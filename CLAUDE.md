@@ -1,0 +1,58 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Repository Overview
+
+This is an AWS SAP (Solutions Architect Professional) exam study resource repository containing HTML-based learning materials. The repository serves as a comprehensive visual learning platform with infographics, technical diagrams, and detailed explanations of AWS services and concepts.
+
+## Directory Structure
+
+The repository is organized into topical categories:
+
+- `networking/` - Networking services (Direct Connect, Transit Gateway, VPN, PrivateLink, EIP/NAT)
+- `transit-gateway-sharing/` - Transit Gateway and AWS RAM sharing resources  
+- `security-governance/` - Security and governance services (SCP, IAM, WAF, Tag Policies)
+- `compute-applications/` - Compute and application services (EC2, Lambda, EFA, Auto Scaling)
+- `content-delivery-dns/` - Content delivery and DNS services (CloudFront, Route53)
+- `development-deployment/` - Development and deployment services (CloudFormation Service Catalog)
+- `index.html` - Main navigation interface with sidebar navigation
+
+## Architecture
+
+### Navigation System
+- `index.html` serves as the main entry point with a collapsible sidebar navigation
+- Each category in the sidebar dynamically loads HTML content using iframe injection
+- JavaScript functions handle category expansion/collapse and content loading
+
+### Content Structure  
+- Each HTML file is a self-contained learning module with:
+  - Embedded SVG diagrams and technical illustrations
+  - Step-by-step explanations with numbered sections
+  - AWS CLI examples and code snippets
+  - Responsive CSS using AWS brand colors (#232F3E, #FF9900)
+  - Japanese language content optimized for Japanese learners
+
+### File Patterns
+- HTML files use descriptive naming: `aws-[service]-[topic].html` or `[service]_[topic]_infographic.html`
+- All content is static HTML/CSS/JavaScript with no external dependencies
+- SVG graphics are inline for offline accessibility
+
+## Working with Content
+
+### Adding New Learning Resources
+1. Create HTML file following existing naming conventions
+2. Use consistent CSS styling with AWS brand colors
+3. Include SVG diagrams for visual explanation
+4. Update `index.html` navigation to include new resource
+5. Place file in appropriate topical directory
+
+### Modifying Navigation
+- Update `index.html` sidebar structure to add/remove categories
+- Modify `loadContent()` function calls to match new file paths
+- Ensure category organization aligns with AWS SAP exam domains
+
+### File Organization
+- When reorganizing files, update all references in `index.html`
+- Maintain logical grouping by AWS service domains
+- Remove any `.html:Zone.Identifier` files that may appear from Windows downloads

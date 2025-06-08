@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route53 ホストゾーン完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1em;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 25px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transform: translateY(30px);
+            opacity: 0;
+            animation: slideUpFade 0.8s ease-out forwards;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        @keyframes slideUpFade {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.4s; }
+        .section:nth-child(4) { animation-delay: 0.6s; }
+        .section:nth-child(5) { animation-delay: 0.8s; }
+        .section:nth-child(6) { animation-delay: 1.0s; }
+        .section:nth-child(7) { animation-delay: 1.2s; }
+        
+        .section h2 {
+            color: #4a90e2;
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .emoji {
+            font-size: 1.2em;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .concept-intro {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            padding: 30px;
+            border-radius: 20px;
+            margin: 25px 0;
+            text-align: center;
+            position: relative;
+        }
+        
+        .concept-intro h3 {
+            font-size: 1.8em;
+            color: #d63031;
+            margin-bottom: 15px;
+        }
+        
+        .concept-intro p {
+            font-size: 1.2em;
+            color: #2d3436;
+        }
+        
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .zone-card {
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .zone-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        
+        .public-zone {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+        }
+        
+        .private-zone {
+            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            color: white;
+        }
+        
+        .zone-card h3 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .zone-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            display: block;
+            animation: rotate 4s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .analogy-section {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .analogy-item {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 5px solid #4a90e2;
+        }
+        
+        .analogy-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .analogy-item h4 {
+            color: #4a90e2;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .flow-step {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .flow-step:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+        
+        .flow-step::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em;
+            color: #4a90e2;
+            font-weight: bold;
+            animation: arrow-pulse 2s infinite;
+        }
+        
+        @keyframes arrow-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .flow-step:last-child::after {
+            display: none;
+        }
+        
+        .step-number {
+            background: #4a90e2;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, #e17055 0%, #fdcb6e 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+        
+        .feature-card h4 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .use-cases {
+            background: #f1f2f6;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+        
+        .use-case-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00b894;
+            transition: all 0.3s ease;
+        }
+        
+        .use-case-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .use-case-item h5 {
+            color: #00b894;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin: 25px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .highlight-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: highlight-shine 3s infinite;
+        }
+        
+        @keyframes highlight-shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .highlight-box h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .comparison-container,
+            .analogy-grid,
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-step::after {
+                content: '↓';
+                right: 50%;
+                top: auto;
+                bottom: -20px;
+                transform: translateX(50%);
+            }
+            
+            .flow-step:last-child::after {
+                display: none;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .section h2 {
+                font-size: 1.8em;
+            }
+        }
+        
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+        
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Route53 ホストゾーン完全ガイド</h1>
+            <p>パブリック vs プライベート</p>
+            <div class="subtitle">電話帳のたとえ話で分かりやすく解説！</div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">📖</span>Route53とは？</h2>
+            <div class="concept-intro">
+                <h3>🌍 インターネットの電話帳</h3>
+                <p>Route53は、ドメイン名（example.com）をIPアドレス（192.168.1.1）に変換する「DNS」サービス。<br>
+                まるで「山田さんの家」を「東京都渋谷区○○」の住所に変換する電話帳のようなもの！</p>
+            </div>
+            
+            <div class="analogy-section">
+                <h3>📞 電話帳で考えてみよう</h3>
+                <div class="analogy-grid">
+                    <div class="analogy-item">
+                        <h4>📕 一般電話帳</h4>
+                        <p><strong>誰でも見ることができる</strong><br>
+                        • 全国の電話番号を掲載<br>
+                        • 公開情報<br>
+                        • みんながアクセス可能</p>
+                    </div>
+                    <div class="analogy-item">
+                        <h4>📗 社内電話帳</h4>
+                        <p><strong>社員だけが見ることができる</strong><br>
+                        • 社内の内線番号を掲載<br>
+                        • 機密情報<br>
+                        • 限定アクセス</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">🌍</span>パブリックホストゾーン</h2>
+            <div class="comparison-container">
+                <div class="zone-card public-zone">
+                    <span class="zone-icon">🌐</span>
+                    <h3>📕 パブリックホストゾーン</h3>
+                    <p><strong>インターネット全体に公開</strong></p>
+                    <p>世界中の誰でもアクセス可能</p>
+                    <p>Webサイトやメールサーバーなど</p>
+                </div>
+                <div class="analogy-item">
+                    <h4>📞 一般電話帳の例</h4>
+                    <p><strong>「ピザ店を探したい」</strong><br>
+                    誰でも電話帳で「○○ピザ」を調べて、電話番号を見つけることができる</p>
+                    <br>
+                    <p><strong>AWS世界では</strong><br>
+                    誰でも「example.com」にアクセスして、Webサイトを表示できる</p>
+                </div>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h4>🌐 用途</h4>
+                    <p>• 公開Webサイト<br>
+                    • メールサーバー<br>
+                    • APIエンドポイント<br>
+                    • CDN（CloudFront）</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💰 料金</h4>
+                    <p>• ホストゾーン: $0.50/月<br>
+                    • クエリ: $0.40/100万回<br>
+                    • 世界中からアクセス可能</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">🏢</span>プライベートホストゾーン</h2>
+            <div class="comparison-container">
+                <div class="zone-card private-zone">
+                    <span class="zone-icon">🔒</span>
+                    <h3>📗 プライベートホストゾーン</h3>
+                    <p><strong>VPC内でのみアクセス可能</strong></p>
+                    <p>特定のネットワーク内限定</p>
+                    <p>内部システムやデータベースなど</p>
+                </div>
+                <div class="analogy-item">
+                    <h4>📞 社内電話帳の例</h4>
+                    <p><strong>「人事部に連絡したい」</strong><br>
+                    社員だけが見ることができる社内電話帳で「人事部」の内線番号を調べる</p>
+                    <br>
+                    <p><strong>AWS世界では</strong><br>
+                    VPC内のサーバーだけが「internal.company.com」にアクセスできる</p>
+                </div>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h4>🔒 用途</h4>
+                    <p>• 内部API<br>
+                    • データベースサーバー<br>
+                    • 管理画面<br>
+                    • マイクロサービス間通信</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💰 料金</h4>
+                    <p>• ホストゾーン: $0.50/月<br>
+                    • クエリ: $0.40/100万回<br>
+                    • VPC内からのみアクセス</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">🔄</span>DNS解決の流れ</h2>
+            <h3>🌐 パブリックホストゾーンの場合</h3>
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <h4>👤 ユーザー</h4>
+                    <p>「example.com」<br>にアクセス</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <h4>🌐 インターネット</h4>
+                    <p>DNS問い合わせ<br>を送信</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <h4>📋 Route53</h4>
+                    <p>パブリックホストゾーン<br>で解決</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <h4>🎯 結果</h4>
+                    <p>IPアドレス<br>を返却</p>
+                </div>
+            </div>
+            
+            <h3>🏢 プライベートホストゾーンの場合</h3>
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <h4>💻 EC2インスタンス</h4>
+                    <p>「internal.company.com」<br>にアクセス</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <h4>🔒 VPC内DNS</h4>
+                    <p>VPC内で<br>DNS問い合わせ</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <h4>📋 Route53</h4>
+                    <p>プライベートホストゾーン<br>で解決</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <h4>🎯 結果</h4>
+                    <p>VPC内IP<br>を返却</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">📋</span>使い分けの例</h2>
+            <div class="use-cases">
+                <h3>🌐 パブリックホストゾーンの使用例</h3>
+                <div class="use-case-item">
+                    <h5>🛒 ECサイト</h5>
+                    <p>「shop.example.com」→ 世界中のお客様がアクセス可能</p>
+                </div>
+                <div class="use-case-item">
+                    <h5>📧 メールサーバー</h5>
+                    <p>「mail.example.com」→ 外部からメール送受信が必要</p>
+                </div>
+                <div class="use-case-item">
+                    <h5>📱 API</h5>
+                    <p>「api.example.com」→ パートナー企業がアクセス</p>
+                </div>
+            </div>
+            
+            <div class="use-cases">
+                <h3>🔒 プライベートホストゾーンの使用例</h3>
+                <div class="use-case-item">
+                    <h5>🗄️ データベース</h5>
+                    <p>「db.internal.com」→ アプリケーションサーバーからのみアクセス</p>
+                </div>
+                <div class="use-case-item">
+                    <h5>⚙️ 管理画面</h5>
+                    <p>「admin.internal.com」→ 社内システムからのみアクセス</p>
+                </div>
+                <div class="use-case-item">
+                    <h5>🔧 内部API</h5>
+                    <p>「internal-api.company.com」→ マイクロサービス間通信</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">⚙️</span>設定のポイント</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h4>🌐 パブリックホストゾーン設定</h4>
+                    <p>• ドメイン名を登録<br>
+                    • NSレコードをドメインレジストラに設定<br>
+                    • A/CNAME/MXレコードを追加<br>
+                    • 世界中に即座に反映</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔒 プライベートホストゾーン設定</h4>
+                    <p>• 対象VPCを指定<br>
+                    • VPC内でのみ有効<br>
+                    • 内部ドメイン名を使用<br>
+                    • セキュリティグループで制御</p>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h3>💡 重要なポイント</h3>
+                <p>同じドメイン名でパブリックとプライベート両方のホストゾーンを作成可能！<br>
+                VPC内からは<span class="tooltip" data-tooltip="VPC内ではプライベートホストゾーンが優先される">プライベートホストゾーンが優先</span>され、外部からはパブリックホストゾーンが使用されます。</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">🤝</span>複数アカウント間でのプライベートホストゾーン共有</h2>
+            <div class="concept-intro">
+                <h3>🏢 複数支社での社内電話帳共有問題</h3>
+                <p>1つの会社に東京本社、大阪支社、名古屋支社があるとき、<br>
+                各支社が独自の社内電話帳を持っていたら、支社間での連絡が困難になります...</p>
+            </div>
+            
+            <div class="analogy-section">
+                <h3>📞 現実世界の課題</h3>
+                <div class="analogy-grid">
+                    <div class="analogy-item" style="border-left-color: #e17055;">
+                        <h4>❌ 問題のある状況</h4>
+                        <p><strong>支社ごとに別々の電話帳</strong><br>
+                        • 東京本社の電話帳には大阪支社の番号がない<br>
+                        • 大阪支社から東京の経理部に連絡できない<br>
+                        • 各支社で重複した管理作業が発生</p>
+                    </div>
+                    <div class="analogy-item" style="border-left-color: #00b894;">
+                        <h4>✅ 理想的な解決策</h4>
+                        <p><strong>全社共通の電話帳を共有</strong><br>
+                        • 本社が管理する統一電話帳を全支社で利用<br>
+                        • どの支社からでも他の支社に連絡可能<br>
+                        • 管理は本社で一元化</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h3>🌐 AWS世界での同じ課題</h3>
+                <p><strong>複数のAWSアカウント（支社）</strong>それぞれに独自のVPCとプライベートホストゾーンがある場合、<br>
+                アカウント間でのサービス名前解決ができません。<br>
+                <br>
+                <strong>解決策：Resource Access Manager (RAM)</strong>を使ってプライベートホストゾーンを共有！</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">📋</span>Resource Access Manager (RAM) とは？</h2>
+            <div class="comparison-container">
+                <div class="zone-card" style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);">
+                    <span class="zone-icon">🤝</span>
+                    <h3>📋 AWS RAM</h3>
+                    <p><strong>リソース共有サービス</strong></p>
+                    <p>AWSアカウント間で安全にリソースを共有</p>
+                    <p>プライベートホストゾーン、サブネット、Transit Gatewayなど</p>
+                </div>
+                <div class="analogy-item">
+                    <h4>📞 電話帳共有システム</h4>
+                    <p><strong>「統一電話帳管理システム」</strong><br>
+                    本社が管理する電話帳を、各支社が安全にアクセスできるシステム</p>
+                    <br>
+                    <p><strong>AWS世界では</strong><br>
+                    メインアカウントのプライベートホストゾーンを、他のアカウントのVPCから利用可能</p>
+                </div>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card" style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);">
+                    <h4>🔧 RAMの機能</h4>
+                    <p>• アカウント間リソース共有<br>
+                    • 細かい権限制御<br>
+                    • 組織単位での共有<br>
+                    • 無料で利用可能</p>
+                </div>
+                <div class="feature-card" style="background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);">
+                    <h4>🎯 共有可能なリソース</h4>
+                    <p>• Route53プライベートホストゾーン<br>
+                    • VPCサブネット<br>
+                    • Transit Gateway<br>
+                    • License Managerライセンス</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">⚙️</span>プライベートホストゾーン共有の設定手順</h2>
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <h4>🏢 メインアカウント</h4>
+                    <p>プライベートホストゾーン<br>を作成</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <h4>📋 RAMで共有</h4>
+                    <p>Resource Share<br>を作成</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <h4>📨 招待送信</h4>
+                    <p>対象アカウントに<br>共有招待</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <h4>✅ 招待承認</h4>
+                    <p>対象アカウントで<br>招待を承認</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">5</div>
+                    <h4>🔗 VPC関連付け</h4>
+                    <p>対象VPCを<br>ホストゾーンに関連付け</p>
+                </div>
+            </div>
+            
+            <div class="config-steps">
+                <div class="config-step">
+                    <h4>ステップ1: メインアカウントでRAM共有作成</h4>
+                    <p>🏢 AWS RAM コンソール → 「Create resource share」<br>
+                    📋 共有するプライベートホストゾーンを選択<br>
+                    👥 共有先アカウントIDを指定</p>
+                </div>
+                
+                <div class="config-step">
+                    <h4>ステップ2: 対象アカウントで招待承認</h4>
+                    <p>📨 対象アカウントのRAMコンソールで招待を確認<br>
+                    ✅ 「Accept」をクリックして招待を承認<br>
+                    🔍 共有されたリソースが表示されることを確認</p>
+                </div>
+                
+                <div class="config-step">
+                    <h4>ステップ3: VPCの関連付け</h4>
+                    <p>🌐 Route53コンソール → プライベートホストゾーン<br>
+                    🔗 「Associate VPC」で対象アカウントのVPCを選択<br>
+                    ⚠️ 対象アカウントのVPC IDとリージョンを正確に指定</p>
+                </div>
+                
+                <div class="config-step">
+                    <h4>ステップ4: 動作確認</h4>
+                    <p>💻 対象アカウントのEC2インスタンスから<br>
+                    🔍 <code>nslookup internal.company.com</code> でテスト<br>
+                    ✅ 正しくIPアドレスが返されることを確認</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">🏗️</span>実際の活用例</h2>
+            <div class="use-cases">
+                <h3>🌟 マルチアカウント戦略での活用</h3>
+                <div class="use-case-item">
+                    <h5>🏢 本社（メインアカウント）</h5>
+                    <p><strong>共有DNS管理</strong><br>
+                    • 「db.internal.company.com」→ 共有データベース<br>
+                    • 「api.internal.company.com」→ 共通APIゲートウェイ<br>
+                    • 「auth.internal.company.com」→ 認証サーバー</p>
+                </div>
+                <div class="use-case-item">
+                    <h5>🛍️ EC部門（アカウントA）</h5>
+                    <p><strong>ECサイト運営</strong><br>
+                    • ECアプリから共有データベースにアクセス<br>
+                    • 共通認証サーバーでユーザー認証<br>
+                    • 共通APIで在庫管理システムと連携</p>
+                </div>
+                <div class="use-case-item">
+                    <h5>📱 モバイル部門（アカウントB）</h5>
+                    <p><strong>モバイルアプリ運営</strong><br>
+                    • モバイルAPIから共有認証サーバーにアクセス<br>
+                    • 共通データベースでユーザー情報を管理<br>
+                    • ECシステムとデータ連携</p>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h3>💡 メリット</h3>
+                <p><strong>一元管理</strong>：DNS管理が本社アカウントに集約<br>
+                <strong>コスト削減</strong>：重複するリソースの削減<br>
+                <strong>セキュリティ</strong>：アカウント間の適切な分離を維持<br>
+                <strong>運用効率</strong>：統一されたネーミング規則</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">🔐</span>セキュリティと権限管理</h2>
+            <div class="features-grid">
+                <div class="feature-card" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);">
+                    <h4>🔒 権限制御</h4>
+                    <p>• 共有は読み取り専用<br>
+                    • レコード作成・変更は所有者のみ<br>
+                    • IAMロールによる細かい制御<br>
+                    • CloudTrailでログ監視</p>
+                </div>
+                <div class="feature-card" style="background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);">
+                    <h4>🛡️ 分離とガバナンス</h4>
+                    <p>• アカウント分離は維持<br>
+                    • 組織単位での共有管理<br>
+                    • 共有範囲の制限可能<br>
+                    • 定期的な共有見直し</p>
+                </div>
+            </div>
+            
+            <div class="tip" style="background: linear-gradient(135deg, #e17055 0%, #fdcb6e 100%); color: white;">
+                <h4>⚠️ 重要な注意点</h4>
+                <p><strong>ネットワーク接続は別途必要</strong><br>
+                プライベートホストゾーンの共有は名前解決のみ。VPC間の実際の通信には<br>
+                <strong>VPC Peering</strong>、<strong>Transit Gateway</strong>、<strong>PrivateLink</strong>などが必要です。</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><span class="emoji">✨</span>まとめ</h2>
+            <div class="analogy-section">
+                <h3>📞 電話帳で振り返り</h3>
+                <div class="analogy-grid">
+                    <div class="analogy-item">
+                        <h4>📕 パブリックホストゾーン</h4>
+                        <p><strong>= 一般電話帳</strong><br>
+                        • 誰でもアクセス可能<br>
+                        • 公開サービス用<br>
+                        • インターネット全体で利用</p>
+                    </div>
+                    <div class="analogy-item">
+                        <h4>📗 プライベートホストゾーン</h4>
+                        <p><strong>= 社内電話帳</strong><br>
+                        • VPC内限定アクセス<br>
+                        • 内部システム用<br>
+                        • セキュリティが重要</p>
+                    </div>
+                </div>
+                <div class="analogy-grid">
+                    <div class="analogy-item" style="border-left-color: #00b894;">
+                        <h4>🤝 RAM による共有</h4>
+                        <p><strong>= 全社共通電話帳</strong><br>
+                        • 複数支社（アカウント）で共有<br>
+                        • 一元管理で効率化<br>
+                        • セキュアな権限制御</p>
+                    </div>
+                    <div class="analogy-item" style="border-left-color: #6c5ce7;">
+                        <h4>🏗️ マルチアカウント設計</h4>
+                        <p><strong>= 企業組織構造</strong><br>
+                        • 部門ごとのアカウント分離<br>
+                        • 共通リソースの効率的共有<br>
+                        • ガバナンスの維持</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h3>🎯 設計の指針</h3>
+                <p><strong>「どのレベルで管理・共有するか？」</strong>を考えよう！<br>
+                <br>
+                🌍 <strong>パブリック</strong> → 全世界向けサービス<br>
+                🏢 <strong>プライベート（単一アカウント）</strong> → 部門内システム<br>
+                🤝 <strong>プライベート（RAM共有）</strong> → 全社共通システム</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

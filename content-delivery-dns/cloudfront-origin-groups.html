@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS CloudFront オリジングループ簡単解説</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #232f3e;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        h2 {
+            color: #232f3e;
+            border-bottom: 2px solid #ff9900;
+            padding-bottom: 8px;
+            margin-top: 30px;
+            font-size: 1.5em;
+        }
+        .section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .orange-text {
+            color: #ff9900;
+        }
+        .diagram-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .step-box {
+            background-color: #f0f8ff;
+            border-left: 4px solid #1890ff;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+        }
+        .alert {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin: 15px 0;
+        }
+        .benefits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .benefit-card {
+            flex: 1 1 200px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .benefit-card h3 {
+            margin-top: 0;
+            color: #1890ff;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #232f3e;
+            color: white;
+            border-radius: 0 0 8px 8px;
+            font-size: 0.9em;
+        }
+        .scenario {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            background-color: #fafafa;
+        }
+        .scenario-title {
+            font-weight: bold;
+            color: #232f3e;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AWS CloudFront <span class="orange-text">オリジングループ</span></h1>
+            <p>バックアップ機能でコンテンツ配信を止めない！</p>
+        </header>
+
+        <div class="section">
+            <h2>オリジングループって何？</h2>
+            <p><strong>簡単に言うと:</strong> コンテンツの取得元（オリジン）にバックアップを用意して、メインのサーバーが故障したときに自動的に切り替える仕組みです。</p>
+            
+            <div class="diagram-container">
+                <svg width="700" height="350" viewBox="0 0 700 350">
+                    <!-- 背景 -->
+                    <rect width="700" height="350" fill="#f8f9fa" rx="10" ry="10" />
+                    
+                    <!-- タイトル -->
+                    <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold">CloudFrontオリジングループの基本的な仕組み</text>
+                    
+                    <!-- ユーザー -->
+                    <g>
+                        <circle cx="80" cy="160" r="40" fill="#E6F7FF" stroke="#1890FF" stroke-width="2" />
+                        <text x="80" y="165" text-anchor="middle" font-size="14" font-weight="bold">ユーザー</text>
+                    </g>
+                    
+                    <!-- CloudFront -->
+                    <g>
+                        <rect x="200" y="110" width="140" height="100" rx="10" ry="10" fill="#E6F7FF" stroke="#1890FF" stroke-width="2" />
+                        <text x="270" y="140" text-anchor="middle" font-size="16" font-weight="bold">CloudFront</text>
+                        <text x="270" y="165" text-anchor="middle" font-size="14">世界中の</text>
+                        <text x="270" y="185" text-anchor="middle" font-size="14">エッジサーバー</text>
+                    </g>
+                    
+                    <!-- オリジングループ枠 -->
+                    <rect x="420" y="70" width="250" height="180" rx="10" ry="10" fill="#FFF0F6" stroke="#FF4D4F" stroke-width="2" stroke-dasharray="5,3" />
+                    <text x="545" y="95" text-anchor="middle" font-size="16" font-weight="bold">オリジングループ</text>
+                    
+                    <!-- プライマリオリジン -->
+                    <g>
+                        <rect x="450" y="110" width="80" height="80" rx="8" ry="8" fill="#F6FFED" stroke="#52C41A" stroke-width="2" />
+                        <text x="490" y="145" text-anchor="middle" font-size="14" font-weight="bold">メイン</text>
+                        <text x="490" y="165" text-anchor="middle" font-size="14">サーバー</text>
+                    </g>
+                    
+                    <!-- セカンダリオリジン -->
+                    <g>
+                        <rect x="560" y="110" width="80" height="80" rx="8" ry="8" fill="#FFF7E6" stroke="#FAAD14" stroke-width="2" />
+                        <text x="600" y="145" text-anchor="middle" font-size="14" font-weight="bold">バックアップ</text>
+                        <text x="600" y="165" text-anchor="middle" font-size="14">サーバー</text>
+                    </g>
+                    
+                    <!-- 矢印：ユーザー → CloudFront -->
+                    <g>
+                        <path d="M130,160 L190,160" stroke="#666" stroke-width="2" />
+                        <polygon points="190,160 185,156 185,164" fill="#666" />
+                        <text x="160" y="150" text-anchor="middle" font-size="14">リクエスト</text>
+                    </g>
+                    
+                    <!-- CloudFront → プライマリ（正常時） -->
+                    <g>
+                        <path d="M350,130 L440,130" stroke="#52C41A" stroke-width="3" />
+                        <polygon points="440,130 435,126 435,134" fill="#52C41A" />
+                        <circle cx="370" cy="130" r="15" fill="#52C41A" />
+                        <text x="370" y="135" text-anchor="middle" font-size="14" fill="white" font-weight="bold">1</text>
+                    </g>
+                    
+                    <!-- CloudFront → セカンダリ（障害時） -->
+                    <g>
+                        <path d="M350,180 C400,220 500,220 550,180" stroke="#FAAD14" stroke-width="3" stroke-dasharray="5,3" />
+                        <polygon points="550,180 545,176 545,184" fill="#FAAD14" />
+                        <circle cx="370" cy="180" r="15" fill="#FAAD14" />
+                        <text x="370" y="185" text-anchor="middle" font-size="14" fill="white" font-weight="bold">2</text>
+                    </g>
+                    
+                    <!-- プライマリ → セカンダリ（内部切替） -->
+                    <g>
+                        <path d="M535,150 L555,150" stroke="#FF4D4F" stroke-width="2" />
+                        <polygon points="555,150 550,146 550,154" fill="#FF4D4F" />
+                        <text x="545" y="140" text-anchor="middle" font-size="14" font-weight="bold">自動切替</text>
+                    </g>
+                    
+                    <!-- 障害表示 -->
+                    <g>
+                        <text x="490" y="218" text-anchor="middle" font-size="28" fill="#FF4D4F" font-weight="bold">×</text>
+                    </g>
+                    
+                    <!-- 説明ボックス：通常時 -->
+                    <g>
+                        <rect x="80" y="260" width="260" height="40" rx="5" ry="5" fill="#F6FFED" stroke="#52C41A" stroke-width="2" />
+                        <text x="210" y="285" text-anchor="middle" font-size="14" font-weight="bold">① 通常時：メインサーバーに接続</text>
+                    </g>
+                    
+                    <!-- 説明ボックス：障害時 -->
+                    <g>
+                        <rect x="360" y="260" width="260" height="40" rx="5" ry="5" fill="#FFF7E6" stroke="#FAAD14" stroke-width="2" />
+                        <text x="490" y="285" text-anchor="middle" font-size="14" font-weight="bold">② 障害時：バックアップに自動切替</text>
+                    </g>
+                </svg>
+            </div>
+            
+            <div class="alert">
+                <strong>重要ポイント:</strong> オリジングループは<strong>バックアップのための仕組み</strong>です。負荷分散ではなく、メインサーバーが正常なときはバックアップサーバーは使われません。
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>オリジングループの仕組み 〜 3ステップで理解</h2>
+            
+            <div class="step-box">
+                <strong>ステップ1: 通常時</strong><br>
+                CloudFrontはユーザーからのリクエストを受け取ると、まずメインサーバー（プライマリオリジン）にコンテンツを取りに行きます。
+            </div>
+            
+            <div class="step-box">
+                <strong>ステップ2: 障害発生</strong><br>
+                メインサーバーがエラー（HTTP 5xxエラー）を返したり、応答しない（タイムアウト）場合、CloudFrontは障害を検知します。
+            </div>
+            
+            <div class="step-box">
+                <strong>ステップ3: 自動切替</strong><br>
+                CloudFrontは自動的にバックアップサーバー（セカンダリオリジン）にリクエストを送り直します。ユーザーは何も気づかずにコンテンツを受け取れます。
+            </div>
+            
+            <div class="diagram-container">
+                <svg width="700" height="350" viewBox="0 0 700 350">
+                    <!-- 背景 -->
+                    <rect width="700" height="350" fill="#f8f9fa" rx="10" ry="10" />
+                    
+                    <!-- タイトル -->
+                    <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold">CloudFrontオリジングループの仕組み</text>
+                    
+                    <!-- ユーザー -->
+                    <g>
+                        <circle cx="80" cy="160" r="40" fill="#E6F7FF" stroke="#1890FF" stroke-width="2" />
+                        <text x="80" y="165" text-anchor="middle" font-size="14" font-weight="bold">ユーザー</text>
+                    </g>
+                    
+                    <!-- CloudFront -->
+                    <g>
+                        <rect x="200" y="110" width="140" height="100" rx="10" ry="10" fill="#E6F7FF" stroke="#1890FF" stroke-width="2" />
+                        <text x="270" y="140" text-anchor="middle" font-size="16" font-weight="bold">CloudFront</text>
+                        <text x="270" y="165" text-anchor="middle" font-size="14">世界中の</text>
+                        <text x="270" y="185" text-anchor="middle" font-size="14">エッジサーバー</text>
+                    </g>
+                    
+                    <!-- オリジングループ枠 -->
+                    <rect x="420" y="70" width="250" height="180" rx="10" ry="10" fill="#FFF0F6" stroke="#FF4D4F" stroke-width="2" stroke-dasharray="5,3" />
+                    <text x="545" y="95" text-anchor="middle" font-size="16" font-weight="bold">オリジングループ</text>
+                    
+                    <!-- プライマリオリジン -->
+                    <g>
+                        <rect x="450" y="110" width="80" height="80" rx="8" ry="8" fill="#F6FFED" stroke="#52C41A" stroke-width="2" />
+                        <text x="490" y="145" text-anchor="middle" font-size="14" font-weight="bold">メイン</text>
+                        <text x="490" y="165" text-anchor="middle" font-size="14">サーバー</text>
+                    </g>
+                    
+                    <!-- セカンダリオリジン -->
+                    <g>
+                        <rect x="560" y="110" width="80" height="80" rx="8" ry="8" fill="#FFF7E6" stroke="#FAAD14" stroke-width="2" />
+                        <text x="600" y="145" text-anchor="middle" font-size="14" font-weight="bold">バックアップ</text>
+                        <text x="600" y="165" text-anchor="middle" font-size="14">サーバー</text>
+                    </g>
+                    
+                    <!-- 矢印：ユーザー → CloudFront -->
+                    <g>
+                        <path d="M130,160 L190,160" stroke="#666" stroke-width="2" />
+                        <polygon points="190,160 185,156 185,164" fill="#666" />
+                        <text x="160" y="150" text-anchor="middle" font-size="14">リクエスト</text>
+                    </g>
+                    
+                    <!-- 説明ボックス：通常時 -->
+                    <g>
+                        <rect x="80" y="260" width="260" height="40" rx="5" ry="5" fill="#F6FFED" stroke="#52C41A" stroke-width="2" />
+                        <text x="210" y="285" text-anchor="middle" font-size="14" font-weight="bold">① 通常時：メインサーバーに接続</text>
+                    </g>
+                    
+                    <!-- 説明ボックス：障害時 -->
+                    <g>
+                        <rect x="360" y="260" width="260" height="40" rx="5" ry="5" fill="#FFF7E6" stroke="#FAAD14" stroke-width="2" />
+                        <text x="490" y="285" text-anchor="middle" font-size="14" font-weight="bold">② 障害時：バックアップに自動切替</text>
+                    </g>
+                    
+                    <!-- CloudFront → プライマリ（正常時） -->
+                    <g>
+                        <path d="M350,130 L440,130" stroke="#52C41A" stroke-width="3" />
+                        <polygon points="440,130 435,126 435,134" fill="#52C41A" />
+                        <circle cx="370" cy="130" r="10" fill="#52C41A" />
+                        <text x="370" y="134" text-anchor="middle" font-size="14" fill="white" font-weight="bold">1</text>
+                    </g>
+                    
+                    <!-- CloudFront → セカンダリ（障害時） -->
+                    <g>
+                        <path d="M350,180 C400,220 500,220 550,180" stroke="#FAAD14" stroke-width="3" stroke-dasharray="5,3" />
+                        <polygon points="550,180 545,176 545,184" fill="#FAAD14" />
+                        <circle cx="370" cy="180" r="10" fill="#FAAD14" />
+                        <text x="370" y="184" text-anchor="middle" font-size="14" fill="white" font-weight="bold">2</text>
+                    </g>
+                    
+                    <!-- プライマリ → セカンダリ（内部切替） -->
+                    <g>
+                        <path d="M535,150 L555,150" stroke="#FF4D4F" stroke-width="2" />
+                        <polygon points="555,150 550,146 550,154" fill="#FF4D4F" />
+                        <text x="545" y="140" text-anchor="middle" font-size="14" font-weight="bold">自動切替</text>
+                    </g>
+                    
+                    <!-- 障害表示 -->
+                    <g>
+                        <text x="490" y="220" text-anchor="middle" font-size="24" fill="#FF4D4F" font-weight="bold">×</text>
+                        <path d="M470,210 C475,215 485,225 510,210" stroke="#FF4D4F" stroke-width="1" stroke-dasharray="3,2" fill="none" />
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>オリジングループのメリット</h2>
+            
+            <div class="benefits">
+                <div class="benefit-card">
+                    <h3>止まらないサービス</h3>
+                    <p>メインサーバーが故障しても、バックアップサーバーが自動的に引き継ぐので、ユーザーは中断を感じることなくサービスを利用できます。</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <h3>サーバー障害に強い</h3>
+                    <p>異なる地域（リージョン）にバックアップを配置することで、地域全体の障害にも対応できます。</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <h3>設定がカンタン</h3>
+                    <p>AWSコンソールから数ステップで設定でき、複雑なフェイルオーバーの仕組みを自分で構築する必要がありません。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>どんなときに使う？</h2>
+            
+            <div class="scenario">
+                <div class="scenario-title">シナリオ1: ECサイト</div>
+                <p>商品画像や商品情報を配信するサーバーが止まると、売上に直結します。オリジングループを使えば、障害時でも顧客は問題なく買い物を続けられます。</p>
+            </div>
+            
+            <div class="scenario">
+                <div class="scenario-title">シナリオ2: 動画ストリーミング</div>
+                <p>動画配信サーバーが一時的に応答しなくなっても、別のサーバーから動画を配信することで、視聴者は途切れることなく視聴を続けられます。</p>
+            </div>
+            
+            <div class="scenario">
+                <div class="scenario-title">シナリオ3: モバイルアプリ</div>
+                <p>アプリが使用するAPIサーバーにバックアップを用意することで、サーバートラブル時でもアプリユーザーは機能を利用し続けられます。</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>オリジングループを設定する方法</h2>
+            
+            <ol>
+                <li><strong>メインとバックアップのサーバーを用意する</strong><br>
+                S3バケット、EC2インスタンス、ロードバランサーなど、同じ内容のコンテンツを提供できるサーバーを2つ用意します。</li>
+                <br>
+                <li><strong>CloudFrontで両方のサーバーを登録する</strong><br>
+                CloudFrontの管理画面で、メインサーバーとバックアップサーバーをオリジンとして登録します。</li>
+                <br>
+                <li><strong>オリジングループを作成する</strong><br>
+                登録した2つのオリジンを使って「オリジングループ」を作成します。どちらがメインでどちらがバックアップかを指定します。</li>
+                <br>
+                <li><strong>切替条件を設定する</strong><br>
+                どんなエラーが発生したときに切り替えるか（HTTP 5xxエラーやタイムアウトなど）を設定します。</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>まとめ: オリジングループの特徴</h2>
+            
+            <table style="width:100%; border-collapse: collapse; margin: 15px 0;">
+                <tr style="background-color: #f0f0f0;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">項目</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">説明</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>目的</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">サーバー障害時のバックアップ（負荷分散ではない）</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>オリジン数</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">最大2つ（メインとバックアップのみ）</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>切替条件</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">HTTP 5xxエラー、タイムアウト</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>ユーザー体験</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">サービス中断を感じさせない（透過的な切替）</td>
+                </tr>
+            </table>
+            
+            <div class="alert">
+                <strong>注意点:</strong> メインサーバーとバックアップサーバーは、同じコンテンツを提供できるように準備しておく必要があります。
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 AWS CloudFront オリジングループ 簡単解説ガイド</p>
+        </div>
+    </div>
+</body>
+</html>
