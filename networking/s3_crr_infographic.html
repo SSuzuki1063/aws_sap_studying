@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Cross Region Replicationを図書館システムで理解しよう</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.4em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .intro-analogy {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .intro-analogy h2 {
+            color: #d63384;
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .analogy-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .analogy-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .analogy-card:hover {
+            transform: translateY(-10px);
+            border-color: #667eea;
+        }
+
+        .analogy-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .comparison-side {
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .everyday-side {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .aws-side {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .simple-diagram {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .diagram-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .diagram-item {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .diagram-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .tokyo-library {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
+        }
+
+        .sync-process {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #2c3e50;
+        }
+
+        .osaka-library {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .connection-arrow {
+            position: absolute;
+            top: 50%;
+            left: 25%;
+            right: 25%;
+            height: 6px;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 3px;
+            animation: dataFlow 3s infinite;
+        }
+
+        .connection-arrow::before,
+        .connection-arrow::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+
+        .connection-arrow::before {
+            left: -8px;
+            border-width: 9px 12px 9px 0;
+            border-color: transparent #4facfe transparent transparent;
+        }
+
+        .connection-arrow::after {
+            right: -8px;
+            border-width: 9px 0 9px 12px;
+            border-color: transparent transparent transparent #00f2fe;
+        }
+
+        .replication-flow {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .flow-step {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .flow-step:hover {
+            transform: scale(1.05);
+        }
+
+        .step-1 {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+
+        .step-2 {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .step-3 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .flow-arrow {
+            position: absolute;
+            top: 50%;
+            right: -15px;
+            width: 30px;
+            height: 4px;
+            background: #4facfe;
+            border-radius: 2px;
+        }
+
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 6px 0 6px 8px;
+            border-color: transparent transparent transparent #4facfe;
+        }
+
+        .step-by-step {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .step-item {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .faq-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .faq-item {
+            background: white;
+            margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .faq-question {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #5a6fd8;
+        }
+
+        .faq-answer {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .benefit-card {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .cost-comparison {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .cost-table {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .cost-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        .scenario-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .scenario-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .scenario-disaster {
+            border-left: 5px solid #e74c3c;
+        }
+
+        .scenario-performance {
+            border-left: 5px solid #f39c12;
+        }
+
+        .scenario-compliance {
+            border-left: 5px solid #27ae60;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes dataFlow {
+            0%, 100% {
+                opacity: 1;
+                transform: scaleX(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scaleX(1.1);
+            }
+        }
+
+        @keyframes bookCopy {
+            0% { transform: translateX(0) scale(1); }
+            50% { transform: translateX(50px) scale(0.8); }
+            100% { transform: translateX(0) scale(1); }
+        }
+
+        .animated-book {
+            animation: bookCopy 4s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .comparison-table {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-row {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .replication-flow {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-arrow {
+                display: none;
+            }
+            
+            .connection-arrow {
+                top: 35%;
+                left: 50%;
+                right: auto;
+                width: 6px;
+                height: 80px;
+                transform: translateX(-50%);
+            }
+            
+            .connection-arrow::before,
+            .connection-arrow::after {
+                left: -6px;
+                top: auto;
+                border-width: 12px 9px 0 9px;
+            }
+            
+            .connection-arrow::before {
+                top: -8px;
+                border-color: #4facfe transparent transparent transparent;
+            }
+            
+            .connection-arrow::after {
+                bottom: -8px;
+                border-color: transparent transparent #00f2fe transparent;
+            }
+            
+            .step-item {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📚 S3 Cross Region Replication</h1>
+            <p>図書館システムで理解する超入門ガイド</p>
+            <div class="intro-analogy">
+                <h2>🏛️ 東京本館 ↔️ 📋 複写サービス ↔️ 🏛️ 大阪分館</h2>
+                <p>S3のクロスリージョンレプリケーションを、身近な図書館システムで例えて分かりやすく説明します！</p>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>🤔 まず、Cross Region Replicationって何？</h2>
+            <div class="highlight-box">
+                <h3>📝 簡単に言うと...</h3>
+                <p style="font-size: 1.2em; margin-top: 15px;">
+                    <strong>東京のS3バケット</strong>にファイルを保存すると、
+                    <strong>自動的に大阪のS3バケット</strong>にも<strong>同じファイルがコピー</strong>される仕組みです
+                </p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>🏛️ 図書館の例</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>東京本館</strong> に新しい本が届いたら<br>
+                        <strong>自動的に大阪分館</strong>にも<br>
+                        同じ本をコピーして配置</p>
+                        <br>
+                        <p>📚 どちらの図書館でも<br>
+                        同じ本が読めるようになる！</p>
+                    </div>
+                </div>
+                <div class="comparison-side aws-side">
+                    <h3>☁️ S3の世界</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>ap-northeast-1（東京）</strong> にファイルを保存したら<br>
+                        <strong>自動的にap-northeast-3（大阪）</strong>にも<br>
+                        同じファイルがコピーされる</p>
+                        <br>
+                        <p>💾 どちらのリージョンからでも<br>
+                        同じファイルが読める！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📚 Cross Region Replicationの3つの重要ポイント</h2>
+            <div class="analogy-cards">
+                <div class="analogy-card">
+                    <div class="analogy-icon">🤖</div>
+                    <h3>自動複写システム<br>= 自動レプリケーション</h3>
+                    <p><strong>図書館員が手動でコピー</strong>するのではなく、<br>
+                    <strong>自動複写機</strong>が新しい本を検知して、<br>
+                    即座に分館にコピーを作成・配送します。</p>
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>特徴:</strong> リアルタイム自動同期<br>
+                        <strong>人の作業:</strong> 不要
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🌍</div>
+                    <h3>地域分散保管<br>= リージョン間複製</h3>
+                    <p><strong>遠く離れた地域</strong>に同じ資料を保管することで、<br>
+                    災害や事故が起きても<strong>安全にデータを守る</strong>ことができます。</p>
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>例:</strong> 東京 → 大阪・シンガポール・バージニア
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🔄</div>
+                    <h3>利用者最適化<br>= 最適なアクセス</h3>
+                    <p><strong>大阪の利用者</strong>は大阪分館から、<br>
+                    <strong>東京の利用者</strong>は東京本館から本を借りることで、<br>
+                    <strong>早くて快適</strong>に利用できます。</p>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>効果:</strong> 高速アクセス + 負荷分散
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 レプリケーションの流れを図で見てみよう</h2>
+            <div class="simple-diagram">
+                <div class="replication-flow">
+                    <div class="flow-step step-1">
+                        <div style="font-size: 3em; margin-bottom: 15px;" class="animated-book">📖</div>
+                        <h3>1. 新しい本が到着</h3>
+                        <p><strong>東京本館（S3バケット）</strong></p>
+                        <small>ファイルがアップロードされる</small>
+                        <div class="flow-arrow"></div>
+                    </div>
+                    
+                    <div class="flow-step step-2">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🤖</div>
+                        <h3>2. 自動複写開始</h3>
+                        <p><strong>レプリケーション処理</strong></p>
+                        <small>AWSが自動でコピーを作成</small>
+                        <div class="flow-arrow"></div>
+                    </div>
+                    
+                    <div class="flow-step step-3">
+                        <div style="font-size: 3em; margin-bottom: 15px;">📚</div>
+                        <h3>3. 分館に配置完了</h3>
+                        <p><strong>大阪分館（S3バケット）</strong></p>
+                        <small>同じファイルが利用可能に</small>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>⚡ 処理時間</h3>
+                    <p>数秒〜15分程度で自動的にコピーが完了します（ファイルサイズに依存）</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 3つの主要な活用シナリオ</h2>
+            <div class="scenario-grid">
+                <div class="scenario-card scenario-disaster">
+                    <div style="font-size: 3em; margin-bottom: 15px; text-align: center;">🚨</div>
+                    <h3 style="color: #e74c3c;">災害対策・BCP</h3>
+                    <p><strong>図書館の例：</strong></p>
+                    <p>東京本館が地震で被災しても、大阪分館で業務継続が可能</p>
+                    <br>
+                    <p><strong>AWSでは：</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>東京リージョンが障害でも、大阪リージョンから復旧</li>
+                        <li>RTO（復旧時間目標）を大幅短縮</li>
+                        <li>データ損失ゼロを実現</li>
+                    </ul>
+                    <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>💡 ポイント：</strong> 99.999999999%（イレブンナイン）の耐久性
+                    </div>
+                </div>
+
+                <div class="scenario-card scenario-performance">
+                    <div style="font-size: 3em; margin-bottom: 15px; text-align: center;">⚡</div>
+                    <h3 style="color: #f39c12;">パフォーマンス向上</h3>
+                    <p><strong>図書館の例：</strong></p>
+                    <p>関西の利用者は大阪分館で借りた方が早く受け取れる</p>
+                    <br>
+                    <p><strong>AWSでは：</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>アジア圏ユーザー → シンガポールリージョン</li>
+                        <li>欧州ユーザー → フランクフルトリージョン</li>
+                        <li>レイテンシー（遅延）を最小化</li>
+                    </ul>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>💡 効果：</strong> 50-80%の応答速度向上
+                    </div>
+                </div>
+
+                <div class="scenario-card scenario-compliance">
+                    <div style="font-size: 3em; margin-bottom: 15px; text-align: center;">⚖️</div>
+                    <h3 style="color: #27ae60;">コンプライアンス対応</h3>
+                    <p><strong>図書館の例：</strong></p>
+                    <p>地域の条例で「重要書類は必ず域内保管」が義務付けられている</p>
+                    <br>
+                    <p><strong>AWSでは：</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>GDPR（EU圏内データ保管義務）</li>
+                        <li>中国の個人情報保護法対応</li>
+                        <li>金融業界の規制要件</li>
+                    </ul>
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>💡 安心：</strong> 法的要件を自動的に満たす
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 実際の設定手順（超簡単版）</h2>
+            <div class="step-by-step">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>東京本館（ソースバケット）を準備</h3>
+                        <p><strong>既存のS3バケットでOK</strong><br>
+                        → バージョニングを有効化（本の改訂版管理のため）<br>
+                        → レプリケーション元として設定</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>大阪分館（デスティネーションバケット）を作成</h3>
+                        <p><strong>別リージョンに新しいバケット作成</strong><br>
+                        → ap-northeast-3（大阪）リージョンを選択<br>
+                        → バケット名は別名でもOK（例：my-bucket-osaka）</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>図書館司書（IAMロール）を雇用</h3>
+                        <p><strong>レプリケーション専用のIAMロールを作成</strong><br>
+                        → S3の読み取り・書き込み権限を付与<br>
+                        → 自動複写作業を任せるための「職員証」</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>自動複写ルールを設定</h3>
+                        <p><strong>レプリケーション設定を作成</strong><br>
+                        → どの本（プレフィックス）をコピーするか指定<br>
+                        → ストレージクラスも選択可能（Standard、IA、Glacier等）</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>自動複写開始！</h3>
+                        <p><strong>以降は全自動で動作</strong><br>
+                        → 新しいファイルが自動でコピーされる<br>
+                        → CloudWatchでコピー状況を監視可能</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💰 料金について</h2>
+            <div class="cost-comparison">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">💸 料金の仕組み</h3>
+                <div class="cost-table">
+                    <div class="cost-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">📤</div>
+                        <h4>レプリケーション転送料金</h4>
+                        <p><strong>$0.02/GB</strong></p>
+                        <small>東京→大阪の複写配送料</small>
+                    </div>
+                    <div class="cost-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">📚</div>
+                        <h4>ストレージ料金</h4>
+                        <p><strong>$0.025/GB/月</strong></p>
+                        <small>大阪分館での保管料</small>
+                    </div>
+                    <div class="cost-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">🔄</div>
+                        <h4>リクエスト料金</h4>
+                        <p><strong>$0.0004/1000回</strong></p>
+                        <small>複写作業の手数料</small>
+                    </div>
+                    <div class="cost-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">📊</div>
+                        <h4>具体例</h4>
+                        <p><strong>100GB → 約$4/月</strong></p>
+                        <small>転送$2 + 保管$2.5</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h3>💡 コスト最適化のコツ</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <p><strong>📋 ストレージクラスを使い分け：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Standard:</strong> よく使うファイル</li>
+                        <li><strong>IA (Infrequent Access):</strong> 月1回程度のアクセス</li>
+                        <li><strong>Glacier:</strong> アーカイブ用途</li>
+                    </ul>
+                    <br>
+                    <p><strong>🎯 プレフィックス指定：</strong> 重要なファイルのみをレプリケーション</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ よくある質問</h2>
+            <div class="faq-section">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🤔 既存のファイルもコピーされる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>レプリケーション設定後のファイルのみ</strong>が自動コピーされます。</p>
+                        <br>
+                        <p><strong>既存ファイルをコピーしたい場合：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>S3 Batch Operations を使用</li>
+                            <li>AWS CLIで手動コピー</li>
+                            <li>一度削除→再アップロードする（非推奨）</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🔄 双方向でレプリケーションできる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>Cross Region Replicationは一方向</strong>です。東京→大阪の単方向レプリケーション。</p>
+                        <br>
+                        <p><strong>双方向が必要な場合：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>2つのレプリケーションルールを作成</li>
+                            <li>東京→大阪 と 大阪→東京 を別々に設定</li>
+                            <li>※無限ループに注意（レプリケーション元タグで制御）</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        ❌ ファイルを削除したらどうなる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>デフォルトでは削除はレプリケートされません</strong>（安全性重視）。</p>
+                        <br>
+                        <p><strong>削除もレプリケートしたい場合：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>「Delete marker replication」を有効化</li>
+                            <li>ソースで削除すると、デスティネーションでも削除マーカーが追加</li>
+                            <li>完全削除（Hard Delete）は設定次第</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🌍 同じリージョン内でもレプリケーションできる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>はい！Same Region Replication (SRR)</strong> も可能です。</p>
+                        <br>
+                        <p><strong>用途例：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>異なるAWSアカウント間でデータ共有</li>
+                            <li>異なるストレージクラスでコスト最適化</li>
+                            <li>本番環境→テスト環境への自動同期</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        ⏱️ レプリケーションにかかる時間は？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>通常は数秒〜15分程度</strong>ですが、ファイルサイズによって変動します。</p>
+                        <br>
+                        <p><strong>時間の目安：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>小ファイル（1MB未満）</strong>: 数秒〜1分</li>
+                            <li><strong>中ファイル（100MB程度）</strong>: 1〜5分</li>
+                            <li><strong>大ファイル（1GB超）</strong>: 5〜15分</li>
+                        </ul>
+                        <p style="margin-top: 10px;">※ネットワーク状況やAWSの負荷により変動</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✨ Cross Region Replicationのメリット</h2>
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🛡️</div>
+                    <h3>99.999999999%の耐久性</h3>
+                    <p>イレブンナインの信頼性で、データ損失のリスクを極限まで軽減</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">⚡</div>
+                    <h3>大幅な高速化</h3>
+                    <p>地理的に近いリージョンからアクセスで、50-80%の速度向上</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🤖</div>
+                    <h3>完全自動化</h3>
+                    <p>人的作業ゼロで、24時間365日自動的にバックアップを実行</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">⚖️</div>
+                    <h3>コンプライアンス対応</h3>
+                    <p>GDPR等の法的要件を、設定だけで自動的に満たすことが可能</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">💰</div>
+                    <h3>コスト効率</h3>
+                    <p>従来の専用線やDRサイトと比べて、大幅なコスト削減を実現</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔧</div>
+                    <h3>柔軟な設定</h3>
+                    <p>ファイル単位、フォルダ単位で細かくレプリケーション対象を制御</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="highlight-box">
+                <h2>🎯 まとめ</h2>
+                <div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+                    <p>📚 <strong>S3バケット</strong> = 図書館（東京本館・大阪分館）</p>
+                    <p>🤖 <strong>Cross Region Replication</strong> = 自動複写システム</p>
+                    <p>🌍 <strong>複数リージョン</strong> = 地域分散でリスク軽減</p>
+                    <p>⚡ <strong>パフォーマンス向上</strong> = 利用者に最も近い場所からアクセス</p>
+                    <br>
+                    <p>これらを組み合わせることで、<strong>安全で高速で法的要件も満たす</strong>システムを構築できます！</p>
+                    <br>
+                    <p><strong>🎯 導入時のポイント：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>バージョニングを有効化 → 改訂版管理のため</li>
+                        <li>適切なストレージクラス選択 → コスト最適化</li>
+                        <li>レプリケーション対象を絞る → 不要なコストを削減</li>
+                        <li>CloudWatchで監視 → 複写状況をリアルタイム確認</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#667eea' : '#5a6fd8';
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.analogy-card, .diagram-item, .flow-step');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1) rotate(1deg)';
+                    setTimeout(() => {
+                        this.style.transform = this.classList.contains('flow-step') ? 'scale(1.05)' : 'translateY(-10px)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // レプリケーションフローのアニメーション
+            function animateReplication() {
+                const steps = document.querySelectorAll('.flow-step');
+                steps.forEach((step, index) => {
+                    setTimeout(() => {
+                        step.style.transform = 'scale(1.1)';
+                        step.style.boxShadow = '0 20px 40px rgba(0,0,0,0.2)';
+                        
+                        setTimeout(() => {
+                            step.style.transform = 'scale(1.05)';
+                            step.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                        }, 600);
+                    }, index * 800);
+                });
+            }
+            
+            // 8秒ごとにレプリケーションアニメーションを実行
+            setInterval(animateReplication, 8000);
+
+            // 本のコピーアニメーション
+            const animatedBooks = document.querySelectorAll('.animated-book');
+            animatedBooks.forEach(book => {
+                setInterval(() => {
+                    book.style.animationDuration = '3s';
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>

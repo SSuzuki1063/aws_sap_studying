@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS VPN接続を郵便システムで理解しよう + Direct Connect比較</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.4em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .intro-analogy {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .intro-analogy h2 {
+            color: #d63384;
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .analogy-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .analogy-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .analogy-card:hover {
+            transform: translateY(-10px);
+            border-color: #667eea;
+        }
+
+        .analogy-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .comparison-side {
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .everyday-side {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .aws-side {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .simple-diagram {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .diagram-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .diagram-item {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .diagram-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .home-office {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
+        }
+
+        .post-office {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #2c3e50;
+        }
+
+        .aws-cloud {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .connection-arrow {
+            position: absolute;
+            top: 50%;
+            left: 30%;
+            right: 30%;
+            height: 6px;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 3px;
+            animation: dataFlow 3s infinite;
+        }
+
+        .connection-arrow::before,
+        .connection-arrow::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+
+        .connection-arrow::before {
+            left: -8px;
+            border-width: 9px 12px 9px 0;
+            border-color: transparent #4facfe transparent transparent;
+        }
+
+        .connection-arrow::after {
+            right: -8px;
+            border-width: 9px 0 9px 12px;
+            border-color: transparent transparent transparent #00f2fe;
+        }
+
+        .step-by-step {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .step-item {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .faq-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .faq-item {
+            background: white;
+            margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .faq-question {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #5a6fd8;
+        }
+
+        .faq-answer {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .benefit-card {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        /* Direct Connect用の新しいスタイル */
+        .direct-connect-side {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .vif-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .vif-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .vif-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .private-vif {
+            border-color: #667eea;
+        }
+
+        .public-vif {
+            border-color: #f093fb;
+        }
+
+        .transit-vif {
+            border-color: #4facfe;
+        }
+
+        .cost-comparison {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .cost-bar {
+            height: 60px;
+            border-radius: 30px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes dataFlow {
+            0%, 100% {
+                opacity: 1;
+                transform: scaleX(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scaleX(1.1);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .comparison-table {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-row {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .connection-arrow {
+                top: 35%;
+                left: 50%;
+                right: auto;
+                width: 6px;
+                height: 80px;
+                transform: translateX(-50%);
+            }
+            
+            .connection-arrow::before,
+            .connection-arrow::after {
+                left: -6px;
+                top: auto;
+                border-width: 12px 9px 0 9px;
+            }
+            
+            .connection-arrow::before {
+                top: -8px;
+                border-color: #4facfe transparent transparent transparent;
+            }
+            
+            .connection-arrow::after {
+                bottom: -8px;
+                border-color: transparent transparent #00f2fe transparent;
+            }
+            
+            .step-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .vif-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📮 AWS 接続方式完全ガイド</h1>
+            <p>VPN接続とDirect Connectを郵便システムで理解する超入門ガイド</p>
+            <div class="intro-analogy">
+                <h2>🏠 自宅 ↔️ 📮 郵便局 ↔️ 🏢 会社 + 🚚 専用配送</h2>
+                <p>AWSへの接続方式を、身近な郵便システムと配送サービスで分かりやすく説明します！</p>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>🤔 まず、AWS接続方式の全体像</h2>
+            <div class="highlight-box">
+                <h3>📝 簡単に言うと...</h3>
+                <p style="font-size: 1.2em; margin-top: 15px;">
+                    <strong>自分の会社のオフィス</strong>と<strong>AWSのクラウド</strong>を安全に繋ぐ方法には、
+                    <strong>2つの主要な選択肢</strong>があります
+                </p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>📮 VPN接続（書留郵便）</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>インターネット経由</strong>で<br>
+                        重要な書類を<strong>安全</strong>に送る</p>
+                        <br>
+                        <p>💰 <strong>安い</strong>（月額$36〜）<br>
+                        ⚡ <strong>すぐ開始</strong>できる<br>
+                        🌍 <strong>どこからでも</strong>接続可能</p>
+                    </div>
+                </div>
+                <div class="comparison-side direct-connect-side">
+                    <h3>🚚 Direct Connect（専用配送）</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>専用の物理回線</strong>で<br>
+                        大量の荷物を<strong>高速</strong>に配送</p>
+                        <br>
+                        <p>🚀 <strong>高速・安定</strong><br>
+                        💰 <strong>大容量なら安い</strong><br>
+                        🔒 <strong>最高レベル</strong>のセキュリティ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📮 VPN接続を詳しく理解しよう</h2>
+            
+            <div class="analogy-cards">
+                <div class="analogy-card">
+                    <div class="analogy-icon">🏠</div>
+                    <h3>カスタマーゲートウェイ<br>= 自宅のポスト</h3>
+                    <p><strong>あなたの会社側</strong>の入口です。<br>
+                    郵便局にあなたの住所を教えるように、<br>
+                    AWSにあなたの会社の<strong>住所（IPアドレス）</strong>を教えます。</p>
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>具体例:</strong> 会社のIP「203.0.113.1」<br>
+                        <strong>ASN:</strong> 65000（郵便番号のようなもの）
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">📮</div>
+                    <h3>VPNトンネル<br>= 書留郵便のサービス</h3>
+                    <p><strong>安全な配送方法</strong>です。<br>
+                    普通郵便（通常のインターネット）だと心配なので、<br>
+                    <strong>書留郵便（暗号化）</strong>で安全に送ります。</p>
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>特徴:</strong> 暗号化 + 追跡可能
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🏢</div>
+                    <h3>仮想プライベートゲートウェイ<br>= 会社の受付</h3>
+                    <p><strong>AWS側</strong>の入口です。<br>
+                    会社の受付のように、<br>
+                    届いた郵便物を正しい部署に<strong>振り分け</strong>します。</p>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>役割:</strong> AWS内への案内係
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚚 Direct Connect を詳しく理解しよう</h2>
+            <div class="intro-analogy">
+                <h2>🏢 → 🛣️ → 📦 専用配送センター</h2>
+                <p>Direct Connectは専用の物理回線で、まるで専用配送トラックのようなサービスです</p>
+            </div>
+
+            <div class="simple-diagram">
+                <h3 style="text-align: center; margin-bottom: 30px; color: #667eea;">Direct Connect配送センターの構造</h3>
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: center;">
+                    <div class="diagram-item home-office">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🏢</div>
+                        <h3>あなたの会社</h3>
+                        <p>荷物の発送元</p>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 30px; border-radius: 15px; position: relative;">
+                        <div style="position: absolute; left: -15px; top: 50%; width: 30px; height: 100px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 15px; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; writing-mode: vertical-rl; font-size: 0.9em; animation: dataFlow 3s infinite;">Direct Connect</div>
+                        <h3 style="text-align: center; margin-bottom: 20px; color: #1976d2;">AWS配送センター</h3>
+                        
+                        <div class="vif-grid">
+                            <div class="vif-card private-vif">
+                                <div style="font-size: 2em; margin-bottom: 10px;">🏠</div>
+                                <strong>Private VIF</strong><br>
+                                <small>VPC専用窓口</small>
+                            </div>
+                            
+                            <div class="vif-card public-vif">
+                                <div style="font-size: 2em; margin-bottom: 10px;">🌐</div>
+                                <strong>Public VIF</strong><br>
+                                <small>パブリックサービス窓口</small>
+                            </div>
+                            
+                            <div class="vif-card transit-vif">
+                                <div style="font-size: 2em; margin-bottom: 10px;">🚛</div>
+                                <strong>Transit VIF</strong><br>
+                                <small>一括配送窓口</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 10px;">
+                    <strong>重要：</strong> 1つのDirect Connect接続で、複数のVIF（仮想インターフェイス）を作成できます！<br>
+                    まるで1つの専用道路から、異なる配送窓口にアクセスするようなイメージです。
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📦 3つの配送窓口（VIF）を詳しく見てみよう</h2>
+            <div class="analogy-cards">
+                <div class="analogy-card">
+                    <div class="analogy-icon">🏠</div>
+                    <h3>Private VIF<br>（プライベート仮想インターフェイス）</h3>
+                    <p><strong>特定のVPC専用の配送窓口</strong><br>
+                    あなたの会社のプライベートな荷物（データ）を、指定されたVPCにだけ配送します。</p>
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>配送先：</strong> EC2、RDS、Lambda など<br>
+                        <strong>料金：</strong> $0.05/時間（約$36/月）<br>
+                        <strong>最適な用途：</strong> 基本的なクラウド接続
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🌐</div>
+                    <h3>Public VIF<br>（パブリック仮想インターフェイス）</h3>
+                    <p><strong>AWSパブリックサービス専用窓口</strong><br>
+                    S3やDynamoDBなど、インターネットからアクセス可能なサービス向けの専用配送ルートです。</p>
+                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>配送先：</strong> S3、DynamoDB、CloudFront など<br>
+                        <strong>料金：</strong> $0.05/時間（約$36/月）<br>
+                        <strong>最適な用途：</strong> 大容量データ転送
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🚛</div>
+                    <h3>Transit VIF<br>（トランジット仮想インターフェイス）</h3>
+                    <p><strong>複数拠点への一括配送窓口</strong><br>
+                    Transit Gateway経由で、複数のVPCや他の拠点に効率的に配送できる統合窓口です。</p>
+                    <div style="background: #e1f5fe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>配送先：</strong> 複数VPC、支社、パートナー など<br>
+                        <strong>料金：</strong> $0.05/時間 + Transit Gateway料金<br>
+                        <strong>最適な用途：</strong> 複雑なネットワーク構成
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚖️ VPN vs Direct Connect - どちらを選ぶ？</h2>
+            <div class="step-by-step">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">選択基準チャート</h3>
+                
+                <div class="step-item" style="border-left-color: #a8edea;">
+                    <div class="step-number" style="background: #a8edea;">📮</div>
+                    <div class="step-content">
+                        <h3>VPN接続を選ぶべき場面</h3>
+                        <p><strong>✅ こんな時におすすめ：</strong><br>
+                        • 迅速にクラウド接続を開始したい<br>
+                        • 月のデータ転送量が10TB未満<br>
+                        • 複数拠点からの接続が必要<br>
+                        • 初期コストを抑えたい<br>
+                        • 災害対策・BCP目的</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #4facfe;">
+                    <div class="step-number" style="background: #4facfe;">🚚</div>
+                    <div class="step-content">
+                        <h3>Direct Connectを選ぶべき場面</h3>
+                        <p><strong>✅ こんな時におすすめ：</strong><br>
+                        • 月のデータ転送量が10TB以上<br>
+                        • 24時間365日安定した通信が必要<br>
+                        • リアルタイム性が重要<br>
+                        • セキュリティが最重要<br>
+                        • 長期的な利用が確定している</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #51cf66;">
+                    <div class="step-number" style="background: #51cf66;">🔄</div>
+                    <div class="step-content">
+                        <h3>ハイブリッド構成（両方使用）</h3>
+                        <p><strong>✅ 最強の組み合わせ：</strong><br>
+                        • Direct Connectをメイン回線として使用<br>
+                        • VPN接続をバックアップ回線として併設<br>
+                        • 冗長性と最適なコストパフォーマンスを両立<br>
+                        • 段階的な移行も可能</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💰 コスト比較：どちらがお得？</h2>
+            <div class="cost-comparison">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">月額料金の比較（1Gbps想定）</h3>
+                
+                <div style="margin: 30px 0;">
+                    <h4>📮 VPN接続のみ</h4>
+                    <div class="cost-bar" style="background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%); width: 20%; color: #333;">
+                        月額 $36 + データ転送料
+                    </div>
+                    <small style="color: #666;">※インターネット経由のデータ転送料金が高額になる場合あり</small>
+                </div>
+
+                <div style="margin: 30px 0;">
+                    <h4>🚚 Direct Connect（ホスト型）</h4>
+                    <div class="cost-bar" style="background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); width: 60%; color: white;">
+                        月額 5〜15万円 + 安い転送料
+                    </div>
+                    <small style="color: #666;">※大容量転送時は転送料金の安さでペイできる</small>
+                </div>
+
+                <div style="margin: 30px 0;">
+                    <h4>🔄 ハイブリッド構成</h4>
+                    <div class="cost-bar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: 70%; color: white;">
+                        月額 5〜15万円 + 冗長性
+                    </div>
+                    <small style="color: #666;">※最高の可用性とコスト効率を両立</small>
+                </div>
+
+                <div class="tip-box" style="margin-top: 30px;">
+                    <h4>💡 損益分岐点の目安</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>月10TB以上：</strong> Direct Connect（ホスト型）が有利</li>
+                        <li><strong>月100TB以上：</strong> Direct Connect（専用接続）が必須</li>
+                        <li><strong>高可用性が必要：</strong> ハイブリッド構成を検討</li>
+                        <li><strong>段階的導入：</strong> VPN → ホスト型 → 専用接続</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 実際の設定手順比較</h2>
+            
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>📮 VPN接続の設定手順</h3>
+                    <div style="text-align: left; margin-top: 15px;">
+                        <p><strong>⏱️ 所要時間：数時間</strong></p>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>カスタマーゲートウェイ作成</li>
+                            <li>仮想プライベートゲートウェイ作成</li>
+                            <li>VPN接続作成</li>
+                            <li>ルートテーブル更新</li>
+                            <li>オンプレ側ルーター設定</li>
+                            <li>接続テスト</li>
+                        </ol>
+                        <br>
+                        <p><strong>💰 初期費用：</strong> ほぼ無料</p>
+                        <p><strong>🎯 難易度：</strong> ★★☆☆☆</p>
+                    </div>
+                </div>
+                <div class="comparison-side direct-connect-side">
+                    <h3>🚚 Direct Connect設定手順</h3>
+                    <div style="text-align: left; margin-top: 15px;">
+                        <p><strong>⏱️ 所要時間：1〜3ヶ月</strong></p>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Direct Connect接続申請</li>
+                            <li>物理接続工事</li>
+                            <li>仮想インターフェイス作成</li>
+                            <li>BGP設定</li>
+                            <li>ルートテーブル更新</li>
+                            <li>接続テスト・最適化</li>
+                        </ol>
+                        <br>
+                        <p><strong>💰 初期費用：</strong> 数十万円〜</p>
+                        <p><strong>🎯 難易度：</strong> ★★★★☆</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 推奨導入パターン</h2>
+            <div class="step-by-step">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">段階的アプローチ</h3>
+                
+                <div class="step-item" style="border-left-color: #a8edea;">
+                    <div class="step-number" style="background: #a8edea;">1</div>
+                    <div class="step-content">
+                        <h3>Phase 1：VPN接続でクイックスタート</h3>
+                        <p><strong>目的：</strong> 迅速にクラウド接続を開始<br>
+                        <strong>期間：</strong> 1週間程度<br>
+                        <strong>効果：</strong> 基本的なクラウド機能をすぐに利用開始<br>
+                        <strong>コスト：</strong> 月額$36〜</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #4facfe;">
+                    <div class="step-number" style="background: #4facfe;">2</div>
+                    <div class="step-content">
+                        <h3>Phase 2：使用量増加でDirect Connect検討</h3>
+                        <p><strong>判断基準：</strong> 月10TB以上のデータ転送<br>
+                        <strong>選択肢：</strong> ホスト型接続から開始<br>
+                        <strong>効果：</strong> 安定した通信品質とコスト削減<br>
+                        <strong>コスト：</strong> 月額5〜15万円</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #51cf66;">
+                    <div class="step-number" style="background: #51cf66;">3</div>
+                    <div class="step-content">
+                        <h3>Phase 3：ハイブリッド構成で最適化</h3>
+                        <p><strong>構成：</strong> Direct Connect + VPN冗長化<br>
+                        <strong>効果：</strong> 99.9%以上の高可用性を実現<br>
+                        <strong>メリット：</strong> 最適なコストパフォーマンス<br>
+                        <strong>運用：</strong> 自動フェイルオーバー対応</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ よくある質問</h2>
+            <div class="faq-section">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🤔 VPNとDirect Connect、どちらから始めるべき？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>ほとんどの場合、VPN接続から始めることをお勧めします。</strong></p>
+                        <br>
+                        <p><strong>理由：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>すぐに開始できる（数時間〜1日）</li>
+                            <li>初期投資が少ない</li>
+                            <li>実際の使用量を把握できる</li>
+                            <li>後からDirect Connectを追加可能</li>
+                        </ul>
+                        <br>
+                        <p><strong>例外：</strong> 既に大量のデータ転送が確実な場合は、最初からDirect Connectを検討</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        💰 どのくらいのデータ量からDirect Connectがお得？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>一般的に月10TB以上からDirect Connectが有利になります。</strong></p>
+                        <br>
+                        <p><strong>計算例（月額）：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>VPN接続（10TB）：</strong> $36 + $900（転送料） = $936</li>
+                            <li><strong>Direct Connect（10TB）：</strong> $3,600 + $200（転送料） = $3,800</li>
+                            <li><strong>50TBの場合：</strong> VPN $4,536 vs Direct Connect $4,600</li>
+                            <li><strong>100TBの場合：</strong> VPN $9,036 vs Direct Connect $6,600</li>
+                        </ul>
+                        <br>
+                        <p><strong>💡 ポイント：</strong> 転送量だけでなく、安定性や遅延も考慮しましょう</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🔧 両方同時に使うことはできる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>はい！ハイブリッド構成がむしろ推奨です。</strong></p>
+                        <br>
+                        <p><strong>ハイブリッド構成のメリット：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>冗長性：</strong> 一方が障害でも継続通信</li>
+                            <li><strong>負荷分散：</strong> 用途に応じてルート使い分け</li>
+                            <li><strong>段階移行：</strong> VPN→Direct Connectの段階的移行</li>
+                            <li><strong>コスト最適化：</strong> トラフィック種別での使い分け</li>
+                        </ul>
+                        <br>
+                        <p><strong>設定例：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>大容量データ → Direct Connect経由</li>
+                            <li>緊急時・管理用 → VPN経由</li>
+                            <li>自動フェイルオーバー設定</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🏢 会社の規模による推奨は？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>会社規模別の推奨アプローチ：</strong></p>
+                        <br>
+                        <p><strong>🏪 スタートアップ・小規模：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>VPN接続でスタート</li>
+                            <li>成長に合わせてDirect Connect検討</li>
+                            <li>ホスト型接続から始める</li>
+                        </ul>
+                        <br>
+                        <p><strong>🏢 中規模企業：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>VPN接続 + Direct Connect（ホスト型）</li>
+                            <li>用途に応じて使い分け</li>
+                            <li>段階的にDirect Connect比重を増加</li>
+                        </ul>
+                        <br>
+                        <p><strong>🏭 大企業・エンタープライズ：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Direct Connect（専用接続）メイン</li>
+                            <li>VPN接続でバックアップ</li>
+                            <li>複数拠点でのハイブリッド構成</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✨ それぞれのメリット総まとめ</h2>
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">📮</div>
+                    <h3>VPN接続</h3>
+                    <p><strong>迅速・簡単・柔軟</strong><br>
+                    すぐに始められて<br>
+                    世界中どこからでも接続<br>
+                    <strong>月額$36〜</strong></p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🚚</div>
+                    <h3>Direct Connect</h3>
+                    <p><strong>高速・安定・大容量</strong><br>
+                    専用回線で安定通信<br>
+                    大容量転送で経済的<br>
+                    <strong>月額数万円〜</strong></p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🏠</div>
+                    <h3>Private VIF</h3>
+                    <p><strong>VPC専用接続</strong><br>
+                    プライベートな通信<br>
+                    最も一般的な用途<br>
+                    <strong>基本の接続方式</strong></p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🌐</div>
+                    <h3>Public VIF</h3>
+                    <p><strong>パブリックサービス</strong><br>
+                    S3・DynamoDB等<br>
+                    大容量データ転送<br>
+                    <strong>ストレージ特化</strong></p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🚛</div>
+                    <h3>Transit VIF</h3>
+                    <p><strong>複数拠点統合</strong><br>
+                    複雑なネットワーク<br>
+                    中央集権管理<br>
+                    <strong>エンタープライズ向け</strong></p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔄</div>
+                    <h3>ハイブリッド構成</h3>
+                    <p><strong>最強の組み合わせ</strong><br>
+                    冗長性と最適化<br>
+                    段階的移行可能<br>
+                    <strong>企業成長に対応</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="highlight-box">
+                <h2>🎯 総合まとめ</h2>
+                <div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+                    <p><strong>🌟 接続方式の選び方：</strong></p>
+                    <p>📮 <strong>VPN接続</strong> = 迅速・低コスト・柔軟性（書留郵便）</p>
+                    <p>🚚 <strong>Direct Connect</strong> = 高性能・安定・大容量（専用配送トラック）</p>
+                    <p>🔄 <strong>ハイブリッド</strong> = 冗長性・最適化・段階的移行</p>
+                    <br>
+                    <p><strong>🎯 VIFの使い分け：</strong></p>
+                    <p>🏠 <strong>Private VIF</strong> = VPC接続の基本（最も一般的）</p>
+                    <p>🌐 <strong>Public VIF</strong> = S3・DynamoDB等への高速アクセス</p>
+                    <p>🚛 <strong>Transit VIF</strong> = 複雑なネットワーク統合</p>
+                    <br>
+                    <p><strong>💡 成功への道筋：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Phase 1：</strong> VPN接続で迅速スタート</li>
+                        <li><strong>Phase 2：</strong> 使用量増加でDirect Connect検討</li>
+                        <li><strong>Phase 3：</strong> ハイブリッド構成で最適化</li>
+                        <li><strong>継続的改善：</strong> 定期的なコスト・パフォーマンス見直し</li>
+                    </ul>
+                    <br>
+                    <p><strong>🎯 最重要ポイント：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>まずは<strong>VPN接続で迅速開始</strong></li>
+                        <li>実際の使用量を把握してから<strong>段階的拡張</strong></li>
+                        <li>月10TB以上なら<strong>Direct Connect検討</strong></li>
+                        <li>可用性重視なら<strong>ハイブリッド構成</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#667eea' : '#5a6fd8';
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.analogy-card, .diagram-item, .vif-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1) rotate(1deg)';
+                    setTimeout(() => {
+                        this.style.transform = 'translateY(-10px)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // ステップアニメーション
+            const steps = document.querySelectorAll('.step-item');
+            function animateSteps() {
+                steps.forEach((step, index) => {
+                    setTimeout(() => {
+                        step.style.transform = 'translateX(15px) scale(1.02)';
+                        step.style.borderLeftColor = '#4facfe';
+                        
+                        setTimeout(() => {
+                            step.style.transform = 'translateX(0) scale(1)';
+                            step.style.borderLeftColor = '#667eea';
+                        }, 800);
+                    }, index * 500);
+                });
+            }
+            
+            // 10秒ごとにステップアニメーションを実行
+            setInterval(animateSteps, 10000);
+
+            // VIFカードアニメーション
+            const vifCards = document.querySelectorAll('.vif-card');
+            function animateVifCards() {
+                vifCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        if (card.classList.contains('private-vif')) {
+                            card.style.borderColor = '#5a6fd8';
+                        } else if (card.classList.contains('public-vif')) {
+                            card.style.borderColor = '#e879f9';
+                        } else if (card.classList.contains('transit-vif')) {
+                            card.style.borderColor = '#2196f3';
+                        }
+                        
+                        card.style.transform = 'translateY(-5px) scale(1.01)';
+                        
+                        setTimeout(() => {
+                            card.style.transform = 'translateY(0) scale(1)';
+                            if (card.classList.contains('private-vif')) {
+                                card.style.borderColor = '#667eea';
+                            } else if (card.classList.contains('public-vif')) {
+                                card.style.borderColor = '#f093fb';
+                            } else if (card.classList.contains('transit-vif')) {
+                                card.style.borderColor = '#4facfe';
+                            }
+                        }, 1000);
+                    }, index * 500);
+                });
+            }
+            
+            // 6秒ごとにVIFカードアニメーションを実行
+            setInterval(animateVifCards, 6000);
+        });
+    </script>
+</body>
+</html>

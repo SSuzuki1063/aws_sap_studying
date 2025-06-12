@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Elastic Disaster Recovery を災害対策で理解しよう</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.4em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .intro-analogy {
+            background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .intro-analogy h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .analogy-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .analogy-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .analogy-card:hover {
+            transform: translateY(-10px);
+            border-color: #ff6b6b;
+        }
+
+        .analogy-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .comparison-side {
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .everyday-side {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .aws-side {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+        }
+
+        .disaster-scenario {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .scenario-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .scenario-step {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .scenario-step:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .normal-office {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+        }
+
+        .disaster-hit {
+            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            color: white;
+        }
+
+        .backup-site {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            color: white;
+        }
+
+        .recovery-complete {
+            background: linear-gradient(135deg, #6c5ce7 0%, #5f3dc4 100%);
+            color: white;
+        }
+
+        .timeline-arrow {
+            position: absolute;
+            top: 50%;
+            left: 20%;
+            right: 20%;
+            height: 6px;
+            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
+            border-radius: 3px;
+            animation: recoveryFlow 4s infinite;
+        }
+
+        .timeline-arrow::before,
+        .timeline-arrow::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+
+        .timeline-arrow::before {
+            left: -8px;
+            border-width: 9px 12px 9px 0;
+            border-color: transparent #ff6b6b transparent transparent;
+        }
+
+        .timeline-arrow::after {
+            right: -8px;
+            border-width: 9px 0 9px 12px;
+            border-color: transparent transparent transparent #ee5a24;
+        }
+
+        .architecture-diagram {
+            background: #f8f9fa;
+            padding: 40px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .architecture-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .arch-component {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .arch-component:hover {
+            transform: translateY(-5px);
+        }
+
+        .source-system {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+        }
+
+        .replication-agent {
+            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            color: white;
+        }
+
+        .staging-area {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+            color: white;
+        }
+
+        .recovery-instances {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            color: white;
+        }
+
+        .step-by-step {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .step-item {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #ff6b6b;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .step-number {
+            background: #ff6b6b;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        .faq-section {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .faq-item {
+            background: white;
+            margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .faq-question {
+            background: #ff6b6b;
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #ee5a24;
+        }
+
+        .faq-answer {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .benefit-card {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .rto-rpo-section {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .rto-rpo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .rto-rpo-card {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .cost-comparison {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .cost-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .cost-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .traditional-dr {
+            background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);
+            color: white;
+        }
+
+        .aws-edr {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+        }
+
+        .no-dr {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes recoveryFlow {
+            0%, 100% {
+                opacity: 1;
+                transform: scaleX(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scaleX(1.1);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        .data-flow {
+            animation: pulse 3s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .comparison-table {
+                grid-template-columns: 1fr;
+            }
+            
+            .scenario-timeline {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .timeline-arrow {
+                top: 35%;
+                left: 50%;
+                right: auto;
+                width: 6px;
+                height: 80px;
+                transform: translateX(-50%);
+                transform-origin: center;
+                rotate: 90deg;
+            }
+            
+            .architecture-row {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .rto-rpo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cost-table {
+                grid-template-columns: 1fr;
+            }
+            
+            .step-item {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🏢 AWS Elastic Disaster Recovery</h1>
+            <p>災害対策・避難計画で理解する超入門ガイド</p>
+            <div class="intro-analogy">
+                <h2>🏢 本社 → 🔄 バックアップ → 🏭 緊急避難所（AWS）</h2>
+                <p>会社の災害対策を、身近な避難計画で例えて分かりやすく説明します！</p>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>🤔 AWS Elastic Disaster Recovery って何？</h2>
+            <div class="highlight-box">
+                <h3>📝 簡単に言うと...</h3>
+                <p style="font-size: 1.2em; margin-top: 15px;">
+                    <strong>会社のサーバーや大事なデータ</strong>を、<strong>AWS</strong>に<strong>常時バックアップ</strong>しておき、
+                    災害が起きた時に<strong>すぐに代替システムを起動</strong>できるサービスです
+                </p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>🏠 災害対策の例</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>本社ビル</strong>で火災や地震が発生！<br>
+                        📋 <strong>事前に準備</strong>した<strong>避難所</strong>で<br>
+                        すぐに業務を再開したい</p>
+                        <br>
+                        <p>👆 普段から準備が必要...<br>
+                        🏭 <strong>緊急避難所</strong>を用意しよう！</p>
+                    </div>
+                </div>
+                <div class="comparison-side aws-side">
+                    <h3>☁️ AWSの世界</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>会社のサーバー</strong>で障害が発生！<br>
+                        💻 <strong>事前にコピー</strong>した<strong>AWS上のサーバー</strong>で<br>
+                        すぐにシステムを復旧したい</p>
+                        <br>
+                        <p>👆 普段から準備が必要...<br>
+                        ☁️ <strong>AWS EDR</strong>を使おう！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🏢 災害復旧のシナリオを見てみよう</h2>
+            <div class="disaster-scenario">
+                <h3 style="text-align: center; margin-bottom: 30px; color: #ff6b6b;">⚡ 災害発生から復旧までの流れ</h3>
+                
+                <div class="scenario-timeline">
+                    <div class="scenario-step normal-office">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🏢</div>
+                        <h4>平常時</h4>
+                        <p><strong>本社で正常運営</strong><br>
+                        AWS EDRが<br>常時データを<br>バックアップ中</p>
+                        <small>📊 毎分データ同期</small>
+                    </div>
+                    
+                    <div class="timeline-arrow"></div>
+                    
+                    <div class="scenario-step disaster-hit pulse-animation">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🔥</div>
+                        <h4>災害発生</h4>
+                        <p><strong>サーバー停止</strong><br>
+                        本社のシステムが<br>使えなくなった！</p>
+                        <small>⚠️ 緊急事態発生</small>
+                    </div>
+                    
+                    <div class="timeline-arrow"></div>
+                    
+                    <div class="scenario-step backup-site">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🚀</div>
+                        <h4>EDR起動</h4>
+                        <p><strong>AWS上で復旧開始</strong><br>
+                        バックアップから<br>システムを起動</p>
+                        <small>⏱️ 数分〜数時間</small>
+                    </div>
+                    
+                    <div class="timeline-arrow"></div>
+                    
+                    <div class="scenario-step recovery-complete">
+                        <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
+                        <h4>復旧完了</h4>
+                        <p><strong>業務再開</strong><br>
+                        AWS上で<br>通常通り運営</p>
+                        <small>🎯 目標時間内復旧</small>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>💡 災害対策のポイント</h3>
+                    <p>常時バックアップ → 災害発生 → ワンクリック復旧 → 業務継続</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🏗️ AWS EDRの4つの重要な要素</h2>
+            <div class="analogy-cards">
+                <div class="analogy-card">
+                    <div class="analogy-icon">👨‍💼</div>
+                    <h3>レプリケーションエージェント<br>= 専属コピー係</h3>
+                    <p><strong>源データの監視役</strong>です。<br>
+                    書類整理係のように、<strong>本社の重要書類</strong>（データ）を<br>
+                    <strong>常時チェック</strong>して変更があるたびに<br>
+                    避難所に<strong>最新版をコピー</strong>します。</p>
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>特徴:</strong> 24時間365日監視<br>
+                        <strong>頻度:</strong> リアルタイム同期
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🏭</div>
+                    <h3>ステージングエリア<br>= 避難所の準備倉庫</h3>
+                    <p><strong>緊急時の準備場所</strong>です。<br>
+                    避難所の倉庫のように、<br>
+                    本社からコピーした書類やデータを<br>
+                    <strong>すぐに使える状態</strong>で保管します。</p>
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>役割:</strong> データの一時保管<br>
+                        <strong>状態:</strong> 即座に起動可能
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🏢</div>
+                    <h3>リカバリインスタンス<br>= 緊急時の代替オフィス</h3>
+                    <p><strong>実際の業務継続場所</strong>です。<br>
+                    避難所の仮設オフィスのように、<br>
+                    災害時に<strong>実際の業務</strong>を行う<br>
+                    <strong>代替システム</strong>が動く場所です。</p>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>機能:</strong> 本格的な業務継続<br>
+                        <strong>性能:</strong> 本社と同等
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">📋</div>
+                    <h3>コンソール<br>= 災害対策本部</h3>
+                    <p><strong>災害対応の司令塔</strong>です。<br>
+                    災害対策本部のように、<br>
+                    <strong>復旧作業の進捗</strong>を監視し、<br>
+                    <strong>ワンクリック</strong>で復旧を開始します。</p>
+                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>操作:</strong> 簡単な画面操作<br>
+                        <strong>監視:</strong> リアルタイム状況確認
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 システム構成を図で見てみよう</h2>
+            <div class="architecture-diagram">
+                <h3 style="text-align: center; margin-bottom: 30px; color: #ff6b6b;">📊 AWS EDR の全体像</h3>
+                
+                <div class="architecture-row">
+                    <div class="arch-component source-system">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🏢</div>
+                        <h4>本社システム</h4>
+                        <p><strong>ソースシステム</strong></p>
+                        <small>物理サーバー / VMware<br>Windows / Linux</small>
+                    </div>
+                    
+                    <div style="text-align: center; flex: 1; color: #ff6b6b;">
+                        <div style="font-size: 2em;">→ 📋</div>
+                        <p><strong>常時監視・コピー</strong></p>
+                    </div>
+                    
+                    <div class="arch-component replication-agent data-flow">
+                        <div style="font-size: 3em; margin-bottom: 15px;">👨‍💼</div>
+                        <h4>レプリケーション<br>エージェント</h4>
+                        <p><strong>コピー係</strong></p>
+                        <small>変更を即座に検知<br>最小限のデータ転送</small>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin: 20px 0; color: #ff6b6b;">
+                    <div style="font-size: 2em;">↓ 🌐</div>
+                    <p><strong>インターネット経由でAWSへ</strong></p>
+                </div>
+
+                <div class="architecture-row">
+                    <div class="arch-component staging-area">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🏭</div>
+                        <h4>ステージングエリア</h4>
+                        <p><strong>準備倉庫</strong></p>
+                        <small>低コストインスタンス<br>t3.micro / t3.small</small>
+                    </div>
+                    
+                    <div style="text-align: center; flex: 1; color: #ff6b6b;">
+                        <div style="font-size: 2em;">→ 🚀</div>
+                        <p><strong>災害時に変換</strong></p>
+                    </div>
+                    
+                    <div class="arch-component recovery-instances">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🏢</div>
+                        <h4>リカバリ<br>インスタンス</h4>
+                        <p><strong>代替オフィス</strong></p>
+                        <small>本格的な性能<br>m5.large / c5.xlarge</small>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>⚡ データの流れ</h3>
+                    <p>本社システム → エージェント監視 → 変更分をAWSに送信 → ステージングに保存 → 災害時にリカバリインスタンス起動</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⏱️ RTO・RPOって何？復旧目標を理解しよう</h2>
+            <div class="rto-rpo-section">
+                <h3 style="text-align: center; margin-bottom: 20px;">🎯 災害復旧の2つの重要な目標</h3>
+                
+                <div class="rto-rpo-grid">
+                    <div class="rto-rpo-card">
+                        <div style="font-size: 4em; margin-bottom: 15px;">⏰</div>
+                        <h3>RTO (Recovery Time Objective)</h3>
+                        <h4>= 復旧時間目標</h4>
+                        <br>
+                        <p><strong>🏢 災害対策の例:</strong><br>
+                        「火災から何時間で<br>代替オフィスで業務再開？」</p>
+                        <br>
+                        <p><strong>💻 AWS EDRの場合:</strong><br>
+                        「システム障害から<br>何分で復旧完了？」</p>
+                        <br>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                            <strong>AWS EDRの目標:</strong><br>
+                            <span style="font-size: 1.3em; color: #ffeaa7;">⚡ 数分〜数時間</span>
+                        </div>
+                    </div>
+                    
+                    <div class="rto-rpo-card">
+                        <div style="font-size: 4em; margin-bottom: 15px;">📊</div>
+                        <h3>RPO (Recovery Point Objective)</h3>
+                        <h4>= 復旧ポイント目標</h4>
+                        <br>
+                        <p><strong>🏢 災害対策の例:</strong><br>
+                        「最大何時間前のデータまで<br>失ってもOK？」</p>
+                        <br>
+                        <p><strong>💻 AWS EDRの場合:</strong><br>
+                        「最大何分前のデータまで<br>失ってもOK？」</p>
+                        <br>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                            <strong>AWS EDRの目標:</strong><br>
+                            <span style="font-size: 1.3em; color: #ffeaa7;">📈 数秒〜数分</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; margin-top: 30px;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">💡 具体的な例で理解しよう</h3>
+                    <div style="text-align: left; font-size: 1.1em;">
+                        <p><strong>📋 シナリオ:</strong> 朝10:00にサーバー障害発生</p>
+                        <br>
+                        <p><strong>⏰ RTO = 2時間の場合:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>12:00（正午）までに復旧完了が目標</li>
+                            <li>AWS EDRで実際は10:15には復旧（大幅にクリア！）</li>
+                        </ul>
+                        <br>
+                        <p><strong>📊 RPO = 15分の場合:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>9:45以降のデータは復旧できればOK</li>
+                            <li>AWS EDRなら9:59のデータまで復旧可能（余裕でクリア！）</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💰 コスト比較 - 従来の災害対策 vs AWS EDR</h2>
+            <div class="cost-comparison">
+                <h3 style="text-align: center; margin-bottom: 30px; color: #2d3436;">💸 どのくらいお得？</h3>
+                
+                <div class="cost-table">
+                    <div class="cost-item traditional-dr">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🏢</div>
+                        <h3>従来のDR</h3>
+                        <p><strong>物理的な代替サイト</strong></p>
+                        <br>
+                        <div style="text-align: left;">
+                            <p><strong>💰 初期費用:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>データセンター構築: 数千万円〜</li>
+                                <li>機器購入: 数百万円〜</li>
+                                <li>ネットワーク構築: 数百万円</li>
+                            </ul>
+                            <br>
+                            <p><strong>🔄 運用費用:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>月額賃料: 50万円〜</li>
+                                <li>保守費用: 20万円〜/月</li>
+                                <li>人件費: 30万円〜/月</li>
+                            </ul>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>総額: 年間数千万円</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-item aws-edr">
+                        <div style="font-size: 3em; margin-bottom: 15px;">☁️</div>
+                        <h3>AWS EDR</h3>
+                        <p><strong>クラウド型DR</strong></p>
+                        <br>
+                        <div style="text-align: left;">
+                            <p><strong>💰 初期費用:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>セットアップ: 0円</li>
+                                <li>機器購入: 0円</li>
+                                <li>設定作業: 数日</li>
+                            </ul>
+                            <br>
+                            <p><strong>🔄 運用費用:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>ステージング: 3〜10万円/月</li>
+                                <li>データ転送: 1〜5万円/月</li>
+                                <li>復旧時のみ: 本格料金</li>
+                            </ul>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>総額: 年間50〜200万円</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-item no-dr">
+                        <div style="font-size: 3em; margin-bottom: 15px;">❌</div>
+                        <h3>災害対策なし</h3>
+                        <p><strong>何も備えない場合</strong></p>
+                        <br>
+                        <div style="text-align: left;">
+                            <p><strong>💰 平常時費用:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>DR関連: 0円</li>
+                                <li>備え: なし</li>
+                            </ul>
+                            <br>
+                            <p><strong>⚠️ 災害時リスク:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>業務停止: 数日〜数週間</li>
+                                <li>売上損失: 数千万円〜</li>
+                                <li>信用失墜: プライスレス</li>
+                                <li>復旧作業: 数百万円〜</li>
+                            </ul>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>リスク: 計り知れない損失</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>🎯 AWS EDRの圧倒的メリット</h3>
+                    <div style="text-align: left; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <div>
+                            <h4>💰 コスト面</h4>
+                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                <li>初期費用: <strong>ほぼ0円</strong></li>
+                                <li>運用費用: <strong>従来の1/10以下</strong></li>
+                                <li>使った分だけ課金</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4>⚡ 技術面</h4>
+                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                <li>設定: <strong>数時間〜数日</strong></li>
+                                <li>復旧: <strong>数分〜数時間</strong></li>
+                                <li>管理: <strong>GUI操作のみ</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 実際の設定手順（超簡単版）</h2>
+            <div class="step-by-step">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>避難計画の策定</h3>
+                        <p><strong>AWS EDRの初期設定</strong><br>
+                        → 災害対策本部（AWSコンソール）にアクセス<br>
+                        → 「何を」「どこに」「どのくらいの頻度で」バックアップするかを決定<br>
+                        → レプリケーション設定テンプレートを作成</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>コピー係を本社に配置</h3>
+                        <p><strong>レプリケーションエージェントをインストール</strong><br>
+                        → 保護したいサーバーに「コピー係」ソフトウェアをインストール<br>
+                        → エージェントがAWSとの通信チャネルを確立<br>
+                        → 初回の完全バックアップを開始（数時間〜1日）</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>避難所の準備</h3>
+                        <p><strong>ステージングエリアの自動構築</strong><br>
+                        → AWS上に「準備倉庫」が自動的に作成される<br>
+                        → 低コストなインスタンスで常時データを同期<br>
+                        → 変更差分のみを継続的にレプリケーション</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>避難訓練の実施</h3>
+                        <p><strong>復旧テストの実行</strong><br>
+                        → 「テスト復旧」機能で実際の復旧手順を確認<br>
+                        → 本番環境に影響なしで復旧時間を測定<br>
+                        → 問題があれば設定を調整</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>緊急時の対応準備</h3>
+                        <p><strong>フェイルオーバー計画の準備</strong><br>
+                        → 災害発生時の担当者と連絡手順を決定<br>
+                        → ワンクリック復旧の手順書を作成<br>
+                        → 社内への通知方法を準備</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <h3>災害対策完了！</h3>
+                        <p><strong>24時間365日の保護開始</strong><br>
+                        → コピー係が常時監視・バックアップを実行<br>
+                        → 災害発生時はワンクリックで復旧開始<br>
+                        → 安心して本業に集中できる環境が完成</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ よくある質問</h2>
+            <div class="faq-section">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🤔 どんなシステムが対象になるの？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>ほぼ全てのシステム</strong>が対象です！</p>
+                        <br>
+                        <p><strong>対応OS:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Windows Server（2008以降）</li>
+                            <li>Linux（RHEL、Ubuntu、CentOS等）</li>
+                        </ul>
+                        <br>
+                        <p><strong>対応環境:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>物理サーバー</li>
+                            <li>VMware vSphere環境</li>
+                            <li>他のクラウド環境（Azure、GCP）</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        ⚡ 復旧にはどのくらい時間がかかるの？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p>システムの規模によりますが、<strong>驚くほど高速</strong>です！</p>
+                        <br>
+                        <p><strong>⏰ 復旧時間の目安:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>起動指示</strong>: 数クリック（1分以内）</li>
+                            <li><strong>小規模システム</strong>: 5〜15分</li>
+                            <li><strong>中規模システム</strong>: 15〜60分</li>
+                            <li><strong>大規模システム</strong>: 1〜4時間</li>
+                        </ul>
+                        <br>
+                        <p>従来の災害対策（数日〜数週間）と比べると<strong>圧倒的に高速</strong>です！</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        💰 料金体系はどうなってるの？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>使った分だけ</strong>の明確な料金体系です！</p>
+                        <br>
+                        <p><strong>💰 主な料金要素:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>ステージング費用</strong>: 1台あたり月額$5〜30（保護対象のサーバー数による）</li>
+                            <li><strong>データ転送費用</strong>: $0.09/GB（初回のみ、差分は微小）</li>
+                            <li><strong>復旧時のEC2費用</strong>: 使用期間のみ（通常のEC2料金）</li>
+                        </ul>
+                        <br>
+                        <p><strong>💡 コツ:</strong> 普段は最小コスト、災害時のみ本格運用で経済的！</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🔧 設定は本当に簡単？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>めちゃくちゃ簡単</strong>です！ ITに詳しくない人でも大丈夫！</p>
+                        <br>
+                        <p><strong>🎯 簡単な理由:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>ウィザード形式</strong>: 画面の指示に従うだけ</li>
+                            <li><strong>自動検出</strong>: サーバーの情報を自動で認識</li>
+                            <li><strong>テンプレート</strong>: よくある設定パターンを用意済み</li>
+                            <li><strong>日本語サポート</strong>: 困った時は日本語で相談OK</li>
+                        </ul>
+                        <br>
+                        <p><strong>⏱️ 設定時間:</strong> 1台あたり30分〜2時間程度</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🌍 どこのリージョンを選べばいい？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>日本にある会社なら東京リージョン</strong>がおすすめです！</p>
+                        <br>
+                        <p><strong>🏯 東京リージョンのメリット:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>低遅延</strong>: 日本からのアクセスが最速</li>
+                            <li><strong>法令対応</strong>: 日本の法律・規制に準拠</li>
+                            <li><strong>データ主権</strong>: データが日本国内に保管</li>
+                            <li><strong>災害分散</strong>: 本社と異なる地域でリスク分散</li>
+                        </ul>
+                        <br>
+                        <p><strong>🌏 別の選択肢:</strong> さらなるリスク分散が必要なら大阪リージョンも検討</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✨ AWS EDRの主要メリット</h2>
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">⚡</div>
+                    <h3>圧倒的な高速復旧</h3>
+                    <p>従来の数日〜数週間から、数分〜数時間に短縮</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">💰</div>
+                    <h3>大幅なコスト削減</h3>
+                    <p>従来の災害対策の1/10以下のコストで本格的なDRを実現</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔧</div>
+                    <h3>簡単設定・管理</h3>
+                    <p>ウィザード形式の設定と直感的な管理画面</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🌐</div>
+                    <h3>幅広い対応環境</h3>
+                    <p>物理、VMware、他クラウドからの移行が可能</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔄</div>
+                    <h3>継続的レプリケーション</h3>
+                    <p>リアルタイムに近い同期でデータ損失を最小化</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🧪</div>
+                    <h3>非破壊テスト</h3>
+                    <p>本番に影響なしで復旧手順を定期的にテスト可能</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">📊</div>
+                    <h3>可視化・監視</h3>
+                    <p>レプリケーション状況をリアルタイムで監視</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🎯</div>
+                    <h3>柔軟な復旧オプション</h3>
+                    <p>テスト、フェイルオーバー、フェイルバックを自由に選択</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="highlight-box">
+                <h2>🎯 まとめ</h2>
+                <div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+                    <p>👨‍💼 <strong>レプリケーションエージェント</strong> = 専属コピー係（常時データ監視）</p>
+                    <p>🏭 <strong>ステージングエリア</strong> = 避難所の準備倉庫（低コストで待機）</p>
+                    <p>🏢 <strong>リカバリインスタンス</strong> = 緊急時の代替オフィス（本格業務継続）</p>
+                    <p>📋 <strong>EDRコンソール</strong> = 災害対策本部（ワンクリック復旧）</p>
+                    <br>
+                    <p>この4つが連携することで、<strong>数分で業務継続</strong>を実現します！</p>
+                    <br>
+                    <p><strong>🎯 AWS EDRで得られるもの：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>💰 従来の1/10のコストで本格的な災害対策</li>
+                        <li>⚡ 数分〜数時間での超高速復旧</li>
+                        <li>😌 24時間365日の安心感</li>
+                        <li>🎯 ビジネス継続性の大幅向上</li>
+                    </ul>
+                    <br>
+                    <p><strong>💡 次のステップ:</strong> まずは小さなシステムから始めて、徐々に保護範囲を拡大しましょう！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#ff6b6b' : '#ee5a24';
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.analogy-card, .scenario-step, .arch-component');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1) rotate(1deg)';
+                    setTimeout(() => {
+                        this.style.transform = this.style.transform.includes('translateY') ? 
+                            this.style.transform : 'translateY(-10px)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // 災害シナリオのアニメーション
+            const scenarioSteps = document.querySelectorAll('.scenario-step');
+            function animateScenario() {
+                scenarioSteps.forEach((step, index) => {
+                    setTimeout(() => {
+                        step.style.transform = 'scale(1.1)';
+                        step.style.boxShadow = '0 20px 40px rgba(255,107,107,0.3)';
+                        
+                        setTimeout(() => {
+                            step.style.transform = 'scale(1)';
+                            step.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                        }, 1000);
+                    }, index * 800);
+                });
+            }
+            
+            // 15秒ごとに災害シナリオアニメーションを実行
+            setInterval(animateScenario, 15000);
+
+            // データフローアニメーション
+            const dataFlowElements = document.querySelectorAll('.data-flow');
+            setInterval(() => {
+                dataFlowElements.forEach(element => {
+                    element.style.transform = 'scale(1.05)';
+                    element.style.boxShadow = '0 15px 35px rgba(253,121,168,0.3)';
+                    
+                    setTimeout(() => {
+                        element.style.transform = 'scale(1)';
+                        element.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                    }, 1500);
+                });
+            }, 3000);
+
+            // ステップアニメーション
+            const steps = document.querySelectorAll('.step-item');
+            function animateSteps() {
+                steps.forEach((step, index) => {
+                    setTimeout(() => {
+                        step.style.transform = 'translateX(15px) scale(1.02)';
+                        step.style.borderLeftColor = '#ee5a24';
+                        
+                        setTimeout(() => {
+                            step.style.transform = 'translateX(0) scale(1)';
+                            step.style.borderLeftColor = '#ff6b6b';
+                        }, 800);
+                    }, index * 400);
+                });
+            }
+            
+            // 12秒ごとにステップアニメーションを実行
+            setInterval(animateSteps, 12000);
+        });
+    </script>
+</body>
+</html>
