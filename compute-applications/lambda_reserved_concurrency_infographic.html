@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lambda 予約済み同時実行数とは？</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Noto Sans JP', Arial, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b95 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .analogy-section {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .analogy-section::before {
+            content: '🍽️';
+            font-size: 4rem;
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            opacity: 0.3;
+        }
+        
+        .analogy-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .restaurant-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .restaurant-side {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .seats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .seat {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid;
+        }
+        
+        .seat.available {
+            background: #2ecc71;
+            border-color: #27ae60;
+            color: white;
+        }
+        
+        .seat.reserved {
+            background: #3498db;
+            border-color: #2980b9;
+            color: white;
+        }
+        
+        .seat.occupied {
+            background: #e74c3c;
+            border-color: #c0392b;
+            color: white;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+        
+        .concept-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .concept-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid;
+            transition: transform 0.3s ease;
+        }
+        
+        .concept-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .concept-card.benefit {
+            border-left-color: #2ecc71;
+        }
+        
+        .concept-card.caution {
+            border-left-color: #f39c12;
+        }
+        
+        .concept-card.setting {
+            border-left-color: #9b59b6;
+        }
+        
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .comparison-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 30px 0;
+        }
+        
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .comparison-table th {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .highlight {
+            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #16a085;
+        }
+        
+        .highlight-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .restaurant-visual {
+                grid-template-columns: 1fr;
+            }
+            
+            .concept-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .seats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .legend {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 AWS Lambda 予約済み同時実行数</h1>
+            <p>レストランの席予約システムで理解しよう！</p>
+        </div>
+        
+        <div class="content">
+            <div class="analogy-section">
+                <h2 class="analogy-title">
+                    <span>🍽️</span>
+                    レストランの席予約システムに例えると...
+                </h2>
+                
+                <div class="restaurant-visual">
+                    <div class="restaurant-side">
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">🏪 通常のレストラン（設定なし）</h3>
+                        <p style="margin-bottom: 15px; font-size: 0.9rem;">全ての席が早い者勝ち！</p>
+                        <div class="seats-grid">
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat available">🪑</div>
+                            <div class="seat available">🪑</div>
+                        </div>
+                        <p style="font-size: 0.9rem; color: #7f8c8d;">
+                            人気のお客さんが来ると、他の人は席に座れない可能性が...
+                        </p>
+                    </div>
+                    
+                    <div class="restaurant-side">
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">🏪 予約席ありレストラン（設定あり）</h3>
+                        <p style="margin-bottom: 15px; font-size: 0.9rem;">重要なお客さん用に席を確保！</p>
+                        <div class="seats-grid">
+                            <div class="seat reserved">📋</div>
+                            <div class="seat reserved">📋</div>
+                            <div class="seat reserved">📋</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat occupied">👤</div>
+                            <div class="seat available">🪑</div>
+                            <div class="seat available">🪑</div>
+                            <div class="seat available">🪑</div>
+                        </div>
+                        <p style="font-size: 0.9rem; color: #7f8c8d;">
+                            重要なお客さんは必ず席を確保できる！
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color available" style="background: #2ecc71; border-color: #27ae60;"></div>
+                        <span>空席（利用可能）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color reserved" style="background: #3498db; border-color: #2980b9;"></div>
+                        <span>予約席（確保済み）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color occupied" style="background: #e74c3c; border-color: #c0392b;"></div>
+                        <span>使用中</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="highlight">
+                <span class="highlight-icon">💡</span>
+                <strong>つまり...</strong> Lambda の予約済み同時実行数とは、特定のLambda関数が「必ず使える実行枠」を事前に確保しておく仕組みです！
+            </div>
+            
+            <div class="concept-section">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">📊 Lambda での実際の仕組み</h2>
+                
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>項目</th>
+                                <th>レストランの例</th>
+                                <th>Lambda の実際</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>席 / 実行環境</strong></td>
+                                <td>レストランの席</td>
+                                <td>Lambda の同時実行環境</td>
+                            </tr>
+                            <tr>
+                                <td><strong>お客さん</strong></td>
+                                <td>レストランのお客さん</td>
+                                <td>Lambda へのリクエスト</td>
+                            </tr>
+                            <tr>
+                                <td><strong>予約席</strong></td>
+                                <td>VIP客用の確保された席</td>
+                                <td>特定関数用の予約済み同時実行数</td>
+                            </tr>
+                            <tr>
+                                <td><strong>総席数</strong></td>
+                                <td>レストランの総席数（50席）</td>
+                                <td>AWSアカウントの同時実行上限（1000など）</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="concept-grid">
+                <div class="concept-card benefit">
+                    <div class="card-icon">✅</div>
+                    <div class="card-title">メリット</div>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>確実な実行保証</strong><br>重要な関数が必ず動く</li>
+                        <li><strong>予測可能な性能</strong><br>レスポンス時間が安定</li>
+                        <li><strong>他関数の影響を回避</strong><br>リソース競合を防止</li>
+                    </ul>
+                </div>
+                
+                <div class="concept-card caution">
+                    <div class="card-icon">⚠️</div>
+                    <div class="card-title">注意点</div>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>コスト増加の可能性</strong><br>使わない分も確保される</li>
+                        <li><strong>全体の上限は変わらない</strong><br>他の関数が使える枠が減る</li>
+                        <li><strong>適切な設定が重要</strong><br>過剰確保は無駄になる</li>
+                    </ul>
+                </div>
+                
+                <div class="concept-card setting">
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">設定方法</div>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>AWS Console</strong><br>Lambda関数の設定から</li>
+                        <li><strong>AWS CLI</strong><br>put-provisioned-concurrency-config</li>
+                        <li><strong>CloudFormation</strong><br>IaCで管理も可能</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="concept-section">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">🔄 Reserved Concurrency vs Provisioned Concurrency</h2>
+                <p style="margin-bottom: 30px; font-size: 1.1rem; color: #5d6d7e;">
+                    よく混同される2つの機能ですが、実は<strong>全く違う目的</strong>の機能です！
+                </p>
+                
+                <div class="restaurant-visual">
+                    <div class="restaurant-side">
+                        <h3 style="color: #e74c3c; margin-bottom: 15px;">📋 Reserved Concurrency</h3>
+                        <p style="margin-bottom: 15px; font-size: 0.9rem; font-weight: bold;">「席を確保」= 実行枠の上限設定</p>
+                        <div style="background: #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-size: 1.5rem;">🏃‍♂️</span>
+                                <span style="font-weight: bold;">お客さんが来てから席の準備開始</span>
+                            </div>
+                            <div style="font-size: 0.9rem; color: #2d3436;">
+                                席は確保されているが、テーブルセッティングに時間がかかる
+                            </div>
+                        </div>
+                        <div class="seats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="seat reserved">📋</div>
+                            <div class="seat reserved">📋</div>
+                            <div class="seat reserved">📋</div>
+                        </div>
+                        <ul style="font-size: 0.9rem; margin-left: 20px; color: #2d3436;">
+                            <li>実行枠の上限を設定</li>
+                            <li>他の関数からリソースを保護</li>
+                            <li>コールドスタートは発生する</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="restaurant-side">
+                        <h3 style="color: #00b894; margin-bottom: 15px;">⚡ Provisioned Concurrency</h3>
+                        <p style="margin-bottom: 15px; font-size: 0.9rem; font-weight: bold;">「席の事前準備」= 実行環境の事前起動</p>
+                        <div style="background: #a8f5e5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-size: 1.5rem;">✨</span>
+                                <span style="font-weight: bold;">お客さんが来る前に席の準備完了</span>
+                            </div>
+                            <div style="font-size: 0.9rem; color: #2d3436;">
+                                テーブルセッティング済み、すぐに座れる
+                            </div>
+                        </div>
+                        <div class="seats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="seat" style="background: #00b894; border-color: #00a085; color: white;">⚡</div>
+                            <div class="seat" style="background: #00b894; border-color: #00a085; color: white;">⚡</div>
+                            <div class="seat" style="background: #00b894; border-color: #00a085; color: white;">⚡</div>
+                        </div>
+                        <ul style="font-size: 0.9rem; margin-left: 20px; color: #2d3436;">
+                            <li>実行環境を事前に起動</li>
+                            <li>コールドスタートを完全回避</li>
+                            <li>レスポンス時間が最速・最安定</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="background: #e8f4f8; border-left: 4px solid #3498db; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <span style="font-size: 1.5rem;">🔗</span>
+                        <strong style="color: #2c3e50;">2つの機能は組み合わせ可能！</strong>
+                    </div>
+                    <p style="color: #34495e; margin-bottom: 10px;">
+                        Reserved Concurrency で実行枠を確保し、その中の一部をProvisioned Concurrency で事前起動することができます。
+                    </p>
+                    <div style="background: white; padding: 15px; border-radius: 8px; font-size: 0.9rem;">
+                        <strong>例：</strong> Reserved Concurrency = 10、Provisioned Concurrency = 3<br>
+                        → 10個の確保された実行枠のうち、3個は常時起動済み
+                    </div>
+                </div>
+            </div>
+            
+            <div class="concept-section">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">💰 コストと用途の比較</h2>
+                
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>項目</th>
+                                <th>Reserved Concurrency</th>
+                                <th>Provisioned Concurrency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>主な目的</strong></td>
+                                <td>実行枠の確保・制限</td>
+                                <td>コールドスタートの回避</td>
+                            </tr>
+                            <tr>
+                                <td><strong>コスト</strong></td>
+                                <td>無料（実行時のみ課金）</td>
+                                <td>有料（常時課金）</td>
+                            </tr>
+                            <tr>
+                                <td><strong>レスポンス時間</strong></td>
+                                <td>コールドスタート有り</td>
+                                <td>常に高速</td>
+                            </tr>
+                            <tr>
+                                <td><strong>適用場面</strong></td>
+                                <td>リソース保護、スロットリング</td>
+                                <td>リアルタイムAPI、即応性重視</td>
+                            </tr>
+                            <tr>
+                                <td><strong>設定の複雑さ</strong></td>
+                                <td>シンプル</td>
+                                <td>やや複雑（バージョン管理等）</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="highlight">
+                <span class="highlight-icon">🎯</span>
+                <strong>いつ使う？</strong> Reserved Concurrency はリソース保護、Provisioned Concurrency は性能最適化。目的に応じて使い分けや組み合わせを検討しましょう。
+            </div>
+            
+            <div style="background: #2c3e50; color: white; padding: 30px; border-radius: 15px; text-align: center; margin-top: 40px;">
+                <h3 style="margin-bottom: 15px;">🚀 まとめ</h3>
+                <p style="font-size: 1.1rem; line-height: 1.8;">
+                    Lambda の予約済み同時実行数は、レストランの予約席のように<br>
+                    <strong>「重要な処理のために実行環境を事前確保する機能」</strong>です。<br>
+                    適切に設定することで、安定したサービス提供が可能になります！
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

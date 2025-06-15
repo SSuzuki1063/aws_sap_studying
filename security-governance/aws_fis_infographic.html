@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Fault Injection Simulator 完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #FF9500, #FF6B35);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-conic-gradient(from 0deg, transparent 0deg 10deg, rgba(255,255,255,0.1) 10deg 20deg);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .section {
+            padding: 40px;
+            border-bottom: 3px solid #f0f0f0;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 2.5em;
+            color: #FF6B35;
+            margin-bottom: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(45deg, #FF9500, #FF6B35);
+            border-radius: 2px;
+        }
+        
+        .analogy-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .analogy-box h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .analogy-box .icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: white;
+            border: 3px solid #f0f0f0;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: #FF6B35;
+            box-shadow: 0 15px 30px rgba(255, 107, 53, 0.2);
+        }
+        
+        .feature-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .feature-card h4 {
+            font-size: 1.5em;
+            color: #FF6B35;
+            margin-bottom: 15px;
+        }
+        
+        .workflow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .workflow-step {
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .workflow-step:hover {
+            transform: scale(1.1);
+            background: #667eea;
+            color: white;
+        }
+        
+        .workflow-step .step-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .workflow-step .step-text {
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        .workflow-arrow {
+            font-size: 2em;
+            color: #667eea;
+            margin: 0 10px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(45deg, #FF9500, #FF6B35);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .highlight {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .aws-services {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .aws-service {
+            background: #232f3e;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            margin: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .aws-service:hover {
+            background: #FF9500;
+            transform: scale(1.05);
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            .section-title {
+                font-size: 2em;
+            }
+            .workflow {
+                flex-direction: column;
+            }
+            .workflow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1>🔧 AWS Fault Injection Simulator</h1>
+            <p>システムの「健康診断」を行う魔法のツール</p>
+        </div>
+
+        <!-- FISとは何か -->
+        <div class="section">
+            <h2 class="section-title">🤔 FISって何？</h2>
+            <div class="analogy-box">
+                <h3><span class="icon">🏥</span>病院の避難訓練のようなもの</h3>
+                <p>実際の火災が起きる前に、避難訓練を行って「もしもの時」に備えますよね？AWS FISも同じように、システムに意図的に「問題」を起こして、システムが正しく対応できるかをテストするサービスです。</p>
+            </div>
+            <div class="highlight">
+                AWSのシステムを「わざと壊して」強くするツール！
+            </div>
+        </div>
+
+        <!-- なぜ必要なのか -->
+        <div class="section">
+            <h2 class="section-title">🎯 なぜ必要なの？</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="icon">🏗️</span>
+                    <h4>建物の耐震テスト</h4>
+                    <p>地震が来る前に建物の強度をテストするように、システムの弱点を事前に見つけることができます</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">🚗</span>
+                    <h4>自動車の衝突テスト</h4>
+                    <p>実際の事故が起きる前に安全性をテストするように、システムの安全性を確認できます</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">💡</span>
+                    <h4>停電への備え</h4>
+                    <p>計画停電でシステムが正常に動くかテストして、実際の停電時に備えることができます</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- どのように動作するか -->
+        <div class="section">
+            <h2 class="section-title">⚙️ どう動くの？</h2>
+            <div class="workflow">
+                <div class="workflow-step pulse">
+                    <div class="step-number">1</div>
+                    <div class="step-text">実験計画<br>作成</div>
+                </div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-text">対象選択<br>(EC2など)</div>
+                </div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-text">障害注入<br>実行</div>
+                </div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-text">結果分析<br>改善</div>
+                </div>
+            </div>
+            
+            <div class="analogy-box">
+                <h3><span class="icon">🎭</span>演劇のリハーサルみたい！</h3>
+                <p>本番の舞台（本番環境）で失敗しないように、リハーサル（テスト）を何度も行って完璧な公演を目指すのと同じです。FISでは「もしサーバーが止まったら？」「もしネットワークが遅くなったら？」という状況を作り出してテストします。</p>
+            </div>
+        </div>
+
+        <!-- 主な機能 -->
+        <div class="section">
+            <h2 class="section-title">🎪 できること</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="icon">💻</span>
+                    <h4>EC2インスタンス停止</h4>
+                    <p>サーバーを一時的に止めて、システムが自動復旧するかテスト</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">🌐</span>
+                    <h4>ネットワーク遅延</h4>
+                    <p>通信を意図的に遅くして、タイムアウト処理が正しく動くかチェック</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">💾</span>
+                    <h4>ディスク障害</h4>
+                    <p>ストレージにアクセスできない状況を作り、データベースの耐障害性をテスト</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">🔋</span>
+                    <h4>CPU負荷増加</h4>
+                    <p>プロセッサーに高負荷をかけて、システムの処理能力限界をチェック</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 対応AWSサービス -->
+        <div class="section">
+            <h2 class="section-title">🔗 対応AWSサービス</h2>
+            <div class="aws-services">
+                <div class="aws-service">EC2</div>
+                <div class="aws-service">RDS</div>
+                <div class="aws-service">EKS</div>
+                <div class="aws-service">ECS</div>
+                <div class="aws-service">Lambda</div>
+                <div class="aws-service">S3</div>
+            </div>
+            <div class="analogy-box">
+                <h3><span class="icon">🏪</span>いろんなお店での防犯訓練</h3>
+                <p>コンビニ、レストラン、銀行など、それぞれ違う種類のお店で防犯訓練を行うように、FISも様々なAWSサービスで障害テストができます。</p>
+            </div>
+        </div>
+
+        <!-- 従来の方法との比較 -->
+        <div class="section">
+            <h2 class="section-title">📊 従来の方法との違い</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>従来の方法</th>
+                        <th>AWS FIS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>テストの簡単さ</strong></td>
+                        <td>複雑なスクリプト作成が必要</td>
+                        <td>GUIでクリックするだけ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>安全性</strong></td>
+                        <td>予期しない影響のリスク</td>
+                        <td>安全ガードが組み込み済み</td>
+                    </tr>
+                    <tr>
+                        <td><strong>対象範囲</strong></td>
+                        <td>限定的</td>
+                        <td>多くのAWSサービスに対応</td>
+                    </tr>
+                    <tr>
+                        <td><strong>結果の分析</strong></td>
+                        <td>手動で収集・分析</td>
+                        <td>自動でログ収集・可視化</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- メリット -->
+        <div class="section">
+            <h2 class="section-title">✨ 使うメリット</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="icon">💪</span>
+                    <h4>システムが強くなる</h4>
+                    <p>弱点を見つけて改善することで、障害に強いシステムが作れます</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">😴</span>
+                    <h4>安心して眠れる</h4>
+                    <p>夜中にシステムトラブルで起こされる心配が減ります</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">💰</span>
+                    <h4>コストダウン</h4>
+                    <p>大きな障害が起きる前に対策できるので、損失を防げます</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon">🎓</span>
+                    <h4>チームが成長</h4>
+                    <p>障害対応の経験を積むことで、チーム全体のスキルが向上します</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- まとめ -->
+        <div class="section">
+            <h2 class="section-title">🎯 まとめ</h2>
+            <div class="highlight">
+                AWS FISは「転ばぬ先の杖」<br>
+                システムを強くして、みんなが安心できるサービスを作ろう！
+            </div>
+            <div class="analogy-box">
+                <h3><span class="icon">🌟</span>最後に...</h3>
+                <p>スポーツ選手が日々トレーニングして強くなるように、システムも定期的に「トレーニング」（障害テスト）することで、どんな問題にも負けない強いシステムを作ることができます。AWS FISは、そのためのベストパートナーです！</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
