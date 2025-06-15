@@ -87,6 +87,10 @@ class QuizApp {
         // 質問文
         document.getElementById('questionText').textContent = question.question;
 
+        // ボタンの状態をリセット（選択肢生成前に）
+        this.selectedAnswer = null;
+        this.isAnswerSubmitted = false;
+
         // 選択肢を生成
         const optionsList = document.getElementById('optionsList');
         optionsList.innerHTML = '';
@@ -99,15 +103,13 @@ class QuizApp {
             optionButton.className = 'option-button';
             optionButton.textContent = option;
             optionButton.onclick = () => this.selectAnswer(index);
-            optionButton.disabled = this.isAnswerSubmitted;
+            optionButton.disabled = false; // 初期状態では有効
             
             optionItem.appendChild(optionButton);
             optionsList.appendChild(optionItem);
         });
 
-        // ボタンの状態をリセット
-        this.selectedAnswer = null;
-        this.isAnswerSubmitted = false;
+        // ボタンの状態を設定
         document.getElementById('submitBtn').style.display = 'inline-block';
         document.getElementById('submitBtn').disabled = true;
         document.getElementById('nextBtn').style.display = 'none';
@@ -150,7 +152,7 @@ class QuizApp {
         // 選択肢に正解/不正解のスタイルを適用
         const optionButtons = document.querySelectorAll('.option-button');
         optionButtons.forEach((button, index) => {
-            button.disabled = true;
+            button.disabled = true; // 回答提出後はすべて無効化
             button.classList.remove('selected');
             
             if (index === question.correct) {
