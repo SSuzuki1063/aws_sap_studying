@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route 53 Application Recovery Controller 解説</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            border-left: 5px solid #4CAF50;
+        }
+        
+        .section h2 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section h2::before {
+            content: "🎯";
+            margin-right: 10px;
+            font-size: 2rem;
+        }
+        
+        .analogy-box {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-box h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .analogy-box h3::before {
+            content: "💡";
+            margin-right: 10px;
+            font-size: 1.8rem;
+        }
+        
+        .diagram {
+            background: white;
+            border: 3px solid #3498db;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 25px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .diagram::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #3498db, #2ecc71, #f39c12, #e74c3c);
+        }
+        
+        .traffic-control {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            align-items: center;
+            margin: 20px 0;
+        }
+        
+        .region {
+            background: linear-gradient(135deg, #a8e6cf 0%, #56ab2f 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .region.inactive {
+            background: linear-gradient(135deg, #ffa8a8 0%, #e74c3c 100%);
+            opacity: 0.6;
+        }
+        
+        .control-center {
+            background: linear-gradient(135deg, #ffd93d 0%, #ff9a3c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+        
+        .control-center::before {
+            content: "🎛️";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .arrow {
+            color: #3498db;
+            font-size: 3rem;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            background: white;
+            border: 2px solid #ecf0f1;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        
+        .feature h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .safety-rules {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .safety-rules h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .safety-rules h3::before {
+            content: "🛡️";
+            margin-right: 10px;
+            font-size: 1.8rem;
+        }
+        
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .use-case {
+            background: linear-gradient(135deg, #a8edea 0%, #74b9ff 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .use-case h4 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .highlight::before {
+            content: "⚡";
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Route 53 Application Recovery Controller</h1>
+            <p>初心者でも分かる！災害時のアプリケーション復旧管理</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>これって何？</h2>
+                <p style="font-size: 1.1rem; line-height: 1.8;">
+                    Route 53 Application Recovery Controller（ARC）は、複数のAWSリージョンにまたがって運用しているアプリケーションの<strong>可用性</strong>と<strong>災害復旧</strong>を管理するサービスです。
+                </p>
+                
+                <div class="analogy-box">
+                    <h3>たとえ話：全国チェーンのカフェ店長</h3>
+                    <p>あなたが全国にカフェチェーンを展開していると想像してください。東京店と大阪店があり、通常は東京店がメインで営業していますが、東京店に何か問題が起きた時に、お客さんを大阪店に案内する必要があります。ARCは、この「どちらの店舗にお客さんを案内するか」を自動で判断・切り替えてくれる優秀な交通整理係のような役割です。</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>仕組みを図で理解しよう</h2>
+                
+                <div class="diagram">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 30px;">🚦 通常時の運用</h3>
+                    <div class="traffic-control">
+                        <div class="region">
+                            <div class="feature-icon">🏢</div>
+                            <h4>東京リージョン</h4>
+                            <p>メイン店舗<br>（アクティブ）</p>
+                        </div>
+                        
+                        <div class="control-center">
+                            <h4 style="margin-top: 30px;">Application Recovery Controller</h4>
+                            <p>交通整理係</p>
+                            <div style="margin: 15px 0;">
+                                <span style="background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; margin: 5px;">
+                                    ルーティングコントロール
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="region inactive">
+                            <div class="feature-icon">🏪</div>
+                            <h4>大阪リージョン</h4>
+                            <p>待機店舗<br>（スタンバイ）</p>
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">⬇️</div>
+                    
+                    <h3 style="text-align: center; color: #2c3e50; margin: 30px 0;">🚨 障害発生時の自動切り替え</h3>
+                    <div class="traffic-control">
+                        <div class="region inactive">
+                            <div class="feature-icon">💥</div>
+                            <h4>東京リージョン</h4>
+                            <p>障害発生<br>（停止中）</p>
+                        </div>
+                        
+                        <div class="control-center">
+                            <h4 style="margin-top: 30px;">自動切り替え実行中</h4>
+                            <p>お客さんを大阪店へ案内</p>
+                            <div style="margin: 15px 0;">
+                                <span style="background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; margin: 5px;">
+                                    フェイルオーバー実行
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="region">
+                            <div class="feature-icon">🏢</div>
+                            <h4>大阪リージョン</h4>
+                            <p>新メイン店舗<br>（アクティブ）</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>主な機能</h2>
+                
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">🎯</span>
+                        <h4>ルーティングコントロール</h4>
+                        <p>どのリージョンにトラフィックを送るかを制御。まるで交通整理のように、お客さんの流れを適切な場所に案内します。</p>
+                    </div>
+                    
+                    <div class="feature">
+                        <span class="feature-icon">🏥</span>
+                        <h4>リーダーネスチェック</h4>
+                        <p>各リージョンのアプリケーションが正常に動作しているかを常時監視。店舗の営業状況を24時間チェックする監視員のような役割。</p>
+                    </div>
+                    
+                    <div class="feature">
+                        <span class="feature-icon">⚡</span>
+                        <h4>自動フェイルオーバー</h4>
+                        <p>問題を検知したら自動的に健全なリージョンにトラフィックを切り替え。店長が不在でも、副店長が自動で営業を引き継ぐイメージ。</p>
+                    </div>
+                </div>
+                
+                <div class="safety-rules">
+                    <h3>セーフティルール</h3>
+                    <p>間違った操作を防ぐための安全装置。例えば「全ての店舗を同時に閉店してしまう」ような危険な操作を自動的にブロックします。安全第一の賢い番人のような機能です。</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>こんな時に使います</h2>
+                
+                <div class="use-cases">
+                    <div class="use-case">
+                        <h4>🌪️ 自然災害対応</h4>
+                        <p>地震や台風で一部リージョンが使えなくなった時の緊急時対応</p>
+                    </div>
+                    
+                    <div class="use-case">
+                        <h4>🔧 計画メンテナンス</h4>
+                        <p>システム更新時に事前にトラフィックを別リージョンに移行</p>
+                    </div>
+                    
+                    <div class="use-case">
+                        <h4>🎯 負荷分散</h4>
+                        <p>特定リージョンに負荷が集中した時の分散処理</p>
+                    </div>
+                    
+                    <div class="use-case">
+                        <h4>🚀 新機能テスト</h4>
+                        <p>一部のトラフィックだけを新しいバージョンに流してテスト</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>導入のメリット</h2>
+                
+                <div class="highlight">
+                    <strong>サービス継続性の向上：</strong> 一つのリージョンで問題が起きても、他のリージョンでサービス継続可能
+                </div>
+                
+                <div class="highlight">
+                    <strong>運用負荷の軽減：</strong> 手動でのフェイルオーバー作業が不要になり、24時間365日の安心運用
+                </div>
+                
+                <div class="highlight">
+                    <strong>ユーザー体験の維持：</strong> 障害が起きてもユーザーは継続してサービスを利用可能
+                </div>
+                
+                <div class="highlight">
+                    <strong>運用コストの最適化：</strong> 必要な時だけリソースを切り替えることで、効率的なコスト管理
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>ルーティングコントロール vs リーダーネスチェック</h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
+                    <div style="background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white; padding: 25px; border-radius: 15px;">
+                        <h3 style="margin-bottom: 20px; display: flex; align-items: center;">
+                            🎯 ルーティングコントロール
+                        </h3>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <strong>目的：</strong> トラフィックの実際の切り替え制御
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <strong>動作：</strong> シンプルなON/OFFスイッチとして機能
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <strong>連携：</strong> Route 53 DNSレコードと直接統合
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #6c5ce7 0%, #5a4fcf 100%); color: white; padding: 25px; border-radius: 15px;">
+                        <h3 style="margin-bottom: 20px; display: flex; align-items: center;">
+                            🏥 リーダーネスチェック
+                        </h3>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <strong>目的：</strong> 復旧準備状況の継続監視
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <strong>動作：</strong> 1分間隔でリソース状況を監査
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                            <strong>監視：</strong> 容量、クォータ、設定の整合性
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analogy-box">
+                    <h3>たとえ話：警備システムの違い</h3>
+                    <p><strong>ルーティングコントロール</strong>は「緊急時にお客さんの流れを変える交通整理の指示棒」のようなもの。実際にお客さんの行き先を変更する実行機能です。<br><br>
+                    <strong>リーダーネスチェック</strong>は「各店舗の営業準備状況を常時チェックする監視カメラ」のようなもの。店舗の準備ができているかを確認しますが、実際にお客さんを誘導するわけではありません。</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>ルーティングコントロールの詳細設定</h2>
+                
+                <div class="diagram">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 30px;">⚙️ Route 53との統合設定</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; align-items: center;">
+                        <div style="background: linear-gradient(135deg, #ff7675 0%, #e84393 100%); color: white; padding: 20px; border-radius: 15px; text-align: center;">
+                            <h4>プライマリレコード</h4>
+                            <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 0.9rem;">
+                                Name: myapp.domain.com<br>
+                                Type: CNAME<br>
+                                Failover: Primary<br>
+                                Value: tokyo.domain.com
+                            </div>
+                            <div style="padding: 8px; background: rgba(255,255,255,0.3); border-radius: 5px;">
+                                ヘルスチェックID: xxx-xxx
+                            </div>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white; padding: 25px; border-radius: 20px; text-align: center;">
+                            <h4>ARCルーティングコントロール</h4>
+                            <div style="margin: 20px 0;">
+                                <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 20px; margin: 5px;">
+                                    東京: ON
+                                </div>
+                                <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 20px; margin: 5px;">
+                                    大阪: OFF
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9rem;">スイッチ切り替えでDNS解決を制御</p>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white; padding: 20px; border-radius: 15px; text-align: center;">
+                            <h4>セカンダリレコード</h4>
+                            <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 0.9rem;">
+                                Name: myapp.domain.com<br>
+                                Type: CNAME<br>
+                                Failover: Secondary<br>
+                                Value: osaka.domain.com
+                            </div>
+                            <div style="padding: 8px; background: rgba(255,255,255,0.3); border-radius: 5px;">
+                                ヘルスチェックID: yyy-yyy
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin: 30px 0;">
+                    <h3 style="color: #2c3e50; margin-bottom: 20px;">🔧 設定コンポーネント</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: #e8f4fd; border: 2px solid #3498db; padding: 15px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🏢</div>
+                            <h4>クラスター</h4>
+                            <p style="font-size: 0.9rem;">5つの冗長リージョナルエンドポイント</p>
+                        </div>
+                        <div style="background: #e8f4fd; border: 2px solid #3498db; padding: 15px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">📋</div>
+                            <h4>コントロールパネル</h4>
+                            <p style="font-size: 0.9rem;">関連するルーティングコントロールをグループ化</p>
+                        </div>
+                        <div style="background: #e8f4fd; border: 2px solid #3498db; padding: 15px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🎛️</div>
+                            <h4>ルーティングコントロール</h4>
+                            <p style="font-size: 0.9rem;">ON/OFFスイッチでトラフィック制御</p>
+                        </div>
+                        <div style="background: #e8f4fd; border: 2px solid #3498db; padding: 15px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🩺</div>
+                            <h4>ヘルスチェック</h4>
+                            <p style="font-size: 0.9rem;">Route 53 DNSレコードとの統合</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>セーフティルールの重要性</h2>
+                
+                <div style="background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%); color: white; padding: 25px; border-radius: 15px; margin: 20px 0;">
+                    <h3 style="margin-bottom: 20px; display: flex; align-items: center;">
+                        🛡️ 安全装置の役割
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <h4>フラッピング防止</h4>
+                            <p>短時間での繰り返し切り替えを防ぎ、システムの安定性を保持</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <h4>全停止防止</h4>
+                            <p>全てのリージョンが同時に停止することを防ぐルール</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <h4>準備不足防止</h4>
+                            <p>準備が整っていないレプリカへのフェイルオーバーをブロック</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analogy-box">
+                    <h3>たとえ話：賢い安全装置</h3>
+                    <p>セーフティルールは、全国チェーン店の「賢い本部システム」のようなものです。店長が慌てて「全店舗を同時に閉店する」ような危険な判断をしようとした時に、「ちょっと待って！それは危険です」と自動的に止めてくれる安全装置。お客さんが路頭に迷わないよう、常に最低1店舗は営業を続けるよう管理します。</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>リーダーネスチェックの監視項目</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 30px 0;">
+                    <div style="background: linear-gradient(135deg, #00cec9 0%, #00b894 100%); color: white; padding: 20px; border-radius: 15px;">
+                        <h4 style="margin-bottom: 15px;">📊 キャパシティ監視</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin: 8px 0;">✓ EC2インスタンス数</li>
+                            <li style="margin: 8px 0;">✓ Auroraキャパシティユニット</li>
+                            <li style="margin: 8px 0;">✓ EBSボリュームサイズ</li>
+                            <li style="margin: 8px 0;">✓ Auto Scalingグループ設定</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%); color: white; padding: 20px; border-radius: 15px;">
+                        <h4 style="margin-bottom: 15px;">⚙️ 設定監視</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin: 8px 0;">✓ サービスクォータ</li>
+                            <li style="margin: 8px 0;">✓ スロットル制限</li>
+                            <li style="margin: 8px 0;">✓ ネットワークルーティングポリシー</li>
+                            <li style="margin: 8px 0;">✓ バージョン整合性</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%); color: white; padding: 20px; border-radius: 15px;">
+                        <h4 style="margin-bottom: 15px;">🔍 監視頻度</h4>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 10px 0;">
+                            <strong>1分間隔</strong>で継続監視
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 10px 0;">
+                            変更検出時に<strong>自動通知</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="highlight">
+                    <strong>重要な注意点：</strong> リーダーネスチェックは復旧準備状況の確認が目的で、実際のフェイルオーバーのトリガーとしては使用しません
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>3つの改善ポイント</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 30px 0;">
+                    <div style="background: linear-gradient(135deg, #55a3ff 0%, #003d82 100%); color: white; padding: 25px; border-radius: 15px; text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🎯</div>
+                        <h4>アプリケーション全体のフェイルオーバー</h4>
+                        <p>従来の個別リソース監視から、アプリケーション全体のメトリクスに基づく統合的なフェイルオーバーが可能</p>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #00b894 0%, #00695c 100%); color: white; padding: 25px; border-radius: 15px; text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🔧</div>
+                        <h4>安全な手動オーバーライド</h4>
+                        <p>メンテナンス時や自動監視では検出できない問題発生時に、安全に手動でトラフィックを切り替え可能</p>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #fd79a8 0%, #b71540 100%); color: white; padding: 25px; border-radius: 15px; text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🛡️</div>
+                        <h4>セーフティルール</h4>
+                        <p>準備不十分なレプリカへのフェイルオーバーやフラッピング問題を自動的に防止する安全機能</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: linear-gradient(135deg, #6c5ce7 0%, #74b9ff 100%); color: white; padding: 30px; border-radius: 20px; text-align: center; margin-top: 40px;">
+                <h3 style="margin-bottom: 15px;">🎉 まとめ</h3>
+                <p style="font-size: 1.1rem; line-height: 1.6;">
+                    Route 53 Application Recovery Controllerは、<strong>ルーティングコントロール</strong>による実際のトラフィック制御と、<strong>リーダーネスチェック</strong>による復旧準備監視の両方を提供し、複数リージョンでのアプリケーション運用を<strong>安全</strong>で<strong>確実</strong>に管理してくれる頼れるパートナーです。全国チェーン店の優秀な店長のように、常にお客さん（ユーザー）に最高のサービスを提供し続けます！
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
