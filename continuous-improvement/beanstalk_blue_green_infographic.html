@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elastic Beanstalk Blue/Green デプロイメント</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .aws-logo {
+            color: #ff9900;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-bottom: 20px;
+        }
+
+        .intro {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .step-container {
+            display: grid;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .step-number {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .step-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .restaurant-diagram {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .kitchen {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            min-width: 180px;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .kitchen.green {
+            background: linear-gradient(135deg, #00b894, #00a085);
+        }
+
+        .kitchen:hover {
+            transform: scale(1.05);
+        }
+
+        .kitchen-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .customer {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            min-width: 150px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .arrow {
+            font-size: 2em;
+            color: #f39c12;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .aws-flow {
+            background: #34495e;
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .aws-environments {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .environment {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .environment:hover {
+            border-color: #3498db;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .environment.blue {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.2);
+        }
+
+        .environment.green {
+            border-color: #27ae60;
+            background: rgba(39, 174, 96, 0.2);
+        }
+
+        .benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .benefit {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .benefit:hover {
+            transform: translateY(-3px);
+        }
+
+        .benefit-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .icon-good { color: #27ae60; }
+        .icon-bad { color: #e74c3c; }
+        .icon-neutral { color: #3498db; }
+
+        .highlight {
+            background: linear-gradient(45deg, #f39c12, #f1c40f);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .swap-animation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            gap: 20px;
+        }
+
+        .swap-button {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .swap-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .restaurant-diagram {
+                flex-direction: column;
+            }
+            
+            .aws-environments {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><span class="aws-logo">AWS</span> Elastic Beanstalk</h1>
+            <h2>Blue/Green デプロイメント完全ガイド</h2>
+            <p class="subtitle">🍽️ レストランの厨房で学ぶ、安全なアプリケーション更新の仕組み</p>
+        </div>
+
+        <div class="intro">
+            <h3>💡 Blue/Green デプロイメントとは？</h3>
+            <p>アプリケーションを更新する際に、<span class="highlight">ダウンタイムゼロ</span>で安全にデプロイできる手法です。</p>
+            <p>まるで2つの厨房を持つレストランのように、片方で新しい料理を準備している間も、お客様へのサービスは止まりません！</p>
+        </div>
+
+        <div class="step-container">
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">現在の環境（Blue環境）でサービス提供中</div>
+                </div>
+                
+                <div class="restaurant-diagram">
+                    <div class="kitchen">
+                        <div class="kitchen-icon">👨‍🍳</div>
+                        <h4>メイン厨房（Blue）</h4>
+                        <p>現在のアプリv1.0が稼働中</p>
+                    </div>
+                    <div class="arrow">➡️</div>
+                    <div class="customer">
+                        <div class="kitchen-icon">👥</div>
+                        <h4>お客様</h4>
+                        <p>サービス利用中</p>
+                    </div>
+                </div>
+
+                <div class="aws-flow">
+                    <h4>🔧 AWS環境</h4>
+                    <div class="aws-environments">
+                        <div class="environment blue">
+                            <strong>Blue環境</strong><br>
+                            本番サービス中<br>
+                            アプリv1.0
+                        </div>
+                        <div class="environment">
+                            <strong>Green環境</strong><br>
+                            待機中<br>
+                            （まだ未作成）
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">新しい環境（Green環境）を準備</div>
+                </div>
+                
+                <div class="restaurant-diagram">
+                    <div class="kitchen">
+                        <div class="kitchen-icon">👨‍🍳</div>
+                        <h4>メイン厨房（Blue）</h4>
+                        <p>お客様対応継続中</p>
+                    </div>
+                    <div class="kitchen green">
+                        <div class="kitchen-icon">👩‍🍳</div>
+                        <h4>サブ厨房（Green）</h4>
+                        <p>新メニュー準備中</p>
+                    </div>
+                </div>
+
+                <div class="aws-flow">
+                    <h4>🔧 AWS環境</h4>
+                    <div class="aws-environments">
+                        <div class="environment blue">
+                            <strong>Blue環境</strong><br>
+                            本番サービス中<br>
+                            アプリv1.0
+                        </div>
+                        <div class="environment green">
+                            <strong>Green環境</strong><br>
+                            デプロイ中<br>
+                            アプリv2.0 🚀
+                        </div>
+                    </div>
+                    <p>💫 Elastic Beanstalkが自動的に新しい環境を作成し、新バージョンをデプロイ</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">テスト・検証フェーズ</div>
+                </div>
+                
+                <p>Green環境では専用のテスト用URLが発行されるので、本番に影響を与えずに新バージョンをテストできます。</p>
+                
+                <div class="aws-flow">
+                    <h4>🧪 テスト段階</h4>
+                    <div class="aws-environments">
+                        <div class="environment blue">
+                            <strong>Blue環境</strong><br>
+                            production.com<br>
+                            お客様利用中 ✅
+                        </div>
+                        <div class="environment green">
+                            <strong>Green環境</strong><br>
+                            test-abc123.com<br>
+                            内部テスト中 🔍
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">🔄 URL切り替え（Swap Environment URLs）</div>
+                </div>
+                
+                <div class="restaurant-diagram">
+                    <div class="kitchen green">
+                        <div class="kitchen-icon">👩‍🍳</div>
+                        <h4>新メイン厨房（Green）</h4>
+                        <p>新メニューでサービス開始！</p>
+                    </div>
+                    <div class="arrow">➡️</div>
+                    <div class="customer">
+                        <div class="kitchen-icon">👥</div>
+                        <h4>お客様</h4>
+                        <p>新サービス利用中</p>
+                    </div>
+                </div>
+
+                <div class="swap-animation">
+                    <button class="swap-button" onclick="animateSwap()">⚡ URL切り替え実行</button>
+                </div>
+
+                <div class="aws-flow">
+                    <h4>🔄 切り替え後</h4>
+                    <div class="aws-environments">
+                        <div class="environment green">
+                            <strong>Green環境</strong><br>
+                            production.com<br>
+                            新本番サービス中 ✅
+                        </div>
+                        <div class="environment blue">
+                            <strong>Blue環境</strong><br>
+                            test-abc123.com<br>
+                            旧版待機中 💤
+                        </div>
+                    </div>
+                    <p>⚡ <strong>数秒で切り替え完了！</strong>ユーザーには全く気づかれません</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="intro">
+            <h3>🎯 Blue/Green デプロイメントの特徴</h3>
+            <div class="benefits">
+                <div class="benefit">
+                    <div class="benefit-icon icon-good">⚡</div>
+                    <h4>ダウンタイムゼロ</h4>
+                    <p>サービス停止なしで更新可能</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon icon-good">🔄</div>
+                    <h4>即座にロールバック</h4>
+                    <p>問題発生時は瞬時に旧版に戻せる</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon icon-good">🧪</div>
+                    <h4>本番同等環境でテスト</h4>
+                    <p>実際の本番環境と同じ構成でテスト</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon icon-bad">💰</div>
+                    <h4>コスト増</h4>
+                    <p>2つの環境を一時的に稼働</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon icon-neutral">⏱️</div>
+                    <h4>切り替え時間</h4>
+                    <p>DNS変更により数分かかる場合も</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon icon-neutral">🔧</div>
+                    <h4>設定管理</h4>
+                    <p>2つの環境の同期管理が必要</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="intro">
+            <h3>📋 実行手順（AWS Console）</h3>
+            <ol style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>新環境作成：</strong> Elastic Beanstalk Console → "Create Environment"</li>
+                <li><strong>アプリケーションデプロイ：</strong> 新しいバージョンをGreen環境にアップロード</li>
+                <li><strong>テスト実行：</strong> Green環境のURLで動作確認</li>
+                <li><strong>URL切り替え：</strong> Actions → "Swap Environment URLs"</li>
+                <li><strong>確認・クリーンアップ：</strong> 旧環境（Blue）を必要に応じて削除</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function animateSwap() {
+            const environments = document.querySelectorAll('.environment');
+            environments.forEach(env => {
+                env.style.transform = 'rotateY(180deg)';
+                setTimeout(() => {
+                    env.style.transform = 'rotateY(0deg)';
+                }, 500);
+            });
+            
+            setTimeout(() => {
+                alert('🎉 URL切り替え完了！\n\nGreen環境が新しい本番環境になりました。\nお客様は何も気づかずに新しいサービスを利用できます。');
+            }, 1000);
+        }
+
+        // ページロード時のアニメーション
+        window.addEventListener('load', () => {
+            const steps = document.querySelectorAll('.step');
+            steps.forEach((step, index) => {
+                step.style.opacity = '0';
+                step.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    step.style.transition = 'all 0.6s ease';
+                    step.style.opacity = '1';
+                    step.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+    </script>
+</body>
+</html>

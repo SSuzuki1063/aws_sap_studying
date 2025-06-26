@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS CI/CDパイプライン - レシピ開発から出版まで</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', Meiryo, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .pipeline {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .stage {
+            position: relative;
+            margin-bottom: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .stage:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stage-header {
+            padding: 20px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .stage-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .stage-title {
+            flex: 1;
+        }
+        
+        .stage-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .stage-title .subtitle {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        .stage-content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .aws-section h3 {
+            color: #232F3E;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .aws-logo {
+            width: 24px;
+            height: 24px;
+            background: #FF9900;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .example-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .example-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .service-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+        
+        .service-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .service-icon {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+        
+        .flow-arrow {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 2rem;
+            color: #667eea;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .stage-1 .stage-header { background: linear-gradient(45deg, #FF6B6B, #FF8E53); }
+        .stage-2 .stage-header { background: linear-gradient(45deg, #4ECDC4, #44A08D); }
+        .stage-3 .stage-header { background: linear-gradient(45deg, #FFE066, #FF6B6B); }
+        .stage-4 .stage-header { background: linear-gradient(45deg, #667eea, #764ba2); }
+        
+        @media (max-width: 768px) {
+            .stage-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .pipeline {
+                padding: 20px;
+            }
+        }
+        
+        .footer {
+            background: #2d3748;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .tips {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .tips h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍳 AWS CI/CDパイプライン</h1>
+            <p>レシピ開発から出版まで - 初心者向け完全ガイド</p>
+        </div>
+        
+        <div class="pipeline">
+            <div class="highlight">
+                <h3>📖 ストーリー</h3>
+                <p>あなたは料理研究家です。新しいレシピを開発し、テストを重ね、最終的に料理本として出版するまでのプロセスを、AWSのサービスを使って自動化してみましょう！</p>
+            </div>
+            
+            <!-- ソース: CodeCommit -->
+            <div class="stage stage-source">
+                <div class="stage-header">
+                    <div class="stage-icon">📝</div>
+                    <div class="stage-title">
+                        <h2>ソース: レシピノート</h2>
+                        <div class="subtitle">AWS CodeCommit</div>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="aws-section">
+                        <h3><span class="aws-logo">AWS</span>技術的説明</h3>
+                        <ul class="service-list">
+                            <li><span class="service-icon">📁</span>CodeCommit: Gitベースのソースコード管理</li>
+                            <li><span class="service-icon">🔄</span>バージョン管理とブランチ機能</li>
+                            <li><span class="service-icon">🔒</span>セキュアなプライベートリポジトリ</li>
+                        </ul>
+                        <div class="code-block">
+git push origin main
+# → パイプライン自動実行トリガー
+                        </div>
+                    </div>
+                    <div class="example-section">
+                        <h3>🍳 レシピ開発に例えると...</h3>
+                        <p><strong>レシピノート</strong>として機能します。</p>
+                        <ul>
+                            <li>📋 レシピの材料リストや手順を記録</li>
+                            <li>🔄 改良版のレシピを履歴として保存</li>
+                            <li>👥 複数の料理人が同時に開発可能</li>
+                            <li>🔒 企業秘密のレシピを安全に管理</li>
+                        </ul>
+                        <div class="tips">
+                            <h4>💡 初心者ポイント</h4>
+                            <p>レシピを更新するたびに、自動的に「品質チェック工程」が開始されます！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">⬇️</div>
+            
+            <!-- Stage1: CodeBuild -->
+            <div class="stage stage-1">
+                <div class="stage-header">
+                    <div class="stage-icon">🧪</div>
+                    <div class="stage-title">
+                        <h2>Stage1: テストキッチン</h2>
+                        <div class="subtitle">AWS CodeBuild</div>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="aws-section">
+                        <h3><span class="aws-logo">AWS</span>技術的説明</h3>
+                        <ul class="service-list">
+                            <li><span class="service-icon">⚙️</span>CodeBuild: マネージドビルドサービス</li>
+                            <li><span class="service-icon">🔧</span>cdk synth: CDKをCloudFormationに変換</li>
+                            <li><span class="service-icon">✅</span>cfn-lint: CloudFormationテンプレート検証</li>
+                            <li><span class="service-icon">📦</span>S3: ビルド成果物のバージョニング保存</li>
+                        </ul>
+                        <div class="code-block">
+# buildspec.yml
+phases:
+  build:
+    commands:
+      - cdk synth
+      - cfn-lint template.yaml
+      - aws s3 cp artifacts/ s3://bucket/
+                        </div>
+                    </div>
+                    <div class="example-section">
+                        <h3>🍳 レシピ開発に例えると...</h3>
+                        <p><strong>テストキッチン</strong>での品質チェック工程です。</p>
+                        <ul>
+                            <li>🧪 レシピの材料が正しく揃っているかチェック</li>
+                            <li>📏 分量や手順に間違いがないか検証</li>
+                            <li>👨‍🍳 プロの料理人による味見テスト</li>
+                            <li>📚 合格したレシピを「レシピ保管庫」に版番号付きで保存</li>
+                        </ul>
+                        <div class="success">
+                            <strong>✅ 成功時:</strong> 検証済みレシピがS3保管庫に安全に格納されます
+                        </div>
+                        <div class="warning">
+                            <strong>❌ 失敗時:</strong> 問題が見つかった場合、パイプラインを停止して修正を促します
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">⬇️</div>
+            
+            <!-- Stage2: Dev/Stg Deploy -->
+            <div class="stage stage-2">
+                <div class="stage-header">
+                    <div class="stage-icon">🍽️</div>
+                    <div class="stage-title">
+                        <h2>Stage2: 社内試食会</h2>
+                        <div class="subtitle">CloudFormation Deploy (dev → stg)</div>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="aws-section">
+                        <h3><span class="aws-logo">AWS</span>技術的説明</h3>
+                        <ul class="service-list">
+                            <li><span class="service-icon">🚀</span>CloudFormation: インフラの自動デプロイ</li>
+                            <li><span class="service-icon">🔄</span>dev環境 → stg環境への段階的デプロイ</li>
+                            <li><span class="service-icon">⚡</span>自動実行（承認不要）</li>
+                            <li><span class="service-icon">📊</span>デプロイ状況の自動監視</li>
+                        </ul>
+                        <div class="code-block">
+# CloudFormation Action
+ActionTypeId:
+  Category: Deploy
+  Owner: AWS
+  Provider: CloudFormation
+  Version: 1
+                        </div>
+                    </div>
+                    <div class="example-section">
+                        <h3>🍳 レシピ開発に例えると...</h3>
+                        <p><strong>社内試食会</strong>での段階的テストです。</p>
+                        <ul>
+                            <li>👨‍🍳 <strong>dev（開発者食堂）:</strong> 料理人自身が味見</li>
+                            <li>👥 <strong>stg（社員食堂）:</strong> 社員みんなで試食</li>
+                            <li>🔄 自動的に両方の食堂でテスト料理を提供</li>
+                            <li>📝 フィードバックを収集して品質を確認</li>
+                        </ul>
+                        <div class="success">
+                            <strong>🎯 目的:</strong> 本格的な出版前に、社内で十分に検証すること
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">⬇️</div>
+            
+            <!-- Stage3: Manual Approval -->
+            <div class="stage stage-3">
+                <div class="stage-header">
+                    <div class="stage-icon">✋</div>
+                    <div class="stage-title">
+                        <h2>Stage3: 編集長の最終チェック</h2>
+                        <div class="subtitle">Manual Approval</div>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="aws-section">
+                        <h3><span class="aws-logo">AWS</span>技術的説明</h3>
+                        <ul class="service-list">
+                            <li><span class="service-icon">⏸️</span>ManualApproval: パイプライン一時停止</li>
+                            <li><span class="service-icon">👤</span>承認者への通知（SNS/Email）</li>
+                            <li><span class="service-icon">✅</span>承認 または ❌ 却下の選択</li>
+                            <li><span class="service-icon">⏱️</span>タイムアウト設定可能</li>
+                        </ul>
+                        <div class="code-block">
+# Manual Approval設定
+ActionTypeId:
+  Category: Approval
+  Owner: AWS
+  Provider: Manual
+  Version: 1
+                        </div>
+                    </div>
+                    <div class="example-section">
+                        <h3>🍳 レシピ開発に例えると...</h3>
+                        <p><strong>編集長による最終判断</strong>の段階です。</p>
+                        <ul>
+                            <li>📧 編集長にメール通知が届く</li>
+                            <li>📋 社内試食会の結果レポートを確認</li>
+                            <li>🤔 「このレシピは本として出版する価値があるか？」を判断</li>
+                            <li>✅ GO！ または ❌ NG の決定を下す</li>
+                        </ul>
+                        <div class="warning">
+                            <strong>⚠️ 重要:</strong> ここで承認されない限り、本番環境（出版）には進めません
+                        </div>
+                        <div class="tips">
+                            <h4>💡 ビジネス的意義</h4>
+                            <p>人間による最終判断で、ビジネスリスクを最小限に抑えます</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">⬇️</div>
+            
+            <!-- Stage4: Production Deploy -->
+            <div class="stage stage-4">
+                <div class="stage-header">
+                    <div class="stage-icon">📚</div>
+                    <div class="stage-title">
+                        <h2>Stage4: 本の出版</h2>
+                        <div class="subtitle">CloudFormation ChangeSets + Cross-Account</div>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="aws-section">
+                        <h3><span class="aws-logo">AWS</span>技術的説明</h3>
+                        <ul class="service-list">
+                            <li><span class="service-icon">📋</span>CreateChangeSet: 変更内容をプレビュー</li>
+                            <li><span class="service-icon">🚀</span>ExecuteChangeSet: 実際にデプロイ実行</li>
+                            <li><span class="service-icon">🔐</span>Cross-Account Role: 別アカウントへの安全な操作</li>
+                            <li><span class="service-icon">⏪</span>Rollback: 問題発生時の自動復旧</li>
+                        </ul>
+                        <div class="code-block">
+# Cross-Account Role
+arn:aws:iam::PROD-ACCOUNT:role/
+  CrossAccountDeploymentRole
+
+# Rollback有効
+DisableRollback: false
+                        </div>
+                    </div>
+                    <div class="example-section">
+                        <h3>🍳 レシピ開発に例えると...</h3>
+                        <p><strong>料理本の正式出版</strong>プロセスです。</p>
+                        <ul>
+                            <li>📋 <strong>CreateChangeSet:</strong> 出版前の最終校正チェック</li>
+                            <li>🏢 <strong>Cross-Account:</strong> 出版社（別会社）との連携</li>
+                            <li>📚 <strong>ExecuteChangeSet:</strong> 書店に本を配本開始</li>
+                            <li>⏪ <strong>Rollback:</strong> 問題があれば即座に回収・差し替え</li>
+                        </ul>
+                        <div class="success">
+                            <strong>🎉 成功!</strong> あなたのレシピが全国の書店に並びました！
+                        </div>
+                        <div class="warning">
+                            <strong>🚨 緊急時:</strong> 自動的に前のバージョンに戻して被害を最小限に
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="highlight">
+                <h3>🎯 このパイプラインの価値</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <div style="background: white; padding: 20px; border-radius: 10px;">
+                        <h4>⚡ 自動化による効率性</h4>
+                        <p>手動作業を最小限に抑えて、人的ミスを防止</p>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 10px;">
+                        <h4>🛡️ 多層防御の品質保証</h4>
+                        <p>複数段階でのテストと承認による高品質維持</p>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 10px;">
+                        <h4>🔒 セキュリティと分離</h4>
+                        <p>環境分離とアカウント分離による安全性確保</p>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 10px;">
+                        <h4>🔄 迅速な復旧能力</h4>
+                        <p>問題発生時の自動ロールバック機能</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <h3>🚀 次のステップ</h3>
+            <p>このパイプラインを実際に構築して、あなたのアプリケーションも自動デプロイの恩恵を受けましょう！</p>
+            <p style="margin-top: 10px; opacity: 0.8;">AWS初心者から中級者へのステップアップガイド</p>
+        </div>
+    </div>
+</body>
+</html>
