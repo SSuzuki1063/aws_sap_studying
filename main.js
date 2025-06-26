@@ -1,31 +1,306 @@
-// リソースデータベース        const resourcesDatabase = [            // クイズ            { title: '理解度クイズ', file: 'quiz.html', category: 'クイズ', action: 'loadQuiz' },                        // 組織の複雑性の設計            { title: 'SCP 簡単解説', file: 'organizational-complexity/aws-scp-simplified.html', category: '組織の複雑性の設計' },            { title: 'タグポリシーガイド', file: 'organizational-complexity/aws_tag_policy_guide (1).html', category: '組織の複雑性の設計' },            { title: 'CloudFormation Service Catalog', file: 'organizational-complexity/cf-service-catalog-infographic.html', category: '組織の複雑性の設計' },            { title: 'AWS RAM Transit Gateway 共有', file: 'organizational-complexity/aws-ram-tgw-sharing.html', category: '組織の複雑性の設計' },            { title: 'TGW 共有インフォグラフィック', file: 'organizational-complexity/aws-tgw-sharing-infographic (1).html', category: '組織の複雑性の設計' },            { title: 'RAM VPC プレフィックス', file: 'organizational-complexity/aws_ram_vpc_prefix_infographic.html', category: '組織の複雑性の設計' },            { title: 'AWS Organizations & Control Tower プロセス図解', file: 'organizational-complexity/aws_org_infographic.html', category: '組織の複雑性の設計' },            { title: 'AWS KMS BYOK 完全ガイド', file: 'organizational-complexity/kms_byok_infographic.html', category: '組織の複雑性の設計' },                        // 新しいソリューション設計            { title: 'Direct Connect & VGW', file: 'new-solutions/aws-direct-connect-vgw.html', category: '新しいソリューション設計' },            { title: 'EIP & NAT インフォグラフィック', file: 'new-solutions/aws_eip_nat_infographic.html', category: '新しいソリューション設計' },            { title: 'VPN インフォグラフィック', file: 'new-solutions/aws_vpn_infographic (1).html', category: '新しいソリューション設計' },            { title: 'VPC PrivateLink CIDR オーバーラップ', file: 'new-solutions/vpc_privatelink_cidr_overlap.html', category: '新しいソリューション設計' },            { title: 'VPN vs PrivateLink', file: 'new-solutions/vpn-vs-privatelink.html', category: '新しいソリューション設計' },            { title: 'AWS VPN接続ガイド + Direct Connect比較', file: 'new-solutions/aws-vpn-with-direct-connect-guide.html', category: '新しいソリューション設計' },            { title: 'Direct Connect 暗号化 & VPN', file: 'new-solutions/direct_connect_encryption_vpn.html', category: '新しいソリューション設計' },            { title: 'IPSec 完全ガイド', file: 'new-solutions/ipsec_complete_guide.html', category: '新しいソリューション設計' },            { title: 'LAG ハイブリッド BGP 関係', file: 'new-solutions/lag_hybrid_bgp_relationship.html', category: '新しいソリューション設計' },            { title: 'CloudFront Origin Groups', file: 'new-solutions/cloudfront-origin-groups.html', category: '新しいソリューション設計' },            { title: 'Route53 ホストゾーン', file: 'new-solutions/route53_hosted_zones_infographic.html', category: '新しいソリューション設計' },            { title: 'Route53 クロスアカウント関連付け', file: 'new-solutions/route53_cross_account_guide.html', category: '新しいソリューション設計' },            { title: 'S3 Multi-Region Access Points', file: 'new-solutions/s3-mrap-infographic.html', category: '新しいソリューション設計' },            { title: 'EC2 Auto Scaling ライフサイクル', file: 'new-solutions/ec2-autoscaling-lifecycle-hooks.html', category: '新しいソリューション設計' },            { title: 'EC2 ブートストラップ', file: 'new-solutions/ec2-bootstrap-infographic.html', category: '新しいソリューション設計' },            { title: 'EFA インフォグラフィック', file: 'new-solutions/efa_infographic.html', category: '新しいソリューション設計' },            { title: 'Lambda エイリアス・カナリー', file: 'new-solutions/lambda-alias-canary.html', category: '新しいソリューション設計' },            { title: 'AWS ECS コンテナ管理', file: 'new-solutions/aws_ecs_infographic (2).html', category: '新しいソリューション設計' },            { title: 'EKS IRSA (IAM Roles for Service Accounts)', file: 'new-solutions/eks_irsa_infographic.html', category: '新しいソリューション設計' },            { title: 'DNS vs AnyCast 完全ガイド - 図解版', file: 'new-solutions/dns-anycast-comparison (1).html', category: '新しいソリューション設計' },                        // 移行計画            { title: 'AWS データベース移行 (SCT & DMS)', file: 'migration-planning/aws_database_migration_infographic.html', category: '移行計画' },            { title: 'AWS Migration Hub', file: 'migration-planning/aws_migration_hub_infographic.html', category: '移行計画' },                        // コスト管理            { title: 'S3 ストレージクラス', file: 'cost-control/s3_storage_classes_infographic.html', category: 'コスト管理' },            { title: 'Lambda 予約済み同時実行数', file: 'cost-control/lambda_reserved_concurrency_infographic.html', category: 'コスト管理' },                        // 既存ソリューションの継続改善            { title: 'AWS WAF インフォグラフィック', file: 'continuous-improvement/aws_waf_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'IAM フェデレーション', file: 'continuous-improvement/iam_federation_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'AWS災害復旧戦略', file: 'continuous-improvement/aws-dr-infographic.html', category: '既存ソリューションの継続改善' },            { title: 'Route53 Application Recovery Controller', file: 'continuous-improvement/route53-arc-infographic.html', category: '既存ソリューションの継続改善' },            { title: 'ACM証明書とEC2', file: 'continuous-improvement/acm_ec2_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'AWS Elastic Disaster Recovery', file: 'continuous-improvement/aws_edr_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'Session Manager セキュリティガイド', file: 'continuous-improvement/session-manager-security-guide.html', category: '既存ソリューションの継続改善' },            { title: 'AWS FIS (Fault Injection Simulator)', file: 'continuous-improvement/aws_fis_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'CloudTrail Lake', file: 'continuous-improvement/cloudtrail-lake-infographic.html', category: '既存ソリューションの継続改善' },            { title: 'CloudWatch Synthetics', file: 'continuous-improvement/cloudwatch_synthetics_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'SSM Run Command', file: 'continuous-improvement/aws_ssm_runcommand_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'Kinesis Data Streams', file: 'continuous-improvement/kinesis-infographic.html', category: '既存ソリューションの継続改善' },            { title: 'AWS Systems Manager', file: 'continuous-improvement/aws_systems_manager_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'EventBridge', file: 'continuous-improvement/eventbridge_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'Lambda ベストプラクティス', file: 'continuous-improvement/lambda_best_practices_guide.html', category: '既存ソリューションの継続改善' },            { title: 'SSM ドキュメントガイド', file: 'continuous-improvement/ssm_document_guide.html', category: '既存ソリューションの継続改善' },            { title: 'AWS CDK', file: 'continuous-improvement/cdk_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'CloudFormation変更セット', file: 'continuous-improvement/cloudformation_changeset_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'AWS CodeDeploy', file: 'continuous-improvement/codedeploy_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'CodeDeploy デプロイ設定', file: 'continuous-improvement/codedeploy_infographic (1).html', category: '既存ソリューションの継続改善' },            { title: 'S3 Cross Region Replication', file: 'continuous-improvement/s3_crr_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'AWS CI/CDパイプライン - レシピ開発から出版まで', file: 'continuous-improvement/aws_pipeline_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'Elastic Beanstalk Blue/Green デプロイメント', file: 'continuous-improvement/beanstalk_blue_green_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'Elastic Beanstalk ブルー/グリーンデプロイ完全ガイド', file: 'continuous-improvement/blue_green_deploy_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'AWS CodeBuild buildspec.yaml 完全ガイド', file: 'continuous-improvement/buildspec_infographic.html', category: '既存ソリューションの継続改善' },            { title: 'CanaryとLinearデプロイメントの違い', file: 'continuous-improvement/canary_linear_infographic.html', category: '既存ソリューションの継続改善' }        ];        // 検索機能        function searchResources(query) {            if (!query.trim()) {                return [];            }            const lowerQuery = query.toLowerCase();            return resourcesDatabase.filter(resource => {                return resource.title.toLowerCase().includes(lowerQuery) ||                       resource.category.toLowerCase().includes(lowerQuery) ||                       resource.file.toLowerCase().includes(lowerQuery);            });        }        function highlightText(text, query) {            if (!query.trim()) return text;                        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\$&')})`, 'gi');            return text.replace(regex, '<span class="search-highlight">$1</span>');        }        function displaySearchResults(results, query) {            const searchResults = document.getElementById('searchResults');            const categoriesContainer = document.getElementById('categoriesContainer');                        if (results.length === 0) {                searchResults.innerHTML = '<div class="no-results">検索結果が見つかりません</div>';                searchResults.classList.add('active');                categoriesContainer.classList.add('search-mode');                return;            }            const resultsHTML = results.map(resource => {                const highlightedTitle = highlightText(resource.title, query);                const highlightedCategory = highlightText(resource.category, query);                const onclick = resource.action ? `${resource.action}()` : `loadContent('${resource.file}')`;                                return `                    <div class="search-result-item" onclick="${onclick}">                        <div class="search-result-title">${highlightedTitle}</div>                        <div class="search-result-category">${highlightedCategory}</div>                    </div>                `;            }).join('');            searchResults.innerHTML = resultsHTML;            searchResults.classList.add('active');            categoriesContainer.classList.add('search-mode');        }        function clearSearch() {            const searchInput = document.getElementById('searchInput');            const searchResults = document.getElementById('searchResults');            const categoriesContainer = document.getElementById('categoriesContainer');                        searchInput.value = '';            searchResults.classList.remove('active');            categoriesContainer.classList.remove('search-mode');        }        // イベントリスナー        document.addEventListener('DOMContentLoaded', function() {            const searchInput = document.getElementById('searchInput');            const clearButton = document.getElementById('clearSearch');            searchInput.addEventListener('input', function(e) {                const query = e.target.value;                if (query.trim()) {                    const results = searchResources(query);                    displaySearchResults(results, query);                } else {                    clearSearch();                }            });            clearButton.addEventListener('click', clearSearch);            searchInput.addEventListener('keydown', function(e) {                if (e.key === 'Escape') {                    clearSearch();                }            });            console.log('AWS SAP 学習リソースページが読み込まれました');            console.log('検索機能が有効になりました');        });        // 既存の関数        function toggleCategory(categoryId) {            const content = document.getElementById(categoryId);            const header = content.previousElementSibling;            const arrow = header.querySelector('.arrow');                        // Close all other categories            document.querySelectorAll('.category-content').forEach(cat => {                if (cat.id !== categoryId) {                    cat.classList.remove('active');                    cat.previousElementSibling.classList.remove('active');                    cat.previousElementSibling.querySelector('.arrow').classList.remove('rotate');                }            });                        // Toggle current category            content.classList.toggle('active');            header.classList.toggle('active');            arrow.classList.toggle('rotate');        }        async function loadContent(filename) {
-            const contentFrame = document.getElementById('content-frame');
-            contentFrame.innerHTML = '<div class="welcome-message">コンテンツを読み込み中...</div>';
+// リソースデータベース
+const resourcesDatabase = [
+    // クイズ
+    { title: '理解度クイズ', file: 'quiz.html', category: 'クイズ', action: 'loadQuiz' },
+    
+    // 組織の複雑性の設計
+    { title: 'SCP 簡単解説', file: 'organizational-complexity/aws-scp-simplified.html', category: '組織の複雑性の設計' },
+    { title: 'タグポリシーガイド', file: 'organizational-complexity/aws_tag_policy_guide (1).html', category: '組織の複雑性の設計' },
+    { title: 'CloudFormation Service Catalog', file: 'organizational-complexity/cf-service-catalog-infographic.html', category: '組織の複雑性の設計' },
+    { title: 'AWS RAM Transit Gateway 共有', file: 'organizational-complexity/aws-ram-tgw-sharing.html', category: '組織の複雑性の設計' },
+    { title: 'TGW 共有インフォグラフィック', file: 'organizational-complexity/aws-tgw-sharing-infographic (1).html', category: '組織の複雑性の設計' },
+    { title: 'RAM VPC プレフィックス', file: 'organizational-complexity/aws_ram_vpc_prefix_infographic.html', category: '組織の複雑性の設計' },
+    { title: 'AWS Organizations & Control Tower プロセス図解', file: 'organizational-complexity/aws_org_infographic.html', category: '組織の複雑性の設計' },
+    { title: 'AWS KMS BYOK 完全ガイド', file: 'organizational-complexity/kms_byok_infographic.html', category: '組織の複雑性の設計' },
+    
+    // 新しいソリューション設計
+    { title: 'Direct Connect & VGW', file: 'new-solutions/aws-direct-connect-vgw.html', category: '新しいソリューション設計' },
+    { title: 'EIP & NAT インフォグラフィック', file: 'new-solutions/aws_eip_nat_infographic.html', category: '新しいソリューション設計' },
+    { title: 'VPN インフォグラフィック', file: 'new-solutions/aws_vpn_infographic (1).html', category: '新しいソリューション設計' },
+    { title: 'VPC PrivateLink CIDR オーバーラップ', file: 'new-solutions/vpc_privatelink_cidr_overlap.html', category: '新しいソリューション設計' },
+    { title: 'VPN vs PrivateLink', file: 'new-solutions/vpn-vs-privatelink.html', category: '新しいソリューション設計' },
+    { title: 'AWS VPN接続ガイド + Direct Connect比較', file: 'new-solutions/aws-vpn-with-direct-connect-guide.html', category: '新しいソリューション設計' },
+    { title: 'Direct Connect 暗号化 & VPN', file: 'new-solutions/direct_connect_encryption_vpn.html', category: '新しいソリューション設計' },
+    { title: 'IPSec 完全ガイド', file: 'new-solutions/ipsec_complete_guide.html', category: '新しいソリューション設計' },
+    { title: 'LAG ハイブリッド BGP 関係', file: 'new-solutions/lag_hybrid_bgp_relationship.html', category: '新しいソリューション設計' },
+    { title: 'CloudFront Origin Groups', file: 'new-solutions/cloudfront-origin-groups.html', category: '新しいソリューション設計' },
+    { title: 'Route53 ホストゾーン', file: 'new-solutions/route53_hosted_zones_infographic.html', category: '新しいソリューション設計' },
+    { title: 'Route53 クロスアカウント関連付け', file: 'new-solutions/route53_cross_account_guide.html', category: '新しいソリューション設計' },
+    { title: 'S3 Multi-Region Access Points', file: 'new-solutions/s3-mrap-infographic.html', category: '新しいソリューション設計' },
+    { title: 'EC2 Auto Scaling ライフサイクル', file: 'new-solutions/ec2-autoscaling-lifecycle-hooks.html', category: '新しいソリューション設計' },
+    { title: 'EC2 ブートストラップ', file: 'new-solutions/ec2-bootstrap-infographic.html', category: '新しいソリューション設計' },
+    { title: 'EFA インフォグラフィック', file: 'new-solutions/efa_infographic.html', category: '新しいソリューション設計' },
+    { title: 'Lambda エイリアス・カナリー', file: 'new-solutions/lambda-alias-canary.html', category: '新しいソリューション設計' },
+    { title: 'AWS ECS コンテナ管理', file: 'new-solutions/aws_ecs_infographic (2).html', category: '新しいソリューション設計' },
+    { title: 'EKS IRSA (IAM Roles for Service Accounts)', file: 'new-solutions/eks_irsa_infographic.html', category: '新しいソリューション設計' },
+    { title: 'DNS vs AnyCast 完全ガイド - 図解版', file: 'new-solutions/dns-anycast-comparison (1).html', category: '新しいソリューション設計' },
+    
+    // 移行計画
+    { title: 'AWS データベース移行 (SCT & DMS)', file: 'migration-planning/aws_database_migration_infographic.html', category: '移行計画' },
+    { title: 'AWS Migration Hub', file: 'migration-planning/aws_migration_hub_infographic.html', category: '移行計画' },
+    
+    // コスト管理
+    { title: 'S3 ストレージクラス', file: 'cost-control/s3_storage_classes_infographic.html', category: 'コスト管理' },
+    { title: 'Lambda 予約済み同時実行数', file: 'cost-control/lambda_reserved_concurrency_infographic.html', category: 'コスト管理' },
+    
+    // 既存ソリューションの継続改善
+    { title: 'AWS WAF インフォグラフィック', file: 'continuous-improvement/aws_waf_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'IAM フェデレーション', file: 'continuous-improvement/iam_federation_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS災害復旧戦略', file: 'continuous-improvement/aws-dr-infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'Route53 Application Recovery Controller', file: 'continuous-improvement/route53-arc-infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'ACM証明書とEC2', file: 'continuous-improvement/acm_ec2_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS Elastic Disaster Recovery', file: 'continuous-improvement/aws_edr_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'Session Manager セキュリティガイド', file: 'continuous-improvement/session-manager-security-guide.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS FIS (Fault Injection Simulator)', file: 'continuous-improvement/aws_fis_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'CloudTrail Lake', file: 'continuous-improvement/cloudtrail-lake-infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'CloudWatch Synthetics', file: 'continuous-improvement/cloudwatch_synthetics_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'SSM Run Command', file: 'continuous-improvement/aws_ssm_runcommand_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'Kinesis Data Streams', file: 'continuous-improvement/kinesis-infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS Systems Manager', file: 'continuous-improvement/aws_systems_manager_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'EventBridge', file: 'continuous-improvement/eventbridge_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'Lambda ベストプラクティス', file: 'continuous-improvement/lambda_best_practices_guide.html', category: '既存ソリューションの継続改善' },
+    { title: 'SSM ドキュメントガイド', file: 'continuous-improvement/ssm_document_guide.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS CDK', file: 'continuous-improvement/cdk_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'CloudFormation変更セット', file: 'continuous-improvement/cloudformation_changeset_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS CodeDeploy', file: 'continuous-improvement/codedeploy_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'CodeDeploy デプロイ設定', file: 'continuous-improvement/codedeploy_infographic (1).html', category: '既存ソリューションの継続改善' },
+    { title: 'S3 Cross Region Replication', file: 'continuous-improvement/s3_crr_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS CI/CDパイプライン - レシピ開発から出版まで', file: 'continuous-improvement/aws_pipeline_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'Elastic Beanstalk Blue/Green デプロイメント', file: 'continuous-improvement/beanstalk_blue_green_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'Elastic Beanstalk ブルー/グリーンデプロイ完全ガイド', file: 'continuous-improvement/blue_green_deploy_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'AWS CodeBuild buildspec.yaml 完全ガイド', file: 'continuous-improvement/buildspec_infographic.html', category: '既存ソリューションの継続改善' },
+    { title: 'CanaryとLinearデプロイメントの違い', file: 'continuous-improvement/canary_linear_infographic.html', category: '既存ソリューションの継続改善' }
+];
 
-            try {
-                const response = await fetch(filename);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const text = await response.text();
-                contentFrame.innerHTML = text;
-            } catch (error) {
-                console.error('コンテンツの読み込みに失敗しました:', error);
-                contentFrame.innerHTML = '<div class="welcome-message" style="color: red;">コンテンツの読み込みに失敗しました。</div>';
-            }
-        }        async function loadQuiz() {
-            const contentFrame = document.getElementById('content-frame');
-            contentFrame.innerHTML = '<div class="welcome-message">クイズを読み込み中...</div>';
+// 検索機能
+function searchResources(query) {
+    if (!query.trim()) {
+        return [];
+    }
+    const lowerQuery = query.toLowerCase();
+    return resourcesDatabase.filter(resource => {
+        return resource.title.toLowerCase().includes(lowerQuery) ||
+               resource.category.toLowerCase().includes(lowerQuery) ||
+               resource.file.toLowerCase().includes(lowerQuery);
+    });
+}
 
-            try {
-                const response = await fetch('quiz.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+function highlightText(text, query) {
+    if (!query.trim()) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
+}
+
+function displaySearchResults(results, query) {
+    const searchResults = document.getElementById('searchResults');
+    const categoriesContainer = document.getElementById('categoriesContainer');
+    
+    if (results.length === 0) {
+        searchResults.innerHTML = '<div class="no-results">検索結果が見つかりません</div>';
+        searchResults.classList.add('active');
+        categoriesContainer.classList.add('search-mode');
+        return;
+    }
+
+    const resultsHTML = results.map(resource => {
+        const highlightedTitle = highlightText(resource.title, query);
+        const highlightedCategory = highlightText(resource.category, query);
+        const onclick = resource.action ? `${resource.action}()` : `loadContent('${resource.file}')`;
+        
+        return `
+            <div class="search-result-item" onclick="${onclick}">
+                <div class="search-result-title">${highlightedTitle}</div>
+                <div class="search-result-category">${highlightedCategory}</div>
+            </div>
+        `;
+    }).join('');
+
+    searchResults.innerHTML = resultsHTML;
+    searchResults.classList.add('active');
+    categoriesContainer.classList.add('search-mode');
+}
+
+function clearSearch() {
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const categoriesContainer = document.getElementById('categoriesContainer');
+    
+    searchInput.value = '';
+    searchResults.classList.remove('active');
+    categoriesContainer.classList.remove('search-mode');
+}
+
+// 既存の関数
+function toggleCategory(categoryId) {
+    console.log('toggleCategory が呼び出されました:', categoryId);
+    
+    const content = document.getElementById(categoryId);
+    if (!content) {
+        console.error('カテゴリが見つかりません:', categoryId);
+        return;
+    }
+    
+    const header = content.previousElementSibling;
+    const arrow = header ? header.querySelector('.arrow') : null;
+    
+    if (!header || !arrow) {
+        console.error('ヘッダーまたは矢印要素が見つかりません');
+        return;
+    }
+    
+    console.log('カテゴリの状態を切り替え中:', categoryId);
+    
+    // Close all other categories
+    document.querySelectorAll('.category-content').forEach(cat => {
+        if (cat.id !== categoryId) {
+            cat.classList.remove('active');
+            const prevHeader = cat.previousElementSibling;
+            if (prevHeader) {
+                prevHeader.classList.remove('active');
+                const prevArrow = prevHeader.querySelector('.arrow');
+                if (prevArrow) {
+                    prevArrow.classList.remove('rotate');
                 }
-                const text = await response.text();
-                contentFrame.innerHTML = text;
-            } catch (error) {
-                console.error('クイズの読み込みに失敗しました:', error);
-                contentFrame.innerHTML = '<div class="welcome-message" style="color: red;">クイズの読み込みに失敗しました。</div>';
             }
-        }        // Initialize page        document.addEventListener('DOMContentLoaded', function() {            console.log('AWS SAP 学習リソースページが読み込まれました');        });
+        }
+    });
+    
+    // Toggle current category
+    const isActive = content.classList.contains('active');
+    content.classList.toggle('active');
+    header.classList.toggle('active');
+    arrow.classList.toggle('rotate');
+    
+    console.log('カテゴリの新しい状態:', categoryId, isActive ? '閉じる' : '開く');
+}
+
+async function loadContent(filename) {
+    const contentFrame = document.getElementById('content-frame');
+    if (!contentFrame) {
+        console.error('content-frame要素が見つかりません');
+        return;
+    }
+    
+    contentFrame.innerHTML = '<div class="welcome-message">コンテンツを読み込み中...</div>';
+    console.log('コンテンツを読み込み中:', filename);
+
+    try {
+        // ファイルパスを正規化
+        const filePath = filename.startsWith('/') ? filename : `./${filename}`;
+        console.log('正規化されたファイルパス:', filePath);
+        
+        const response = await fetch(filePath);
+        console.log('レスポンスステータス:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+        }
+        const text = await response.text();
+        console.log('コンテンツ読み込み成功:', text.length, '文字');
+        
+        contentFrame.innerHTML = text;
+        
+        // 読み込まれたコンテンツ内のスクリプトを実行
+        const scripts = contentFrame.querySelectorAll('script');
+        scripts.forEach((script, index) => {
+            try {
+                if (script.src) {
+                    // 外部スクリプトの場合
+                    const newScript = document.createElement('script');
+                    newScript.src = script.src;
+                    newScript.onload = () => console.log(`外部スクリプト${index}読み込み完了:`, script.src);
+                    newScript.onerror = () => console.error(`外部スクリプト${index}読み込み失敗:`, script.src);
+                    document.head.appendChild(newScript);
+                } else if (script.textContent.trim()) {
+                    // インラインスクリプトの場合
+                    console.log(`インラインスクリプト${index}を実行中...`);
+                    eval(script.textContent);
+                }
+            } catch (scriptError) {
+                console.warn(`スクリプト${index}の実行に失敗:`, scriptError);
+            }
+        });
+        
+    } catch (error) {
+        console.error('コンテンツの読み込みに失敗しました:', error);
+        contentFrame.innerHTML = `
+            <div class="welcome-message" style="color: red;">
+                <h3>コンテンツの読み込みに失敗しました</h3>
+                <p>ファイル: ${filename}</p>
+                <p>エラー: ${error.message}</p>
+                <p>ローカルサーバーを起動してお試しください。</p>
+            </div>
+        `;
+    }
+}
+
+async function loadQuiz() {
+    const contentFrame = document.getElementById('content-frame');
+    contentFrame.innerHTML = '<div class="welcome-message">クイズを読み込み中...</div>';
+
+    try {
+        const response = await fetch('quiz.html');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const text = await response.text();
+        contentFrame.innerHTML = text;
+        
+        // クイズHTMLが読み込まれた後、クイズスクリプトを実行
+        const scriptElements = contentFrame.querySelectorAll('script');
+        scriptElements.forEach(script => {
+            if (script.src) {
+                // 外部スクリプトの場合
+                const newScript = document.createElement('script');
+                newScript.src = script.src;
+                document.head.appendChild(newScript);
+            } else {
+                // インラインスクリプトの場合
+                eval(script.textContent);
+            }
+        });
+    } catch (error) {
+        console.error('クイズの読み込みに失敗しました:', error);
+        contentFrame.innerHTML = '<div class="welcome-message" style="color: red;">クイズの読み込みに失敗しました。</div>';
+    }
+}
+
+// グローバル関数として公開
+window.toggleCategory = toggleCategory;
+window.loadContent = loadContent;
+window.loadQuiz = loadQuiz;
+window.searchResources = searchResources;
+window.clearSearch = clearSearch;
+
+// イベントリスナー
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const clearButton = document.getElementById('clearSearch');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value;
+            if (query.trim()) {
+                const results = searchResources(query);
+                displaySearchResults(results, query);
+            } else {
+                clearSearch();
+            }
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                clearSearch();
+            }
+        });
+    }
+    
+    if (clearButton) {
+        clearButton.addEventListener('click', clearSearch);
+    }
+    
+    console.log('AWS SAP 学習リソースページが読み込まれました');
+    console.log('検索機能が有効になりました');
+    console.log('利用可能な関数:', Object.keys(window).filter(key => typeof window[key] === 'function' && ['toggleCategory', 'loadContent', 'loadQuiz'].includes(key)));
+});
