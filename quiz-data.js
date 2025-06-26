@@ -1,4 +1,4 @@
-// AWS SAP クイズデータベース
+// AWS SAP クイズデータベース - 拡張版
 const quizData = {
     networking: {
         title: "ネットワーキング",

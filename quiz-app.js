@@ -29,7 +29,7 @@ class QuizApp {
             categoryCard.innerHTML = `
                 <span class="category-icon">${category.icon}</span>
                 <div class="category-title">${category.title}</div>
-                <div class="question-count">${category.questions.length}問</div>
+                <div class="question-count">${getTotalQuestions(categoryKey)}問</div>
             `;
             
             categoriesGrid.appendChild(categoryCard);
@@ -38,7 +38,7 @@ class QuizApp {
 
     startQuiz(categoryKey) {
         this.currentCategory = categoryKey;
-        this.questions = [...quizData[categoryKey].questions];
+        this.questions = getAllQuestions(categoryKey);
         this.currentQuestionIndex = 0;
         this.userAnswers = [];
         this.selectedAnswer = null;
