@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudFrontのカスタムHTTPヘッダーとCache-Control入門ガイド</title>
+    <style>
+        :root {
+            --primary: #232F3E;
+            --secondary: #FF9900;
+            --accent: #0073BB;
+            --light-bg: #f8f9fa;
+            --dark-text: #333;
+            --light-text: #fff;
+            --border-radius: 8px;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-text);
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary);
+            color: var(--light-text);
+            padding: 30px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background-color: var(--primary);
+            color: var(--light-text);
+            padding: 15px 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .card-header.orange {
+            background-color: var(--secondary);
+        }
+        
+        .card-header.blue {
+            background-color: var(--accent);
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .flex-item {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 5px solid var(--accent);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+        
+        .warning-box {
+            background-color: #fff3e0;
+            border-left: 5px solid var(--secondary);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+        
+        .diagram {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .diagram img {
+            max-width: 100%;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .flow-item {
+            background-color: var(--primary);
+            color: var(--light-text);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            width: 150px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .flow-item::after {
+            content: "→";
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em;
+            color: var(--primary);
+        }
+        
+        .flow-item:last-child::after {
+            display: none;
+        }
+        
+        .example-code {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-family: monospace;
+            overflow-x: auto;
+            line-height: 1.4;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: var(--primary);
+            color: var(--light-text);
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .step-container {
+            counter-reset: step;
+        }
+        
+        .step {
+            margin-bottom: 20px;
+            padding-left: 60px;
+            position: relative;
+        }
+        
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background-color: var(--primary);
+            color: var(--light-text);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        @media (max-width: 768px) {
+            .flex-container {
+                flex-direction: column;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .flow-item {
+                width: 100%;
+            }
+            
+            .flow-item::after {
+                content: "↓";
+                right: auto;
+                bottom: -25px;
+                top: auto;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CloudFrontのカスタムHTTPヘッダーとCache-Control入門ガイド</h1>
+            <div class="subtitle">初心者でもわかるウェブパフォーマンスとキャッシュ最適化の基礎</div>
+        </header>
+        
+        <div class="card">
+            <div class="card-header">CloudFrontとは？</div>
+            <div class="card-body">
+                <p>Amazon CloudFrontは、AWSが提供するCDN（コンテンツ配信ネットワーク）サービスです。世界中のエッジロケーションを活用して、ウェブサイトやアプリケーションのコンテンツを高速に配信します。</p>
+                
+                <div class="diagram">
+                    <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+                        <!-- World Map (Simplified) -->
+                        <path d="M100,150 Q200,100 300,150 Q400,200 500,150 Q600,100 700,150" stroke="#ccc" fill="none" stroke-width="2"/>
+                        
+                        <!-- CloudFront Edge Locations -->
+                        <circle cx="150" cy="120" r="10" fill="#FF9900"/>
+                        <circle cx="250" cy="140" r="10" fill="#FF9900"/>
+                        <circle cx="350" cy="170" r="10" fill="#FF9900"/>
+                        <circle cx="450" cy="130" r="10" fill="#FF9900"/>
+                        <circle cx="550" cy="150" r="10" fill="#FF9900"/>
+                        <circle cx="650" cy="120" r="10" fill="#FF9900"/>
+                        
+                        <!-- Origin Server -->
+                        <rect x="370" y="220" width="60" height="40" fill="#232F3E" rx="5"/>
+                        <text x="400" y="245" text-anchor="middle" fill="white" font-size="12">オリジン</text>
+                        
+                        <!-- Users -->
+                        <circle cx="150" cy="80" r="15" fill="#0073BB"/>
+                        <text x="150" y="85" text-anchor="middle" fill="white" font-size="15">👤</text>
+                        
+                        <circle cx="350" cy="100" r="15" fill="#0073BB"/>
+                        <text x="350" y="105" text-anchor="middle" fill="white" font-size="15">👤</text>
+                        
+                        <circle cx="550" cy="90" r="15" fill="#0073BB"/>
+                        <text x="550" y="95" text-anchor="middle" fill="white" font-size="15">👤</text>
+                        
+                        <circle cx="650" cy="70" r="15" fill="#0073BB"/>
+                        <text x="650" y="75" text-anchor="middle" fill="white" font-size="15">👤</text>
+                        
+                        <!-- Connections -->
+                        <line x1="150" y1="95" x2="150" y2="110" stroke="#0073BB" stroke-width="2"/>
+                        <line x1="350" y1="115" x2="350" y2="160" stroke="#0073BB" stroke-width="2"/>
+                        <line x1="550" y1="105" x2="550" y2="140" stroke="#0073BB" stroke-width="2"/>
+                        <line x1="650" y1="85" x2="650" y2="110" stroke="#0073BB" stroke-width="2"/>
+                        
+                        <line x1="400" y1="220" x2="150" y2="130" stroke="#FF9900" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="400" y1="220" x2="250" y2="150" stroke="#FF9900" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="400" y1="220" x2="350" y2="180" stroke="#FF9900" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="400" y1="220" x2="450" y2="140" stroke="#FF9900" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="400" y1="220" x2="550" y2="160" stroke="#FF9900" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="400" y1="220" x2="650" y2="130" stroke="#FF9900" stroke-width="2" stroke-dasharray="5,5"/>
+                    </svg>
+                </div>
+                
+                <div class="info-box">
+                    <strong>CloudFrontの主なメリット:</strong>
+                    <ul>
+                        <li>ウェブサイトの読み込み時間を短縮</li>
+                        <li>オリジンサーバーの負荷を軽減</li>
+                        <li>大規模なトラフィック処理が可能</li>
+                        <li>セキュリティの向上</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex-container">
+            <div class="flex-item card">
+                <div class="card-header orange">HTTPヘッダーとは？</div>
+                <div class="card-body">
+                    <p>HTTPヘッダーは、ウェブブラウザとサーバー間で交換される追加情報です。これらはリクエストやレスポンスの詳細を提供し、どのようにデータを処理すべきかを指示します。</p>
+                    
+                    <div class="example-code">
+                        GET /index.html HTTP/1.1<br>
+                        Host: www.example.com<br>
+                        User-Agent: Mozilla/5.0<br>
+                        Accept: text/html<br>
+                        Accept-Language: ja<br>
+                        ...
+                    </div>
+                    
+                    <p>レスポンスヘッダーの例:</p>
+                    
+                    <div class="example-code">
+                        HTTP/1.1 200 OK<br>
+                        Content-Type: text/html<br>
+                        Content-Length: 1234<br>
+                        Date: Tue, 11 Mar 2025 12:00:00 GMT<br>
+                        Cache-Control: max-age=3600<br>
+                        ...
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-item card">
+                <div class="card-header blue">CloudFrontのカスタムHTTPヘッダー</div>
+                <div class="card-body">
+                    <p>CloudFrontでは、オリジンに送信するリクエストや、ビューワーに送信するレスポンスにカスタムHTTPヘッダーを追加できます。</p>
+                    
+                    <div class="info-box">
+                        <strong>カスタムヘッダーの主な用途:</strong>
+                        <ul>
+                            <li>オリジンの識別</li>
+                            <li>セキュリティの強化</li>
+                            <li>カスタムコンテンツの提供</li>
+                            <li>分析・モニタリング</li>
+                        </ul>
+                    </div>
+                    
+                    <p>CloudFrontは自動的に以下のようなヘッダーも追加します:</p>
+                    <ul>
+                        <li><code>X-Edge-Location</code>: リクエストを処理したエッジロケーション</li>
+                        <li><code>X-Cache</code>: キャッシュヒット/ミス情報</li>
+                        <li><code>X-Amz-Cf-Id</code>: リクエスト識別子</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">Cache-Controlヘッダーの基本</div>
+            <div class="card-body">
+                <p>Cache-Controlは、コンテンツのキャッシュ方法を指定するHTTPレスポンスヘッダーです。このヘッダーを使って、CloudFrontやブラウザがどのようにコンテンツをキャッシュするかをコントロールできます。</p>
+                
+                <table>
+                    <tr>
+                        <th>ディレクティブ</th>
+                        <th>説明</th>
+                        <th>例</th>
+                    </tr>
+                    <tr>
+                        <td><code>max-age</code></td>
+                        <td>コンテンツがキャッシュ可能な最大秒数</td>
+                        <td><code>Cache-Control: max-age=3600</code><br>(1時間キャッシュ)</td>
+                    </tr>
+                    <tr>
+                        <td><code>s-maxage</code></td>
+                        <td>共有キャッシュ（CloudFrontなど）に対する最大秒数</td>
+                        <td><code>Cache-Control: s-maxage=86400</code><br>(CDNで1日キャッシュ)</td>
+                    </tr>
+                    <tr>
+                        <td><code>no-cache</code></td>
+                        <td>再検証なしでキャッシュを使用しない</td>
+                        <td><code>Cache-Control: no-cache</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>no-store</code></td>
+                        <td>一切キャッシュしない</td>
+                        <td><code>Cache-Control: no-store</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>public</code></td>
+                        <td>任意のキャッシュで保存可能</td>
+                        <td><code>Cache-Control: public, max-age=86400</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>private</code></td>
+                        <td>ブラウザのみでキャッシュ可能、CDNでは不可</td>
+                        <td><code>Cache-Control: private, max-age=3600</code></td>
+                    </tr>
+                </table>
+                
+                <div class="warning-box">
+                    <strong>注意:</strong> <code>private</code>ディレクティブを使用すると、CloudFrontはそのコンテンツをキャッシュしません。これはユーザー固有のコンテンツに適しています。
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">CloudFrontでのCache-Control活用方法</div>
+            <div class="card-body">
+                <p>CloudFrontでは、オリジンから送られるCache-Controlヘッダーに基づいてキャッシュを管理しますが、CloudFrontの設定でこれをオーバーライドすることも可能です。</p>
+                
+                <div class="diagram">
+                    <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Browser -->
+                        <rect x="50" y="80" width="100" height="60" rx="10" fill="#0073BB"/>
+                        <text x="100" y="115" text-anchor="middle" fill="white">ブラウザ</text>
+                        
+                        <!-- CloudFront -->
+                        <rect x="350" y="80" width="100" height="60" rx="10" fill="#FF9900"/>
+                        <text x="400" y="115" text-anchor="middle" fill="white">CloudFront</text>
+                        
+                        <!-- Origin -->
+                        <rect x="650" y="80" width="100" height="60" rx="10" fill="#232F3E"/>
+                        <text x="700" y="115" text-anchor="middle" fill="white">オリジン</text>
+                        
+                        <!-- Arrows -->
+                        <line x1="150" y1="100" x2="350" y2="100" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+                        <text x="250" y="90" text-anchor="middle" fill="#333" font-size="12">リクエスト</text>
+                        
+                        <line x1="350" y1="120" x2="150" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+                        <text x="250" y="140" text-anchor="middle" fill="#333" font-size="12">レスポンス + Cache-Control</text>
+                        
+                        <line x1="450" y1="100" x2="650" y2="100" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+                        <text x="550" y="90" text-anchor="middle" fill="#333" font-size="12">キャッシュミス時のみ</text>
+                        
+                        <line x1="650" y1="120" x2="450" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+                        <text x="550" y="140" text-anchor="middle" fill="#333" font-size="12">レスポンス + Cache-Control</text>
+                        
+                        <!-- Arrow Marker -->
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+                
+                <div class="step-container">
+                    <div class="step">
+                        <h3>静的コンテンツの最適化</h3>
+                        <p>画像、CSS、JavaScriptなどの静的コンテンツは長時間キャッシュするのが効果的です。</p>
+                        <div class="example-code">
+                            Cache-Control: public, max-age=31536000
+                        </div>
+                        <p>これにより、コンテンツは1年間キャッシュされます。更新時には、ファイル名にバージョンやハッシュを含めることで、新しいバージョンを確実に取得できます。</p>
+                    </div>
+                    
+                    <div class="step">
+                        <h3>動的コンテンツの管理</h3>
+                        <p>頻繁に更新される動的コンテンツは、短時間のキャッシュか再検証を設定します。</p>
+                        <div class="example-code">
+                            Cache-Control: no-cache
+                        </div>
+                        <p>この設定では、CloudFrontは毎回オリジンに再検証を行います。または、短時間キャッシュする場合:</p>
+                        <div class="example-code">
+                            Cache-Control: max-age=60
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <h3>個人向けコンテンツの保護</h3>
+                        <p>ユーザー固有の情報を含むページは、CDNでキャッシュしないようにします。</p>
+                        <div class="example-code">
+                            Cache-Control: private, max-age=0
+                        </div>
+                        <p>これにより、CloudFrontはこのコンテンツをキャッシュせず、各リクエストをオリジンに転送します。</p>
+                    </div>
+                    
+                    <div class="step">
+                        <h3>CloudFrontでのキャッシュ設定</h3>
+                        <p>CloudFrontのディストリビューション設定で、オリジンのCache-Controlヘッダーを上書きできます。</p>
+                        <ol>
+                            <li>CloudFrontコンソールでディストリビューションを選択</li>
+                            <li>「動作」タブでキャッシュ動作を編集</li>
+                            <li>「最小TTL」「デフォルトTTL」「最大TTL」値を設定</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>ベストプラクティス:</strong>
+                    <ul>
+                        <li>静的アセット: 長時間キャッシュ（max-age=31536000）+ ファイル名にバージョン</li>
+                        <li>HTML: 短時間キャッシュ（max-age=300）または再検証（no-cache）</li>
+                        <li>API応答: 適切なキャッシュ時間を設定するか、個別に設定</li>
+                        <li>個人データ: privateディレクティブを使用してCDNキャッシュを防止</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">カスタムヘッダーとCache-Controlの組み合わせ例</div>
+            <div class="card-body">
+                <p>カスタムヘッダーとCache-Controlを組み合わせることで、より柔軟なコンテンツ配信が可能になります。</p>
+                
+                <div class="flex-container">
+                    <div class="flex-item">
+                        <h3>地域別コンテンツのカスタマイズ</h3>
+                        <div class="example-code">
+                            # CloudFrontからオリジンへのカスタムヘッダー<br>
+                            X-Country-Code: JP<br><br>
+                            # オリジンからのレスポンス<br>
+                            Cache-Control: public, max-age=3600, s-maxage=86400<br>
+                            Vary: X-Country-Code
+                        </div>
+                        <p><code>Vary</code>ヘッダーを使用すると、同じURLでも国別に異なるキャッシュバージョンを保持できます。</p>
+                    </div>
+                    
+                    <div class="flex-item">
+                        <h3>デバイスタイプ別の最適化</h3>
+                        <div class="example-code">
+                            # CloudFrontの設定でUser-Agentに基づくカスタムヘッダー<br>
+                            X-Device-Type: mobile<br><br>
+                            # オリジンからのレスポンス<br>
+                            Cache-Control: public, max-age=21600<br>
+                            Vary: X-Device-Type
+                        </div>
+                        <p>この設定により、モバイルとデスクトップで最適化された異なるバージョンをキャッシュできます。</p>
+                    </div>
+                </div>
+                
+                <div class="warning-box">
+                    <strong>注意点:</strong> <code>Vary</code>ヘッダーを過剰に使用すると、キャッシュヒット率が低下する可能性があります。重要な差異のみに使用しましょう。
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">まとめ</div>
+            <div class="card-body">
+                <div class="flex-container">
+                    <div class="flex-item">
+                        <h3>カスタムHTTPヘッダーのポイント</h3>
+                        <ul>
+                            <li>CloudFrontからオリジンへのリクエストにカスタムヘッダーを追加できる</li>
+                            <li>セキュリティやコンテンツのカスタマイズに有効</li>
+                            <li>分析やデバッグのためのヘッダーも追加可能</li>
+                            <li>地域やデバイスに基づくコンテンツの最適化に活用</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="flex-item">
+                        <h3>Cache-Controlのポイント</h3>
+                        <ul>
+                            <li>コンテンツ種類に応じた適切なキャッシュ戦略を選択</li>
+                            <li>静的コンテンツは長時間、動的コンテンツは短時間キャッシュ</li>
+                            <li>個人データには<code>private</code>ディレクティブを使用</li>
+                            <li>CloudFrontの設定でオリジンのCache-Controlを上書き可能</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <p>適切なHTTPヘッダーとCache-Control設定により、ウェブサイトのパフォーマンス、セキュリティ、ユーザー体験を大幅に向上させることができます。コンテンツの特性に合わせて最適な設定を選択しましょう。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

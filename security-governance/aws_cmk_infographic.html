@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS CMK（暗号化キー）を銀行の貸金庫で理解しよう</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.4em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .intro-analogy {
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .intro-analogy h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .analogy-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .analogy-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .analogy-card:hover {
+            transform: translateY(-10px);
+            border-color: #667eea;
+        }
+
+        .analogy-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .comparison-side {
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .everyday-side {
+            background: linear-gradient(135deg, #ffd89b 0%, #ffb347 100%);
+        }
+
+        .aws-side {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .simple-diagram {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .diagram-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .diagram-item {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .diagram-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .key-holder {
+            background: linear-gradient(135deg, #ffd89b 0%, #ffb347 100%);
+            color: #8b4513;
+        }
+
+        .safe-vault {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #2c3e50;
+        }
+
+        .aws-kms {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .connection-arrow {
+            position: absolute;
+            top: 50%;
+            left: 30%;
+            right: 30%;
+            height: 6px;
+            background: linear-gradient(90deg, #ffd700 0%, #ffb347 100%);
+            border-radius: 3px;
+            animation: keyFlow 3s infinite;
+        }
+
+        .connection-arrow::before,
+        .connection-arrow::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+
+        .connection-arrow::before {
+            left: -8px;
+            border-width: 9px 12px 9px 0;
+            border-color: transparent #ffd700 transparent transparent;
+        }
+
+        .connection-arrow::after {
+            right: -8px;
+            border-width: 9px 0 9px 12px;
+            border-color: transparent transparent transparent #ffb347;
+        }
+
+        .step-by-step {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .step-item {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .faq-section {
+            background: linear-gradient(135deg, #ffd89b 0%, #ffb347 100%);
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .faq-item {
+            background: white;
+            margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .faq-question {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #5a6fd8;
+        }
+
+        .faq-answer {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .benefit-card {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .rotation-demo {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .rotation-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .timeline-item {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-item:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .timeline-arrow {
+            font-size: 2em;
+            color: #ffd700;
+            animation: pulse 2s infinite;
+        }
+
+        .access-control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .access-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 3px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .access-allowed {
+            border-color: #4caf50;
+            background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+        }
+
+        .access-denied {
+            border-color: #f44336;
+            background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%);
+        }
+
+        .access-card:hover {
+            transform: translateY(-5px);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes keyFlow {
+            0%, 100% {
+                opacity: 1;
+                transform: scaleX(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scaleX(1.1);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .comparison-table {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-row {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .connection-arrow {
+                top: 35%;
+                left: 50%;
+                right: auto;
+                width: 6px;
+                height: 80px;
+                transform: translateX(-50%);
+            }
+            
+            .rotation-timeline {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .timeline-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .step-item {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🏦 AWS CMK（暗号化キー）</h1>
+            <p>銀行の貸金庫システムで理解する超入門ガイド</p>
+            <div class="intro-analogy">
+                <h2>🔑 あなたの鍵 ↔️ 🏦 銀行の貸金庫 ↔️ 💎 大切なデータ</h2>
+                <p>AWS CMKの仕組みを、身近な銀行の貸金庫システムで分かりやすく説明します！</p>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>🤔 まず、CMK（暗号化キー）って何？</h2>
+            <div class="highlight-box">
+                <h3>📝 簡単に言うと...</h3>
+                <p style="font-size: 1.2em; margin-top: 15px;">
+                    <strong>大切なデータ</strong>を<strong>暗号化して保護</strong>するための
+                    <strong>特別な鍵</strong>です
+                </p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>🏦 銀行の貸金庫の例</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>貴重品</strong>を<strong>貸金庫</strong>に<br>
+                        安全に保管したい</p>
+                        <br>
+                        <p>🔑 <strong>専用の鍵</strong>でロック<br>
+                        👮 銀行員が<strong>鍵の管理</strong>をサポート<br>
+                        🔄 定期的に<strong>鍵を交換</strong></p>
+                    </div>
+                </div>
+                <div class="comparison-side aws-side">
+                    <h3>☁️ AWSの世界</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>重要なデータ</strong>を<strong>暗号化</strong>して<br>
+                        安全に保存したい</p>
+                        <br>
+                        <p>🔑 <strong>CMK（暗号化キー）</strong>でロック<br>
+                        ☁️ AWS KMSが<strong>鍵の管理</strong>をサポート<br>
+                        🔄 自動で<strong>鍵をローテーション</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🏦 3つの重要な要素を銀行で理解</h2>
+            <div class="analogy-cards">
+                <div class="analogy-card">
+                    <div class="analogy-icon">🔑</div>
+                    <h3>CMK（Customer Master Key）<br>= 貸金庫の主鍵</h3>
+                    <p><strong>あなた専用の特別な鍵</strong>です。<br>
+                    この鍵でデータを暗号化・復号化します。<br>
+                    <strong>カスタマーマネージド</strong>なら、あなたが完全にコントロール可能。</p>
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>例:</strong> my-company-master-key<br>
+                        <strong>用途:</strong> S3、RDS、EBSの暗号化
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">👮</div>
+                    <h3>アクセス制御<br>= 鍵の使用許可システム</h3>
+                    <p><strong>誰が鍵を使えるか</strong>を細かく設定。<br>
+                    社長、経理、開発者など、<br>
+                    <strong>役職や部署ごと</strong>に権限を分けられます。</p>
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>設定例:</strong> 開発者は暗号化のみ<br>
+                        <strong>管理例:</strong> 管理者は全権限
+                    </div>
+                </div>
+
+                <div class="analogy-card">
+                    <div class="analogy-icon">🔄</div>
+                    <h3>自動ローテーション<br>= 定期的な鍵交換サービス</h3>
+                    <p><strong>1年に1回自動</strong>で新しい鍵に交換。<br>
+                    古い鍵で暗号化されたデータも、<br>
+                    <strong>ちゃんと復号化</strong>できるので安心。</p>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <strong>頻度:</strong> 年1回（自動）<br>
+                        <strong>利点:</strong> セキュリティ向上
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔐 カスタマーマネージドCMKって何が特別？</h2>
+            <div class="intro-analogy">
+                <h2>🏠 自分で管理 vs 🏦 銀行におまかせ</h2>
+                <p>AWS管理の鍵と、あなたが管理する鍵の違いを理解しよう</p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>🏦 AWS管理CMK</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>銀行が全部管理</strong></p>
+                        <br>
+                        <p>✅ <strong>メリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 20px;">
+                            <li>設定不要で簡単</li>
+                            <li>追加料金なし</li>
+                            <li>自動で安全管理</li>
+                        </ul>
+                        <br>
+                        <p>❌ <strong>デメリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 20px;">
+                            <li>アクセス制御不可</li>
+                            <li>ローテーション制御不可</li>
+                            <li>監査ログなし</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="comparison-side aws-side">
+                    <h3>🔑 カスタマーマネージドCMK</h3>
+                    <div style="font-size: 1.1em; margin-top: 15px;">
+                        <p><strong>あなたが完全コントロール</strong></p>
+                        <br>
+                        <p>✅ <strong>メリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 20px;">
+                            <li>細かいアクセス制御</li>
+                            <li>自動ローテーション設定可</li>
+                            <li>完全な監査ログ</li>
+                            <li>他AWSアカウントと共有可</li>
+                        </ul>
+                        <br>
+                        <p>❌ <strong>デメリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 20px;">
+                            <li>設定が必要</li>
+                            <li>月額$1/鍵</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h3>💡 どちらを選ぶべき？</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <p><strong>🏦 AWS管理CMKが向いている場合:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>とりあえず暗号化したい</li>
+                        <li>設定を簡単にしたい</li>
+                        <li>コストを抑えたい</li>
+                    </ul>
+                    <br>
+                    <p><strong>🔑 カスタマーマネージドCMKが向いている場合:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>厳格なアクセス制御が必要</li>
+                        <li>監査要件がある（SOX法、PCI DSS等）</li>
+                        <li>定期的なキーローテーションが必要</li>
+                        <li>複数のAWSアカウントで鍵を共有したい</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>👮 アクセス制御の仕組み</h2>
+            <div class="intro-analogy">
+                <h2>🏢 会社の金庫室への入室管理</h2>
+                <p>誰が、いつ、どの操作をできるかを細かくコントロール</p>
+            </div>
+
+            <div class="step-by-step">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">🔐 アクセス制御の3段階</h3>
+                
+                <div class="step-item" style="border-left-color: #f093fb;">
+                    <div class="step-number" style="background: #f093fb;">1</div>
+                    <div class="step-content">
+                        <h3>IAMポリシー（社員証チェック）</h3>
+                        <p><strong>銀行の例：</strong> 「田中さんは貸金庫エリアに入室可能」<br>
+                        <strong>AWS:</strong> どのユーザー・ロールがKMSにアクセスできるかを設定</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #4facfe;">
+                    <div class="step-number" style="background: #4facfe;">2</div>
+                    <div class="step-content">
+                        <h3>キーポリシー（鍵の使用ルール）</h3>
+                        <p><strong>銀行の例：</strong> 「田中さんは鍵で開けることは可能、でも鍵のコピーは不可」<br>
+                        <strong>AWS:</strong> その特定のCMKに対して何ができるかを設定</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #20c997;">
+                    <div class="step-number" style="background: #20c997;">3</div>
+                    <div class="step-content">
+                        <h3>グラント（一時的な権限）</h3>
+                        <p><strong>銀行の例：</strong> 「今日だけ、佐藤さんも田中さんの鍵を使えます」<br>
+                        <strong>AWS:</strong> 期間限定や条件付きでの一時的なアクセス権限</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="access-control-grid">
+                <div class="access-card access-allowed">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">✅</div>
+                    <h4>開発者</h4>
+                    <p><strong>許可:</strong><br>
+                    ・データの暗号化<br>
+                    ・データの復号化</p>
+                    <p><strong>拒否:</strong><br>
+                    ・鍵の削除<br>
+                    ・鍵の管理</p>
+                </div>
+
+                <div class="access-card access-allowed">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">👑</div>
+                    <h4>管理者</h4>
+                    <p><strong>許可:</strong><br>
+                    ・全ての操作<br>
+                    ・鍵の作成・削除<br>
+                    ・ポリシー変更</p>
+                </div>
+
+                <div class="access-card access-denied">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">❌</div>
+                    <h4>外部ユーザー</h4>
+                    <p><strong>拒否:</strong><br>
+                    ・全ての操作<br>
+                    ・アクセス不可</p>
+                </div>
+
+                <div class="access-card access-allowed">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">🕐</div>
+                    <h4>監査役</h4>
+                    <p><strong>許可:</strong><br>
+                    ・ログの閲覧<br>
+                    ・鍵の使用状況確認</p>
+                    <p><strong>拒否:</strong><br>
+                    ・データアクセス</p>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #d63384;">🤔 アクセス制御のよくある質問</h3>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🤷 アクセス制御が複雑そう...簡単な設定例は？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>シンプルな3段階設定例:</strong></p>
+                        <br>
+                        <p><strong>1. キー管理者:</strong> IT部門のマネージャー</p>
+                        <ul style="margin-left: 20px;">
+                            <li>鍵の作成、削除、ポリシー変更が可能</li>
+                        </ul>
+                        <br>
+                        <p><strong>2. キー利用者:</strong> アプリケーション開発チーム</p>
+                        <ul style="margin-left: 20px;">
+                            <li>暗号化・復号化のみ可能</li>
+                        </ul>
+                        <br>
+                        <p><strong>3. 監査者:</strong> セキュリティチーム</p>
+                        <ul style="margin-left: 20px;">
+                            <li>使用ログの閲覧のみ可能</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🔍 誰が鍵を使ったか確認できる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>はい！CloudTrailで全て記録されます</strong></p>
+                        <br>
+                        <p><strong>記録される情報:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>誰が（どのユーザーが）</li>
+                            <li>いつ（日時）</li>
+                            <li>何をしたか（暗号化、復号化、削除等）</li>
+                            <li>どの鍵を使ったか</li>
+                            <li>IPアドレス</li>
+                        </ul>
+                        <br>
+                        <p>💡 <strong>監査やコンプライアンス</strong>に必要な情報が全て残ります</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        ⚠️ 間違って権限を与えすぎた場合は？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>即座に権限を取り消せます！</strong></p>
+                        <br>
+                        <p><strong>対処方法:</strong></p>
+                        <ol style="margin-left: 20px;">
+                            <li><strong>IAMポリシー</strong>の変更（数分で反映）</li>
+                            <li><strong>キーポリシー</strong>の変更（即座に反映）</li>
+                            <li><strong>グラント</strong>の取り消し（即座に反映）</li>
+                        </ol>
+                        <br>
+                        <p>🛡️ <strong>最小権限の原則:</strong> 必要最小限の権限から始めて、必要に応じて追加することが推奨</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 自動ローテーションの仕組み</h2>
+            <div class="rotation-demo">
+                <h3 style="text-align: center; margin-bottom: 20px;">🗓️ 年1回の自動鍵交換サービス</h3>
+                <p style="text-align: center; font-size: 1.1em; margin-bottom: 30px;">
+                    まるで銀行が定期的に貸金庫の鍵を新しくしてくれるようなサービスです
+                </p>
+                
+                <div class="rotation-timeline">
+                    <div class="timeline-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">🔑</div>
+                        <h4>今日: 現在の鍵</h4>
+                        <p>今使っている鍵で<br>データを暗号化</p>
+                    </div>
+                    
+                    <div class="timeline-arrow">➡️</div>
+                    
+                    <div class="timeline-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">🔄</div>
+                        <h4>365日後: 自動交換</h4>
+                        <p>AWSが新しい鍵を<br>自動で作成</p>
+                    </div>
+                    
+                    <div class="timeline-arrow">➡️</div>
+                    
+                    <div class="timeline-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">🆕</div>
+                        <h4>新しい鍵で暗号化</h4>
+                        <p>新データは新鍵で<br>暗号化される</p>
+                    </div>
+                    
+                    <div class="timeline-arrow">➡️</div>
+                    
+                    <div class="timeline-item">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">📚</div>
+                        <h4>古いデータも安全</h4>
+                        <p>古い鍵も保管されるので<br>復号化可能</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h3>🤔 なぜローテーションが重要？</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <p><strong>🏦 銀行の例で考えてみると...</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>長年同じ鍵を使い続けるのは危険</li>
+                        <li>誰かに鍵を盗まれる可能性がある</li>
+                        <li>定期的に鍵を変えることで安全性アップ</li>
+                    </ul>
+                    <br>
+                    <p><strong>☁️ AWSでも同じ理由:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>鍵が漏洩した場合の影響を最小化</li>
+                        <li>コンプライアンス要件（年1回のローテーション）</li>
+                        <li>暗号学的な安全性の向上</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">⚙️ ローテーション設定の流れ</h3>
+                
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>CMK作成時にローテーション有効化</h3>
+                        <p><strong>設定場所:</strong> KMSコンソール > カスタマーマネージドキー > 作成<br>
+                        <strong>設定項目:</strong> 「自動ローテーションを有効にする」をチェック</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>ローテーション間隔の設定</h3>
+                        <p><strong>デフォルト:</strong> 365日（1年）<br>
+                        <strong>範囲:</strong> 90日〜2560日まで設定可能<br>
+                        <strong>推奨:</strong> 1年（セキュリティと運用のバランス）</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>既存CMKでのローテーション有効化</h3>
+                        <p><strong>手順:</strong> 既存のCMK > キーローテーション > 編集<br>
+                        <strong>注意:</strong> 次回ローテーションは設定から365日後<br>
+                        <strong>影響:</strong> アプリケーションは何も変更不要</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>ローテーション状況の確認</h3>
+                        <p><strong>確認方法:</strong> KMSコンソール > キーの詳細 > ローテーション履歴<br>
+                        <strong>CloudTrail:</strong> ローテーション実行のログも記録<br>
+                        <strong>監視:</strong> CloudWatchでローテーション失敗を検知可能</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-section" style="margin-top: 30px;">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #d63384;">🔄 ローテーションのよくある質問</h3>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        😰 ローテーション中にシステムが止まる？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>いいえ！ダウンタイムは一切ありません</strong></p>
+                        <br>
+                        <p><strong>AWS KMSの賢い仕組み:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>ローテーション処理は<strong>バックグラウンド</strong>で実行</li>
+                            <li>アプリケーションは<strong>何も変更不要</strong></li>
+                            <li><strong>同じキーID</strong>なので、コードの修正なし</li>
+                            <li>新旧両方の鍵が<strong>自動で管理</strong>される</li>
+                        </ul>
+                        <br>
+                        <p>💡 銀行が夜中に金庫の鍵を交換するようなイメージです</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        📅 ローテーション頻度はどう決める？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>推奨は1年（365日）です</strong></p>
+                        <br>
+                        <p><strong>頻度別のメリット・デメリット:</strong></p>
+                        <br>
+                        <p><strong>🟢 1年（推奨）:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>セキュリティと運用コストのバランス◎</li>
+                            <li>多くのコンプライアンス要件を満たす</li>
+                        </ul>
+                        <br>
+                        <p><strong>🟡 3ヶ月（高セキュリティ）:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>より高いセキュリティ</li>
+                            <li>キー管理の複雑さ増加</li>
+                        </ul>
+                        <br>
+                        <p><strong>🔴 2年以上（非推奨）:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>セキュリティリスク増加</li>
+                            <li>コンプライアンス要件を満たさない可能性</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🗺️ データ暗号化の流れを図で見てみよう</h2>
+            <div class="simple-diagram">
+                <h3 style="text-align: center; margin-bottom: 30px;">📊 データ暗号化の流れ</h3>
+                
+                <div class="diagram-row">
+                    <div class="diagram-item key-holder">
+                        <div style="font-size: 3em; margin-bottom: 15px;">📄</div>
+                        <h3>機密データ</h3>
+                        <p><strong>暗号化前</strong></p>
+                        <small>顧客情報、財務データ<br>パスワード等</small>
+                    </div>
+                    
+                    <div class="connection-arrow"></div>
+                    
+                    <div class="diagram-item safe-vault">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🔑</div>
+                        <h3>CMK</h3>
+                        <p><strong>暗号化キー</strong></p>
+                        <small>カスタマーマネージド<br>自動ローテーション有効</small>
+                    </div>
+                    
+                    <div class="connection-arrow"></div>
+                    
+                    <div class="diagram-item aws-kms">
+                        <div style="font-size: 3em; margin-bottom: 15px;">🔐</div>
+                        <h3>暗号化データ</h3>
+                        <p><strong>安全に保存</strong></p>
+                        <small>S3、RDS、EBS等<br>解読不可能な状態</small>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>🔄 復号化の流れ</h3>
+                    <p>データが必要になったら → アクセス権限をチェック → CMKで復号化 → 元のデータとして使用</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 実際の設定手順（超簡単版）</h2>
+            <div class="step-by-step">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>カスタマーマネージドCMKの作成</h3>
+                        <p><strong>場所:</strong> AWSコンソール > KMS > カスタマーマネージドキー > 作成<br>
+                        → 鍵の種類: 対称<br>
+                        → 用途: 暗号化と復号化<br>
+                        → 自動ローテーション: 有効</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>鍵の管理者を設定</h3>
+                        <p><strong>キー管理者:</strong> IT部門のマネージャーを指定<br>
+                        → 鍵の削除、ポリシー変更権限<br>
+                        → 通常はAWS管理者アカウント</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>鍵の利用者を設定</h3>
+                        <p><strong>キー利用者:</strong> アプリケーションやユーザーを指定<br>
+                        → EC2インスタンス、Lambda関数等<br>
+                        → 暗号化・復号化権限のみ</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>鍵の名前とエイリアス設定</h3>
+                        <p><strong>エイリアス例:</strong> alias/my-company-master-key<br>
+                        → 覚えやすい名前を付ける<br>
+                        → 説明文も追加（「顧客データ暗号化用」等）</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>アプリケーションでの使用</h3>
+                        <p><strong>S3での使用:</strong> バケットの暗号化設定でCMKを指定<br>
+                        <strong>RDSでの使用:</strong> データベース作成時にCMKを指定<br>
+                        <strong>EBSでの使用:</strong> ボリューム作成時にCMKを指定</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <h3>監視とログ確認</h3>
+                        <p><strong>CloudTrail:</strong> KMS APIの使用ログを確認<br>
+                        <strong>CloudWatch:</strong> メトリクスとアラームを設定<br>
+                        → 異常なアクセスを早期発見</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ よくある質問</h2>
+            <div class="faq-section">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🤔 AWS管理CMKで十分じゃない？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>用途によります！</strong></p>
+                        <br>
+                        <p><strong>AWS管理CMKで十分な場合:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>個人プロジェクトや開発環境</li>
+                            <li>厳格なアクセス制御が不要</li>
+                            <li>監査要件がない</li>
+                        </ul>
+                        <br>
+                        <p><strong>カスタマーマネージドCMKが必要な場合:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>企業の本番環境</li>
+                            <li>個人情報や機密データを扱う</li>
+                            <li>SOX法、PCI DSS等のコンプライアンス要件</li>
+                            <li>細かいアクセス制御が必要</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        💰 コストはどのくらいかかるの？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>カスタマーマネージドCMKの料金:</strong></p>
+                        <br>
+                        <ul style="margin-left: 20px;">
+                            <li><strong>CMK作成・管理:</strong> $1/月（1つの鍵あたり）</li>
+                            <li><strong>API呼び出し:</strong> $0.03/10,000回</li>
+                            <li><strong>ローテーション:</strong> 無料</li>
+                            <li><strong>初期費用:</strong> 無料</li>
+                        </ul>
+                        <br>
+                        <p><strong>💡 例:</strong> 1つのCMKで月100万回のAPI呼び出し<br>
+                        → $1 + $3 = $4/月（約600円）</p>
+                        <br>
+                        <p>AWS管理CMKは無料ですが、カスタマーマネージドは月額コストがかかります。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🔧 間違って鍵を削除したら？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>安心してください！すぐには削除されません</strong></p>
+                        <br>
+                        <p><strong>KMSの安全な削除システム:</strong></p>
+                        <ol style="margin-left: 20px;">
+                            <li><strong>削除予約:</strong> 削除コマンドを実行</li>
+                            <li><strong>待機期間:</strong> 7〜30日の待機（設定可能）</li>
+                            <li><strong>取り消し可能:</strong> 待機中なら削除をキャンセル可能</li>
+                            <li><strong>完全削除:</strong> 待機期間後に本当に削除</li>
+                        </ol>
+                        <br>
+                        <p>💡 <strong>推奨:</strong> 待機期間は最大の30日に設定しておくと安心です</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        🌍 複数のリージョンで使える？
+                    </div>
+                    <div class="faq-answer" style="display: none;">
+                        <p><strong>CMKはリージョン固有です</strong></p>
+                        <br>
+                        <p><strong>対応方法:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li><strong>各リージョンで作成:</strong> 東京とバージニアで別々のCMK</li>
+                            <li><strong>マルチリージョンキー:</strong> 複数リージョンで同期されるCMK（より高度）</li>
+                            <li><strong>レプリケーション:</strong> 暗号化データをリージョン間でコピー</li>
+                        </ul>
+                        <br>
+                        <p>💡 <strong>初心者向け:</strong> まずは1つのリージョンでCMKを作成して慣れることをおすすめします</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✨ カスタマーマネージドCMKのメリット</h2>
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔐</div>
+                    <h3>完全なコントロール</h3>
+                    <p>誰がいつ鍵を使えるかを細かく制御。自分だけの鍵で最高レベルの安全性</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">📊</div>
+                    <h3>完全な監査ログ</h3>
+                    <p>いつ、誰が、何をしたかがすべて記録。コンプライアンス要件も安心</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔄</div>
+                    <h3>自動ローテーション</h3>
+                    <p>年1回自動で鍵を更新。アプリケーション変更不要で安全性アップ</p>
+                </div>
+                <div class="benefit-card">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🤝</div>
+                    <h3>柔軟な共有</h3>
+                    <p>他のAWSアカウントとも安全に鍵を共有。組織全体での一元管理</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚖️ AWSマネージド vs カスタマーマネージド徹底比較</h2>
+            <div class="intro-analogy">
+                <h2>🏦 おまかせプラン vs 🔐 フルカスタムプラン</h2>
+                <p>どちらのキータイプがあなたのニーズに最適か、詳しく比較してみましょう</p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-side everyday-side">
+                    <h3>🏦 AWSマネージドキー</h3>
+                    <div style="font-size: 1em; margin-top: 15px;">
+                        <h4>🍔 ファストフードのようなお手軽さ</h4>
+                        <p><strong>✅ メリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 15px; font-size: 0.9em;">
+                            <li>完全無料</li>
+                            <li>設定不要（即利用可能）</li>
+                            <li>AWS が全て管理</li>
+                            <li>メンテナンスフリー</li>
+                        </ul>
+                        <br>
+                        <p><strong>❌ デメリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 15px; font-size: 0.9em;">
+                            <li>アクセス制御不可</li>
+                            <li>ローテーション制御不可</li>
+                            <li>詳細監査ログなし</li>
+                            <li>他アカウントと共有不可</li>
+                            <li>削除不可</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="comparison-side aws-side">
+                    <h3>🔐 カスタマーマネージドキー</h3>
+                    <div style="font-size: 1em; margin-top: 15px;">
+                        <h4>🍽️ フルコースのような高級感</h4>
+                        <p><strong>✅ メリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 15px; font-size: 0.9em;">
+                            <li>完全なコントロール権</li>
+                            <li>細かいアクセス制御</li>
+                            <li>ローテーション自由設定</li>
+                            <li>完全な監査ログ</li>
+                            <li>クロスアカウント共有</li>
+                            <li>自由な削除・管理</li>
+                        </ul>
+                        <br>
+                        <p><strong>❌ デメリット:</strong></p>
+                        <ul style="text-align: left; margin-left: 15px; font-size: 0.9em;">
+                            <li>月額$1 + API料金</li>
+                            <li>設定が必要</li>
+                            <li>管理責任</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 詳細比較表 -->
+            <div class="simple-diagram">
+                <h3 style="text-align: center; margin-bottom: 30px;">📊 機能比較表</h3>
+                
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <thead>
+                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <th style="padding: 15px; text-align: left; font-size: 1.1em;">機能</th>
+                                <th style="padding: 15px; text-align: center; font-size: 1.1em;">🏦 AWSマネージド</th>
+                                <th style="padding: 15px; text-align: center; font-size: 1.1em;">🔐 カスタマーマネージド</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #f0f0f0;">
+                                <td style="padding: 15px; font-weight: bold;">💰 料金</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50; font-weight: bold;">無料</td>
+                                <td style="padding: 15px; text-align: center; color: #ff9800;">$1/月 + API料</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f0f0f0; background: #f8f9fa;">
+                                <td style="padding: 15px; font-weight: bold;">🔧 設定</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50;">自動作成</td>
+                                <td style="padding: 15px; text-align: center; color: #ff9800;">手動設定必要</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f0f0f0;">
+                                <td style="padding: 15px; font-weight: bold;">👮 アクセス制御</td>
+                                <td style="padding: 15px; text-align: center; color: #f44336;">❌ 制御不可</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50;">✅ 完全制御</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f0f0f0; background: #f8f9fa;">
+                                <td style="padding: 15px; font-weight: bold;">🔄 ローテーション</td>
+                                <td style="padding: 15px; text-align: center; color: #ff9800;">AWS自動（3年）</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50;">✅ 自由設定</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f0f0f0;">
+                                <td style="padding: 15px; font-weight: bold;">📊 監査ログ</td>
+                                <td style="padding: 15px; text-align: center; color: #f44336;">❌ 詳細ログなし</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50;">✅ 完全ログ</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f0f0f0; background: #f8f9fa;">
+                                <td style="padding: 15px; font-weight: bold;">🤝 クロスアカウント共有</td>
+                                <td style="padding: 15px; text-align: center; color: #f44336;">❌ 不可</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50;">✅ 可能</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f0f0f0;">
+                                <td style="padding: 15px; font-weight: bold;">🗑️ 削除</td>
+                                <td style="padding: 15px; text-align: center; color: #f44336;">❌ 削除不可</td>
+                                <td style="padding: 15px; text-align: center; color: #4caf50;">✅ 削除可能</td>
+                            </tr>
+                            <tr style="background: #f8f9fa;">
+                                <td style="padding: 15px; font-weight: bold;">🏷️ 識別方法</td>
+                                <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.9em;">aws/s3<br>aws/rds</td>
+                                <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.9em;">UUID形式<br>alias/my-key</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🤔 どちらを選ぶべき？判断フローチャート</h2>
+            
+            <div class="simple-diagram">
+                <h3 style="text-align: center; margin-bottom: 30px;">🗺️ キータイプ選択ガイド</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 30px; align-items: center;">
+                    <!-- 開始点 -->
+                    <div class="diagram-item" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; max-width: 400px;">
+                        <div style="font-size: 2.5em; margin-bottom: 15px;">🚀</div>
+                        <h3>AWSで暗号化を始めたい！</h3>
+                        <p>どちらのキータイプを選ぶべき？</p>
+                    </div>
+                    
+                    <!-- 第1の質問 -->
+                    <div style="text-align: center;">
+                        <div class="diagram-item" style="background: linear-gradient(135deg, #ffd89b 0%, #ffb347 100%); max-width: 500px;">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">❓</div>
+                            <h3>これは本番環境での企業利用ですか？</h3>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-around; margin: 30px 0; gap: 30px;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                                <div style="background: #e8f5e8; padding: 15px 30px; border-radius: 20px; border: 3px solid #4caf50;">
+                                    <strong style="color: #2e7d32;">👍 はい</strong>
+                                </div>
+                                <div style="font-size: 2em;">⬇️</div>
+                                <div class="diagram-item" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); max-width: 300px;">
+                                    <div style="font-size: 2em; margin-bottom: 10px;">💼</div>
+                                    <h4>さらに質問：</h4>
+                                    <ul style="text-align: left; font-size: 0.9em;">
+                                        <li>機密データを扱う？</li>
+                                        <li>コンプライアンス要件がある？</li>
+                                        <li>厳格なアクセス制御が必要？</li>
+                                        <li>監査ログが必要？</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                                <div style="background: #ffebee; padding: 15px 30px; border-radius: 20px; border: 3px solid #f44336;">
+                                    <strong style="color: #c62828;">👎 いいえ</strong>
+                                </div>
+                                <div style="font-size: 2em;">⬇️</div>
+                                <div class="diagram-item" style="background: linear-gradient(135deg, #ffd89b 0%, #ffb347 100%); max-width: 300px;">
+                                    <div style="font-size: 3em; margin-bottom: 15px;">🏦</div>
+                                    <h3>AWSマネージドキー</h3>
+                                    <p><strong>推奨！</strong><br>
+                                    無料で簡単、<br>
+                                    学習や開発に最適</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 最終判定 -->
+                    <div style="display: flex; justify-content: space-around; width: 100%; gap: 30px;">
+                        <div style="text-align: center;">
+                            <div style="background: #e8f5e8; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                                <strong style="color: #2e7d32;">1つでも「はい」なら</strong>
+                            </div>
+                            <div class="diagram-item aws-kms" style="max-width: 350px;">
+                                <div style="font-size: 3em; margin-bottom: 15px;">🔐</div>
+                                <h3>カスタマーマネージドキー</h3>
+                                <p><strong>必須！</strong><br>
+                                企業レベルの<br>
+                                セキュリティと制御</p>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <div style="background: #ffebee; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                                <strong style="color: #c62828;">全て「いいえ」なら</strong>
+                            </div>
+                            <div class="diagram-item key-holder" style="max-width: 350px;">
+                                <div style="font-size: 3em; margin-bottom: 15px;">🏦</div>
+                                <h3>AWSマネージドキー</h3>
+                                <p><strong>おすすめ！</strong><br>
+                                コスト効率と<br>
+                                シンプルさ重視</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📈 実際の選択例と移行パターン</h2>
+            
+            <div class="step-by-step">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">🏢 企業での典型的な段階的導入</h3>
+                
+                <div class="step-item" style="border-left-color: #ffd700;">
+                    <div class="step-number" style="background: #ffd700; color: #333;">1</div>
+                    <div class="step-content">
+                        <h3>Phase 1: 学習・開発段階</h3>
+                        <p><strong>🏦 AWSマネージドキーのみ使用</strong><br>
+                        → 開発・テスト環境で暗号化を学習<br>
+                        → コストゼロで暗号化の基本を体験<br>
+                        → S3、RDS、EBSで基本的な暗号化を実装</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #ff9800;">
+                    <div class="step-number" style="background: #ff9800;">2</div>
+                    <div class="step-content">
+                        <h3>Phase 2: 本番環境導入</h3>
+                        <p><strong>🔐 本番のみカスタマーマネージド</strong><br>
+                        → 本番環境の機密データに対してのみ使用<br>
+                        → アクセス制御と監査ログの重要性を実感<br>
+                        → 開発環境は引き続きAWSマネージド</p>
+                    </div>
+                </div>
+
+                <div class="step-item" style="border-left-color: #4caf50;">
+                    <div class="step-number" style="background: #4caf50;">3</div>
+                    <div class="step-content">
+                        <h3>Phase 3: 成熟段階</h3>
+                        <p><strong>⚖️ データの機密度に応じて使い分け</strong><br>
+                        → 機密度「高」：カスタマーマネージド<br>
+                        → 機密度「中」：AWSマネージド<br>
+                        → ログやキャッシュ：AWSマネージド</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 具体的な使用例 -->
+            <div class="benefit-grid">
+                <div class="benefit-card" style="background: linear-gradient(135deg, #ffd89b 0%, #ffb347 100%);">
+                    <div style="font-size: 3em; margin-bottom: 15px;">👤</div>
+                    <h3>個人・学習用途</h3>
+                    <p><strong>🏦 AWSマネージド推奨</strong><br>
+                    個人プロジェクト<br>
+                    学習・練習用<br>
+                    プロトタイプ開発</p>
+                </div>
+
+                <div class="benefit-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🏢</div>
+                    <h3>スタートアップ</h3>
+                    <p><strong>🔀 混合利用</strong><br>
+                    開発：AWSマネージド<br>
+                    本番：カスタマーマネージド<br>
+                    段階的にカスタマー移行</p>
+                </div>
+
+                <div class="benefit-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🏛️</div>
+                    <h3>大企業・金融</h3>
+                    <p><strong>🔐 カスタマーマネージド</strong><br>
+                    厳格なコンプライアンス<br>
+                    完全な監査要件<br>
+                    最高レベルの制御</p>
+                </div>
+
+                <div class="benefit-card" style="background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%); color: white;">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🏥</div>
+                    <h3>医療・官公庁</h3>
+                    <p><strong>🔐 カスタマーマネージド必須</strong><br>
+                    患者データ保護<br>
+                    法的要件遵守<br>
+                    最高機密レベル</p>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h3>💡 移行のベストプラクティス</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <p><strong>📋 段階的移行の手順：</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>現在の暗号化状況を把握</strong> - どのサービスがどのキーを使用中か</li>
+                        <li><strong>データの機密度分類</strong> - 高・中・低に分けて優先度を決定</li>
+                        <li><strong>パイロット導入</strong> - 小規模なサービスでカスタマーマネージドを試験</li>
+                        <li><strong>段階的移行</strong> - 機密度の高いデータから順次移行</li>
+                        <li><strong>監視・最適化</strong> - CloudTrailログを活用して運用を改善</li>
+                    </ol>
+                    <br>
+                    <p><strong>⚠️ 注意点：</strong> 既存のAWSマネージドキーからカスタマーマネージドキーへの直接変更はできません。データを復号化→再暗号化する必要があります。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💰 コスト比較と ROI 分析</h2>
+            
+            <div class="simple-diagram">
+                <h3 style="text-align: center; margin-bottom: 30px;">💰 年間コスト比較（例）</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0;">
+                    <div style="background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%); padding: 25px; border-radius: 15px; text-align: center;">
+                        <h4>🏦 AWSマネージドキー</h4>
+                        <div style="font-size: 2.5em; margin: 15px 0; color: #2e7d32;">$0</div>
+                        <p><strong>年間コスト</strong><br>
+                        キー管理料金：無料<br>
+                        API使用料：約$5-50<br>
+                        <small>（使用量による）</small></p>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%); padding: 25px; border-radius: 15px; text-align: center;">
+                        <h4>🔐 カスタマーマネージドキー</h4>
+                        <div style="font-size: 2.5em; margin: 15px 0; color: #c62828;">$12-60</div>
+                        <p><strong>年間コスト（1キー）</strong><br>
+                        キー管理料金：$12/年<br>
+                        API使用料：約$5-50<br>
+                        <small>（使用量による）</small></p>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>📊 ROI（投資収益率）の考え方</h3>
+                    <div style="text-align: left; margin-top: 20px;">
+                        <p><strong>💰 カスタマーマネージドキーの追加コスト年間$12-60に対して：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>🛡️ セキュリティ強化</strong> - データ漏洩リスク大幅削減</li>
+                            <li><strong>📋 コンプライアンス遵守</strong> - 監査費用削減、法的リスク回避</li>
+                            <li><strong>⏰ 運用効率化</strong> - 自動ローテーション、詳細ログによる問題の早期発見</li>
+                            <li><strong>💼 ビジネス価値</strong> - 顧客からの信頼向上、契約獲得の優位性</li>
+                        </ul>
+                        <br>
+                        <p><strong>🎯 結論：</strong> 企業にとってカスタマーマネージドキーの年間数千円の投資は、<br>
+                        数百万円規模のセキュリティリスクを回避する非常に効果的な投資です。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="highlight-box">
+                <h2>🎯 まとめ</h2>
+                <div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+                    <p>🔑 <strong>カスタマーマネージドCMK</strong> = 自分で管理する銀行の貸金庫の鍵</p>
+                    <p>🏦 <strong>AWSマネージドCMK</strong> = 銀行におまかせする簡単な暗号化</p>
+                    <p>👮 <strong>アクセス制御</strong> = 誰が鍵を使えるかの細かい権限設定</p>
+                    <p>🔄 <strong>自動ローテーション</strong> = 年1回の自動鍵交換サービス</p>
+                    <p>📊 <strong>監査ログ</strong> = いつ誰が鍵を使ったかの完全記録</p>
+                    <br>
+                    <p>この理解で、<strong>あなたのニーズに最適な暗号化戦略</strong>を選択できます！</p>
+                    <br>
+                    <p><strong>🎯 選択の指針：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>学習・開発段階</strong> → AWSマネージドキーで始める</li>
+                        <li><strong>本番環境・企業利用</strong> → カスタマーマネージドキーを検討</li>
+                        <li><strong>機密データ・コンプライアンス要件</strong> → カスタマーマネージドキー必須</li>
+                        <li><strong>段階的移行</strong> → リスクとコストのバランスで判断</li>
+                    </ul>
+                    <br>
+                    <p><strong>🚀 次のステップ：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>現在の暗号化ニーズを整理する</li>
+                        <li>小規模なテスト環境で実際に試してみる</li>
+                        <li>チーム内でセキュリティ要件を議論する</li>
+                        <li>段階的な移行計画を立てる</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#667eea' : '#5a6fd8';
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.analogy-card, .diagram-item, .benefit-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1) rotate(1deg)';
+                    setTimeout(() => {
+                        this.style.transform = 'translateY(-10px)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // ローテーションアニメーション
+            const timelineItems = document.querySelectorAll('.timeline-item');
+            function animateRotation() {
+                timelineItems.forEach((item, index) => {
+                    setTimeout(() => {
+                        item.style.transform = 'scale(1.1)';
+                        item.style.background = 'rgba(255,255,255,0.3)';
+                        
+                        setTimeout(() => {
+                            item.style.transform = 'scale(1)';
+                            item.style.background = 'rgba(255,255,255,0.2)';
+                        }, 800);
+                    }, index * 1000);
+                });
+            }
+            
+            // 15秒ごとにローテーションアニメーションを実行
+            setInterval(animateRotation, 15000);
+
+            // アクセス制御カードのアニメーション
+            const accessCards = document.querySelectorAll('.access-card');
+            accessCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    if (this.classList.contains('access-allowed')) {
+                        this.style.transform = 'translateY(-5px) scale(1.05)';
+                        this.style.boxShadow = '0 20px 40px rgba(76, 175, 80, 0.3)';
+                    } else {
+                        this.style.transform = 'translateY(-5px) scale(1.05)';
+                        this.style.boxShadow = '0 20px 40px rgba(244, 67, 54, 0.3)';
+                    }
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                    this.style.boxShadow = '';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

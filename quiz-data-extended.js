@@ -820,6 +820,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Config Aggregatorは組織内の複数アカウント・複数リージョンから設定情報を自動収集し、コンプライアンス状況を一元的に監視・分析できるため、大規模組織のガバナンス管理を効率化します。"
+            },
+            {
+                id: 6,
+                question: "AWS Landing Zone と AWS Control Tower の違いは？",
+                options: [
+                    "機能は同じで名称のみ異なる",
+                    "Control Tower は Landing Zone の後継で、より自動化されたマネージドサービス",
+                    "Landing Zone の方が高機能",
+                    "Control Tower は有料、Landing Zone は無料"
+                ],
+                correct: 1,
+                explanation: "AWS Control Tower は AWS Landing Zone の後継サービスで、アカウント作成からガバナンス設定まで高度に自動化されたマネージドサービスとして提供されています。"
+            },
+            {
+                id: 7,
+                question: "Tag Policies の強制レベルで正しいのは？",
+                options: [
+                    "推奨事項の表示のみ",
+                    "タグの標準化と命名規則の強制が可能",
+                    "すべてのリソースに自動タグ付与",
+                    "コスト計算時のみ適用"
+                ],
+                correct: 1,
+                explanation: "Tag Policies では、リソース作成時にタグの命名規則、許可される値、必須タグを強制でき、組織全体でのタグ標準化とコスト管理を実現できます。"
+            },
+            {
+                id: 8,
+                question: "AWS CloudFormation StackSets の Organization 統合の利点は？",
+                options: [
+                    "単一アカウントでの利用のみ",
+                    "組織内の複数アカウントに対して自動的にスタックをデプロイ・管理",
+                    "手動でのアカウント管理が必要",
+                    "コストが高くなる"
+                ],
+                correct: 1,
+                explanation: "StackSets の Organization 統合により、新しいアカウントが作成されると自動的に定義されたスタック（セキュリティベースライン等）がデプロイされ、一貫したガバナンスを維持できます。"
+            },
+            {
+                id: 9,
+                question: "AWS Organizations の Trusted Access の用途は？",
+                options: [
+                    "アカウント間のデータ転送",
+                    "他のAWSサービスが組織内のアカウントに代わって操作を実行することを許可",
+                    "ユーザー認証の簡素化",
+                    "料金の一元管理"
+                ],
+                correct: 1,
+                explanation: "Trusted Access は、CloudFormation StackSets や Config Aggregator 等のサービスが、組織内の各アカウントに代わって必要な操作を実行することを許可する機能です。"
+            },
+            {
+                id: 10,
+                question: "AWS Service Catalog の Product Portfolio 管理における Permission Set の役割は？",
+                options: [
+                    "製品の価格設定",
+                    "ユーザーとグループが利用できる製品と操作権限を制御",
+                    "製品のバージョン管理",
+                    "デプロイメント先の指定"
+                ],
+                correct: 1,
+                explanation: "Permission Set は、Portfolio に関連付けられたユーザーやグループが実行できる操作（起動、更新、削除等）を詳細に制御し、セルフサービス環境でのガバナンスを実現します。"
             }
         ]
     },
@@ -886,6 +946,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Cost Anomaly Detectionは、サービスや用途別に細分化された検出器を設定し、3ヶ月以上の履歴データを蓄積することで、機械学習モデルの精度が向上し、より正確な異常検出が可能になります。"
+            },
+            {
+                id: 6,
+                question: "AWS Savings Plans の種類と最適な選択基準は？",
+                options: [
+                    "Compute Savings Plans のみを購入",
+                    "用途に応じて Compute Savings Plans（柔軟性重視）と EC2 Instance Savings Plans（最大割引率重視）を組み合わせ",
+                    "EC2 Instance Savings Plans のみを購入",
+                    "Reserved Instance の方が常に有利"
+                ],
+                correct: 1,
+                explanation: "Compute Savings Plans は EC2、Fargate、Lambda で使え柔軟性に優れ、EC2 Instance Savings Plans は最大72%の割引率を提供します。ワークロードの予測可能性に応じて組み合わせが最適です。"
+            },
+            {
+                id: 7,
+                question: "S3 Storage Lens の組織レベル設定の利点は？",
+                options: [
+                    "単一アカウントの分析のみ",
+                    "組織全体のストレージ使用状況とコスト最適化推奨事項を一元分析",
+                    "手動での設定収集が必要",
+                    "追加料金が高額"
+                ],
+                correct: 1,
+                explanation: "S3 Storage Lens の組織設定により、全アカウントのストレージ使用状況、アクセスパターン、コスト最適化機会を一元的に可視化し、データドリブンなストレージ管理が可能になります。"
+            },
+            {
+                id: 8,
+                question: "AWS Cost and Usage Report (CUR) の分析に最適なアーキテクチャは？",
+                options: [
+                    "Excel での手動分析",
+                    "S3 + Athena + QuickSight による自動化された分析基盤",
+                    "CloudWatch のみでの監視",
+                    "手動での月次レポート作成"
+                ],
+                correct: 1,
+                explanation: "CUR を S3 に保存し、Athena でクエリ分析、QuickSight で可視化する組み合わせにより、詳細なコスト分析、トレンド分析、カスタムダッシュボード作成が効率的に実現できます。"
+            },
+            {
+                id: 9,
+                question: "Lambda のコスト最適化における実行時間と メモリ配分の関係は？",
+                options: [
+                    "常に最小メモリで実行",
+                    "メモリを増やすとCPU性能も向上し、実行時間短縮により総コストが削減される場合がある",
+                    "メモリサイズは課金に影響しない",
+                    "最大メモリで常に実行"
+                ],
+                correct: 1,
+                explanation: "Lambda はメモリサイズに比例してCPU性能も向上するため、適切なメモリ増加により実行時間が短縮され、結果的に総コスト（実行時間×メモリサイズ）が削減される場合があります。"
+            },
+            {
+                id: 10,
+                question: "AWS Cost Explorer API を活用した自動コスト管理の実装パターンは？",
+                options: [
+                    "手動でのレポート確認のみ",
+                    "Lambda + Cost Explorer API による定期的なコスト分析と閾値超過時のアラート自動化",
+                    "CloudWatch メトリクスのみ監視",
+                    "月次の手動確認"
+                ],
+                correct: 1,
+                explanation: "Cost Explorer API を Lambda で定期実行し、コスト異常検出、予算超過アラート、部門別コスト分析レポート自動生成により、プロアクティブなコスト管理を実現できます。"
             }
         ]
     },
@@ -952,6 +1072,571 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Strangler Fig Pattern は、既存のモノリシックシステムを段階的にマイクロサービスに置き換える移行戦略で、新機能を新サービスで実装し、段階的に旧システムの機能を置き換えていく手法です。"
+            },
+            {
+                id: 6,
+                question: "AWS Schema Conversion Tool (SCT) の主な機能は？",
+                options: [
+                    "データベースデータの物理的な転送",
+                    "異なるデータベースエンジン間でのスキーマとコードの自動変換・アセスメント",
+                    "アプリケーションのリファクタリング",
+                    "ネットワーク設定の変換"
+                ],
+                correct: 1,
+                explanation: "SCT は、Oracle から PostgreSQL、SQL Server から MySQL など、異なるデータベースエンジン間でのスキーマ、ストアドプロシージャ、ビューの自動変換と移行アセスメントレポートを提供します。"
+            },
+            {
+                id: 7,
+                question: "AWS Snow Family デバイスの使い分け基準は？",
+                options: [
+                    "すべてのケースで Snowball Edge を使用",
+                    "データ量と転送時間要件に応じて Snowcone（8TB）、Snowball Edge（80TB）、Snowmobile（100PB）を選択",
+                    "物理的なセキュリティのみ考慮",
+                    "コストのみで判断"
+                ],
+                correct: 1,
+                explanation: "Snow Family は転送データ量に応じた選択が重要で、Snowcone（エッジコンピューティング＋小規模転送）、Snowball Edge（中〜大規模転送）、Snowmobile（超大規模転送）の特性を理解して選択します。"
+            },
+            {
+                id: 8,
+                question: "AWS Application Discovery Service の収集方法の違いは？",
+                options: [
+                    "エージェントレス収集のみ対応",
+                    "エージェントベース（詳細情報）とエージェントレス（基本情報）の2つの収集方法を提供",
+                    "手動での情報入力のみ",
+                    "ネットワークスキャンのみ"
+                ],
+                correct: 1,
+                explanation: "Application Discovery Service は、エージェントベース収集（詳細なプロセス・ネットワーク接続情報）とエージェントレス収集（VM基本情報・使用状況）の両方をサポートし、環境に応じて選択できます。"
+            },
+            {
+                id: 9,
+                question: "Container 移行における ECS と EKS の選択基準は？",
+                options: [
+                    "常に EKS を選択",
+                    "Kubernetes の既存知識・要件の有無、運用複雑度の許容度、AWS ネイティブ統合の重要度を総合判断",
+                    "コンテナ数のみで判断",
+                    "常に ECS を選択"
+                ],
+                correct: 1,
+                explanation: "ECS は AWS ネイティブで運用が簡単、EKS は Kubernetes エコシステムとポータビリティを提供します。既存の技術スタック、運用体制、移行後の拡張計画を総合的に評価して選択します。"
+            },
+            {
+                id: 10,
+                question: "Well-Architected Framework の移行における 6 R 戦略で、最もコスト効率が良い順序は？",
+                options: [
+                    "Retire → Retain → Rehost → Replatform → Refactor → Repurchase",
+                    "Rehost → Replatform → Refactor → Repurchase → Retain → Retire",
+                    "Refactor → Repurchase → Replatform → Rehost → Retain → Retire",
+                    "すべて同等のコスト"
+                ],
+                correct: 0,
+                explanation: "一般的にコスト効率順は: Retire（廃止、コスト0）→ Retain（保持、移行コスト0）→ Rehost（リフト&シフト、最小移行コスト）→ Replatform → Refactor → Repurchase となります。"
+            }
+        ]
+    },
+    // 新規カテゴリを追加
+    "storage-database": {
+        title: "ストレージ・データベース",
+        icon: "💾",
+        questions: [
+            {
+                id: 1,
+                question: "Amazon RDS Multi-AZ と Read Replica の違いは？",
+                options: [
+                    "Multi-AZ は高可用性、Read Replica は読み取りスケーリングが主目的",
+                    "機能は同じで名称のみ異なる",
+                    "Multi-AZ の方が高速",
+                    "Read Replica の方が可用性が高い"
+                ],
+                correct: 0,
+                explanation: "Multi-AZ は同期レプリケーションによる高可用性（フェイルオーバー）を提供し、Read Replica は非同期レプリケーションによる読み取り性能スケーリングを目的とします。"
+            },
+            {
+                id: 2,
+                question: "Amazon Aurora の Auto Scaling 機能で調整される要素は？",
+                options: [
+                    "ストレージ容量のみ",
+                    "Read Replica の数とコンピュート容量の両方",
+                    "接続数のみ",
+                    "バックアップ頻度のみ"
+                ],
+                correct: 1,
+                explanation: "Aurora Auto Scaling は、Read Replica の自動追加・削除（読み取りワークロード対応）と、Aurora Serverless でのコンピュート容量自動調整の両方をサポートします。"
+            },
+            {
+                id: 3,
+                question: "DynamoDB Global Tables の一貫性モデルは？",
+                options: [
+                    "強一貫性のみ",
+                    "結果整合性で、通常1秒以内に全リージョンに伝搬",
+                    "設定可能な一貫性レベル",
+                    "一貫性保証なし"
+                ],
+                correct: 1,
+                explanation: "DynamoDB Global Tables は結果整合性モデルを採用し、一つのリージョンでの更新が通常1秒以内に他のすべてのリージョンに非同期で伝搬されます。"
+            },
+            {
+                id: 4,
+                question: "S3 Cross-Region Replication (CRR) の前提条件は？",
+                options: [
+                    "ソースとデスティネーションバケットで同じストレージクラスを使用",
+                    "バージョニングが両方のバケットで有効になっている必要がある",
+                    "同一アカウント内のバケットのみ対象",
+                    "手動でのレプリケーション設定が必要"
+                ],
+                correct: 1,
+                explanation: "S3 CRR を設定するには、ソースとデスティネーション両方のバケットでバージョニングが有効になっている必要があります。異なるアカウント間でも設定可能です。"
+            },
+            {
+                id: 5,
+                question: "ElastiCache Redis の Auth Token の用途は？",
+                options: [
+                    "データ暗号化のためのキー",
+                    "Redis コマンド実行時の認証パスワード",
+                    "バックアップファイルの暗号化",
+                    "ネットワーク接続の暗号化"
+                ],
+                correct: 1,
+                explanation: "Redis Auth Token は、Redis クラスターへの接続時にクライアントが提供する必要がある認証パスワードで、認証機能を有効にすることでセキュリティを向上させます。"
+            },
+            {
+                id: 6,
+                question: "Amazon EFS の Performance Mode の選択基準は？",
+                options: [
+                    "常に Max I/O を選択",
+                    "低レイテンシ重視なら General Purpose、高スループット重視なら Max I/O",
+                    "ストレージ容量で決定",
+                    "コストで決定"
+                ],
+                correct: 1,
+                explanation: "General Purpose は低レイテンシを提供し、Max I/O はより高いスループットと IOPS を実現しますが、わずかにレイテンシが高くなります。ワークロードの要件に応じて選択します。"
+            },
+            {
+                id: 7,
+                question: "RDS Proxy の主な利点は？",
+                options: [
+                    "データベースの自動バックアップ",
+                    "接続プーリングによる接続効率化とフェイルオーバー時間短縮",
+                    "SQL クエリの自動最適化",
+                    "データの自動暗号化"
+                ],
+                correct: 1,
+                explanation: "RDS Proxy は接続プーリング、接続の再利用、フェイルオーバー時の迅速な接続切り替えを提供し、特に Lambda のようなサーバーレス環境での DB 接続効率を大幅に改善します。"
+            },
+            {
+                id: 8,
+                question: "DynamoDB DAX (DynamoDB Accelerator) の適用場面は？",
+                options: [
+                    "書き込み集約型ワークロード",
+                    "マイクロ秒レベルの読み取りレイテンシが必要な読み取り集約型ワークロード",
+                    "データ分析処理",
+                    "バックアップ処理"
+                ],
+                correct: 1,
+                explanation: "DAX は DynamoDB の前面に配置されるインメモリキャッシュで、読み取りレイテンシをミリ秒からマイクロ秒レベルまで短縮し、読み取り集約型アプリケーションのパフォーマンスを劇的に向上させます。"
+            },
+            {
+                id: 9,
+                question: "S3 の Multipart Upload の利点は？",
+                options: [
+                    "小さなファイル専用の機能",
+                    "大きなファイルの並列アップロード、再開可能、失敗時の部分的リトライ",
+                    "コスト削減のみ",
+                    "セキュリティ向上のみ"
+                ],
+                correct: 1,
+                explanation: "Multipart Upload は大きなオブジェクト（100MB以上推奨）を複数の部分に分割して並列アップロードし、ネットワーク効率向上、障害時の部分リトライ、アップロード再開を可能にします。"
+            },
+            {
+                id: 10,
+                question: "Amazon Redshift の Concurrency Scaling の仕組みは？",
+                options: [
+                    "ストレージ容量を自動拡張",
+                    "読み取りクエリの高負荷時に追加クラスターを自動起動してクエリを分散処理",
+                    "接続数を自動調整",
+                    "バックアップ頻度を調整"
+                ],
+                correct: 1,
+                explanation: "Concurrency Scaling は、読み取りクエリのキューイングが発生した際に、追加の Redshift クラスターを自動起動してクエリを分散処理し、一貫したパフォーマンスを維持します。"
+            }
+        ]
+    },
+    "analytics-bigdata": {
+        title: "分析・ビッグデータ",
+        icon: "📊",
+        questions: [
+            {
+                id: 1,
+                question: "Amazon Kinesis Data Streams と Kinesis Data Firehose の使い分けは？",
+                options: [
+                    "機能は同じで名称のみ異なる",
+                    "Data Streams はリアルタイム処理、Data Firehose はS3/Redshift等への配信に特化",
+                    "Data Firehose の方が高速",
+                    "Data Streams はバッチ処理専用"
+                ],
+                correct: 1,
+                explanation: "Data Streams はリアルタイムデータ処理（Lambda、Analytics）に適し、Data Firehose はデータレイクやデータウェアハウスへの継続的配信に最適化されています。"
+            },
+            {
+                id: 2,
+                question: "AWS Glue Crawler の役割は？",
+                options: [
+                    "データの物理的な移動",
+                    "データソースを自動スキャンしてスキーマを検出・Data Catalog に登録",
+                    "データの暗号化",
+                    "データのバックアップ"
+                ],
+                correct: 1,
+                explanation: "Glue Crawler は S3、RDS、DynamoDB 等のデータソースを自動スキャンし、スキーマ情報を検出して AWS Glue Data Catalog にメタデータとして登録します。"
+            },
+            {
+                id: 3,
+                question: "Amazon EMR の Spot Instance 活用における考慮点は？",
+                options: [
+                    "Master ノードでも積極的に使用",
+                    "Task ノードのみで使用し、Core ノードは On-Demand で安定性確保",
+                    "すべてのノードでSpot Instanceを使用",
+                    "コスト削減効果がない"
+                ],
+                correct: 1,
+                explanation: "EMR では Master と Core ノードの中断がクラスター全体に影響するため、Task ノード（処理のみ）でSpot Instanceを使用し、Core ノードは On-Demand で安定性を保つのがベストプラクティスです。"
+            },
+            {
+                id: 4,
+                question: "Amazon Athena のパフォーマンス最適化手法は？",
+                options: [
+                    "データをそのまま保存",
+                    "データのパーティション化、列指向形式（Parquet）、データ圧縮の組み合わせ",
+                    "単一の大きなファイルで保存",
+                    "テキスト形式での保存"
+                ],
+                correct: 1,
+                explanation: "Athena のパフォーマンス最適化には、適切なパーティション設計、Parquet等の列指向形式、圧縮、適切なファイルサイズ（128MB-1GB）の組み合わせが効果的です。"
+            },
+            {
+                id: 5,
+                question: "AWS Lake Formation の Fine-grained Access Control の特徴は？",
+                options: [
+                    "テーブルレベルの権限のみ",
+                    "行レベル・列レベルでの詳細な権限制御が可能",
+                    "ファイルレベルの権限のみ",
+                    "読み取り専用の権限のみ"
+                ],
+                correct: 1,
+                explanation: "Lake Formation は、従来のテーブルレベル権限に加えて、特定の行（WHERE条件）や列の組み合わせでの詳細なアクセス制御を提供し、データガバナンスを強化します。"
+            },
+            {
+                id: 6,
+                question: "Amazon Kinesis Analytics (現 Kinesis Data Analytics) でのウィンドウ処理の種類は？",
+                options: [
+                    "固定ウィンドウのみ",
+                    "固定ウィンドウ、スライディングウィンドウ、セッションウィンドウが利用可能",
+                    "スライディングウィンドウのみ",
+                    "ウィンドウ処理はサポートしていない"
+                ],
+                correct: 1,
+                explanation: "Kinesis Data Analytics は時間ベースの固定ウィンドウ、スライディングウィンドウ、非アクティブ時間によるセッションウィンドウなど、多様なウィンドウ処理をサポートします。"
+            },
+            {
+                id: 7,
+                question: "Amazon QuickSight の SPICE エンジンの利点は？",
+                options: [
+                    "データストレージ機能のみ",
+                    "インメモリ計算によるクエリ高速化とコスト効率的な分析",
+                    "データバックアップ機能",
+                    "データ暗号化機能のみ"
+                ],
+                correct: 1,
+                explanation: "SPICE（Super-fast, Parallel, In-memory Calculation Engine）は、データを高速なインメモリストレージに格納し、分析クエリを大幅に高速化すると同時に、ソースデータベースへの負荷も軽減します。"
+            },
+            {
+                id: 8,
+                question: "AWS Data Pipeline と AWS Glue の使い分けは？",
+                options: [
+                    "機能は同じで新旧の違いのみ",
+                    "Data Pipeline は従来のETL/スケジューリング、Glue はサーバーレスなETL/データカタログ",
+                    "Data Pipeline の方が高機能",
+                    "Glue はバッチ処理のみ"
+                ],
+                correct: 1,
+                explanation: "Data Pipeline は EC2 ベースの従来型ETLとスケジューリングに適し、Glue はサーバーレスETL、自動スケーリング、データカタログ統合に優れ、モダンなデータ処理に適しています。"
+            },
+            {
+                id: 9,
+                question: "Amazon Elasticsearch Service (現 OpenSearch Service) のクラスター設計ベストプラクティスは？",
+                options: [
+                    "すべてを単一ノードで処理",
+                    "専用マスターノード、データノード、UltraWarm ノードの役割分離",
+                    "マスターノードのみで構成",
+                    "データノードは必要ない"
+                ],
+                correct: 1,
+                explanation: "大規模クラスターでは、専用マスターノード（クラスター管理）、データノード（インデックス・検索）、UltraWarm ノード（アーカイブデータ）の役割分離により、安定性とコスト効率を両立します。"
+            },
+            {
+                id: 10,
+                question: "AWS MSK (Managed Streaming for Apache Kafka) のセキュリティ機能は？",
+                options: [
+                    "暗号化機能なし",
+                    "保存時・転送時暗号化、IAM/SASL認証、ACLによるトピックレベル権限制御",
+                    "転送時暗号化のみ",
+                    "認証機能なし"
+                ],
+                correct: 1,
+                explanation: "MSK は KMS による保存時暗号化、TLS による転送時暗号化、IAM および SASL/SCRAM 認証、Kafka ACL によるトピック・コンシューマーグループレベルの詳細な権限制御を提供します。"
+            }
+        ]
+    },
+    "monitoring-logging": {
+        title: "監視・ログギング",
+        icon: "📈",
+        questions: [
+            {
+                id: 1,
+                question: "CloudWatch Custom Metrics の名前空間設計のベストプラクティスは？",
+                options: [
+                    "すべてのメトリクスを同一名前空間に配置",
+                    "アプリケーション・環境・チーム別に階層的な名前空間を設計",
+                    "名前空間は使用しない",
+                    "AWS標準の名前空間のみ使用"
+                ],
+                correct: 1,
+                explanation: "Custom Metrics は「MyCompany/Production/WebApp」のような階層的な名前空間設計により、メトリクスの整理、フィルタリング、権限管理、コスト配分を効率化できます。"
+            },
+            {
+                id: 2,
+                question: "AWS X-Ray のサンプリングルールの目的は？",
+                options: [
+                    "すべてのリクエストを記録",
+                    "コストとパフォーマンスを考慮して記録するトレースの割合を制御",
+                    "エラーのみを記録",
+                    "重要なAPIのみを記録"
+                ],
+                correct: 1,
+                explanation: "X-Ray サンプリングルールは、トレースデータの記録割合を動的に制御し、パフォーマンス影響とコストを最適化しながら、統計的に有意なトレース情報を収集します。"
+            },
+            {
+                id: 3,
+                question: "CloudWatch Logs Insights のクエリ最適化手法は？",
+                options: [
+                    "時間範囲の指定は不要",
+                    "適切な時間範囲、fields の限定、filter の早期適用でクエリ効率化",
+                    "すべてのフィールドを常に取得",
+                    "並列処理は使用しない"
+                ],
+                correct: 1,
+                explanation: "Logs Insights では、検索時間範囲の適切な指定、必要なフィールドのみの選択、filter による早期データ絞り込みにより、クエリパフォーマンスとコストを最適化できます。"
+            },
+            {
+                id: 4,
+                question: "AWS Systems Manager Compliance の評価対象は？",
+                options: [
+                    "ネットワーク設定のみ",
+                    "パッチレベル、設定ファイル、ソフトウェアインベントリの合規性",
+                    "コストのみ",
+                    "パフォーマンスのみ"
+                ],
+                correct: 1,
+                explanation: "SSM Compliance は、パッチ適用状況、セキュリティ設定、インストール済みソフトウェア、カスタム設定などを評価し、組織のコンプライアンス要件に対する準拠状況を一元管理します。"
+            },
+            {
+                id: 5,
+                question: "CloudWatch Container Insights が提供するメトリクス情報は？",
+                options: [
+                    "EC2インスタンスレベルのみ",
+                    "ECS/EKSクラスター、サービス、タスク、Pod レベルの詳細なパフォーマンスメトリクス",
+                    "ネットワークメトリクスのみ",
+                    "ログ情報のみ"
+                ],
+                correct: 1,
+                explanation: "Container Insights は、CPU、メモリ、ディスク、ネットワーク使用率をクラスター、サービス、タスク/Pod、コンテナの各レベルで収集し、コンテナ環境の詳細な可視化を提供します。"
+            },
+            {
+                id: 6,
+                question: "AWS CloudTrail の Insight Events の検出内容は？",
+                options: [
+                    "すべてのAPI呼び出し",
+                    "通常と異なるパターンのAPI活動や異常なアクセス行動",
+                    "成功したAPIコールのみ",
+                    "エラーのAPIコールのみ"
+                ],
+                correct: 1,
+                explanation: "CloudTrail Insights は機械学習を使用して、通常の API 使用パターンを学習し、異常なボリューム増加、新しいユーザーエージェント、地理的に異常なアクセスなどを自動検出します。"
+            },
+            {
+                id: 7,
+                question: "Amazon EventBridge でのカスタムパターンマッチングの利点は？",
+                options: [
+                    "単純な文字列マッチングのみ",
+                    "JSON構造を理解した柔軟なルールベースのイベントルーティング",
+                    "正規表現は使用できない",
+                    "数値比較はできない"
+                ],
+                correct: 1,
+                explanation: "EventBridge は JSON イベントの構造を理解し、ネストしたフィールド、配列、数値範囲、文字列パターンなどの複雑な条件でイベントをフィルタリング・ルーティングできます。"
+            },
+            {
+                id: 8,
+                question: "CloudWatch Synthetics の監視タイプは？",
+                options: [
+                    "API監視のみ",
+                    "API エンドポイント監視とブラウザベースのユーザージャーニー監視",
+                    "ファイル監視のみ",
+                    "データベース監視のみ"
+                ],
+                correct: 1,
+                explanation: "CloudWatch Synthetics は、REST API の可用性・レスポンス時間監視と、実際のブラウザを使用したユーザージャーニー（ログイン、購入フローなど）の総合監視を提供します。"
+            },
+            {
+                id: 9,
+                question: "AWS Config Rules の修復アクション（Remediation）の仕組みは？",
+                options: [
+                    "手動修復のみ",
+                    "非準拠リソース検出時にSSM DocumentやLambda関数を自動実行して修復",
+                    "ログ出力のみ",
+                    "削除のみ可能"
+                ],
+                correct: 1,
+                explanation: "Config Rules の自動修復機能は、非準拠リソースを検出すると事前定義された SSM Document や Lambda 関数を自動実行し、セキュリティグループ設定修正やタグ追加などの自動修復を行います。"
+            },
+            {
+                id: 10,
+                question: "CloudWatch Application Signals の主な機能は？",
+                options: [
+                    "インフラ監視のみ",
+                    "アプリケーションパフォーマンスの自動計測とSLI/SLO管理",
+                    "ログ収集のみ",
+                    "コスト監視のみ"
+                ],
+                correct: 1,
+                explanation: "Application Signals は、分散アプリケーションのレスポンス時間、エラー率、スループットを自動計測し、SLI（Service Level Indicators）と SLO（Service Level Objectives）によるサービス品質管理を支援します。"
+            }
+        ]
+    },
+    "ai-machine-learning": {
+        title: "AI・機械学習",
+        icon: "🤖",
+        questions: [
+            {
+                id: 1,
+                question: "Amazon SageMaker の推論エンドポイントの種類は？",
+                options: [
+                    "リアルタイム推論のみ",
+                    "リアルタイム推論、バッチ変換、マルチモデルエンドポイント、非同期推論",
+                    "バッチ処理のみ",
+                    "ストリーミング推論のみ"
+                ],
+                correct: 1,
+                explanation: "SageMaker は用途に応じて、リアルタイム推論（低レイテンシ）、バッチ変換（大量データ）、マルチモデルエンドポイント（コスト効率）、非同期推論（長時間処理）の選択肢を提供します。"
+            },
+            {
+                id: 2,
+                question: "Amazon Comprehend の感情分析で検出される感情は？",
+                options: [
+                    "ポジティブ・ネガティブのみ",
+                    "ポジティブ、ネガティブ、ニュートラル、混在の4種類",
+                    "喜怒哀楽の4種類",
+                    "数値スコアのみ"
+                ],
+                correct: 1,
+                explanation: "Amazon Comprehend の感情分析は、ポジティブ、ネガティブ、ニュートラル、混在（Mixed）の4つの感情カテゴリと、それぞれの信頼度スコアを提供します。"
+            },
+            {
+                id: 3,
+                question: "Amazon Rekognition の顔認識と顔検索の違いは？",
+                options: [
+                    "機能は同じ",
+                    "顔検識は顔の検出・分析、顔検索は既知の顔データベースとの照合",
+                    "顔検索の方が高速",
+                    "顔検識の方が高精度"
+                ],
+                correct: 1,
+                explanation: "顔検識（DetectFaces）は画像内の顔検出と属性分析を行い、顔検索（SearchFaces）は事前に登録された顔コレクションとの照合により人物特定を行います。"
+            },
+            {
+                id: 4,
+                question: "Amazon Textract の文書分析機能の範囲は？",
+                options: [
+                    "OCRのみ",
+                    "OCR、テーブル抽出、フォーム項目抽出、手書き文字認識",
+                    "手書き文字のみ",
+                    "英語のみ対応"
+                ],
+                correct: 1,
+                explanation: "Textract は OCR に加えて、表形式データの構造保持、フォームのキー・バリューペア抽出、手書き文字認識、複数言語対応の包括的な文書分析機能を提供します。"
+            },
+            {
+                id: 5,
+                question: "Amazon Lex V2 の主な改善点は？",
+                options: [
+                    "機能は同じ",
+                    "多言語サポート、ストリーミング会話、改善された意図認識精度",
+                    "価格のみ変更",
+                    "UIのみ改善"
+                ],
+                correct: 1,
+                explanation: "Lex V2 は、リアルタイムストリーミング会話、多言語サポート（8言語以上）、改善されたNLU（Natural Language Understanding）エンジン、柔軟な会話フローを提供します。"
+            },
+            {
+                id: 6,
+                question: "Amazon Polly の音声カスタマイズ機能は？",
+                options: [
+                    "音声速度のみ調整可能",
+                    "SSML対応による発音、イントネーション、音声速度、音量の詳細制御",
+                    "言語変更のみ",
+                    "カスタマイズ機能なし"
+                ],
+                correct: 1,
+                explanation: "Amazon Polly は SSML（Speech Synthesis Markup Language）をサポートし、発音記号、イントネーション、間合い、音声速度、音量を詳細にカスタマイズして自然な音声合成を実現します。"
+            },
+            {
+                id: 7,
+                question: "Amazon Forecast の予測アルゴリズムの選択方法は？",
+                options: [
+                    "手動で単一アルゴリズムを選択",
+                    "AutoMLによる複数アルゴリズムの自動評価・選択",
+                    "線形回帰のみ使用",
+                    "ランダムに選択"
+                ],
+                correct: 1,
+                explanation: "Amazon Forecast の AutoML は、CNN-QR、Prophet、ARIMA、ETS など複数の予測アルゴリズムを自動評価し、データセットに最適なアルゴリズムまたはアンサンブルを選択します。"
+            },
+            {
+                id: 8,
+                question: "Amazon Personalize のリアルタイム推薦の仕組みは？",
+                options: [
+                    "バッチ処理のみ",
+                    "ユーザーの行動履歴をリアルタイム取得してパーソナライズされた推薦を生成",
+                    "事前計算された推薦のみ",
+                    "ランダム推薦"
+                ],
+                correct: 1,
+                explanation: "Amazon Personalize は、ユーザーのクリック、購入、評価などのインタラクションデータをリアルタイムで学習し、その場でパーソナライズされた推薦を生成するリアルタイム推論をサポートします。"
+            },
+            {
+                id: 9,
+                question: "Amazon Transcribe の話者識別（Speaker Diarization）機能は？",
+                options: [
+                    "単一話者のみ識別",
+                    "複数話者を自動識別し、発話内容を話者別に分離",
+                    "話者の感情のみ識別",
+                    "話者の年齢のみ識別"
+                ],
+                correct: 1,
+                explanation: "Speaker Diarization は、音声ファイル内の複数話者を自動で識別・分離し、「話者A」「話者B」として発話内容をタイムスタンプ付きで分類する機能です。"
+            },
+            {
+                id: 10,
+                question: "Amazon Bedrock の基盤モデル（Foundation Models）の利用方法は？",
+                options: [
+                    "モデルの再トレーニングが必要",
+                    "事前トレーニング済みモデルをAPI経由で直接利用、またはファインチューニング",
+                    "ソースコードの提供が必要",
+                    "専用ハードウェアが必要"
+                ],
+                correct: 1,
+                explanation: "Amazon Bedrock は、Anthropic Claude、Meta Llama 等の事前トレーニング済み基盤モデルを API 経由で利用でき、さらに独自データでのファインチューニングも可能なマネージドサービスです。"
             }
         ]
     }

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudFormation リソース保持メカニズム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ffa726);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideInUp 0.8s ease-out forwards;
+        }
+
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.4s; }
+        .section:nth-child(4) { animation-delay: 0.6s; }
+        .section:nth-child(5) { animation-delay: 0.8s; }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            color: #333;
+        }
+
+        .icon {
+            width: 60px;
+            height: 60px;
+            margin-right: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .icon.stack { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .icon.deletion { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .icon.update { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+        .icon.protection { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+
+        .house-diagram {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            color: white;
+            text-align: center;
+        }
+
+        .house {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        .policy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .policy-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .policy-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .policy-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .policy-emoji {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .protection-demo {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .shield {
+            font-size: 4rem;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .flow-diagram {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .flow-step {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            margin: 10px;
+        }
+
+        .flow-step-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .arrow {
+            font-size: 2rem;
+            color: #667eea;
+            margin: 0 10px;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #00b894;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #d63031;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translate3d(0, -100%, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 100%, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes slideInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% {
+                transform: translate3d(0, 0, 0);
+            }
+            40%, 43% {
+                transform: translate3d(0, -10px, 0);
+            }
+            70% {
+                transform: translate3d(0, -5px, 0);
+            }
+            90% {
+                transform: translate3d(0, -2px, 0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ CloudFormation 保護メカニズム</h1>
+            <p>家の建築管理で学ぶAWS CloudFormationの安全対策</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <div class="section-title">
+                    <div class="icon stack">🏠</div>
+                    <h2>CloudFormationスタックとは？</h2>
+                </div>
+                
+                <div class="house-diagram">
+                    <div class="house">🏘️</div>
+                    <h3>スタック = 家の設計図 + 建築プロジェクト</h3>
+                    <p>CloudFormationスタックは、AWSリソース（EC2、S3、RDSなど）を一括管理する「家の設計図」のようなものです。</p>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="flow-step-icon">📋</div>
+                        <h4>テンプレート</h4>
+                        <p>設計図</p>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🏗️</div>
+                        <h4>スタック</h4>
+                        <p>建築プロジェクト</p>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🏠</div>
+                        <h4>リソース</h4>
+                        <p>実際の部屋・設備</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <div class="icon deletion">🗑️</div>
+                    <h2>DeletionPolicy - 解体時のルール</h2>
+                </div>
+
+                <p><strong>DeletionPolicy</strong>は、家（スタック）を解体する時に、各部屋や設備をどう扱うかを決めるルールです。</p>
+
+                <div class="policy-grid">
+                    <div class="policy-card">
+                        <span class="policy-emoji">💥</span>
+                        <h3>Delete（削除）</h3>
+                        <p>家と一緒にすべて解体。デフォルトの動作で、一般的な設備に使用。</p>
+                    </div>
+                    
+                    <div class="policy-card">
+                        <span class="policy-emoji">📦</span>
+                        <h3>Retain（保持）</h3>
+                        <p>貴重品は残しておく。重要なデータベースやファイルに使用。</p>
+                    </div>
+                    
+                    <div class="policy-card">
+                        <span class="policy-emoji">📸</span>
+                        <h3>Snapshot（スナップショット）</h3>
+                        <p>写真に残してから解体。データベースのバックアップに使用。</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>💡 例：家族の思い出の部屋</h4>
+                    <p>大切な家族写真やアルバムが保管された部屋は「Retain」に設定。家を解体しても、この部屋だけは残しておきます。AWS では重要なS3バケットやRDSデータベースに相当します。</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <div class="icon update">🔄</div>
+                    <h2>UpdateReplacePolicy - リノベーション時のルール</h2>
+                </div>
+
+                <p><strong>UpdateReplacePolicy</strong>は、家をリノベーション（更新）する時に、古い設備を新しいものに交換する際のルールです。</p>
+
+                <div class="policy-grid">
+                    <div class="policy-card">
+                        <span class="policy-emoji">🔨</span>
+                        <h3>Delete（削除）</h3>
+                        <p>古い設備は処分して新しいものに交換。</p>
+                    </div>
+                    
+                    <div class="policy-card">
+                        <span class="policy-emoji">🏪</span>
+                        <h3>Retain（保持）</h3>
+                        <p>古い設備も倉庫に保管しておく。</p>
+                    </div>
+                    
+                    <div class="policy-card">
+                        <span class="policy-emoji">📷</span>
+                        <h3>Snapshot（スナップショット）</h3>
+                        <p>古い設備の状態を記録してから交換。</p>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ 注意：DeletionPolicy vs UpdateReplacePolicy</h4>
+                    <p>DeletionPolicyは「家全体の解体時」、UpdateReplacePolicyは「部分的なリノベーション時」に適用されます。両方設定することで、どんな場面でも大切なデータを守れます。</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <div class="icon protection">🛡️</div>
+                    <h2>Termination Protection - 家全体の解体防止</h2>
+                </div>
+
+                <div class="protection-demo">
+                    <div class="shield">🛡️</div>
+                    <h3>スタック全体を誤って削除することを防ぐ安全装置</h3>
+                    <p>重要な本番環境などで、うっかり家全体を解体してしまわないようにする「解体禁止ロック」です。</p>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🔒</div>
+                        <h4>保護ON</h4>
+                        <p>解体不可</p>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🔓</div>
+                        <h4>保護解除</h4>
+                        <p>解体許可</p>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🗑️</div>
+                        <h4>削除実行</h4>
+                        <p>安全に解体</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>🎯 使用場面</h4>
+                    <p><strong>本番環境</strong>：顧客が使用している重要なシステム<br>
+                    <strong>共有リソース</strong>：チーム全体で使用するデータベースやネットワーク<br>
+                    <strong>高価なリソース</strong>：作成に時間とコストがかかるリソース</p>
+                </div>
+            </div>
+
+            <div class="summary">
+                <h2>🎉 まとめ：3つの安全対策で大切なものを守ろう</h2>
+                <div class="policy-grid">
+                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+                        <h4>🗑️ DeletionPolicy</h4>
+                        <p>スタック削除時の各リソースの扱い方</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+                        <h4>🔄 UpdateReplacePolicy</h4>
+                        <p>リソース交換時の旧リソースの扱い方</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+                        <h4>🛡️ Termination Protection</h4>
+                        <p>スタック全体の誤削除防止</p>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; font-size: 1.1rem;">
+                    これらの機能を適切に設定することで、AWSの重要なリソースを安全に管理できます！
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

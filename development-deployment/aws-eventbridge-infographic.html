@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS EventBridge API宛先と入力トランスフォーマー機能の解説</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7f9;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background-color: #232f3e;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.4em;
+        }
+        
+        h2 {
+            color: #ec7211;
+            border-bottom: 2px solid #ec7211;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        
+        h3 {
+            color: #232f3e;
+            margin-top: 25px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+        }
+        
+        .flex-item {
+            flex: 1 1 300px;
+        }
+        
+        .flow-diagram {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .flow-step {
+            text-align: center;
+            flex: 1 1 120px;
+            position: relative;
+            padding: 10px;
+            max-width: 180px;
+        }
+        
+        .flow-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #f1faff;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ec7211;
+        }
+        
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ec7211;
+            font-size: 24px;
+            padding: 10px;
+            flex: 0 0 30px;
+        }
+        
+        .code-block {
+            background-color: #f1f1f1;
+            border-left: 4px solid #ec7211;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        .highlight {
+            background-color: #fff8dc;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .note {
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .advantage {
+            background-color: #f6ffed;
+            border-left: 4px solid #52c41a;
+            padding: 10px 15px;
+            margin: 5px 0;
+        }
+        
+        .tags {
+            display: inline-block;
+            background-color: #e6f7ff;
+            border-radius: 15px;
+            padding: 3px 10px;
+            margin: 5px;
+            font-size: 0.85em;
+        }
+
+        .info-box {
+            display: flex;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-icon {
+            background-color: #ec7211;
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex: 0 0 60px;
+        }
+        
+        .info-content {
+            padding: 20px;
+            flex: 1;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background-color: #232f3e;
+            color: white;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #ec7211;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            background-color: #232f3e;
+            color: white;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AWS EventBridge API宛先と入力トランスフォーマー機能</h1>
+            <p>イベント駆動型アーキテクチャを簡単に構築するための基礎ガイド</p>
+        </header>
+        
+        <div class="info-box">
+            <div class="info-icon">📋</div>
+            <div class="info-content">
+                <h3 style="margin-top: 0;">このガイドの内容</h3>
+                <p>このインフォグラフィックでは、AWS EventBridgeの基本概念から、API宛先機能、そして入力トランスフォーマー機能の使い方までを解説します。初心者の方でも理解しやすいように、視覚的な例と実際のユースケースを交えて説明していきます。</p>
+            </div>
+        </div>
+        
+        <section class="card">
+            <h2>EventBridgeとは？</h2>
+            <p>AWS EventBridgeは、アプリケーションコンポーネントを接続するサーバーレスのイベントバスサービスです。イベント駆動型アーキテクチャを簡単に構築できます。</p>
+            
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-icon">📤</div>
+                    <p><strong>イベントソース</strong><br>AWSサービス、自社アプリ、SaaSアプリからイベント発生</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">🔄</div>
+                    <p><strong>イベントバス</strong><br>イベントをルーティングする中央ハブ</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">🎯</div>
+                    <p><strong>ルール</strong><br>どのイベントをどこに送るかを定義</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">📡</div>
+                    <p><strong>ターゲット</strong><br>AWSサービスやカスタムAPI</p>
+                </div>
+            </div>
+            
+            <div class="note">
+                <p><strong>ポイント:</strong> EventBridgeは「イベント」を中心に設計されています。イベントとは、環境の変化を記述するJSONオブジェクトのことです。例えば、EC2インスタンスの状態変化、S3バケットへのファイルアップロード、カスタムアプリケーションからの通知などです。</p>
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>API宛先（API Destinations）とは？</h2>
+            <p>API宛先は、EventBridgeからHTTP APIエンドポイントにイベントを直接送信できる機能です。これにより、AWS外部のサービスやアプリケーションと簡単に連携できます。</p>
+            
+            <div class="flex-container">
+                <div class="flex-item">
+                    <h3>主な特徴</h3>
+                    <ul>
+                        <li>HTTP（REST）エンドポイントにイベントを送信</li>
+                        <li>認証方法としてOAuth、API キー、基本認証をサポート</li>
+                        <li>リトライ回数やレート制限などの設定が可能</li>
+                        <li>API Gateway経由せずに直接外部APIに接続可能</li>
+                    </ul>
+                </div>
+                <div class="flex-item">
+                    <h3>利用シナリオ</h3>
+                    <div class="advantage">✅ SaaSプラットフォームとの連携（Slack、Jira、Zendesk等）</div>
+                    <div class="advantage">✅ 社内マイクロサービスへのイベント通知</div>
+                    <div class="advantage">✅ パートナー企業のAPIとの連携</div>
+                    <div class="advantage">✅ ウェブフックをサポートするあらゆるサービスとの統合</div>
+                </div>
+            </div>
+            
+            <h3>API宛先の設定手順</h3>
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-icon">🔑</div>
+                    <p><strong>接続の作成</strong><br>認証情報と認証タイプを設定</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">🌐</div>
+                    <p><strong>API宛先の定義</strong><br>エンドポイントURLとHTTPメソッドを指定</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">⚙️</div>
+                    <p><strong>ルールの作成</strong><br>イベントパターンの定義</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">🔗</div>
+                    <p><strong>ターゲットに設定</strong><br>作成したAPI宛先をターゲットに指定</p>
+                </div>
+            </div>
+            
+            <div class="code-block">
+                # AWS CLIでのAPI宛先作成例
+                aws events create-connection \
+                  --name "my-slack-connection" \
+                  --authorization-type "API_KEY" \
+                  --auth-parameters '{"ApiKey": {"Key": "x-api-key", "Value": "your-api-key-value"}}'
+                
+                aws events create-api-destination \
+                  --name "slack-notification" \
+                  --connection-arn "arn:aws:events:region:account-id:connection/my-slack-connection" \
+                  --invocation-endpoint "https://hooks.slack.com/services/T00000/B00000/XXXXX" \
+                  --http-method "POST"
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>入力トランスフォーマー（Input Transformer）とは？</h2>
+            <p>入力トランスフォーマーは、EventBridgeのルールが受け取ったイベントデータを、ターゲットが必要とする形式に変換する機能です。JSONパスを使用して元のイベントからデータを抽出し、新しいJSONを作成します。</p>
+            
+            <div class="flex-container">
+                <div class="flex-item">
+                    <div class="info-box" style="margin-bottom: 15px;">
+                        <div class="info-icon" style="background-color: #1890ff;">🔍</div>
+                        <div class="info-content">
+                            <h3 style="margin-top: 0;">入力パス（Input Path）</h3>
+                            <p>元のイベントから必要なデータを抽出するためのJSONパス式を定義します。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-item">
+                    <div class="info-box" style="margin-bottom: 15px;">
+                        <div class="info-icon" style="background-color: #52c41a;">🔄</div>
+                        <div class="info-content">
+                            <h3 style="margin-top: 0;">入力テンプレート（Input Template）</h3>
+                            <p>抽出したデータを使って新しいJSON構造を定義します。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>入力トランスフォーマーの使用例</h3>
+            <p>S3バケットに新しいファイルがアップロードされたイベントを、SlackのWebhookに送信する例を見てみましょう：</p>
+            
+            <div class="code-block">
+                # 元のS3イベント（一部）
+                {
+                  "version": "0",
+                  "id": "12345678-1234-1234-1234-123456789012",
+                  "detail-type": "Object Created",
+                  "source": "aws.s3",
+                  "account": "123456789012",
+                  "time": "2021-11-12T00:00:00Z",
+                  "region": "ap-northeast-1",
+                  "detail": {
+                    "bucket": {
+                      "name": "my-bucket"
+                    },
+                    "object": {
+                      "key": "uploads/document.pdf",
+                      "size": 1024
+                    }
+                  }
+                }
+                
+                # 入力パス
+                {
+                  "bucketName": "$.detail.bucket.name",
+                  "objectKey": "$.detail.object.key",
+                  "objectSize": "$.detail.object.size",
+                  "eventTime": "$.time"
+                }
+                
+                # 入力テンプレート（Slack用に整形）
+                {
+                  "text": "S3バケット <bucketName> に新しいファイルがアップロードされました！\n- ファイル名: <objectKey>\n- サイズ: <objectSize> バイト\n- 時間: <eventTime>"
+                }
+            </div>
+            
+            <div class="note">
+                <p><strong>ポイント:</strong> 入力トランスフォーマーを使うことで、イベントプロデューサー（S3）とコンシューマー（Slack）の間のデータフォーマットの違いを解決できます。変換はサーバーレスで行われるため、追加のコードを書く必要がありません。</p>
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>API宛先と入力トランスフォーマーの組み合わせ</h2>
+            <p>API宛先と入力トランスフォーマーを組み合わせることで、強力なイベント駆動型のワークフローを構築できます。以下のユースケースを見てみましょう。</p>
+            
+            <h3>実践ユースケース: EC2インスタンス状態変更をTeamsに通知</h3>
+            
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-icon">💻</div>
+                    <p><strong>EC2インスタンス</strong><br>状態が変化（起動/停止など）</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">📬</div>
+                    <p><strong>EventBridge</strong><br>イベントを受信し、ルールに従って処理</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">🔄</div>
+                    <p><strong>入力トランスフォーマー</strong><br>データをTeams形式に変換</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-icon">📡</div>
+                    <p><strong>API宛先</strong><br>TeamsのWebhookにPOSTリクエスト</p>
+                </div>
+            </div>
+            
+            <div class="code-block">
+                # EventBridgeルールの定義例（AWS CloudFormation）
+                Resources:
+                  TeamsConnection:
+                    Type: AWS::Events::Connection
+                    Properties:
+                      AuthorizationType: API_KEY
+                      AuthParameters:
+                        ApiKey:
+                          Key: "Content-Type"
+                          Value: "application/json"
+                  
+                  TeamsApiDestination:
+                    Type: AWS::Events::ApiDestination
+                    Properties:
+                      ConnectionArn: !GetAtt TeamsConnection.Arn
+                      InvocationEndpoint: "https://yourcompany.webhook.office.com/webhookb2/..."
+                      HttpMethod: "POST"
+                      InvocationRateLimitPerSecond: 5
+                  
+                  EC2StateChangeRule:
+                    Type: AWS::Events::Rule
+                    Properties:
+                      EventPattern:
+                        source:
+                          - "aws.ec2"
+                        detail-type:
+                          - "EC2 Instance State-change Notification"
+                      Targets:
+                        - Id: "TeamsNotification"
+                          Arn: !GetAtt TeamsApiDestination.Arn
+                          InputTransformer:
+                            InputPathsMap:
+                              "instanceId": "$.detail.instance-id"
+                              "state": "$.detail.state"
+                              "region": "$.region"
+                              "time": "$.time"
+                            InputTemplate: |
+                              {
+                                "type": "message",
+                                "attachments": [{
+                                  "contentType": "application/vnd.microsoft.card.adaptive",
+                                  "content": {
+                                    "type": "AdaptiveCard",
+                                    "body": [{
+                                      "type": "TextBlock",
+                                      "size": "Medium",
+                                      "weight": "Bolder",
+                                      "text": "EC2インスタンス状態変更通知"
+                                    }, {
+                                      "type": "FactSet",
+                                      "facts": [{
+                                        "title": "インスタンスID:",
+                                        "value": "<instanceId>"
+                                      }, {
+                                        "title": "新しい状態:",
+                                        "value": "<state>"
+                                      }, {
+                                        "title": "リージョン:",
+                                        "value": "<region>"
+                                      }, {
+                                        "title": "時間:",
+                                        "value": "<time>"
+                                      }]
+                                    }],
+                                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                                    "version": "1.2"
+                                  }
+                                }]
+                              }
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>ベストプラクティスと注意点</h2>
+            
+            <div class="flex-container">
+                <div class="flex-item">
+                    <h3>API宛先のベストプラクティス</h3>
+                    <ul>
+                        <li>適切な認証方法の選択（OAuth推奨）</li>
+                        <li>リトライポリシーとレート制限の設定</li>
+                        <li>接続を複数のAPI宛先で再利用</li>
+                        <li>エンドポイントのヘルスチェックの実装</li>
+                    </ul>
+                </div>
+                <div class="flex-item">
+                    <h3>入力トランスフォーマーのコツ</h3>
+                    <ul>
+                        <li>JSONパス式のテスト（EventBridgeコンソールで可能）</li>
+                        <li>必要なデータのみを抽出して変換</li>
+                        <li>エラーハンドリングの考慮（不正な形式のイベント対策）</li>
+                        <li>テンプレート内で条件分岐を使用（可能な場合）</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>よくある問題と解決策</h3>
+            <table class="comparison-table">
+                <tr>
+                    <th>問題</th>
+                    <th>考えられる原因</th>
+                    <th>解決策</th>
+                </tr>
+                <tr>
+                    <td>API宛先にイベントが届かない</td>
+                    <td>認証情報の不一致、エンドポイントの誤り</td>
+                    <td>CloudWatchログで詳細を確認し、認証情報とエンドポイントを再確認</td>
+                </tr>
+                <tr>
+                    <td>変換後のデータが正しくない</td>
+                    <td>JSONパス式の誤り、テンプレート構文ミス</td>
+                    <td>コンソールのテスト機能を使って式とテンプレートを検証</td>
+                </tr>
+                <tr>
+                    <td>レート制限エラー</td>
+                    <td>API宛先への送信頻度が高すぎる</td>
+                    <td>InvocationRateLimitPerSecondを適切に設定、DLQの設定を検討</td>
+                </tr>
+                <tr>
+                    <td>特定のイベントのみ処理されない</td>
+                    <td>イベントパターンのミスマッチ</td>
+                    <td>イベントパターンのテスト機能を利用して確認</td>
+                </tr>
+            </table>
+        </section>
+        
+        <section class="card">
+            <h2>まとめ</h2>
+            <p>AWS EventBridgeのAPI宛先と入力トランスフォーマー機能を活用することで、以下のようなメリットが得られます：</p>
+            
+            <div class="flex-container">
+                <div class="flex-item">
+                    <div class="advantage">✅ <strong>コード不要の統合:</strong> Lambda関数を書かずに外部APIと連携可能</div>
+                    <div class="advantage">✅ <strong>柔軟なデータ変換:</strong> イベントデータを必要な形式に変換</div>
+                </div>
+                <div class="flex-item">
+                    <div class="advantage">✅ <strong>運用負荷の軽減:</strong> サーバーレスでスケーラブルな設計</div>
+                    <div class="advantage">✅ <strong>コスト最適化:</strong> 不要なLambda呼び出しを削減</div>
+                </div>
+            </div>
+            
+            <div class="note">
+                <p><strong>次のステップ:</strong> まずは小規模なユースケースから始めて、EventBridgeの機能を体験してみましょう。例えば、テスト環境でEC2の状態変更をSlackに通知するワークフローなど、シンプルな統合から始めるとよいでしょう。</p>
+            </div>
+            
+            <div class="tags">EventBridge</div>
+            <div class="tags">API宛先</div>
+            <div class="tags">入力トランスフォーマー</div>
+            <div class="tags">サーバーレス</div>
+            <div class="tags">イベント駆動型</div>
+        </section>
+        
+        <footer>
+            <p>© 2025 AWS EventBridge ガイド | 初心者のための解説資料</p>
+        </footer>
+    </div>
+</body>
+</html>

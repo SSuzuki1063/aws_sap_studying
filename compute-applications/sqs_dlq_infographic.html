@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS SQS DLQ & Redrive Policy インフォグラフィック</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shine 4s infinite;
+        }
+        
+        .header h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3rem;
+            color: #666;
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.8;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 25px;
+            margin-bottom: 40px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
+        }
+        
+        .section:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-top: 25px solid #34495e;
+        }
+        
+        .section-header h2 {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+        }
+        
+        .section-content {
+            padding: 50px;
+        }
+        
+        /* 配送センター3D表現 */
+        .delivery-center {
+            perspective: 1200px;
+            margin: 40px 0;
+        }
+        
+        .center-building {
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+            border: 4px solid #28a745;
+            border-radius: 25px;
+            padding: 50px;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .center-building:hover {
+            transform: rotateY(8deg) rotateX(4deg);
+        }
+        
+        .center-building::before {
+            content: '🏢';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            background: white;
+            padding: 15px;
+            border-radius: 50%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .center-title {
+            text-align: center;
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 40px;
+            margin-top: 20px;
+        }
+        
+        /* メッセージフロー */
+        .message-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .queue-box {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            text-align: center;
+            min-width: 180px;
+            position: relative;
+            transition: all 0.4s ease;
+        }
+        
+        .queue-box:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+        }
+        
+        .main-queue {
+            border: 4px solid #007bff;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        }
+        
+        .dlq {
+            border: 4px solid #dc3545;
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+        }
+        
+        .queue-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .queue-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .queue-description {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .message-counter {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ffc107;
+            color: #333;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 5px 15px rgba(255,193,7,0.4);
+            animation: counterPulse 2s infinite;
+        }
+        
+        /* 配達プロセス */
+        .delivery-process {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .delivery-process::before {
+            content: '🚚';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 3rem;
+            opacity: 0.1;
+        }
+        
+        .delivery-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .delivery-step {
+            background: white;
+            border: 3px solid #007bff;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 30px rgba(0,123,255,0.2);
+            transition: all 0.5s ease;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .delivery-step:hover {
+            transform: scale(1.15) translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,123,255,0.4);
+        }
+        
+        .delivery-step.success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-color: #28a745;
+            animation: successPulse 3s infinite;
+        }
+        
+        .delivery-step.failed {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            border-color: #dc3545;
+            animation: failedShake 0.5s infinite;
+        }
+        
+        .delivery-step.retry {
+            background: linear-gradient(135deg, #ffc107, #ffb300);
+            color: #333;
+            border-color: #ffc107;
+            animation: retryBounce 1s infinite;
+        }
+        
+        .delivery-arrow {
+            font-size: 2.5rem;
+            color: #007bff;
+            animation: flowMove 2s infinite;
+            margin: 0 15px;
+        }
+        
+        .step-label {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            white-space: nowrap;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* 包荷物アニメーション */
+        .package-animation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+            height: 200px;
+        }
+        
+        .package {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(255,107,107,0.4);
+            position: absolute;
+            transition: all 1s ease;
+        }
+        
+        .package.moving {
+            animation: packageMove 3s infinite;
+        }
+        
+        .delivery-truck {
+            width: 80px;
+            height: 50px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin: 0 40px;
+        }
+        
+        .delivery-truck::before {
+            content: '🚚';
+            font-size: 2rem;
+        }
+        
+        .delivery-truck::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 10px;
+            width: 15px;
+            height: 15px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: 45px 0 #333;
+        }
+        
+        /* 再配達カウンター */
+        .retry-counter {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+            position: relative;
+        }
+        
+        .retry-counter::before {
+            content: '🔄';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
+            background: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .retry-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .retry-box {
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 15px 25px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 5px 15px rgba(0,123,255,0.2);
+        }
+        
+        .retry-current {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            border-color: #dc3545;
+        }
+        
+        .retry-max {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-color: #28a745;
+        }
+        
+        /* インタラクティブシミュレーター */
+        .simulator {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 25px;
+            padding: 50px;
+            margin: 40px 0;
+            text-align: center;
+            border: 3px dashed #007bff;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .simulator::before {
+            content: '🎮';
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3.5rem;
+            background: white;
+            padding: 15px;
+            border-radius: 50%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .sim-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .sim-button {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sim-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .sim-button:hover::before {
+            left: 100%;
+        }
+        
+        .sim-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,123,255,0.4);
+        }
+        
+        .sim-button.success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        
+        .sim-button.failed {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+        
+        .sim-button.reset {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+        
+        /* ステータス表示 */
+        .status-display {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .status-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .status-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        /* AWS設定コード */
+        .aws-config {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .aws-config::before {
+            content: 'AWS';
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: #ff9500;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .config-section {
+            margin: 20px 0;
+        }
+        
+        .config-title {
+            color: #4fd1c7;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        /* 比較テーブル */
+        .comparison-table {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            margin: 40px 0;
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+        
+        .table-content {
+            padding: 0;
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            border-bottom: 1px solid #dee2e6;
+            transition: background 0.3s ease;
+        }
+        
+        .table-row:hover {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        }
+        
+        .table-cell {
+            padding: 20px;
+            text-align: center;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .table-cell:last-child {
+            border-right: none;
+        }
+        
+        .table-cell.header {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* ベストプラクティス */
+        .best-practices {
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+            border: 3px solid #28a745;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .practice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .practice-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(40,167,69,0.2);
+        }
+        
+        .practice-icon {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .practice-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #155724;
+        }
+        
+        .practice-content {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        /* アニメーション */
+        @keyframes shine {
+            0% { transform: translate(-100%, -100%) rotate(45deg); }
+            100% { transform: translate(100%, 100%) rotate(45deg); }
+        }
+        
+        @keyframes counterPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+        }
+        
+        @keyframes failedShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        @keyframes retryBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes flowMove {
+            0%, 100% { opacity: 0.7; transform: translateX(0); }
+            50% { opacity: 1; transform: translateX(10px); }
+        }
+        
+        @keyframes packageMove {
+            0% { transform: translateX(-200px); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateX(200px); opacity: 0; }
+        }
+        
+        /* レスポンシブデザイン */
+        @media (max-width: 768px) {
+            .message-flow {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .delivery-steps {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .delivery-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .retry-display {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .sim-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-cell {
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .package-animation {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1>📦 AWS SQS DLQ & Redrive Policy</h1>
+            <p>Dead Letter Queue（不達荷物センター）とRedrive Policy（再配達ルール）を宅配便システムで完全理解！</p>
+        </div>
+        
+        <!-- 基本概念 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>🏢 宅配便配送センターのシナリオ</h2>
+                <p>AWS SQS = 宅配便の配送システム</p>
+            </div>
+            <div class="section-content">
+                <div class="delivery-center">
+                    <div class="center-building">
+                        <div class="center-title">🏪 AWS配送センター株式会社</div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 40px 0;">
+                            <div style="background: white; padding: 30px; border-radius: 15px; border: 3px solid #007bff;">
+                                <h3 style="text-align: center; color: #007bff; margin-bottom: 20px;">📋 システム構成</h3>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li style="margin: 15px 0; padding: 10px; background: #e3f2fd; border-radius: 8px;">
+                                        <strong>🎯 SQS Queue</strong> = 配送待ち荷物置き場
+                                    </li>
+                                    <li style="margin: 15px 0; padding: 10px; background: #fff3e0; border-radius: 8px;">
+                                        <strong>📦 Message</strong> = お客様への荷物
+                                    </li>
+                                    <li style="margin: 15px 0; padding: 10px; background: #e8f5e8; border-radius: 8px;">
+                                        <strong>🚚 Consumer</strong> = 配達員ドライバー
+                                    </li>
+                                    <li style="margin: 15px 0; padding: 10px; background: #ffebee; border-radius: 8px;">
+                                        <strong>🏪 DLQ</strong> = 不達荷物保管センター
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div style="background: white; padding: 30px; border-radius: 15px; border: 3px solid #dc3545;">
+                                <h3 style="text-align: center; color: #dc3545; margin-bottom: 20px;">⚠️ 配達問題の例</h3>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li style="margin: 15px 0; padding: 10px; background: #ffebee; border-radius: 8px;">
+                                        🏠 <strong>住所不明</strong> - 引っ越し済み
+                                    </li>
+                                    <li style="margin: 15px 0; padding: 10px; background: #ffebee; border-radius: 8px;">
+                                        😴 <strong>不在</strong> - 受取人がいない
+                                    </li>
+                                    <li style="margin: 15px 0; padding: 10px; background: #ffebee; border-radius: 8px;">
+                                        🚫 <strong>受け取り拒否</strong> - 注文キャンセル
+                                    </li>
+                                    <li style="margin: 15px 0; padding: 10px; background: #ffebee; border-radius: 8px;">
+                                        🔧 <strong>システムエラー</strong> - 配達員の機械故障
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- メッセージフロー -->
+        <div class="section">
+            <div class="section-header">
+                <h2>🌊 荷物の流れ - メインキューからDLQまで</h2>
+                <p>配送失敗時の荷物がどのように移動するかを見てみよう！</p>
+            </div>
+            <div class="section-content">
+                <div class="message-flow">
+                    <div class="queue-box main-queue">
+                        <div class="message-counter" id="mainQueueCounter">25</div>
+                        <div class="queue-icon">📮</div>
+                        <div class="queue-title">メインキュー</div>
+                        <div class="queue-description">
+                            配送待ちの荷物<br>
+                            （SQS Main Queue）<br>
+                            通常の配達リスト
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin: 20px 0;">➡️</div>
+                        <div style="font-weight: bold; color: #007bff;">配達試行</div>
+                    </div>
+                    
+                    <div class="queue-box dlq">
+                        <div class="message-counter" id="dlqCounter">3</div>
+                        <div class="queue-icon">🚫</div>
+                        <div class="queue-title">Dead Letter Queue</div>
+                        <div class="queue-description">
+                            配達不可能な荷物<br>
+                            （DLQ）<br>
+                            再配達限界に到達
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="delivery-process">
+                    <h3 style="text-align: center; margin-bottom: 30px; color: #2c3e50;">🚚 配達プロセスの詳細</h3>
+                    
+                    <div class="delivery-steps">
+                        <div class="delivery-step success" onclick="showStepDetails('pickup')">
+                            📦<br>荷物<br>取得
+                            <div class="step-label">メインキューから荷物を取得</div>
+                        </div>
+                        
+                        <div class="delivery-arrow">➡️</div>
+                        
+                        <div class="delivery-step retry" onclick="showStepDetails('delivery')">
+                            🚚<br>配達<br>試行
+                            <div class="step-label">お客様の住所に配達を試行</div>
+                        </div>
+                        
+                        <div class="delivery-arrow">➡️</div>
+                        
+                        <div class="delivery-step failed" onclick="showStepDetails('check')">
+                            ❓<br>結果<br>確認
+                            <div class="step-label">配達成功 or 失敗を判定</div>
+                        </div>
+                        
+                        <div class="delivery-arrow">➡️</div>
+                        
+                        <div class="delivery-step" onclick="showStepDetails('decision')" id="decisionStep">
+                            🔄<br>再配達<br>判定
+                            <div class="step-label">再配達回数をチェック</div>
+                        </div>
+                    </div>
+                    
+                    <div id="stepDetails" style="background: #e3f2fd; border: 2px solid #2196f3; border-radius: 15px; padding: 25px; margin-top: 30px;">
+                        <h4 style="color: #1565c0;">📦 Step 1: 荷物取得</h4>
+                        <p>配達員がメインキューから荷物を受け取ります。この時点で荷物は「配達中」状態になり、他の配達員からは見えなくなります。</p>
+                        <ul>
+                            <li><strong>AWS用語:</strong> Consumer が SQS Message を Receive</li>
+                            <li><strong>Visibility Timeout:</strong> 配達員が荷物を独占する時間</li>
+                            <li><strong>状態変化:</strong> Available → In-Flight</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 荷物アニメーション -->
+                <div class="package-animation">
+                    <div style="position: absolute; left: 0;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">📮</div>
+                            <div style="font-weight: bold;">メインキュー</div>
+                        </div>
+                    </div>
+                    
+                    <div class="package moving" id="animatedPackage">📦</div>
+                    
+                    <div class="delivery-truck"></div>
+                    
+                    <div style="position: absolute; right: 0;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🏠</div>
+                            <div style="font-weight: bold;">配達先</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Redrive Policy -->
+        <div class="section">
+            <div class="section-header">
+                <h2>🔄 Redrive Policy - 再配達ルール</h2>
+                <p>何回まで再配達を試みるかのルール設定</p>
+            </div>
+            <div class="section-content">
+                <div class="retry-counter">
+                    <h3 style="margin-top: 30px; margin-bottom: 30px; color: #856404;">再配達カウンター</h3>
+                    
+                    <div class="retry-display">
+                        <div class="retry-box retry-current">
+                            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">現在の試行回数</div>
+                            <div id="currentRetry" style="font-size: 2rem;">2</div>
+                        </div>
+                        
+                        <div style="font-size: 2rem; color: #dc3545;">/</div>
+                        
+                        <div class="retry-box retry-max">
+                            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">最大再配達回数</div>
+                            <div id="maxRetry" style="font-size: 2rem;">3</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 30px 0; padding: 20px; background: white; border-radius: 10px;">
+                        <h4 style="color: #2c3e50; margin-bottom: 15px;">📋 再配達ルール（maxReceiveCount）</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div style="padding: 15px; background: #e8f5e8; border-radius: 8px; border: 2px solid #28a745;">
+                                <strong style="color: #155724;">✅ 再配達可能</strong><br>
+                                <span style="color: #666;">まだ最大回数に達していない</span>
+                            </div>
+                            <div style="padding: 15px; background: #ffebee; border-radius: 8px; border: 2px solid #dc3545;">
+                                <strong style="color: #721c24;">🚫 DLQに移動</strong><br>
+                                <span style="color: #666;">最大回数に達した場合</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 40px 0;">
+                    <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 30px; border-radius: 20px; border: 3px solid #2196f3;">
+                        <h4 style="color: #1565c0; text-align: center; margin-bottom: 20px;">🔧 AWS 設定例</h4>
+                        <div style="background: #2d3748; color: #e2e8f0; padding: 20px; border-radius: 10px; font-family: monospace; font-size: 0.9rem;">
+<pre># maxReceiveCount = 3
+{
+  "deadLetterTargetArn": "arn:aws:sqs:us-east-1:123456789012:my-dlq",
+  "maxReceiveCount": 3
+}</pre>
+                        </div>
+                        <div style="margin-top: 15px; color: #1565c0;">
+                            <strong>意味:</strong> 3回配達失敗したらDLQに送る
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 30px; border-radius: 20px; border: 3px solid #ff9800;">
+                        <h4 style="color: #e65100; text-align: center; margin-bottom: 20px;">💡 推奨設定値</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin: 10px 0; padding: 10px; background: white; border-radius: 8px;">
+                                <strong>一般的:</strong> maxReceiveCount = 3~5
+                            </li>
+                            <li style="margin: 10px 0; padding: 10px; background: white; border-radius: 8px;">
+                                <strong>クリティカル:</strong> maxReceiveCount = 1~2
+                            </li>
+                            <li style="margin: 10px 0; padding: 10px; background: white; border-radius: 8px;">
+                                <strong>バッチ処理:</strong> maxReceiveCount = 5~10
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- インタラクティブシミュレーター -->
+        <div class="section">
+            <div class="section-header">
+                <h2>🎮 配達シミュレーター</h2>
+                <p>実際に配達を試して、DLQ移動プロセスを体験しよう！</p>
+            </div>
+            <div class="section-content">
+                <div class="simulator">
+                    <h3 style="margin-top: 40px; margin-bottom: 30px; color: #2c3e50;">配達結果を選択してシミュレーション</h3>
+                    
+                    <div class="sim-controls">
+                        <button class="sim-button success" onclick="simulateDelivery('success')">
+                            ✅<br>配達成功<br>
+                            <small>荷物を正常にお渡し</small>
+                        </button>
+                        <button class="sim-button failed" onclick="simulateDelivery('failed')">
+                            ❌<br>配達失敗<br>
+                            <small>不在・住所不明等</small>
+                        </button>
+                        <button class="sim-button reset" onclick="resetSimulation()">
+                            🔄<br>リセット<br>
+                            <small>初期状態に戻す</small>
+                        </button>
+                    </div>
+                    
+                    <div class="status-display">
+                        <h4 style="text-align: center; margin-bottom: 25px; color: #2c3e50;">📊 配送センター リアルタイム状況</h4>
+                        <div class="status-grid">
+                            <div class="status-card">
+                                <div style="color: #007bff;">📮</div>
+                                <div class="status-value" id="simMainQueue" style="color: #007bff;">100</div>
+                                <div class="status-label">メインキュー<br>配達待ち荷物</div>
+                            </div>
+                            <div class="status-card">
+                                <div style="color: #ffc107;">🔄</div>
+                                <div class="status-value" id="simRetryCount" style="color: #ffc107;">0</div>
+                                <div class="status-label">現在の再配達回数<br>(maxReceiveCount: 3)</div>
+                            </div>
+                            <div class="status-card">
+                                <div style="color: #dc3545;">🚫</div>
+                                <div class="status-value" id="simDLQ" style="color: #dc3545;">5</div>
+                                <div class="status-label">DLQ<br>配達不可荷物</div>
+                            </div>
+                            <div class="status-card">
+                                <div style="color: #28a745;">✅</div>
+                                <div class="status-value" id="simDelivered" style="color: #28a745;">892</div>
+                                <div class="status-label">配達完了<br>成功した荷物</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="simStatus" style="margin-top: 30px; padding: 20px; background: white; border-radius: 15px; border: 2px solid #007bff;">
+                        <div style="text-align: center; font-size: 1.2rem; font-weight: bold; color: #2c3e50;">
+                            🎯 シミュレーション待機中 - 上のボタンを押して配達を開始してください
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AWS設定詳細 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>⚙️ AWS SQS DLQ設定の実装</h2>
+                <p>実際のAWS環境での設定方法とコード例</p>
+            </div>
+            <div class="section-content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                    <div>
+                        <h3 style="color: #2c3e50; margin-bottom: 20px;">🔧 AWS CLI 設定例</h3>
+                        <div class="aws-config">
+                            <div class="config-section">
+                                <div class="config-title"># 1. DLQの作成</div>
+<pre>aws sqs create-queue \
+  --queue-name my-app-dlq \
+  --attributes '{
+    "MessageRetentionPeriod": "1209600"
+  }'</pre>
+                            </div>
+                            
+                            <div class="config-section">
+                                <div class="config-title"># 2. メインキューの作成</div>
+<pre>aws sqs create-queue \
+  --queue-name my-app-queue \
+  --attributes '{
+    "RedrivePolicy": "{
+      \"deadLetterTargetArn\": \"arn:aws:sqs:us-east-1:123456789012:my-app-dlq\",
+      \"maxReceiveCount\": 3
+    }",
+    "VisibilityTimeoutSeconds": "30"
+  }'</pre>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #2c3e50; margin-bottom: 20px;">📝 CloudFormation テンプレート</h3>
+                        <div class="aws-config">
+                            <div class="config-section">
+<pre>Resources:
+  MyAppDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: my-app-dlq
+      MessageRetentionPeriod: 1209600
+      
+  MyAppQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: my-app-queue
+      VisibilityTimeoutSeconds: 30
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt MyAppDLQ.Arn
+        maxReceiveCount: 3
+      
+  # アラーム設定
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: DLQ-Messages-Alert
+      MetricName: ApproximateNumberOfMessages
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt MyAppDLQ.QueueName</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px;">
+                    <h3 style="color: #2c3e50; margin-bottom: 20px;">💻 アプリケーションコード例（Python）</h3>
+                    <div class="aws-config">
+                        <div class="config-section">
+<pre>import boto3
+import json
+from botocore.exceptions import ClientError
+
+class SQSDeliveryService:
+    def __init__(self):
+        self.sqs = boto3.client('sqs')
+        self.queue_url = 'https://sqs.us-east-1.amazonaws.com/123456789012/my-app-queue'
+        self.dlq_url = 'https://sqs.us-east-1.amazonaws.com/123456789012/my-app-dlq'
+    
+    def process_messages(self):
+        """メッセージ処理（配達員の仕事）"""
+        try:
+            # メッセージ受信（荷物取得）
+            response = self.sqs.receive_message(
+                QueueUrl=self.queue_url,
+                MaxNumberOfMessages=1,
+                WaitTimeSeconds=20,
+                MessageAttributeNames=['All']
+            )
+            
+            if 'Messages' in response:
+                message = response['Messages'][0]
+                receipt_handle = message['ReceiptHandle']
+                
+                # 配達処理を実行
+                delivery_success = self.deliver_package(message)
+                
+                if delivery_success:
+                    # 配達成功 → メッセージ削除
+                    self.sqs.delete_message(
+                        QueueUrl=self.queue_url,
+                        ReceiptHandle=receipt_handle
+                    )
+                    print("✅ 配達成功！メッセージを削除しました")
+                else:
+                    # 配達失敗 → SQSが自動的にreceiveCountを増加
+                    # maxReceiveCountに達するとDLQに自動移動
+                    print("❌ 配達失敗。再配達キューに戻ります")
+                    
+        except ClientError as e:
+            print(f"🚨 エラー: {e}")
+    
+    def deliver_package(self, message):
+        """実際の配達処理（ビジネスロジック）"""
+        try:
+            # ここで実際の配達処理を実行
+            # 例：APIコール、データベース更新、外部サービス連携等
+            package_data = json.loads(message['Body'])
+            
+            # 配達シミュレーション
+            if self.simulate_delivery(package_data):
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            print(f"配達中にエラー: {e}")
+            return False
+    
+    def monitor_dlq(self):
+        """DLQ監視（不達荷物のチェック）"""
+        response = self.sqs.get_queue_attributes(
+            QueueUrl=self.dlq_url,
+            AttributeNames=['ApproximateNumberOfMessages']
+        )
+        
+        message_count = int(response['Attributes']['ApproximateNumberOfMessages'])
+        
+        if message_count > 0:
+            print(f"⚠️ DLQに{message_count}個の不達荷物があります")
+            # アラート送信やログ出力などの処理
+            
+    def simulate_delivery(self, package_data):
+        """配達成功/失敗のシミュレーション"""
+        import random
+        # 80%の確率で配達成功
+        return random.random() < 0.8
+
+# 使用例
+if __name__ == "__main__":
+    service = SQSDeliveryService()
+    
+    # メッセージ処理開始
+    while True:
+        service.process_messages()
+        service.monitor_dlq()
+        time.sleep(5)</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 比較表とベストプラクティス -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📊 設定パラメータ比較とベストプラクティス</h2>
+                <p>適切な設定値とその影響を理解しよう</p>
+            </div>
+            <div class="section-content">
+                <div class="comparison-table">
+                    <div class="table-header">maxReceiveCount 設定値による影響比較</div>
+                    <div class="table-content">
+                        <div class="table-row">
+                            <div class="table-cell header">設定値</div>
+                            <div class="table-cell header">メリット</div>
+                            <div class="table-cell header">デメリット</div>
+                        </div>
+                        <div class="table-row">
+                            <div class="table-cell"><strong>1-2回</strong><br>（厳格）</div>
+                            <div class="table-cell">
+                                ✅ 即座に問題検出<br>
+                                ✅ システム負荷軽減<br>
+                                ✅ 障害の早期発見
+                            </div>
+                            <div class="table-cell">
+                                ❌ 一時的問題で失敗<br>
+                                ❌ DLQ増加の可能性<br>
+                                ❌ 偽陽性リスク
+                            </div>
+                        </div>
+                        <div class="table-row">
+                            <div class="table-cell"><strong>3-5回</strong><br>（標準）</div>
+                            <div class="table-cell">
+                                ✅ バランス良好<br>
+                                ✅ 一時的問題に対応<br>
+                                ✅ 実用的な設定
+                            </div>
+                            <div class="table-cell">
+                                ⚠️ 中程度の遅延<br>
+                                ⚠️ リソース使用
+                            </div>
+                        </div>
+                        <div class="table-row">
+                            <div class="table-cell"><strong>6回以上</strong><br>（寛容）</div>
+                            <div class="table-cell">
+                                ✅ 確実な再試行<br>
+                                ✅ ネットワーク問題に対応<br>
+                                ✅ データ損失回避
+                            </div>
+                            <div class="table-cell">
+                                ❌ 処理遅延<br>
+                                ❌ リソース無駄<br>
+                                ❌ 問題検出遅延
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="best-practices">
+                    <h3 style="text-align: center; color: #155724; margin-bottom: 30px;">🏆 DLQ運用のベストプラクティス</h3>
+                    
+                    <div class="practice-grid">
+                        <div class="practice-card">
+                            <div class="practice-icon">📊</div>
+                            <div class="practice-title">監視とアラート</div>
+                            <div class="practice-content">
+                                DLQにメッセージが蓄積されたら即座にアラート。CloudWatchでメトリクス監視を設定し、DLQ内のメッセージ数を定期チェック。
+                            </div>
+                        </div>
+                        
+                        <div class="practice-card">
+                            <div class="practice-icon">🔄</div>
+                            <div class="practice-title">Redrive機能活用</div>
+                            <div class="practice-content">
+                                問題修正後、DLQからメインキューへのRedriveを実行。AWSコンソールまたはAPIで簡単に実行可能。
+                            </div>
+                        </div>
+                        
+                        <div class="practice-card">
+                            <div class="practice-icon">📝</div>
+                            <div class="practice-title">DLQメッセージ分析</div>
+                            <div class="practice-content">
+                                DLQのメッセージを定期分析して根本原因を特定。エラーパターンの把握により、システム改善に活用。
+                            </div>
+                        </div>
+                        
+                        <div class="practice-card">
+                            <div class="practice-icon">⏰</div>
+                            <div class="practice-title">適切な保持期間</div>
+                            <div class="practice-content">
+                                DLQのメッセージ保持期間を14日（最大）に設定。十分な調査時間を確保しつつ、コスト最適化を図る。
+                            </div>
+                        </div>
+                        
+                        <div class="practice-card">
+                            <div class="practice-icon">🔐</div>
+                            <div class="practice-title">セキュリティ設定</div>
+                            <div class="practice-content">
+                                DLQにも適切なIAMポリシーを設定。機密情報を含むメッセージの場合は、暗号化設定も必須。
+                            </div>
+                        </div>
+                        
+                        <div class="practice-card">
+                            <div class="practice-icon">📈</div>
+                            <div class="practice-title">段階的対応</div>
+                            <div class="practice-content">
+                                DLQメッセージの対応は段階的に実施。まず少数をテスト的にRedriveし、成功を確認してから全量対応。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentRetryCount = 0;
+        let maxRetryCount = 3;
+        let mainQueueCount = 100;
+        let dlqCount = 5;
+        let deliveredCount = 892;
+        
+        function updateCounters() {
+            document.getElementById('currentRetry').textContent = currentRetryCount;
+            document.getElementById('maxRetry').textContent = maxRetryCount;
+            document.getElementById('mainQueueCounter').textContent = mainQueueCount;
+            document.getElementById('dlqCounter').textContent = dlqCount;
+            
+            // シミュレーター表示更新
+            document.getElementById('simMainQueue').textContent = mainQueueCount;
+            document.getElementById('simRetryCount').textContent = currentRetryCount;
+            document.getElementById('simDLQ').textContent = dlqCount;
+            document.getElementById('simDelivered').textContent = deliveredCount;
+        }
+        
+        function showStepDetails(step) {
+            const details = document.getElementById('stepDetails');
+            const stepInfo = {
+                pickup: {
+                    title: '📦 Step 1: 荷物取得',
+                    content: '配達員がメインキューから荷物を受け取ります。この時点で荷物は「配達中」状態になり、他の配達員からは見えなくなります。',
+                    aws: [
+                        'Consumer が SQS Message を Receive',
+                        'Visibility Timeout: 配達員が荷物を独占する時間',
+                        '状態変化: Available → In-Flight'
+                    ]
+                },
+                delivery: {
+                    title: '🚚 Step 2: 配達試行',
+                    content: '配達員が実際にお客様の住所に荷物を配達します。様々な理由で配達が失敗する場合があります。',
+                    aws: [
+                        'ビジネスロジックの実行',
+                        'External API コール、DB更新等',
+                        '処理成功 or 例外発生'
+                    ]
+                },
+                check: {
+                    title: '❓ Step 3: 結果確認',
+                    content: '配達結果を確認し、成功か失敗かを判定します。失敗の場合は理由も記録されます。',
+                    aws: [
+                        'Exception handling',
+                        'エラーログ記録',
+                        '成功時: Delete Message, 失敗時: Retry判定'
+                    ]
+                },
+                decision: {
+                    title: '🔄 Step 4: 再配達判定',
+                    content: '失敗した場合、再配達回数をチェックします。上限に達していればDLQに移動、そうでなければ再配達キューに戻します。',
+                    aws: [
+                        'receiveCount のチェック',
+                        'maxReceiveCount と比較',
+                        '上限未満: 再配達, 上限到達: DLQ移動'
+                    ]
+                }
+            };
+            
+            const info = stepInfo[step];
+            details.innerHTML = `
+                <h4 style="color: #1565c0;">${info.title}</h4>
+                <p>${info.content}</p>
+                <ul>
+                    ${info.aws.map(item => `<li><strong>AWS用語:</strong> ${item}</li>`).join('')}
+                </ul>
+            `;
+        }
+        
+        function simulateDelivery(result) {
+            const statusDiv = document.getElementById('simStatus');
+            
+            if (result === 'success') {
+                // 配達成功
+                currentRetryCount = 0;
+                mainQueueCount = Math.max(0, mainQueueCount - 1);
+                deliveredCount++;
+                
+                statusDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">✅</div>
+                        <div style="font-size: 1.3rem; font-weight: bold; color: #28a745; margin-bottom: 10px;">
+                            配達成功！
+                        </div>
+                        <div style="color: #666;">
+                            荷物を正常にお客様にお渡ししました。<br>
+                            メッセージがキューから削除されました。
+                        </div>
+                    </div>
+                `;
+                
+                // 成功アニメーション
+                document.getElementById('decisionStep').className = 'delivery-step success';
+                
+            } else if (result === 'failed') {
+                // 配達失敗
+                currentRetryCount++;
+                
+                if (currentRetryCount >= maxRetryCount) {
+                    // DLQに移動
+                    mainQueueCount = Math.max(0, mainQueueCount - 1);
+                    dlqCount++;
+                    currentRetryCount = 0;
+                    
+                    statusDiv.innerHTML = `
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 15px;">🚫</div>
+                            <div style="font-size: 1.3rem; font-weight: bold; color: #dc3545; margin-bottom: 10px;">
+                                DLQに移動！
+                            </div>
+                            <div style="color: #666;">
+                                最大再配達回数（${maxRetryCount}回）に達しました。<br>
+                                荷物は不達荷物センター（DLQ）に移動されました。
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('decisionStep').className = 'delivery-step failed';
+                    
+                } else {
+                    // 再配達
+                    statusDiv.innerHTML = `
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 15px;">🔄</div>
+                            <div style="font-size: 1.3rem; font-weight: bold; color: #ffc107; margin-bottom: 10px;">
+                                再配達待ち
+                            </div>
+                            <div style="color: #666;">
+                                配達に失敗しました（${currentRetryCount}/${maxRetryCount}回目）。<br>
+                                荷物は再配達キューに戻されました。
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('decisionStep').className = 'delivery-step retry';
+                }
+            }
+            
+            updateCounters();
+        }
+        
+        function resetSimulation() {
+            currentRetryCount = 0;
+            mainQueueCount = 100;
+            dlqCount = 5;
+            deliveredCount = 892;
+            
+            document.getElementById('simStatus').innerHTML = `
+                <div style="text-align: center; font-size: 1.2rem; font-weight: bold; color: #2c3e50;">
+                    🎯 シミュレーション待機中 - 上のボタンを押して配達を開始してください
+                </div>
+            `;
+            
+            document.getElementById('decisionStep').className = 'delivery-step';
+            updateCounters();
+        }
+        
+        // 荷物アニメーション制御
+        function startPackageAnimation() {
+            const packageElement = document.getElementById('animatedPackage');
+            packageElement.style.animation = 'none';
+            setTimeout(() => {
+                packageElement.style.animation = 'packageMove 3s infinite';
+            }, 100);
+        }
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCounters();
+            startPackageAnimation();
+            showStepDetails('pickup');
+            
+            // 定期的にアニメーション再開
+            setInterval(startPackageAnimation, 4000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS EC2のInsufficientInstanceCapacityエラーと再起動による解決メカニズム</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #232F3E;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            border-bottom: 2px solid #FF9900;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #232F3E;
+            margin-top: 30px;
+            font-size: 22px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px 0;
+            position: relative;
+            flex-wrap: wrap;
+        }
+        
+        .step {
+            width: 180px;
+            background-color: #fff;
+            border: 2px solid #FF9900;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #232F3E;
+        }
+        
+        .arrow {
+            position: absolute;
+            top: 50%;
+            right: -30px;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border-top: 3px solid #FF9900;
+            border-right: 3px solid #FF9900;
+            transform: rotate(45deg);
+        }
+        
+        .info-box {
+            background-color: #E4F7FB;
+            border-left: 4px solid #00A1C9;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .warning-box {
+            background-color: #FFF4E6;
+            border-left: 4px solid #FF9900;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .comparison {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .comparison-column {
+            width: 48%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .comparison-title {
+            background-color: #232F3E;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .pros-cons {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .pros-cons div {
+            margin-bottom: 10px;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .pros-cons .pro:before {
+            content: "✓";
+            color: green;
+            position: absolute;
+            left: 5px;
+        }
+        
+        .pros-cons .con:before {
+            content: "✗";
+            color: red;
+            position: absolute;
+            left: 5px;
+        }
+        
+        .icon-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+        
+        .icon {
+            width: 60px;
+            height: 60px;
+            background-color: #FF9900;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            margin: 0 15px;
+        }
+        
+        .caption {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .flow-diagram {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .step {
+                width: 80%;
+                margin-bottom: 30px;
+            }
+            
+            .arrow {
+                transform: rotate(135deg);
+                right: auto;
+                top: auto;
+                bottom: -15px;
+                left: 50%;
+            }
+            
+            .comparison-column {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AWS EC2の容量不足エラーと再起動による解決メカニズム</h1>
+        
+        <h2>InsufficientInstanceCapacityエラーとは？</h2>
+        <div class="info-box">
+            特定のインスタンスタイプやアベイラビリティゾーンで、AWSに十分な空き容量がない場合に発生するエラーです。新規インスタンスの起動やスケールアウト時に表示されることが一般的です。
+        </div>
+        
+        <div class="icon-container">
+            <div class="icon">❌</div>
+            <div class="icon">⚠️</div>
+            <div class="icon">🔄</div>
+        </div>
+        <p class="caption">InsufficientInstanceCapacityエラーは一時的な問題です</p>
+        
+        <h2>問題と解決メカニズム：図解</h2>
+        <div class="flow-diagram">
+            <div class="step">
+                <div class="step-title">step 1</div>
+                <p>インスタンス起動中</p>
+                <p>（正常稼働）</p>
+            </div>
+            
+            <div class="step">
+                <div class="step-title">step 2</div>
+                <p>容量不足発生</p>
+                <p>（リソースの制約）</p>
+            </div>
+            
+            <div class="step">
+                <div class="step-title">step 3</div>
+                <p>RebootInstances API呼び出し</p>
+                <p>（再起動操作）</p>
+            </div>
+            
+            <div class="step">
+                <div class="step-title">step 4</div>
+                <p>キャパシティ再割り当て</p>
+                <p>（エラー解消）</p>
+            </div>
+        </div>
+        
+        <h2>なぜ再起動が容量不足を解決するのか？</h2>
+        <div class="comparison">
+            <div class="comparison-column">
+                <div class="comparison-title">エラー発生のメカニズム</div>
+                <ul>
+                    <li>AWSはハイパーバイザーごとにキャパシティプールを管理</li>
+                    <li>特定のインスタンスタイプに対する需要が急増</li>
+                    <li>物理サーバーの容量制限に到達</li>
+                    <li>新規起動リクエストが拒否される</li>
+                </ul>
+            </div>
+            
+            <div class="comparison-column">
+                <div class="comparison-title">再起動による解決方法</div>
+                <ul>
+                    <li>再起動時にAWSが内部リソース再割り当てを実行</li>
+                    <li>同じハードウェアでキャパシティが再評価される</li>
+                    <li>最適化された配置アルゴリズムが適用される</li>
+                    <li>既存インスタンスは「優先権」を持っている</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="warning-box">
+            <strong>重要ポイント：</strong> 再起動操作は、<em>すでに稼働中のインスタンス</em>に対して有効です。新規インスタンスの起動時に発生するInsufficientInstanceCapacityエラーには異なる対策が必要です。
+        </div>
+        
+        <h2>再起動のメリットとリスク</h2>
+        <div class="pros-cons">
+            <div class="pro">インスタンスのIPアドレスは変更されない（Elastic IPを使用している場合）</div>
+            <div class="pro">インスタンスID、および関連するEBSボリュームは維持される</div>
+            <div class="pro">数分で完了する比較的簡単な操作</div>
+            <div class="con">短時間のダウンタイムが発生する</div>
+            <div class="con">メモリ内のデータは失われる</div>
+            <div class="con">100%の解決を保証するものではない</div>
+        </div>
+        
+        <h2>実践的なアプローチ</h2>
+        <ol>
+            <li>AWS Management ConsoleまたはAWS CLIから再起動操作を実行</li>
+            <li>可能であれば低負荷時間帯に再起動をスケジュール</li>
+            <li>重要なシステムの場合は、事前にデータをバックアップ</li>
+            <li>複数のアベイラビリティゾーンにわたる冗長構成を検討</li>
+        </ol>
+        
+        <div class="info-box">
+            <strong>AWS CLIコマンド例：</strong><br>
+            <code>aws ec2 reboot-instances --instance-ids i-1234567890abcdef0</code>
+        </div>
+        
+        <h2>EC2キャパシティ管理のベストプラクティス</h2>
+        <ul>
+            <li>複数のアベイラビリティゾーンを活用する</li>
+            <li>予約インスタンスまたはSavings Plansを使用してキャパシティを確保</li>
+            <li>Auto Scalingグループに複数のインスタンスタイプを設定</li>
+            <li>キャパシティ予約機能を活用する</li>
+            <li>重要なワークロードには専用ホストやCapacity Blocksの使用を検討</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS EventBridge API宛先と入力トランスフォーマー機能の完全ガイド</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7f9;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #232f3e 0%, #163a5f 100%);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.4em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        h2 {
+            color: #ec7211;
+            border-bottom: 2px solid #ec7211;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        
+        h3 {
+            color: #232f3e;
+            margin-top: 25px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+        }
+        
+        .flex-item {
+            flex: 1 1 300px;
+        }
+        
+        .flow-diagram {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .flow-diagram::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, #ec7211, #ff9900);
+        }
+        
+        .flow-step {
+            text-align: center;
+            flex: 1 1 120px;
+            position: relative;
+            padding: 15px;
+            max-width: 180px;
+            z-index: 1;
+        }
+        
+        .flow-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #f1faff;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ec7211;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .flow-icon::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(236,114,17,0.1) 0%, rgba(255,255,255,0) 70%);
+            top: 0;
+            left: 0;
+        }
+        
+        .flow-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(236, 114, 17, 0.3);
+        }
+        
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ec7211;
+            font-size: 24px;
+            padding: 10px;
+            flex: 0 0 30px;
+            position: relative;
+        }
+        
+        .animated-arrow {
+            display: inline-block;
+            animation: moveArrow 1.5s infinite;
+        }
+        
+        @keyframes moveArrow {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(5px); }
+        }
+        
+        .code-block {
+            background-color: #272822;
+            color: #f8f8f2;
+            border-left: 4px solid #ec7211;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .code-block .language-tag {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: #ec7211;
+            color: white;
+            padding: 2px 8px;
+            font-size: 12px;
+            border-radius: 0 0 0 4px;
+        }
+        
+        .highlight {
+            background-color: rgba(255, 248, 220, 0.2);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .note {
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .note::before {
+            content: "ℹ️ 注意点";
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .advantage {
+            background-color: #f6ffed;
+            border-left: 4px solid #52c41a;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 4px;
+            transition: transform 0.2s ease;
+        }
+        
+        .advantage:hover {
+            transform: translateX(5px);
+        }
+        
+        .tags {
+            display: inline-block;
+            background-color: #e6f7ff;
+            border-radius: 15px;
+            padding: 5px 12px;
+            margin: 5px;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tags:hover {
+            background-color: #1890ff;
+            color: white;
+        }
+
+        .info-box {
+            display: flex;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .info-box:hover {
+            transform: translateY(-5px);
+        }
+        
+        .info-icon {
+            background-color: #ec7211;
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex: 0 0 60px;
+        }
+        
+        .info-content {
+            padding: 20px;
+            flex: 1;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #232f3e 0%, #163a5f 100%);
+            color: white;
+        }
+        
+        .comparison-table tr {
+            transition: background-color 0.3s ease;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .comparison-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #ec7211 0%, #ff9900 100%);
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            background: linear-gradient(135deg, #232f3e 0%, #163a5f 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        /* タブUIコンポーネント */
+        .tabs {
+            margin: 25px 0;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            overflow-x: auto;
+        }
+        
+        .tab-button {
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            border-radius: 4px 4px 0 0;
+            margin-right: 2px;
+        }
+        
+        .tab-button.active {
+            background-color: #ec7211;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            animation: fadeIn 0.5s ease;
+            background-color: white;
+            border-radius: 0 0 4px 4px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* アコーディオン */
+        .accordion {
+            margin-bottom: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .accordion-button {
+            background-color: #f1f1f1;
+            color: #333;
+            cursor: pointer;
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .accordion-button:hover {
+            background-color: #ddd;
+        }
+        
+        .accordion-button:after {
+            content: '+';
+            font-size: 18px;
+            color: #ec7211;
+        }
+        
+        .accordion-button.active:after {
+            content: '-';
+        }
+        
+        .accordion-content {
+            padding: 0 15px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background-color: white;
+        }
+        
+        .accordion-content.active {
+            max-height: 1000px;
+            padding: 15px;
+        }
+        
+        /* チェックリスト・ステップ */
+        .step-list {
+            counter-reset: step-counter;
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .step-list li {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 50px;
+            min-height: 40px;
+        }
+        
+        .step-list li:before {
+            content: counter(step-counter);
+            counter-increment: step-counter;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 36px;
+            height: 36px;
+            background-color: #ec7211;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        /* コンソールスクリーンショット風UI */
+        .console-ui {
+            background-color: #0e1621;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        .console-ui-header {
+            background-color: #232f3e;
+            padding: 10px 15px;
+            border-radius: 4px 4px 0 0;
+            margin: -20px -20px 20px -20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .console-ui-title {
+            color: white;
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .console-ui-content {
+            color: #ddd;
+        }
+        
+        .console-ui-field {
+            margin-bottom: 15px;
+        }
+        
+        .console-ui-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #f1f1f1;
+        }
+        
+        .console-ui-input {
+            background-color: #1a2634;
+            border: 1px solid #394b61;
+            border-radius: 4px;
+            color: #f1f1f1;
+            padding: 8px 10px;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        .console-ui-button {
+            background-color: #ec7211;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        /* 言語切り替えタブ */
+        .language-tabs {
+            display: flex;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .language-tab {
+            padding: 5px 10px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 2px;
+            font-size: 12px;
+        }
+        
+        .language-tab.active {
+            background-color: #272822;
+            color: white;
+            border-color: #272822;
+        }
+        
+        .language-content {
+            display: none;
+        }
+        
+        .language-content.active {
+            display: block;
+        }
+        
+        /* 実装例 */
+        .implementation-example {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #52c41a;
+        }
+        
+        .implementation-example h4 {
+            color: #52c41a;
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        /* アニメーション */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(236, 114, 17, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(236, 114, 17, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(236, 114, 17, 0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* ツールチップ */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tooltip .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* 比較カード */
+        .comparison-card {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .comparison-card-header {
+            background-color: #232f3e;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .comparison-card-content {
+            padding: 15px;
+        }
+        
+        .comparison-card-footer {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #eee;
+        }
+        
+        /* ローディングアニメーション */
+        .loading-bar {
+            height: 4px;
+            width: 100%;
+            background-color: #f0f0f0;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            width: 30%;
+            background-color: #ec7211;
+            animation: loading 2s infinite ease-in-out;
+        }
+        
+        @keyframes loading {
+            0% { margin-left: -30%; }
+            100% { margin-left: 100%; }
+        }
+        
+        /* セキュリティレベル表示 */
+        .security-level {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+        }
+        
+        .security-level-label {
+            margin-right: 10px;
+            font-weight: bold;
+            width: 100px;
+        }
+        
+        .security-dots {
+            display: flex;
+        }
+        
+        .security-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+            background-color: #ddd;
+        }
+        
+        .security-dot.filled {
+            background-color: #52c41a;
+        }
+        
+        .security-dot.medium {
+            background-color: #faad14;
+        }
+        
+        .security-dot.low {
+            background-color: #f5222d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AWS EventBridge API宛先と入力トランスフォーマー機能</h1>
+            <p>イベント駆動型アーキテクチャを効率的に構築するための完全ガイド</p>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </header>
+        
+        <div class="info-box">
+            <div class="info-icon">📋</div>
+            <div class="info-content">
+                <h3 style="margin-top: 0;">このガイドの内容</h3>
+                <p>このインフォグラフィックでは、AWS EventBridgeの基本概念から、API宛先機能、そして入力トランスフォーマー機能の実践的な実装まで解説します。初心者の方でも理解しやすいように、視覚的な例と実際のユースケース、実装手順、トラブルシューティングを詳細に説明しています。</p>
+                <button class="btn" onclick="alert('目次にジャンプします')">目次を表示</button>
+            </div>
+        </div>
+        
+        <section class="card">
+            <h2>EventBridgeとは？</h2>
+            <p>AWS EventBridgeは、アプリケーションコンポーネントを接続するサーバーレスのイベントバスサービスです。イベント駆動型アーキテクチャを簡単に構築できます。</p>
+            
+            <div class="tabs">
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="openTab(event, 'overview')">概要</button>
+                    <button class="tab-button" onclick="openTab(event, 'architecture')">アーキテクチャ</button>
+                    <button class="tab-button" onclick="openTab(event, 'eventStructure')">イベント構造</button>
+                </div>
+                
+                <div id="overview" class="tab-content active">
+                    <div class="flex-container">
+                        <div class="flex-item">
+                            <p>AWS EventBridgeは、アプリケーション間でリアルタイムデータを簡単に転送するために設計されたサーバーレスイベントバスです。このサービスにより、疎結合なアーキテクチャを実現し、マイクロサービス、コンテナ、サーバーレス関数などのさまざまなコンポーネント間の通信を効率化できます。</p>
+                            <p>イベント駆動型アーキテクチャでは、システムコンポーネントが互いに直接通信する代わりに、イベントを発行し、それらのイベントを購読します。これにより、柔軟性が高まり、スケーラビリティが向上します。</p>
+                        </div>
+                        <div class="flex-item">
+                            <div class="advantage">✅ <strong>疎結合なサービス間連携</strong>: サービス同士が直接依存しない設計が可能</div>
+                            <div class="advantage">✅ <strong>サーバーレスオペレーション</strong>: インフラ管理不要でスケーラブル</div>
+                            <div class="advantage">✅ <strong>豊富な連携先</strong>: 300以上のAWSサービスとSaaSアプリケーション</div>
+                            <div class="advantage">✅ <strong>カスタムイベントバス</strong>: 環境やワークロード別に分離可能</div>
+                            <div class="advantage">✅ <strong>スキーマレジストリ</strong>: イベントスキーマの検出と管理</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="architecture" class="tab-content">
+                    <div class="flow-diagram">
+                        <div class="flow-step">
+                            <div class="flow-icon">📤</div>
+                            <p><strong>イベントソース</strong><br>AWSサービス、自社アプリ、SaaSアプリからイベント発生</p>
+                        </div>
+                        <div class="flow-arrow"><span class="animated-arrow">→</span></div>
+                        <div class="flow-step">
+                            <div class="flow-icon">🔄</div>
+                            <p><strong>イベントバス</strong><br>イベントをルーティングする中央ハブ</p>
+                        </div>
+                        <div class="flow-arrow"><span class="animated-arrow">→</span></div>
+                        <div class="flow-step">
+                            <div class="flow-icon">🎯</div>
+                            <p><strong>ルール</strong><br>どのイベントをどこに送るかを定義</p>
+                        </div>
+                        <div class="flow-arrow"><span class="animated-arrow">→</span></div>
+                        <div class="flow-step">
+                            <div class="flow-icon">📡</div>
+                            <p><strong>ターゲット</strong><br>AWSサービスやカスタムAPI</p>
+                        </div>
+                    </div>
+                    <div class="note">
+                        <p>EventBridgeは、デフォルトのイベントバスに加えて、カスタムイベントバスとパートナーイベントバスをサポートしています。カスタムイベントバスは、特定のワークロードや環境用に分離されたイベントバスを作成したい場合に役立ちます。パートナーイベントバスは、SaaSプロバイダーからのイベントを受信するために使用します。</p>
+                    </div>
+                </div>
+                
+                <div id="eventStructure" class="tab-content">
+                    <p>EventBridgeのイベントは標準的なJSON形式で構造化されています。以下は基本的なイベント構造です：</p>
+                    <div class="code-block">
+                        <span class="language-tag">JSON</span>
+{
+  "version": "0",               // イベントのバージョン
+  "id": "uuid",                 // イベントの一意のID
+  "detail-type": "イベントタイプ", // イベントの種類を識別
+  "source": "イベントソース",      // イベントの発生源
+  "account": "123456789012",    // AWSアカウントID
+  "time": "タイムスタンプ",        // イベント発生時刻
+  "region": "リージョン",         // AWSリージョン
+  "resources": [                // 関連するAWSリソース
+    "リソースARN1",
+    "リソースARN2"
+  ],
+  "detail": {                   // イベント固有のデータ
+    // イベントによって異なるJSON構造
+  }
+}
+                    </div>
+                    <p>イベントパターンマッチングは<code>detail-type</code>、<code>source</code>、<code>detail</code>フィールドに基づいて行われることが多いです。特にルールを作成する際には、これ

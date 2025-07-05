@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS マルチリージョン DR 構成</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+            border-radius: 15px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .analogy-box {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border-left: 5px solid #ff6b6b;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .analogy-box h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .diagram-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e0e0e0;
+        }
+        
+        .region {
+            display: inline-block;
+            width: 280px;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .region:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .primary-region {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .backup-region {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+        
+        .s3-bucket {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+        }
+        
+        .arrow {
+            font-size: 2em;
+            color: #ff6b6b;
+            margin: 0 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .cloudfront-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        
+        .step {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #4facfe;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .step:hover {
+            transform: translateX(10px);
+        }
+        
+        .step h4 {
+            color: #4facfe;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .benefit-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .benefit-card:hover {
+            transform: scale(1.05);
+        }
+        
+        .benefit-card h4 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .emergency-scenario {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        
+        .emergency-scenario h3 {
+            color: #d63384;
+            margin-bottom: 15px;
+        }
+        
+        .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .tooltip {
+            position: relative;
+            cursor: help;
+            border-bottom: 1px dotted #333;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 AWS マルチリージョン DR 構成</h1>
+            <p>S3レプリケーション × CloudFrontフェイルオーバー完全解説</p>
+        </div>
+
+        <div class="analogy-box">
+            <h3>📚 たとえ話：世界規模の図書館システム</h3>
+            <p>AWSのマルチリージョンDR構成を、世界中に支店を持つ図書館システムに例えて考えてみましょう。本館（メインリージョン）に大切な本（データ）がありますが、災害に備えて支店（バックアップリージョン）にも同じ本のコピーを置いておく。そして、利用者（ユーザー）が最も近い図書館で本を借りられるように案内システム（CloudFront）を用意するイメージです。</p>
+        </div>
+
+        <div class="diagram-container">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">🏗️ 基本構成図</h2>
+            <div class="flow-diagram">
+                <div class="region primary-region">
+                    <div class="icon">🏢</div>
+                    <h3>メインリージョン</h3>
+                    <p>（東京：ap-northeast-1）</p>
+                    <div class="s3-bucket">
+                        <strong>📦 S3バケット（本館）</strong>
+                        <br>メインデータ保存
+                    </div>
+                </div>
+                
+                <span class="arrow">➡️</span>
+                
+                <div class="region backup-region">
+                    <div class="icon">🏪</div>
+                    <h3>バックアップリージョン</h3>
+                    <p>（大阪：ap-northeast-3）</p>
+                    <div class="s3-bucket">
+                        <strong>📦 S3バケット（支店）</strong>
+                        <br>レプリケートされたデータ
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cloudfront-section">
+            <h2 style="text-align: center; margin-bottom: 25px; color: #333;">☁️ CloudFront：世界規模の案内システム</h2>
+            <p style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">CloudFrontは、世界中のユーザーを最適なリージョンに案内する「賢い受付係」のような役割を果たします。</p>
+            
+            <div class="step">
+                <h4>🎯 ステップ1：通常時の動作</h4>
+                <p>ユーザーがアクセス → CloudFrontが最も近いエッジロケーションで応答 → メインリージョン（東京）からデータを取得</p>
+            </div>
+            
+            <div class="step">
+                <h4>🚨 ステップ2：障害発生時</h4>
+                <p>メインリージョンで障害発生 → CloudFrontが自動的に検知 → バックアップリージョン（大阪）に切り替え</p>
+            </div>
+            
+            <div class="step">
+                <h4>✅ ステップ3：復旧後</h4>
+                <p>メインリージョンが復旧 → CloudFrontが正常性を確認 → 徐々にメインリージョンへのトラフィックを戻す</p>
+            </div>
+        </div>
+
+        <div class="emergency-scenario">
+            <h3>🔥 緊急事態シナリオ：東京データセンター停電</h3>
+            <div style="background: white; padding: 20px; border-radius: 10px; margin-top: 15px;">
+                <p><strong>午前9時:</strong> 東京リージョンで大規模停電発生 ⚡</p>
+                <p><strong>午前9時1分:</strong> CloudFrontが障害を検知、自動的に大阪リージョンへ切り替え 🔄</p>
+                <p><strong>午前9時2分:</strong> ユーザーは何も気づかずにサービスを継続利用 😊</p>
+                <p><strong>午後2時:</strong> 東京リージョン復旧、段階的にトラフィック復帰 🔄</p>
+            </div>
+        </div>
+
+        <div class="diagram-container">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">🔄 S3レプリケーションの仕組み</h2>
+            
+            <div class="step">
+                <h4>📝 Cross-Region Replication (CRR)</h4>
+                <p><span class="tooltip" data-tooltip="ファイルがアップロードされるとすぐに開始">リアルタイム同期</span>：東京のS3バケットに新しいファイルがアップロードされると、数秒以内に大阪のバケットにも自動的にコピーされます。</p>
+            </div>
+            
+            <div class="step">
+                <h4>🎛️ 設定のポイント</h4>
+                <p>• <strong>IAMロール：</strong> レプリケーション実行権限<br>
+                • <strong>バージョニング：</strong> 両方のバケットで有効化必須<br>
+                • <strong>暗号化：</strong> データ転送時も保存時も暗号化</p>
+            </div>
+            
+            <div class="step">
+                <h4>💰 コスト最適化</h4>
+                <p>• ストレージクラスの選択（IA, Glacier等）<br>
+                • 必要なオブジェクトのみレプリケーション<br>
+                • ライフサイクルポリシーで古いデータを自動削除</p>
+            </div>
+        </div>
+
+        <div class="benefits">
+            <div class="benefit-card">
+                <div class="icon">⚡</div>
+                <h4>高速復旧</h4>
+                <p>障害発生から数分以内でサービス復旧が可能</p>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="icon">🛡️</div>
+                <h4>データ保護</h4>
+                <p>複数リージョンでデータを保護し、消失リスクを最小化</p>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="icon">🌍</div>
+                <h4>グローバル配信</h4>
+                <p>世界中のユーザーに高速でコンテンツを配信</p>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="icon">🤖</div>
+                <h4>自動化</h4>
+                <p>人的介入なしで障害対応とフェイルオーバーを実行</p>
+            </div>
+        </div>
+
+        <div class="analogy-box">
+            <h3>💡 まとめ：なぜこの構成が重要なのか</h3>
+            <p>現代のビジネスでは、システム停止は即座に収益損失につながります。この構成により、99.99%以上の可用性を実現し、災害や障害時でもユーザーにサービスを提供し続けることができます。初期設定は複雑に見えますが、一度構築すれば安心してビジネスに集中できる「保険」のような存在です。</p>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%); padding: 25px; border-radius: 15px; text-align: center; margin-top: 40px;">
+            <h3 style="color: #2d3436; margin-bottom: 15px;">🎓 次のステップ</h3>
+            <p style="color: #2d3436;">1. 小規模な検証環境でS3レプリケーションを試す<br>
+            2. CloudFrontディストリビューションを作成<br>
+            3. Route 53ヘルスチェックで監視を強化<br>
+            4. 定期的な災害復旧訓練を実施</p>
+        </div>
+    </div>
+</body>
+</html>

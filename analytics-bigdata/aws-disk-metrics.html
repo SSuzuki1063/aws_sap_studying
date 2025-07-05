@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS EC2ディスクメトリクスの違い</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7f9;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            color: #232f3e;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        h2 {
+            color: #232f3e;
+            border-bottom: 2px solid #ff9900;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        .metrics-diagram {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .metric-box {
+            width: 45%;
+            min-width: 300px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .instance-metrics {
+            border-color: #FF9900;
+        }
+        
+        .volume-metrics {
+            border-color: #527FFF;
+        }
+        
+        .metric-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .metric-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-right: 15px;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .instance-icon {
+            background-color: #FF9900;
+        }
+        
+        .volume-icon {
+            background-color: #527FFF;
+        }
+        
+        .metric-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .metric-detail {
+            margin-top: 15px;
+        }
+        
+        .metric-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        
+        .metric-list li {
+            margin-bottom: 10px;
+        }
+        
+        .comparison {
+            background-color: #f0f7ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .example {
+            background-color: #fffaf0;
+            border-left: 4px solid #ff9900;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .example-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 30px 0;
+        }
+        
+        .flow-box {
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            width: 80%;
+            text-align: center;
+            position: relative;
+        }
+        
+        .flow-arrow {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #666;
+        }
+        
+        .tips {
+            background-color: #f0f7ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .tips-list {
+            padding-left: 20px;
+        }
+        
+        .tips-list li {
+            margin-bottom: 10px;
+        }
+        
+        .highlight {
+            font-weight: bold;
+            color: #ff9900;
+        }
+        
+        .highlight-blue {
+            font-weight: bold;
+            color: #527FFF;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .instance-row {
+            background-color: rgba(255, 153, 0, 0.1) !important;
+        }
+        
+        .volume-row {
+            background-color: rgba(82, 127, 255, 0.1) !important;
+        }
+        
+        @media (max-width: 768px) {
+            .metric-box {
+                width: 100%;
+            }
+            
+            .comparison-table {
+                font-size: 14px;
+            }
+            
+            .comparison-table th, .comparison-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AWS EC2 ディスクメトリクスの違い</h1>
+        <div class="subtitle">DiskReadBytes・DiskWriteBytes vs VolumeReadBytes・VolumeWriteBytes</div>
+    </header>
+    
+    <div class="container">
+        <div class="section">
+            <h2>概要</h2>
+            <p>AWS EC2インスタンスのディスクパフォーマンスを監視する際、似たような名前の2種類のメトリクスがあります：</p>
+            
+            <div class="metrics-diagram">
+                <div class="metric-box instance-metrics">
+                    <div class="metric-header">
+                        <div class="metric-icon instance-icon">EC2</div>
+                        <h3 class="metric-title">インスタンスレベルのメトリクス</h3>
+                    </div>
+                    <div class="metric-detail">
+                        <p><span class="highlight">DiskReadBytes</span> と <span class="highlight">DiskWriteBytes</span></p>
+                        <p>EC2インスタンスのOSが認識するディスク操作を測定します。</p>
+                    </div>
+                </div>
+                
+                <div class="metric-box volume-metrics">
+                    <div class="metric-header">
+                        <div class="metric-icon volume-icon">EBS</div>
+                        <h3 class="metric-title">ボリュームレベルのメトリクス</h3>
+                    </div>
+                    <div class="metric-detail">
+                        <p><span class="highlight-blue">VolumeReadBytes</span> と <span class="highlight-blue">VolumeWriteBytes</span></p>
+                        <p>EBSボリュームの実際の物理的なI/O操作を測定します。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>メトリクスの詳細</h2>
+            
+            <div class="metric-box instance-metrics">
+                <div class="metric-header">
+                    <div class="metric-icon instance-icon">EC2</div>
+                    <h3 class="metric-title">DiskReadBytes / DiskWriteBytes</h3>
+                </div>
+                <div class="metric-detail">
+                    <p>これらはEC2インスタンスの<strong>論理的なI/O操作</strong>を測定するメトリクスです。</p>
+                    <ul class="metric-list">
+                        <li><strong>測定場所：</strong> インスタンスのOSレベル（ハイパーバイザーから見たI/O）</li>
+                        <li><strong>キャッシュの影響：</strong> OSのキャッシュやバッファリングの影響を受けます</li>
+                        <li><strong>計測単位：</strong> バイト数</li>
+                        <li><strong>取得方法：</strong> CloudWatchメトリクスの「EC2」名前空間から</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="metric-box volume-metrics">
+                <div class="metric-header">
+                    <div class="metric-icon volume-icon">EBS</div>
+                    <h3 class="metric-title">VolumeReadBytes / VolumeWriteBytes</h3>
+                </div>
+                <div class="metric-detail">
+                    <p>これらはEBSボリュームの<strong>物理的なI/O操作</strong>を測定するメトリクスです。</p>
+                    <ul class="metric-list">
+                        <li><strong>測定場所：</strong> EBSボリュームレベル（実際のストレージデバイス）</li>
+                        <li><strong>キャッシュの影響：</strong> OSのキャッシュやバッファリングの影響を受けません</li>
+                        <li><strong>計測単位：</strong> バイト数</li>
+                        <li><strong>取得方法：</strong> CloudWatchメトリクスの「EBS」名前空間から</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>主な違い</h2>
+            
+            <table class="comparison-table">
+                <tr>
+                    <th>比較項目</th>
+                    <th>DiskReadBytes / DiskWriteBytes</th>
+                    <th>VolumeReadBytes / VolumeWriteBytes</th>
+                </tr>
+                <tr class="instance-row">
+                    <td>測定レベル</td>
+                    <td>インスタンス（OS）レベル</td>
+                    <td>ボリューム（物理ストレージ）レベル</td>
+                </tr>
+                <tr class="volume-row">
+                    <td>データの正確性</td>
+                    <td>OSのキャッシュにより値が少なく見える場合がある</td>
+                    <td>実際にディスクに書き込まれた正確なバイト数</td>
+                </tr>
+                <tr class="instance-row">
+                    <td>ユースケース</td>
+                    <td>アプリケーションの論理的I/O性能の把握</td>
+                    <td>実際のEBSボリュームのパフォーマンス把握</td>
+                </tr>
+                <tr class="volume-row">
+                    <td>複数ボリューム</td>
+                    <td>インスタンスにアタッチされた全ボリュームの合計</td>
+                    <td>個別のボリュームごとに測定可能</td>
+                </tr>
+                <tr class="instance-row">
+                    <td>監視の目的</td>
+                    <td>アプリケーションがどれだけのI/Oを要求しているか</td>
+                    <td>物理的なディスクの使用状況と性能</td>
+                </tr>
+            </table>
+            
+            <div class="comparison">
+                <h3>値の差が生じる理由</h3>
+                <p>同じインスタンスで測定した場合でも、これらのメトリクスの値が異なることがあります。主な理由は：</p>
+                <ul>
+                    <li><strong>OSのキャッシュ：</strong> OSはディスク操作を最適化するためにメモリ上にキャッシュを持ちます。読み取りがキャッシュから行われた場合、DiskReadBytesには含まれませんが、最初にデータを読み取る際にはVolumeReadBytesに記録されます。</li>
+                    <li><strong>バッファリング：</strong> 書き込みはOSによってバッファリングされ、一定のタイミングでまとめて物理ディスクに書き込まれます。そのため、DiskWriteBytesとVolumeWriteBytesの間で時間差が生じることがあります。</li>
+                    <li><strong>ファイルシステムのオーバーヘッド：</strong> ファイルシステムが内部で行う操作（メタデータの更新など）により、アプリケーションが要求した以上のディスクI/Oが発生することがあります。</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>データの流れ</h2>
+            
+            <div class="flowchart">
+                <div class="flow-box" style="border-color: #FF9900;">
+                    <strong>アプリケーション</strong><br>
+                    データの読み書きを要求
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-box" style="border-color: #FF9900;">
+                    <strong>OSのキャッシュ・バッファ</strong><br>
+                    <span class="highlight">DiskReadBytes / DiskWriteBytes</span> はここで測定
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-box" style="border-color: #527FFF;">
+                    <strong>EBSボリューム（物理ストレージ）</strong><br>
+                    <span class="highlight-blue">VolumeReadBytes / VolumeWriteBytes</span> はここで測定
+                </div>
+            </div>
+            
+            <div class="example">
+                <div class="example-title">例：ファイル読み取りの場合</div>
+                <p>1. アプリケーションが10MBのファイルを読み取り要求</p>
+                <p>2. 初回アクセス時：OSはEBSから10MB読み取り → <span class="highlight-blue">VolumeReadBytes = 10MB</span>, <span class="highlight">DiskReadBytes = 10MB</span></p>
+                <p>3. 2回目のアクセス時：OSがキャッシュから読み取り → <span class="highlight-blue">VolumeReadBytes = 0MB</span> (追加読み取りなし), <span class="highlight">DiskReadBytes = 10MB</span></p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>使い分け方</h2>
+            
+            <div class="metric-box instance-metrics">
+                <div class="metric-header">
+                    <div class="metric-icon instance-icon">EC2</div>
+                    <h3 class="metric-title">DiskReadBytes / DiskWriteBytes を使う場合</h3>
+                </div>
+                <div class="metric-detail">
+                    <ul class="metric-list">
+                        <li><strong>アプリケーションの要求するI/O量</strong>を把握したい場合</li>
+                        <li>アプリケーションレベルの<strong>パフォーマンスチューニング</strong>をする場合</li>
+                        <li>複数のEBSボリュームを使用しており、<strong>インスタンス全体の論理的なI/O</strong>を監視したい場合</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="metric-box volume-metrics">
+                <div class="metric-header">
+                    <div class="metric-icon volume-icon">EBS</div>
+                    <h3 class="metric-title">VolumeReadBytes / VolumeWriteBytes を使う場合</h3>
+                </div>
+                <div class="metric-detail">
+                    <ul class="metric-list">
+                        <li><strong>実際のディスク使用量</strong>を正確に把握したい場合</li>
+                        <li>EBSボリュームの<strong>パフォーマンス制限</strong>に近づいているかを確認したい場合</li>
+                        <li>複数のEBSボリュームがある場合に<strong>個別のボリュームパフォーマンス</strong>を監視したい場合</li>
+                        <li>ストレージコストの<strong>最適化</strong>を行いたい場合</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>監視のベストプラクティス</h2>
+            
+            <div class="tips">
+                <h3>効果的な監視のためのヒント</h3>
+                <ul class="tips-list">
+                    <li><strong>両方のメトリクスを監視する：</strong> 完全な状況を把握するためには、両方のメトリクスを監視することをお勧めします。</li>
+                    <li><strong>差異に注目する：</strong> 二つのメトリクス間に大きな差がある場合、それはOSのキャッシュが効いている、またはI/Oの問題がある可能性があります。</li>
+                    <li><strong>アラートの設定：</strong> VolumeReadBytes/VolumeWriteBytesがボリュームの制限に近づいた場合にアラートを設定すると、パフォーマンスの問題を事前に検知できます。</li>
+                    <li><strong>トレンドの分析：</strong> 単発の値よりも時間経過による傾向を分析することで、システムの健全性をより良く理解できます。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
