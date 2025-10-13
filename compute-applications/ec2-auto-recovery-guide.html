@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC2 Auto Recovery完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔄';
+            position: absolute;
+            font-size: 15em;
+            opacity: 0.1;
+            top: -30px;
+            right: -30px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 15px;
+            border-left: 6px solid #f59e0b;
+        }
+        
+        .intro h2 {
+            color: #92400e;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #78350f;
+            line-height: 1.8;
+        }
+        
+        .concept-section {
+            margin: 50px 0;
+            background: linear-gradient(to bottom, #f0f9ff 0%, white 100%);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .workflow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .workflow-step {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            border-top: 5px solid #6366f1;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .workflow-step:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.3);
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+        }
+        
+        .step-icon {
+            font-size: 3.5em;
+            margin: 20px 0 15px;
+        }
+        
+        .step-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #4338ca;
+            margin-bottom: 10px;
+        }
+        
+        .step-desc {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .comparison-card {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .comparison-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        
+        .comparison-card.manual {
+            border-color: #ef4444;
+        }
+        
+        .comparison-card.auto {
+            border-color: #10b981;
+        }
+        
+        .card-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .card-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        
+        .card-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .manual .card-title {
+            color: #dc2626;
+        }
+        
+        .auto .card-title {
+            color: #059669;
+        }
+        
+        .feature-list {
+            margin: 20px 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: start;
+            gap: 15px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9fafb;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-item:hover {
+            background: #f3f4f6;
+            transform: translateX(5px);
+        }
+        
+        .feature-icon {
+            font-size: 1.8em;
+            min-width: 40px;
+        }
+        
+        .setting-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .setting-title {
+            font-size: 2em;
+            color: #4338ca;
+            margin-bottom: 30px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #e5e7eb;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #6b7280;
+        }
+        
+        .tab.active {
+            background: #6366f1;
+            color: white;
+            transform: translateY(-3px);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+            background: #f9fafb;
+            border-radius: 15px;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 25px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 20px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .code-comment {
+            color: #9ca3af;
+        }
+        
+        .code-keyword {
+            color: #f472b6;
+        }
+        
+        .code-string {
+            color: #34d399;
+        }
+        
+        .code-value {
+            color: #60a5fa;
+        }
+        
+        .limitation-section {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ef4444;
+        }
+        
+        .limitation-title {
+            color: #991b1b;
+            font-size: 2em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .limitation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+        
+        .limitation-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #dc2626;
+        }
+        
+        .limitation-card h4 {
+            color: #dc2626;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .benefit-section {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #10b981;
+        }
+        
+        .benefit-title {
+            color: #065f46;
+            font-size: 2em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+        
+        .benefit-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .benefit-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .benefit-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .best-practice {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .practice-item {
+            display: flex;
+            gap: 25px;
+            padding: 25px;
+            margin: 20px 0;
+            background: linear-gradient(to right, #f0f9ff 0%, white 100%);
+            border-radius: 12px;
+            border-left: 5px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+        
+        .practice-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 5px 20px rgba(59, 130, 246, 0.2);
+        }
+        
+        .practice-icon {
+            font-size: 3em;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .practice-content h4 {
+            color: #1e40af;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+        
+        .monitoring-dashboard {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            margin: 15px 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .metric-label {
+            font-weight: bold;
+            color: #374151;
+            font-size: 1.1em;
+        }
+        
+        .metric-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+        
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-ok {
+            background: #10b981;
+        }
+        
+        .status-alert {
+            background: #ef4444;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 1024px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .workflow {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 EC2 Auto Recovery</h1>
+            <p>CloudWatch Alarmで実現する自動復旧の完全ガイド</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>🏥 Auto Recoveryとは？</h2>
+                <p class="intro-text">
+                    <strong>マンションの「自動修理サービス」のようなもの！</strong><br><br>
+                    建物に問題が起きたら、自動的に健全な建物に引っ越して、<br>
+                    すべてのデータと設定をそのまま引き継いでくれる魔法のようなサービスです✨<br><br>
+                    しかも、<strong>あなたは何もする必要がありません！</strong>
+                </p>
+            </div>
+            
+            <!-- 自動復旧の流れ -->
+            <div class="concept-section">
+                <h2 style="color: #4338ca; font-size: 2em; margin-bottom: 30px; text-align: center;">⚙️ Auto Recoveryの動作フロー</h2>
+                
+                <div class="workflow">
+                    <div class="workflow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-icon">🔍</div>
+                        <div class="step-title">問題を検知</div>
+                        <div class="step-desc">
+                            CloudWatchが1分ごとにSystem Status Checkを監視。物理ホストの障害を発見！
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-icon">🚨</div>
+                        <div class="step-title">アラーム発動</div>
+                        <div class="step-desc">
+                            設定した閾値（例：2分間連続で失敗）に達したら、CloudWatch Alarmが発火
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-icon">🔄</div>
+                        <div class="step-title">自動復旧開始</div>
+                        <div class="step-desc">
+                            AWSが自動的にインスタンスを停止し、健全な物理ホストに移動を開始
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-icon">🚚</div>
+                        <div class="step-title">データ保持</div>
+                        <div class="step-desc">
+                            EBSボリューム、プライベートIP、Elastic IP、メタデータなど全て保持
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-icon">✨</div>
+                        <div class="step-title">新しいホストで起動</div>
+                        <div class="step-desc">
+                            健全な物理ホストでインスタンスが自動的に起動。設定はそのまま！
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-number">6</div>
+                        <div class="step-icon">✅</div>
+                        <div class="step-title">復旧完了</div>
+                        <div class="step-desc">
+                            サービスが自動的に再開。通知が届き、復旧完了を確認できる
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #dbeafe; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: center;">
+                    <strong style="font-size: 1.3em; color: #1e40af;">⏱️ 復旧時間の目安：約5〜15分</strong><br>
+                    <span style="color: #1e3a8a; margin-top: 10px; display: inline-block;">手動で対応するより圧倒的に速い！</span>
+                </div>
+            </div>
+            
+            <!-- 手動 vs 自動の比較 -->
+            <div style="margin: 50px 0;">
+                <h2 style="color: #4338ca; font-size: 2em; margin-bottom: 30px; text-align: center;">🆚 手動対応 vs Auto Recovery</h2>
+                
+                <div class="comparison-grid">
+                    <div class="comparison-card manual">
+                        <div class="card-header">
+                            <div class="card-icon">👨‍💻</div>
+                            <h3 class="card-title">手動対応</h3>
+                            <p style="color: #6b7280; font-size: 1.1em;">従来の方法</p>
+                        </div>
+                        
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <div class="feature-icon">⏰</div>
+                                <div>
+                                    <strong>対応時間</strong><br>
+                                    障害検知から復旧まで30分〜数時間
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">🌙</div>
+                                <div>
+                                    <strong>夜間・休日</strong><br>
+                                    担当者が対応できるまで待機
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">😰</div>
+                                <div>
+                                    <strong>人的リスク</strong><br>
+                                    操作ミスや手順忘れの可能性
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">📧</div>
+                                <div>
+                                    <strong>通知</strong><br>
+                                    アラート受信→確認→対応判断→作業
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">💸</div>
+                                <div>
+                                    <strong>コスト</strong><br>
+                                    24時間365日の待機体制が必要
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="comparison-card auto">
+                        <div class="card-header">
+                            <div class="card-icon">🤖</div>
+                            <h3 class="card-title">Auto Recovery</h3>
+                            <p style="color: #6b7280; font-size: 1.1em;">自動化された方法</p>
+                        </div>
+                        
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <div class="feature-icon">⚡</div>
+                                <div>
+                                    <strong>対応時間</strong><br>
+                                    検知から復旧まで5〜15分で自動完了
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">🌟</div>
+                                <div>
+                                    <strong>24/7対応</strong><br>
+                                    いつでも自動的に対応、人手不要
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">🎯</div>
+                                <div>
+                                    <strong>確実性</strong><br>
+                                    常に同じ手順で確実に復旧
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">✅</div>
+                                <div>
+                                    <strong>通知</strong><br>
+                                    復旧完了の通知を受け取るだけ
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">💰</div>
+                                <div>
+                                    <strong>コスト</strong><br>
+                                    追加料金なし（CloudWatchの基本料金のみ）
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 設定方法 -->
+            <div class="setting-section">
+                <h2 class="setting-title">
+                    <span>⚙️</span>
+                    <span>Auto Recoveryの設定方法</span>
+                </h2>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab(0)">🖥️ コンソール</button>
+                    <button class="tab" onclick="showTab(1)">💻 CLI</button>
+                    <button class="tab" onclick="showTab(2)">📄 CloudFormation</button>
+                </div>
+                
+                <div class="tab-content active">
+                    <h3 style="color: #4338ca; margin-bottom: 20px; font-size: 1.5em;">AWS Management Consoleでの設定</h3>
+                    
+                    <div style="background: white; padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #6366f1;">
+                        <h4 style="color: #4338ca; margin-bottom: 15px;">📍 Step 1: CloudWatchコンソールを開く</h4>
+                        <ol style="padding-left: 25px; line-height: 2;">
+                            <li>CloudWatchコンソールにアクセス</li>
+                            <li>左メニューから「アラーム」を選択</li>
+                            <li>「アラームの作成」をクリック</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="background: white; padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #8b5cf6;">
+                        <h4 style="color: #7c3aed; margin-bottom: 15px;">📍 Step 2: メトリクスを選択</h4>
+                        <ol style="padding-left: 25px; line-height: 2;">
+                            <li>「メトリクスの選択」をクリック</li>
+                            <li>「EC2」→「Per-Instance Metrics」を選択</li>
+                            <li>対象のインスタンスIDで「StatusCheckFailed_System」を選択</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="background: white; padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #d946ef;">
+                        <h4 style="color: #c026d3; margin-bottom: 15px;">📍 Step 3: 条件を設定</h4>
+                        <ul style="padding-left: 25px; line-height: 2;">
+                            <li><strong>統計:</strong> Maximum</li>
+                            <li><strong>期間:</strong> 1分</li>
+                            <li><strong>しきい値:</strong> >= 1（1以上で障害とみなす）</li>
+                            <li><strong>データポイント:</strong> 2 / 2（2回連続で確認）</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: white; padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #6366f1;">
+                        <h4 style="color: #4338ca; margin-bottom: 15px;">📍 Step 4: アクションを設定</h4>
+                        <ul style="padding-left: 25px; line-height: 2;">
+                            <li>「アクション」セクションで「EC2アクション」を選択</li>
+                            <li>「このインスタンスを復旧」を選択</li>
+                            <li>（オプション）SNS通知を設定して、復旧時にメール通知</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: white; padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #8b5cf6;">
+                        <h4 style="color: #7c3aed; margin-bottom: 15px;">📍 Step 5: 名前をつけて作成</h4>
+                        <ul style="padding-left: 25px; line-height: 2;">
+                            <li>わかりやすい名前をつける（例: "Production-Web-AutoRecover"）</li>
+                            <li>「アラームの作成」をクリック</li>
+                            <li>完了！</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="tab-content">
+                    <h3 style="color: #4338ca; margin-bottom: 20px; font-size: 1.5em;">AWS CLIでの設定</h3>
+                    
+                    <p style="margin-bottom: 20px; color: #4b5563;">コマンド一発で設定完了！</p>
+                    
+                    <div class="code-block">
+<pre><span class="code-comment"># Auto Recoveryアラームを作成</span>
+aws cloudwatch put-metric-alarm \
+  --alarm-name <span class="code-string">"AutoRecover-i-1234567890abcdef0"</span> \
+  --alarm-description <span class="code-string">"Auto recover instance on system status check failure"</span> \
+  --namespace <span class="code-string">"AWS/EC2"</span> \
+  --metric-name <span class="code-string">"StatusCheckFailed_System"</span> \
+  --dimensions <span class="code-string">Name=InstanceId,Value=i-1234567890abcdef0</span> \
+  --statistic <span class="code-string">Maximum</span> \
+  --period <span class="code-value">60</span> \
+  --evaluation-periods <span class="code-value">2</span> \
+  --threshold <span class="code-value">1</span> \
+  --comparison-operator <span class="code-string">GreaterThanOrEqualToThreshold</span> \
+  --alarm-actions <span class="code-string">arn:aws:automate:ap-northeast-1:ec2:recover</span>
+
+<span class="code-comment"># SNS通知も追加する場合</span>
+aws cloudwatch put-metric-alarm \
+  --alarm-name <span class="code-string">"AutoRecover-with-SNS-i-1234567890abcdef0"</span> \
+  --alarm-description <span class="code-string">"Auto recover with notification"</span> \
+  --namespace <span class="code-string">"AWS/EC2"</span> \
+  --metric-name <span class="code-string">"StatusCheckFailed_System"</span> \
+  --dimensions <span class="code-string">Name=InstanceId,Value=i-1234567890abcdef0</span> \
+  --statistic <span class="code-string">Maximum</span> \
+  --period <span class="code-value">60</span> \
+  --evaluation-periods <span class="code-value">2</span> \
+  --threshold <span class="code-value">1</span> \
+  --comparison-operator <span class="code-string">GreaterThanOrEqualToThreshold</span> \
+  --alarm-actions \
+    <span class="code-string">arn:aws:automate:ap-northeast-1:ec2:recover</span> \
+    <span class="code-string">arn:aws:sns:ap-northeast-1:123456789012:MyTopic</span></pre>
+                    </div>
+                    
+                    <div style="background: #dbeafe; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                        <strong>💡 ポイント:</strong><br>
+                        • <code>evaluation-periods</code>を2にすることで、一時的な問題での誤検知を防ぐ<br>
+                        • リージョンに応じて <code>ap-northeast-1</code> を変更する
+                    </div>
+                </div>
+                
+                <div class="tab-content">
+                    <h3 style="color: #4338ca; margin-bottom: 20px; font-size: 1.5em;">CloudFormationテンプレート</h3>
+                    
+                    <p style="margin-bottom: 20px; color: #4b5563;">インフラをコード化して管理！</p>
+                    
+                    <div class="code-block">
+<pre><span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Description:</span> <span class="code-string">'EC2 instance with Auto Recovery'</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-keyword">MyEC2Instance:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::Instance
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">ImageId:</span> ami-0abcdef1234567890
+      <span class="code-keyword">InstanceType:</span> t3.medium
+      <span class="code-keyword">Tags:</span>
+        - <span class="code-keyword">Key:</span> Name
+          <span class="code-keyword">Value:</span> AutoRecovery-Instance
+
+  <span class="code-keyword">RecoveryAlarm:</span>
+    <span class="code-keyword">Type:</span> AWS::CloudWatch::Alarm
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">AlarmName:</span> !Sub <span class="code-string">'${MyEC2Instance}-AutoRecover'</span>
+      <span class="code-keyword">AlarmDescription:</span> <span class="code-string">'Trigger auto recovery on system status check failure'</span>
+      <span class="code-keyword">Namespace:</span> <span class="code-string">'AWS/EC2'</span>
+      <span class="code-keyword">MetricName:</span> <span class="code-string">'StatusCheckFailed_System'</span>
+      <span class="code-keyword">Dimensions:</span>
+        - <span class="code-keyword">Name:</span> InstanceId
+          <span class="code-keyword">Value:</span> !Ref MyEC2Instance
+      <span class="code-keyword">Statistic:</span> Maximum
+      <span class="code-keyword">Period:</span> <span class="code-value">60</span>
+      <span class="code-keyword">EvaluationPeriods:</span> <span class="code-value">2</span>
+      <span class="code-keyword">Threshold:</span> <span class="code-value">1</span>
+      <span class="code-keyword">ComparisonOperator:</span> GreaterThanOrEqualToThreshold
+      <span class="code-keyword">AlarmActions:</span>
+        - !Sub <span class="code-string">'arn:aws:automate:${AWS::Region}:ec2:recover'</span>
+        - !Ref MySNSTopic  <span class="code-comment"># オプション: 通知用</span>
+
+  <span class="code-keyword">MySNSTopic:</span>
+    <span class="code-keyword">Type:</span> AWS::SNS::Topic
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">TopicName:</span> EC2-Recovery-Notifications
+      <span class="code-keyword">Subscription:</span>
+        - <span class="code-keyword">Endpoint:</span> your-email@example.com
+          <span class="code-keyword">Protocol:</span> email
+
+<span class="code-keyword">Outputs:</span>
+  <span class="code-keyword">InstanceId:</span>
+    <span class="code-keyword">Value:</span> !Ref MyEC2Instance
+  <span class="code-keyword">AlarmName:</span>
+    <span class="code-keyword">Value:</span> !Ref RecoveryAlarm</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 制限事項 -->
+            <div class="limitation-section">
+                <h3 class="limitation-title">⚠️ Auto Recoveryの制限事項</h3>
+                <p style="text-align: center; color: #991b1b; margin-bottom: 25px; font-size: 1.1em;">
+                    使えないケースがあるので要注意！
+                </p>
+                
+                <div class="limitation-grid">
+                    <div class="limitation-card">
+                        <h4>💾 Instance Store非対応</h4>
+                        <p>Instance Store（エフェメラルストレージ）を使用しているインスタンスは対象外</p>
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.95em;">
+                            <strong>理由:</strong> Instance Storeのデータは物理ホスト移動時に消失するため
+                        </div>
+                    </div>
+                    
+                    <div class="limitation-card">
+                        <h4>🚫 一部インスタンスタイプ</h4>
+                        <p>メタルインスタンス（*.metal）やスポットインスタンスは非対応</p>
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.95em;">
+                            <strong>対応:</strong> t3, t2, m5, c5, r5などの一般的なタイプは使用可能
+                        </div>
+                    </div>
+                    
+                    <div class="limitation-card">
+                        <h4>🌐 VPC内限定</h4>
+                        <p>EC2-Classic環境では使用できない（ほとんどのユーザーは問題なし）</p>
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.95em;">
+                            <strong>対応:</strong> VPCを使用していれば問題なし
+                        </div>
+                    </div>
+                    
+                    <div class="limitation-card">
+                        <h4>📍 専有テナンシー</h4>
+                        <p>Dedicated Host上のインスタンスは非対応</p>
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.95em;">
+                            <strong>対応:</strong> デフォルトまたはDedicated Instanceなら使用可能
+                        </div>
+                    </div>
+                    
+                    <div class="limitation-card">
+                        <h4>⏸️ 停止中は無効</h4>
+                        <p>停止中のインスタンスは監視されない</p>
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.95em;">
+                            <strong>対応:</strong> 稼働中のインスタンスのみ有効
+                        </div>
+                    </div>
+                    
+                    <div class="limitation-card">
+                        <h4>🔀 リージョン内のみ</h4>
+                        <p>別リージョンへの移動はできない</p>
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.95em;">
+                            <strong>対応:</strong> 同一リージョン内の別AZ内物理ホストに移動
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- メリット -->
+            <div class="benefit-section">
+                <h3 class="benefit-title">✨ Auto Recoveryのメリット</h3>
+                
+                <div class="benefit-grid">
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🚀</div>
+                        <h4 style="color: #059669; margin-bottom: 10px;">高速復旧</h4>
+                        <p>5〜15分で自動復旧。手動対応の1/4以下の時間</p>
+                    </div>
+                    
+                    <div class="benefit-card">
+                        <div class="benefit-icon">💰</div>
+                        <h4 style="color: #059669; margin-bottom: 10px;">追加費用なし</h4>
+                        <p>CloudWatchの基本料金のみ。復旧アクション自体は無料</p>
+                    </div>
+                    
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🌙</div>
+                        <h4 style="color: #059669; margin-bottom: 10px;">24/7対応</h4>
+                        <p>深夜・休日でも自動対応。オンコール不要</p>
+                    </div>
+                    
+                    <div class="benefit-card">
+                        <div class="benefit-icon">💾</div>
+                        <h4 style="color: #059669; margin-bottom: 10px;">データ保持</h4>
+                        <p>EBSボリューム、IP、設定など全て保持</p>
+                    </div>
+                    
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🎯</div>
+                        <h4 style="color: #059669; margin-bottom: 10px;">確実性</h4>
+                        <p>人的ミスなし。毎回同じ手順で確実に復旧</p>
+                    </div>
+                    
+                    <div class="benefit-card">
+                        <div class="benefit-icon">📊</div>
+                        <h4 style="color: #059669; margin-bottom: 10px;">可視化</h4>
+                        <p>CloudWatchで復旧履歴を確認・分析可能</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- モニタリングダッシュボード例 -->
+            <div style="margin: 50px 0;">
+                <h2 style="color: #4338ca; font-size: 2em; margin-bottom: 30px; text-align: center;">📊 監視ダッシュボード例</h2>
+                
+                <div class="monitoring-dashboard">
+                    <h3 style="color: #374151; margin-bottom: 25px; text-align: center;">EC2インスタンスの状態</h3>
+                    
+                    <div class="metric-row">
+                        <div class="metric-label">System Status Check</div>
+                        <div class="metric-value">
+                            <span class="status-indicator status-ok"></span>
+                            <span style="color: #10b981; font-weight: bold;">Passing</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <div class="metric-label">Instance Status Check</div>
+                        <div class="metric-value">
+                            <span class="status-indicator status-ok"></span>
+                            <span style="color: #10b981; font-weight: bold;">Passing</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <div class="metric-label">Auto Recovery Alarm</div>
+                        <div class="metric-value">
+                            <span class="status-indicator status-ok"></span>
+                            <span style="color: #10b981; font-weight: bold;">OK</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <div class="metric-label">Last Recovery</div>
+                        <div class="metric-value">
+                            <span style="color: #6b7280;">Never (正常稼働中)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-row">
+                        <div class="metric-label">Uptime</div>
+                        <div class="metric-value">
+                            <span style="color: #4338ca; font-weight: bold;">45 days 12 hours</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ベストプラクティス -->
+            <div class="best-practice">
+                <h2 style="color: #4338ca; font-size: 2em; margin-bottom: 30px; text-align: center;">💡 ベストプラクティス</h2>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">📧</div>
+                    <div class="practice-content">
+                        <h4>SNS通知を必ず設定</h4>
+                        <p>Auto Recoveryが発動したことを知るために、SNSトピックを設定してメール・SMS通知を受け取りましょう。復旧が成功したか確認できます。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">🔄</div>
+                    <div class="practice-content">
+                        <h4>定期的なテスト</h4>
+                        <p>年に1-2回、テスト環境でStop→Startを実行し、復旧手順が正しく動作することを確認しましょう。本番環境での動作も安心です。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">💾</div>
+                    <div class="practice-content">
+                        <h4>EBSボリュームを使用</h4>
+                        <p>Instance Storeは復旧時にデータが消失します。必ずEBSボリュームを使用し、定期的なスナップショットも取得しましょう。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">🎯</div>
+                    <div class="practice-content">
+                        <h4>重要なインスタンスから設定</h4>
+                        <p>すべてのインスタンスに設定するのが理想ですが、まずは本番環境の重要なインスタンスから優先的に設定しましょう。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">📊</div>
+                    <div class="practice-content">
+                        <h4>CloudWatch Dashboardで可視化</h4>
+                        <p>すべてのインスタンスのステータスチェックを一つのダッシュボードで監視できるようにしましょう。問題の早期発見につながります。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">🔐</div>
+                    <div class="practice-content">
+                        <h4>Elastic IPを使用</h4>
+                        <p>固定IPが必要な場合はElastic IPを割り当てましょう。復旧後も同じIPアドレスが維持されます。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">📝</div>
+                    <div class="practice-content">
+                        <h4>タグで管理</h4>
+                        <p>インスタンスに「AutoRecovery: Enabled」などのタグをつけて、どのインスタンスが保護されているか一目でわかるようにしましょう。</p>
+                    </div>
+                </div>
+                
+                <div class="practice-item">
+                    <div class="practice-icon">⚠️</div>
+                    <div class="practice-content">
+                        <h4>Instance Status Check失敗にも対応</h4>
+                        <p>System Status CheckだけでなくInstance Status Check失敗時の対応（自動再起動など）も設定して、両方のケースに備えましょう。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 900px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 25px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">🔄 Auto Recoveryとは</h3>
+                        <p style="font-size: 1.15em; line-height: 1.8;">
+                            物理ホスト障害を<strong>自動検知</strong>して、<br>
+                            <strong>5〜15分</strong>で健全なホストに自動移動！<br>
+                            データと設定は<strong>すべて保持</strong>されます✨
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 10px;">⚡</div>
+                            <strong style="font-size: 1.2em;">高速</strong><br>
+                            5〜15分で復旧
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 10px;">💰</div>
+                            <strong style="font-size: 1.2em;">無料</strong><br>
+                            追加費用なし
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 10px;">🤖</div>
+                            <strong style="font-size: 1.2em;">自動</strong><br>
+                            24/7対応
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 1.3em; margin-top: 30px; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px);">
+                        🎯 <strong>今すぐ設定しましょう！</strong><br>
+                        障害が起きてから後悔するより、<br>
+                        今のうちにAuto Recoveryを有効化して安心運用✨
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showTab(index) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach((tab, i) => {
+                if (i === index) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            contents.forEach((content, i) => {
+                if (i === index) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
