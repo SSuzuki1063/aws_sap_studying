@@ -36,6 +36,8 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `quiz-data-extended.js` - Quiz question database (100+ questions across 9 categories)
 - `server.py` - Development server with CORS support
 - `main.js` - Additional utility functions (verify usage before modifying)
+- `add_breadcrumbs.py` - Utility script to add breadcrumb navigation to all HTML files
+- `remove_breadcrumbs.py` - Utility script to remove breadcrumb navigation from HTML files
 
 ## Architecture
 
@@ -71,6 +73,27 @@ Key JavaScript functions in index.html:
 - `loadQuiz()` - Opens quiz.html in new tab
 
 Search data structure: Array of objects with `{title, category, file}` - must be updated when adding new resources.
+
+#### Category Quick Navigation
+- Category quick links section added below statistics section on index.html
+- Each major category has an ID anchor for in-page navigation:
+  - `#networking` - ネットワーキング
+  - `#security-governance` - セキュリティ・ガバナンス
+  - `#compute-applications` - コンピュート・アプリケーション
+  - `#content-delivery-dns` - コンテンツ配信・DNS
+  - `#development-deployment` - 開発・デプロイメント
+  - `#storage-database` - ストレージ・データベース
+  - `#migration-transfer` - 移行・転送
+  - `#analytics-operations` - 分析・運用・クイズ
+- Smooth scroll behavior implemented via CSS `scroll-behavior: smooth`
+- 8 category cards with icons, names, and resource counts
+- Hover animations with color transitions and shadow effects
+
+#### Breadcrumb Navigation
+- All HTML learning resource pages include breadcrumb navigation
+- Breadcrumbs show: Home > Major Category > Sub Category
+- Link back to index.html for easy navigation
+- Consistent styling with AWS brand colors
 
 #### Quiz System
 - Interactive quiz application (`quiz.html`, `quiz-app.js`, `quiz-data-extended.js`)
@@ -169,6 +192,7 @@ python3 server.py
 - This repository uses Git for version control and change tracking
 - User identity is configured as: suzuki100603@gmail.com (Suzuki)
 - All changes should be committed with descriptive messages in Japanese or English
+- **CRITICAL**: All feature additions, modifications, and source code changes MUST be committed to Git and pushed to the remote repository immediately after completion
 
 ### Commit Guidelines
 - Make atomic commits for logical changes (single feature/fix per commit)
@@ -234,3 +258,4 @@ python3 server.py
 - All content is in Japanese (日本語)
 - File paths and code use English
 - Comments and explanations in learning materials are in Japanese
+- 機能追加・機能変更・ソースコード変更といったあらゆる変更はgitにコミットし、リモートリポジトリに反映させるようにしてください。
