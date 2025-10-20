@@ -259,3 +259,4 @@ python3 server.py
 - File paths and code use English
 - Comments and explanations in learning materials are in Japanese
 - 機能追加・機能変更・ソースコード変更といったあらゆる変更はgitにコミットし、リモートリポジトリに反映させるようにしてください。
+- webサイトの機能変更は、静的サイトの要素のみで機能変更を完結させること
