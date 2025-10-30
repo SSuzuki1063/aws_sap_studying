@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS SQS Dead-letter Queue & Redrive Policy 完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '📬';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 15px;
+            border-left: 6px solid #f59e0b;
+        }
+        
+        .intro h2 {
+            color: #92400e;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #78350f;
+            line-height: 1.8;
+        }
+        
+        .concept-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .concept-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .analogy-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-top: 6px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .analogy-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        
+        .analogy-card.restaurant {
+            border-color: #f59e0b;
+        }
+        
+        .analogy-card.aws {
+            border-color: #3b82f6;
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-content {
+            color: #475569;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+        
+        .flow-diagram {
+            background: white;
+            padding: 50px 30px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .flow-title {
+            text-align: center;
+            font-size: 2.3em;
+            color: #1e293b;
+            margin-bottom: 50px;
+            font-weight: bold;
+        }
+        
+        .flow-steps {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: linear-gradient(to right, #f8fafc 0%, white 100%);
+            border-radius: 15px;
+            border-left: 6px solid;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .flow-step:hover {
+            transform: translateX(10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .flow-step:nth-child(1) { border-color: #10b981; }
+        .flow-step:nth-child(2) { border-color: #3b82f6; }
+        .flow-step:nth-child(3) { border-color: #f59e0b; }
+        .flow-step:nth-child(4) { border-color: #ef4444; }
+        .flow-step:nth-child(5) { border-color: #8b5cf6; }
+        
+        .step-number {
+            font-size: 3em;
+            font-weight: bold;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 30px;
+            flex-shrink: 0;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .flow-step:nth-child(1) .step-number { background: linear-gradient(135deg, #10b981, #059669); }
+        .flow-step:nth-child(2) .step-number { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .flow-step:nth-child(3) .step-number { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .flow-step:nth-child(4) .step-number { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .flow-step:nth-child(5) .step-number { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .step-description {
+            color: #475569;
+            line-height: 1.7;
+            font-size: 1.05em;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .comparison-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-top: 6px solid;
+        }
+        
+        .comparison-card.normal {
+            border-color: #10b981;
+        }
+        
+        .comparison-card.problem {
+            border-color: #ef4444;
+        }
+        
+        .comparison-icon {
+            font-size: 3.5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+        
+        .comparison-items {
+            color: #475569;
+            line-height: 2;
+            font-size: 1.05em;
+        }
+        
+        .comparison-items li {
+            margin-bottom: 12px;
+            padding-left: 10px;
+        }
+        
+        .config-section {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            padding: 50px 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #3b82f6;
+        }
+        
+        .config-title {
+            color: #1e3a8a;
+            font-size: 2.3em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .config-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .config-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .config-card-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .config-param {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .param-name {
+            font-weight: bold;
+            color: #1e40af;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .param-desc {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .code-example {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 35px;
+            border-radius: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.8;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .code-title {
+            color: #60a5fa;
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        
+        .code-comment { color: #94a3b8; }
+        .code-keyword { color: #f472b6; }
+        .code-string { color: #34d399; }
+        .code-number { color: #fbbf24; }
+        .code-property { color: #60a5fa; }
+        
+        .use-case-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .use-case-title {
+            color: #92400e;
+            font-size: 2.3em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .use-case-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(245, 158, 11, 0.3);
+        }
+        
+        .use-case-icon {
+            font-size: 3.5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .use-case-card h4 {
+            color: #92400e;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .use-case-content {
+            color: #78350f;
+            line-height: 1.8;
+        }
+        
+        .best-practices {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 50px 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #10b981;
+        }
+        
+        .best-practices-title {
+            color: #065f46;
+            font-size: 2.3em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .practice-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+        
+        .practice-item {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .practice-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .practice-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #065f46;
+            margin-bottom: 12px;
+        }
+        
+        .practice-desc {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border-left: 6px solid #ef4444;
+        }
+        
+        .warning-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #991b1b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .warning-content {
+            color: #7f1d1d;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+        
+        .tip-box {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border-left: 6px solid #6366f1;
+        }
+        
+        .tip-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #3730a3;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #312e81;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+        
+        .visual-diagram {
+            background: white;
+            padding: 50px 30px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .diagram-title {
+            text-align: center;
+            font-size: 2.3em;
+            color: #1e293b;
+            margin-bottom: 50px;
+            font-weight: bold;
+        }
+        
+        .diagram-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .diagram-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 40px 0;
+            gap: 20px;
+        }
+        
+        .diagram-box {
+            background: linear-gradient(135deg, #f8fafc 0%, white 100%);
+            padding: 25px 35px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            min-width: 200px;
+            border: 3px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .diagram-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .diagram-box.source {
+            border-color: #10b981;
+        }
+        
+        .diagram-box.queue {
+            border-color: #3b82f6;
+        }
+        
+        .diagram-box.dlq {
+            border-color: #ef4444;
+        }
+        
+        .diagram-box.consumer {
+            border-color: #8b5cf6;
+        }
+        
+        .diagram-box-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .diagram-box-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .diagram-box-subtitle {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        .diagram-arrow {
+            font-size: 3em;
+            color: #94a3b8;
+        }
+        
+        .diagram-label {
+            position: absolute;
+            background: #fef3c7;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #92400e;
+            font-weight: bold;
+            border: 2px solid #f59e0b;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .analogy-box,
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .config-cards,
+            .use-case-grid,
+            .practice-items {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-row {
+                flex-direction: column;
+            }
+            
+            .diagram-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📬 AWS SQS DLQ & Redrive</h1>
+            <p>レストランの注文システムで理解する！失敗メッセージの処理完全ガイド</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>🍽️ レストランの注文システムで例えると超わかりやすい!</h2>
+                <p class="intro-text">
+                    <strong>SQSは「レストランの注文伝票システム」のようなもの!</strong><br><br>
+                    注文が正常に処理できない場合、どうしますか?<br>
+                    <strong>Dead-letter Queue (DLQ)</strong> = 問題のある注文を別の場所に保管<br>
+                    <strong>Redrive Policy</strong> = 何回失敗したら別の場所に移すかのルール<br><br>
+                    この仕組みを完璧にマスターしましょう✨
+                </p>
+            </div>
+            
+            <!-- 基本概念の比較 -->
+            <div class="concept-section">
+                <h2 class="concept-title">📚 基本概念：レストラン vs AWS</h2>
+                
+                <div class="analogy-box">
+                    <div class="analogy-card restaurant">
+                        <div class="analogy-icon">🍽️</div>
+                        <div class="analogy-title">レストランの注文システム</div>
+                        <div class="analogy-content">
+                            <p><strong>📋 注文伝票トレイ</strong><br>
+                            厨房に届く注文伝票を置く場所</p>
+                            <br>
+                            <p><strong>👨‍🍳 シェフ（処理担当）</strong><br>
+                            注文を見て料理を作る人</p>
+                            <br>
+                            <p><strong>❌ 作れない注文</strong><br>
+                            材料不足、レシピ不明など</p>
+                            <br>
+                            <p><strong>🗂️ 問題注文ボックス</strong><br>
+                            処理できない注文を別管理</p>
+                            <br>
+                            <p><strong>📏 再試行ルール</strong><br>
+                            「3回失敗したら問題ボックスへ」</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card aws">
+                        <div class="analogy-icon">☁️</div>
+                        <div class="analogy-title">AWS SQSの世界</div>
+                        <div class="analogy-content">
+                            <p><strong>📬 Standard Queue（通常キュー）</strong><br>
+                            メッセージを保管するメインキュー</p>
+                            <br>
+                            <p><strong>⚙️ Consumer（コンシューマー）</strong><br>
+                            メッセージを処理するアプリケーション</p>
+                            <br>
+                            <p><strong>❌ 処理失敗メッセージ</strong><br>
+                            エラーや例外で処理できないメッセージ</p>
+                            <br>
+                            <p><strong>💀 Dead-letter Queue (DLQ)</strong><br>
+                            失敗メッセージを隔離する専用キュー</p>
+                            <br>
+                            <p><strong>🔄 Redrive Policy</strong><br>
+                            maxReceiveCount = 何回で移動するか</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ビジュアル図解 -->
+            <div class="visual-diagram">
+                <h2 class="diagram-title">🎨 全体の流れ - ビジュアル図解</h2>
+                
+                <div class="diagram-container">
+                    <div class="diagram-row">
+                        <div class="diagram-box source">
+                            <div class="diagram-box-icon">📤</div>
+                            <div class="diagram-box-title">Producer</div>
+                            <div class="diagram-box-subtitle">メッセージ送信元</div>
+                        </div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box queue">
+                            <div class="diagram-box-icon">📬</div>
+                            <div class="diagram-box-title">Main Queue</div>
+                            <div class="diagram-box-subtitle">メインキュー</div>
+                        </div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box consumer">
+                            <div class="diagram-box-icon">⚙️</div>
+                            <div class="diagram-box-title">Consumer</div>
+                            <div class="diagram-box-subtitle">処理アプリ</div>
+                        </div>
+                    </div>
+                    
+                    <div class="diagram-row" style="margin-top: 80px;">
+                        <div class="diagram-box queue" style="opacity: 0.3;">
+                            <div class="diagram-box-icon">📬</div>
+                            <div class="diagram-box-title">Main Queue</div>
+                            <div class="diagram-box-subtitle">3回失敗</div>
+                        </div>
+                        <div class="diagram-arrow" style="color: #ef4444;">⬇️</div>
+                        <div class="diagram-box dlq">
+                            <div class="diagram-box-icon">💀</div>
+                            <div class="diagram-box-title">Dead-letter Queue</div>
+                            <div class="diagram-box-subtitle">失敗メッセージ保管</div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 50px; padding: 30px; background: #fef3c7; border-radius: 12px; border: 3px solid #f59e0b;">
+                        <div style="font-size: 1.5em; font-weight: bold; color: #92400e; margin-bottom: 15px;">
+                            🔄 Redrive Policy の役割
+                        </div>
+                        <div style="font-size: 1.1em; color: #78350f; line-height: 1.8;">
+                            <strong>maxReceiveCount = 3</strong> の場合<br>
+                            メッセージが3回処理失敗したら自動的にDLQへ移動
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 処理フロー -->
+            <div class="flow-diagram">
+                <h2 class="flow-title">🔄 メッセージ処理フロー：5つのステップ</h2>
+                
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">📬 メッセージ受信</div>
+                            <div class="step-description">
+                                <strong>🍽️ レストラン：</strong>新しい注文伝票が届く<br>
+                                <strong>☁️ AWS：</strong>Consumerがメインキューからメッセージを取得<br>
+                                <em style="color: #64748b;">→ ReceiveMessageが実行される</em>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">⚙️ 処理試行</div>
+                            <div class="step-description">
+                                <strong>🍽️ レストラン：</strong>シェフが注文を見て料理を作ろうとする<br>
+                                <strong>☁️ AWS：</strong>アプリケーションロジックでメッセージを処理<br>
+                                <em style="color: #64748b;">→ ビジネスロジックの実行</em>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">❌ 処理失敗</div>
+                            <div class="step-description">
+                                <strong>🍽️ レストラン：</strong>材料不足で料理が作れない！<br>
+                                <strong>☁️ AWS：</strong>例外エラーが発生、DeleteMessageが呼ばれない<br>
+                                <em style="color: #64748b;">→ メッセージはキューに残る（ReceiveCountが+1）</em>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-title">🔄 リトライ判定</div>
+                            <div class="step-description">
+                                <strong>🍽️ レストラン：</strong>「まだ2回目だからもう一度トライ」<br>
+                                <strong>☁️ AWS：</strong>ReceiveCount < maxReceiveCount なら再度キューに戻る<br>
+                                <em style="color: #64748b;">→ Visibility Timeout後に再度取得可能</em>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <div class="step-title">💀 DLQへ移動</div>
+                            <div class="step-description">
+                                <strong>🍽️ レストラン：</strong>「3回失敗！問題注文ボックスへ」<br>
+                                <strong>☁️ AWS：</strong>ReceiveCount ≥ maxReceiveCount でDLQへ自動移動<br>
+                                <em style="color: #64748b;">→ 後で原因調査と修正が可能</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較：正常 vs 問題 -->
+            <div class="concept-section">
+                <h2 class="concept-title">⚖️ 正常処理 vs 問題発生時の違い</h2>
+                
+                <div class="comparison-grid">
+                    <div class="comparison-card normal">
+                        <div class="comparison-icon">✅</div>
+                        <div class="comparison-title">正常処理の流れ</div>
+                        <ul class="comparison-items">
+                            <li><strong>1️⃣</strong> メッセージ受信 (ReceiveMessage)</li>
+                            <li><strong>2️⃣</strong> 処理成功 (ビジネスロジック実行)</li>
+                            <li><strong>3️⃣</strong> メッセージ削除 (DeleteMessage)</li>
+                            <li><strong>🎉</strong> <span style="color: #10b981; font-weight: bold;">完了！キューから消える</span></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="comparison-card problem">
+                        <div class="comparison-icon">❌</div>
+                        <div class="comparison-title">失敗時の流れ</div>
+                        <ul class="comparison-items">
+                            <li><strong>1️⃣</strong> メッセージ受信 (ReceiveMessage)</li>
+                            <li><strong>2️⃣</strong> 処理失敗 (例外エラー発生)</li>
+                            <li><strong>3️⃣</strong> DeleteMessage呼ばれず</li>
+                            <li><strong>4️⃣</strong> ReceiveCount +1 (受信回数カウント)</li>
+                            <li><strong>5️⃣</strong> Visibility Timeout後に再度出現</li>
+                            <li><strong>6️⃣</strong> maxReceiveCount到達でDLQへ</li>
+                            <li><strong>💀</strong> <span style="color: #ef4444; font-weight: bold;">DLQで隔離・原因調査</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 設定方法 -->
+            <div class="config-section">
+                <h3 class="config-title">⚙️ Redrive Policy 設定方法</h3>
+                
+                <div class="config-cards">
+                    <div class="config-card">
+                        <div class="config-card-title">
+                            <span>📝</span>
+                            <span>必須パラメータ</span>
+                        </div>
+                        
+                        <div class="config-param">
+                            <div class="param-name">maxReceiveCount</div>
+                            <div class="param-desc">
+                                <strong>意味：</strong>何回受信失敗したらDLQへ移動するか<br>
+                                <strong>推奨値：</strong>3〜5回<br>
+                                <strong>🍽️ 例：</strong>「3回作れなかったら問題ボックスへ」<br>
+                                <strong>注意：</strong>1回だと誤検知が多く、10回以上だと遅すぎる
+                            </div>
+                        </div>
+                        
+                        <div class="config-param">
+                            <div class="param-name">deadLetterTargetArn</div>
+                            <div class="param-desc">
+                                <strong>意味：</strong>どのDLQへ移動するか（DLQのARN）<br>
+                                <strong>形式：</strong>arn:aws:sqs:region:account:queue-name<br>
+                                <strong>🍽️ 例：</strong>「問題注文ボックスの場所」<br>
+                                <strong>注意：</strong>事前にDLQ用のキューを作成しておく必要あり
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="config-card">
+                        <div class="config-card-title">
+                            <span>🔍</span>
+                            <span>関連する重要設定</span>
+                        </div>
+                        
+                        <div class="config-param">
+                            <div class="param-name">Visibility Timeout</div>
+                            <div class="param-desc">
+                                <strong>意味：</strong>メッセージが他のConsumerに見えなくなる時間<br>
+                                <strong>推奨値：</strong>処理時間の6倍<br>
+                                <strong>🍽️ 例：</strong>「この注文は今調理中」の札を付ける時間<br>
+                                <strong>注意：</strong>短すぎると重複処理、長すぎるとリトライが遅い
+                            </div>
+                        </div>
+                        
+                        <div class="config-param">
+                            <div class="param-name">Message Retention Period</div>
+                            <div class="param-desc">
+                                <strong>意味：</strong>DLQでメッセージを保持する期間<br>
+                                <strong>推奨値：</strong>14日間（最大）<br>
+                                <strong>🍽️ 例：</strong>「問題注文を2週間保管」<br>
+                                <strong>注意：</strong>DLQは長めに設定して原因調査の時間を確保
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AWS CLIコード例 -->
+            <div class="code-example">
+                <div class="code-title">📟 AWS CLI での設定例</div>
+<pre><span class="code-comment"># 1. DLQ用のキューを作成</span>
+aws sqs create-queue \
+  --queue-name <span class="code-string">my-app-dlq</span> \
+  --attributes <span class="code-string">MessageRetentionPeriod=1209600</span>  <span class="code-comment"># 14日間</span>
+
+<span class="code-comment"># 2. DLQのARNを取得</span>
+aws sqs get-queue-attributes \
+  --queue-url <span class="code-string">https://sqs.ap-northeast-1.amazonaws.com/123456789012/my-app-dlq</span> \
+  --attribute-names <span class="code-string">QueueArn</span>
+
+<span class="code-comment"># 3. メインキューにRedrive Policyを設定</span>
+aws sqs set-queue-attributes \
+  --queue-url <span class="code-string">https://sqs.ap-northeast-1.amazonaws.com/123456789012/my-main-queue</span> \
+  --attributes <span class="code-string">'{
+    "RedrivePolicy": "{
+      \"deadLetterTargetArn\": \"arn:aws:sqs:ap-northeast-1:123456789012:my-app-dlq\",
+      \"maxReceiveCount\": \"3\"
+    }",
+    "VisibilityTimeout": "300"
+  }'</span></pre>
+            </div>
+            
+            <!-- Terraformコード例 -->
+            <div class="code-example">
+                <div class="code-title">🏗️ Terraform での設定例</div>
+<pre><span class="code-comment"># DLQ用のキュー</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_sqs_queue"</span> <span class="code-string">"dlq"</span> {
+  <span class="code-property">name</span>                      = <span class="code-string">"my-app-dlq"</span>
+  <span class="code-property">message_retention_seconds</span> = <span class="code-number">1209600</span>  <span class="code-comment"># 14日</span>
+  
+  <span class="code-property">tags</span> = {
+    <span class="code-property">Name</span>        = <span class="code-string">"My App DLQ"</span>
+    <span class="code-property">Environment</span> = <span class="code-string">"production"</span>
+  }
+}
+
+<span class="code-comment"># メインキュー（Redrive Policy設定済み）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_sqs_queue"</span> <span class="code-string">"main"</span> {
+  <span class="code-property">name</span>                      = <span class="code-string">"my-main-queue"</span>
+  <span class="code-property">visibility_timeout_seconds</span> = <span class="code-number">300</span>      <span class="code-comment"># 5分</span>
+  <span class="code-property">message_retention_seconds</span> = <span class="code-number">345600</span>   <span class="code-comment"># 4日</span>
+  
+  <span class="code-comment"># 🔄 Redrive Policy設定</span>
+  <span class="code-property">redrive_policy</span> = <span class="code-keyword">jsonencode</span>({
+    <span class="code-property">deadLetterTargetArn</span> = <span class="code-property">aws_sqs_queue.dlq.arn</span>
+    <span class="code-property">maxReceiveCount</span>     = <span class="code-number">3</span>
+  })
+  
+  <span class="code-property">tags</span> = {
+    <span class="code-property">Name</span>        = <span class="code-string">"My Main Queue"</span>
+    <span class="code-property">Environment</span> = <span class="code-string">"production"</span>
+  }
+}
+
+<span class="code-comment"># 💀 DLQからメインキューへのRedrive設定（オプション）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_sqs_queue_redrive_allow_policy"</span> <span class="code-string">"dlq_redrive"</span> {
+  <span class="code-property">queue_url</span> = <span class="code-property">aws_sqs_queue.dlq.id</span>
+  
+  <span class="code-property">redrive_allow_policy</span> = <span class="code-keyword">jsonencode</span>({
+    <span class="code-property">redrivePermission</span> = <span class="code-string">"byQueue"</span>
+    <span class="code-property">sourceQueueArns</span>   = [<span class="code-property">aws_sqs_queue.main.arn</span>]
+  })
+}</pre>
+            </div>
+            
+            <!-- ユースケース -->
+            <div class="use-case-section">
+                <h3 class="use-case-title">💼 実際のユースケース</h3>
+                
+                <div class="use-case-grid">
+                    <div class="use-case-card">
+                        <div class="use-case-icon">📧</div>
+                        <h4>メール配信システム</h4>
+                        <div class="use-case-content">
+                            <strong>シナリオ：</strong><br>
+                            メールアドレスが無効、SMTPサーバーダウン<br><br>
+                            <strong>設定：</strong><br>
+                            maxReceiveCount = 5<br>
+                            → 5回失敗したらDLQへ<br><br>
+                            <strong>対応：</strong><br>
+                            DLQのメッセージを見て無効アドレスをDBから削除
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">💳</div>
+                        <h4>決済処理システム</h4>
+                        <div class="use-case-content">
+                            <strong>シナリオ：</strong><br>
+                            外部API障害、タイムアウト、データ不整合<br><br>
+                            <strong>設定：</strong><br>
+                            maxReceiveCount = 3<br>
+                            → すぐに隔離して手動確認<br><br>
+                            <strong>対応：</strong><br>
+                            重要度が高いので即座にアラート発行、手動再処理
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">📊</div>
+                        <h4>データ分析バッチ</h4>
+                        <div class="use-case-content">
+                            <strong>シナリオ：</strong><br>
+                            不正なデータフォーマット、計算エラー<br><br>
+                            <strong>設定：</strong><br>
+                            maxReceiveCount = 2<br>
+                            → 少ない回数で早めに分離<br><br>
+                            <strong>対応：</strong><br>
+                            DLQメッセージを分析してデータバリデーション改善
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🖼️</div>
+                        <h4>画像変換サービス</h4>
+                        <div class="use-case-content">
+                            <strong>シナリオ：</strong><br>
+                            破損画像、未対応フォーマット、メモリ不足<br><br>
+                            <strong>設定：</strong><br>
+                            maxReceiveCount = 4<br>
+                            → 一時的エラーを考慮して少し多め<br><br>
+                            <strong>対応：</strong><br>
+                            問題ファイルのパターンを分析してエラー処理強化
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ベストプラクティス -->
+            <div class="best-practices">
+                <h3 class="best-practices-title">✅ ベストプラクティス</h3>
+                
+                <div class="practice-items">
+                    <div class="practice-item">
+                        <div class="practice-icon">🎯</div>
+                        <div class="practice-title">1. maxReceiveCountは慎重に設定</div>
+                        <div class="practice-desc">
+                            <strong>推奨：</strong>3〜5回<br>
+                            • 1回：誤検知が多すぎる<br>
+                            • 10回以上：問題発見が遅れる<br>
+                            • 処理の重要度とコストを考慮して決定
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-icon">🔔</div>
+                        <div class="practice-title">2. DLQの監視とアラート設定</div>
+                        <div class="practice-desc">
+                            <strong>必須：</strong>CloudWatch Alarmを設定<br>
+                            • ApproximateNumberOfMessagesVisible > 0<br>
+                            • メッセージがDLQに入ったら即座に通知<br>
+                            • Slackやメールで開発チームへアラート
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-icon">📝</div>
+                        <div class="practice-title">3. DLQのメッセージに詳細情報を追加</div>
+                        <div class="practice-desc">
+                            <strong>推奨：</strong>MessageAttributesを活用<br>
+                            • エラー理由、タイムスタンプ<br>
+                            • 元のReceiveCount<br>
+                            • 処理試行時のログID<br>
+                            → 原因調査が劇的に楽になる
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-icon">🔄</div>
+                        <div class="practice-title">4. Redrive機能で再処理</div>
+                        <div class="practice-desc">
+                            <strong>活用：</strong>問題修正後にDLQから戻す<br>
+                            • AWSコンソールの「Start DLQ redrive」<br>
+                            • 修正済みメッセージを元のキューへ<br>
+                            • 一括処理が可能で効率的
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-icon">⏱️</div>
+                        <div class="practice-title">5. Retention期間を長めに設定</div>
+                        <div class="practice-desc">
+                            <strong>DLQ推奨：</strong>14日間（最大値）<br>
+                            • メインキュー：4日間<br>
+                            • DLQ：14日間<br>
+                            → 問題調査と修正の時間を十分確保
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-icon">🏗️</div>
+                        <div class="practice-title">6. 環境ごとにDLQを分離</div>
+                        <div class="practice-desc">
+                            <strong>構成：</strong>dev/staging/prod別々に<br>
+                            • my-app-dev-dlq<br>
+                            • my-app-staging-dlq<br>
+                            • my-app-prod-dlq<br>
+                            → 環境間の混乱を防止
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 警告ボックス -->
+            <div class="warning-box">
+                <div class="warning-title">
+                    <span>⚠️</span>
+                    <span>よくある間違いと注意点</span>
+                </div>
+                <div class="warning-content">
+                    <strong>❌ 間違い1: DLQを設定せずに運用</strong><br>
+                    → 失敗メッセージが永遠にリトライされ続ける。Visibility Timeout後に何度も処理されてコストが増大。<br><br>
+                    
+                    <strong>❌ 間違い2: maxReceiveCountを1に設定</strong><br>
+                    → 一時的なネットワークエラーなどでも即DLQ行きになり、誤検知が多すぎる。<br><br>
+                    
+                    <strong>❌ 間違い3: DLQの監視をしない</strong><br>
+                    → メッセージがDLQに溜まっていることに気づかず、重要な処理が止まったまま。<br><br>
+                    
+                    <strong>❌ 間違い4: 処理失敗時にDeleteMessageを呼ぶ</strong><br>
+                    → リトライの機会を失い、データロスの原因に。エラー時はDeleteしてはいけない。<br><br>
+                    
+                    <strong>❌ 間違い5: DLQのRetention期間が短い</strong><br>
+                    → 原因調査中にメッセージが消えてしまい、問題の再現ができなくなる。
+                </div>
+            </div>
+            
+            <!-- Tipボックス -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>プロのTips：DLQ運用テクニック</span>
+                </div>
+                <div class="tip-content">
+                    <strong>📊 Tip 1: DLQメッセージのダッシュボード作成</strong><br>
+                    CloudWatch Logsにエラーパターンを集約し、どの種類のエラーが多いか可視化。優先度をつけて対応。<br><br>
+                    
+                    <strong>🔍 Tip 2: Lambda DLQトリガーで自動分析</strong><br>
+                    DLQにメッセージが入ったらLambdaを起動し、エラー分類を自動実行。Slackに詳細レポート送信。<br><br>
+                    
+                    <strong>⚙️ Tip 3: 段階的リトライ戦略</strong><br>
+                    maxReceiveCount=3でDLQ行き → Lambda処理 → 修正可能なら元のキューへRedrive → 不可能ならS3へアーカイブ。<br><br>
+                    
+                    <strong>🧪 Tip 4: DLQでテスト環境を作る</strong><br>
+                    本番のDLQメッセージをコピーして開発環境で再現テスト。実際の問題データで検証できて確実。<br><br>
+                    
+                    <strong>📈 Tip 5: エラー率をKPIとして追跡</strong><br>
+                    (DLQメッセージ数 / 総メッセージ数) × 100 = エラー率。週次レポートで改善トレンドを可視化。
+                </div>
+            </div>
+            
+            <!-- Python実装例 -->
+            <div class="code-example">
+                <div class="code-title">🐍 Python実装例：エラーハンドリング付きConsumer</div>
+<pre><span class="code-keyword">import</span> boto3
+<span class="code-keyword">import</span> json
+<span class="code-keyword">import</span> logging
+<span class="code-keyword">from</span> time <span class="code-keyword">import</span> sleep
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+sqs = boto3.client(<span class="code-string">'sqs'</span>, region_name=<span class="code-string">'ap-northeast-1'</span>)
+QUEUE_URL = <span class="code-string">'https://sqs.ap-northeast-1.amazonaws.com/123456789012/my-main-queue'</span>
+
+<span class="code-keyword">def</span> <span class="code-keyword">process_message</span>(message_body):
+    <span class="code-string">"""ビジネスロジック：ここで実際の処理を実行"""</span>
+    <span class="code-comment"># 例：外部APIを呼び出す、DBに書き込むなど</span>
+    data = json.loads(message_body)
+    
+    <span class="code-comment"># 何らかの処理...</span>
+    <span class="code-keyword">if</span> data.get(<span class="code-string">'invalid'</span>):
+        <span class="code-keyword">raise</span> ValueError(<span class="code-string">"Invalid data format"</span>)
+    
+    <span class="code-keyword">return</span> <span class="code-string">True</span>
+
+<span class="code-keyword">def</span> <span class="code-keyword">consume_messages</span>():
+    <span class="code-string">"""メッセージを受信して処理する"""</span>
+    <span class="code-keyword">while</span> <span class="code-string">True</span>:
+        <span class="code-comment"># メッセージを受信（Long Polling: 20秒）</span>
+        response = sqs.receive_message(
+            QueueUrl=QUEUE_URL,
+            MaxNumberOfMessages=<span class="code-number">10</span>,  <span class="code-comment"># 一度に10件まで</span>
+            WaitTimeSeconds=<span class="code-number">20</span>,       <span class="code-comment"># Long Polling</span>
+            AttributeNames=[<span class="code-string">'ApproximateReceiveCount'</span>]
+        )
+        
+        messages = response.get(<span class="code-string">'Messages'</span>, [])
+        
+        <span class="code-keyword">if</span> <span class="code-keyword">not</span> messages:
+            logger.info(<span class="code-string">"No messages, waiting..."</span>)
+            <span class="code-keyword">continue</span>
+        
+        <span class="code-keyword">for</span> message <span class="code-keyword">in</span> messages:
+            receipt_handle = message[<span class="code-string">'ReceiptHandle'</span>]
+            message_id = message[<span class="code-string">'MessageId'</span>]
+            body = message[<span class="code-string">'Body'</span>]
+            receive_count = <span class="code-keyword">int</span>(message[<span class="code-string">'Attributes'</span>].get(<span class="code-string">'ApproximateReceiveCount'</span>, <span class="code-number">0</span>))
+            
+            logger.info(<span class="code-string">f"Processing message {message_id} (ReceiveCount: {receive_count})"</span>)
+            
+            <span class="code-keyword">try</span>:
+                <span class="code-comment"># ✅ ビジネスロジック実行</span>
+                process_message(body)
+                
+                <span class="code-comment"># ✅ 成功したらメッセージを削除</span>
+                sqs.delete_message(
+                    QueueUrl=QUEUE_URL,
+                    ReceiptHandle=receipt_handle
+                )
+                logger.info(<span class="code-string">f"Successfully processed message {message_id}"</span>)
+                
+            <span class="code-keyword">except</span> Exception <span class="code-keyword">as</span> e:
+                <span class="code-comment"># ❌ エラー発生時はDeleteしない → 自動的にキューに戻る</span>
+                logger.error(<span class="code-string">f"Failed to process message {message_id}: {str(e)}"</span>)
+                logger.error(<span class="code-string">f"Receive count: {receive_count}. Will retry or move to DLQ."</span>)
+                
+                <span class="code-comment"># ⚠️ DeleteMessageを呼ばないことで：</span>
+                <span class="code-comment"># 1. Visibility Timeout後に再度処理可能になる</span>
+                <span class="code-comment"># 2. ReceiveCountが+1される</span>
+                <span class="code-comment"># 3. maxReceiveCountに達したら自動的にDLQへ</span>
+                <span class="code-keyword">continue</span>
+
+<span class="code-keyword">if</span> __name__ == <span class="code-string">"__main__"</span>:
+    logger.info(<span class="code-string">"Starting SQS Consumer..."</span>)
+    consume_messages()</pre>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; padding: 50px; border-radius: 20px; text-align: center; margin-top: 50px;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 1100px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">🍽️ レストランの問題注文システム = SQS DLQ</h3>
+                        <p style="font-size: 1.15em; line-height: 2;">
+                            Dead-letter Queue と Redrive Policy で<br>
+                            <strong>失敗メッセージを適切に管理</strong>できる✨
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">💀</div>
+                            <strong style="font-size: 1.3em;">DLQ</strong><br><br>
+                            失敗メッセージを<br>安全に隔離して<br>後で調査
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🔄</div>
+                            <strong style="font-size: 1.3em;">Redrive Policy</strong><br><br>
+                            何回失敗したら<br>DLQへ移動するかの<br>ルール設定
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">📊</div>
+                            <strong style="font-size: 1.3em;">監視</strong><br><br>
+                            DLQにメッセージが<br>入ったら即座に<br>アラート通知
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px); margin-top: 30px;">
+                        <p style="font-size: 1.4em; line-height: 1.8; margin-bottom: 20px;">
+                            <strong>🎯 重要ポイント：</strong>
+                        </p>
+                        <p style="font-size: 1.2em; line-height: 2;">
+                            1️⃣ <strong>maxReceiveCount = 3〜5</strong> が推奨<br>
+                            2️⃣ エラー時は <strong>DeleteMessage を呼ばない</strong><br>
+                            3️⃣ <strong>CloudWatch Alarm</strong> でDLQ監視<br>
+                            4️⃣ 問題修正後は <strong>Redrive機能</strong> で再処理<br>
+                            5️⃣ DLQのRetention期間は <strong>14日間</strong>（最大）
+                        </p>
+                    </div>
+                    
+                    <p style="font-size: 1.3em; margin-top: 30px; padding: 25px; background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px);">
+                        🎉 <strong>これでSQSの失敗処理はバッチリ！</strong><br>
+                        安心してメッセージキューを運用できます！
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
