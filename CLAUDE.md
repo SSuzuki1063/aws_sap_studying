@@ -6,6 +6,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an AWS SAP (Solutions Architect Professional) exam study resource repository containing HTML-based learning materials. The repository serves as a comprehensive visual learning platform with infographics, technical diagrams, and detailed explanations of AWS services and concepts.
 
+## Quick Start Workflows
+
+### Adding New HTML Learning Resources (Most Common Task)
+```bash
+# 1. Place HTML files in new_html/ directory
+# 2. Preview integration
+python3 integrate_new_html.py --dry-run
+
+# 3. Execute integration (moves files, updates index.html automatically)
+python3 integrate_new_html.py
+
+# 4. Test locally
+python3 server.py
+# Visit http://localhost:8080/
+
+# 5. Commit changes
+git add .
+git commit -m "feat: 新規AWS学習リソースを追加"
+git push origin gh-pages
+```
+
+### Local Development & Testing
+```bash
+# Start development server
+python3 server.py
+
+# Access at http://localhost:8080/
+# - Test navigation and search
+# - Verify new resources load correctly
+# - Check mobile responsiveness
+```
+
+### Adding Quiz Questions
+Edit `quiz-data-extended.js` and add questions to appropriate category object. Question count updates automatically.
+
 ## Directory Structure
 
 The repository is organized into topical categories aligned with AWS SAP exam domains:
@@ -30,7 +65,7 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 ### Key Files
 - `index.html` - Main navigation interface with collapsible sidebar, search, and category-based navigation
 - `home.html` - Default homepage content loaded on initial page load
-- `table-of-contents.html` - Comprehensive table of contents for all resources
+- `table-of-contents.html` - Comprehensive table of contents for all resources (static reference page)
 - `quiz.html` - Interactive quiz application for exam preparation
 - `quiz-app.js` - Quiz application logic
 - `quiz-data-extended.js` - Quiz question database (100+ questions across 9 categories)
@@ -38,6 +73,7 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `main.js` - Additional utility functions (verify usage before modifying)
 - `add_breadcrumbs.py` - Utility script to add breadcrumb navigation to all HTML files
 - `remove_breadcrumbs.py` - Utility script to remove breadcrumb navigation from HTML files
+- `integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files (see Automation Workflows section)
 
 ## Architecture
 
@@ -46,13 +82,20 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - Each category in the sidebar dynamically loads HTML content using iframe injection
 - JavaScript functions handle category expansion/collapse and content loading
 
-### Content Structure  
+### Content Structure
 - Each HTML file is a self-contained learning module with:
   - Embedded SVG diagrams and technical illustrations
   - Step-by-step explanations with numbered sections
   - AWS CLI examples and code snippets
   - Responsive CSS using AWS brand colors (#232F3E, #FF9900)
   - Japanese language content optimized for Japanese learners
+
+**Important Architecture Note:**
+This is NOT a typical table-of-contents.html based static site. The repository has two different navigation systems:
+1. **`index.html`** - Main dynamic navigation page (THIS is the primary navigation, NOT table-of-contents.html)
+2. **`table-of-contents.html`** - Static reference page for quick browsing (secondary, manually maintained)
+
+When adding resources, `index.html` must be updated (automatically by `integrate_new_html.py` or manually).
 
 ### Technical Implementation
 
@@ -120,6 +163,10 @@ const quizData = {
     ]
   }
 }
+
+// Helper functions (defined at bottom of quiz-data-extended.js)
+function getTotalQuestions(categoryKey) { ... }  // Returns question count for category
+function getAllQuestions(categoryKey) { ... }   // Returns copy of all questions for category
 ```
 
 ### File Patterns
@@ -148,17 +195,50 @@ python3 server.py
 ## Working with Content
 
 ### Adding New Learning Resources
+
+**IMPORTANT**: There are two workflows for adding new resources - automated (recommended) and manual:
+
+#### Option 1: Automated Integration (Recommended)
+Use the `integrate_new_html.py` script to automatically categorize and integrate new HTML files:
+
+1. Place new HTML files in `new_html/` directory
+2. Run integration script:
+   ```bash
+   # Dry run to preview changes
+   python3 integrate_new_html.py --dry-run
+
+   # Execute integration
+   python3 integrate_new_html.py
+   ```
+3. The script will:
+   - Analyze HTML title and content to determine appropriate category
+   - Move file to correct directory (e.g., `networking/`, `security-governance/`)
+   - Update `index.html` navigation sidebar automatically
+   - Update resource counts for affected categories
+   - Remove Zone.Identifier files from Windows downloads
+4. Review changes and commit to git
+5. Test via local server: `python3 server.py`
+
+**Script features:**
+- AI-powered keyword detection for smart categorization
+- Automatic section detection based on AWS service keywords
+- Handles multiple files in batch
+- Safe dry-run mode to preview changes
+
+#### Option 2: Manual Integration
+If you prefer manual control or the script categorizes incorrectly:
+
 1. Create HTML file following naming conventions:
    - Preferred: `aws-[service]-[topic].html` (e.g., `aws-lambda-metrics.html`)
    - Alternative: `[service]_[topic]_infographic.html` (e.g., `ecs_infographic.html`)
 2. Use consistent CSS styling with AWS brand colors (#232F3E, #FF9900)
 3. Include inline SVG diagrams for visual explanations
-4. Update **two locations** in `index.html`:
-   - Navigation sidebar: Add resource item in appropriate category section
-   - Search data array: Add entry with `{title, category, file}` structure
+4. **Manually update `table-of-contents.html`**: This is a static reference page that should be kept in sync
 5. Place file in appropriate topical directory matching AWS SAP exam domains
 6. Ensure content is self-contained with inline CSS and SVG for offline use
 7. Test loading via local server to verify paths and functionality
+
+**Note**: The automated script updates `index.html` but NOT `table-of-contents.html`. Keep the TOC page in sync manually if using automation.
 
 ### Modifying Navigation
 - Update `index.html` sidebar structure in category sections to add/remove categories
@@ -180,11 +260,60 @@ python3 server.py
    - Detailed `explanation` text
 5. Question count automatically calculated by `getTotalQuestions()` function
 
+### Automation Workflows
+
+#### Breadcrumb Management
+Add or remove breadcrumb navigation across all HTML files:
+
+```bash
+# Add breadcrumbs to all HTML files
+python3 add_breadcrumbs.py
+
+# Remove breadcrumbs from all HTML files
+python3 remove_breadcrumbs.py
+```
+
+The breadcrumb scripts automatically:
+- Detect category from file path
+- Map to appropriate major/minor category names
+- Insert breadcrumb navigation HTML at the top of each file
+- Maintain consistent styling across all pages
+
+#### Bulk HTML Integration
+The `integrate_new_html.py` script provides powerful automation:
+
+```bash
+# Preview what would happen (no changes made)
+python3 integrate_new_html.py --dry-run
+
+# Integrate files from new_html/ directory
+python3 integrate_new_html.py
+
+# Use custom source directory
+python3 integrate_new_html.py --source custom_directory/
+```
+
+**Categorization Algorithm:**
+- Scans HTML title and H1 tags for keywords
+- Matches against predefined AWS service keyword mappings
+- Scores each category based on keyword matches
+- Selects best-fit category automatically
+- Defaults to `compute-applications` if no strong match
+
+**Keyword mappings** (defined in script):
+- `security-governance`: IAM, Cognito, SCP, Organizations, KMS, CMK, WAF, Shield
+- `compute-applications`: EC2, Lambda, ECS, Auto Scaling, ALB, SQS, SNS, Patch Manager
+- `networking`: VPC, Direct Connect, VPN, Transit Gateway, PrivateLink, ENI
+- `storage-database`: S3, EBS, EFS, RDS, Aurora, DynamoDB, ElastiCache
+- `development-deployment`: CloudFormation, CDK, SAM, CodePipeline, EventBridge, API Gateway
+- And more (see script for complete mappings)
+
 ### File Organization
 - When reorganizing files, search `index.html` for all references (sidebar + search data)
 - Maintain logical grouping by AWS service domains
-- Remove `.html:Zone.Identifier` files that appear from Windows downloads
+- Remove `.html:Zone.Identifier` files that appear from Windows downloads (automated by `integrate_new_html.py`)
 - Some files may have duplicates across directories (e.g., `new-solutions/` and domain-specific folders)
+- Use `table-of-contents.html` as static reference - it's NOT automatically updated by scripts
 
 ## Git Operations and Version Control
 
@@ -260,3 +389,28 @@ python3 server.py
 - Comments and explanations in learning materials are in Japanese
 - 機能追加・機能変更・ソースコード変更といったあらゆる変更はgitにコミットし、リモートリポジトリに反映させるようにしてください。
 - webサイトの機能変更は、静的サイトの要素のみで機能変更を完結させること
+
+## Design Constraints & Philosophy
+
+### Static Site Architecture
+**CRITICAL**: This is a fully static website with NO backend server, NO database, NO build process.
+
+- **No Node.js/npm**: No package.json, no npm install, no webpack/vite/parcel
+- **No external dependencies**: All CSS/JS must be inline or in local files
+- **No CDNs**: No loading from external URLs for offline capability
+- **Pure HTML/CSS/JavaScript**: Everything runs client-side in the browser
+- **Python server is for development only**: The `server.py` script is ONLY for local testing with CORS support. The deployed site on GitHub Pages serves static files directly.
+
+### Offline-First Design
+All resources must work without internet:
+- SVG diagrams embedded inline in HTML files
+- No external image URLs or font CDNs
+- No API calls or external data fetching
+- JavaScript is vanilla JS with no framework dependencies
+
+### Why This Architecture?
+1. **Zero deployment complexity**: Push to gh-pages = instant deployment
+2. **Perfect offline study**: Download repo and study anywhere
+3. **Fast loading**: No build step, no bundling, instant page loads
+4. **Educational clarity**: Students can view source and learn web development basics
+5. **Maximum portability**: Works on any web server, USB drive, or local filesystem
