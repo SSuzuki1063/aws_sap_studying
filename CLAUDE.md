@@ -111,11 +111,42 @@ Key JavaScript functions in index.html:
 - `toggleCategory(categoryId)` - Handles category accordion expansion/collapse
 - `loadContent(filename)` - Loads HTML content into iframe with error handling
 - `performSearch(query)` - Filters and displays search results from searchData array
+- `clearSearch()` - Clears search input and hides results
 - `toggleSidebarCollapse()` - Desktop sidebar collapse with localStorage persistence
 - `toggleMobileMenu()` - Mobile hamburger menu toggle
 - `loadQuiz()` - Opens quiz.html in new tab
 
-Search data structure: Array of objects with `{title, category, file}` - must be updated when adding new resources.
+#### Resource Search System
+The site includes a comprehensive search functionality for finding learning resources:
+
+**Search Features:**
+- **Real-time search**: Results filter automatically as you type
+- **Search scope**: Searches across all 120+ resource titles and categories
+- **Keyboard shortcuts**:
+  - `Enter` - Execute search
+  - `Escape` - Clear search and reset results
+- **Visual feedback**: Search results count, category badges, and "no results" message
+- **Responsive design**: Grid layout adapts to screen size
+
+**Search Data Structure:**
+```javascript
+const searchData = [
+  {
+    title: 'Resource Title',
+    category: 'Category Name',
+    file: 'path/to/resource.html'
+  },
+  // ... 120+ entries covering all resources
+];
+```
+
+**Important**: When adding new resources via `integrate_new_html.py` or manually, the `searchData` array in `index.html` must be updated to include the new resource. The script does NOT automatically update the search data.
+
+**Search Implementation:**
+- Location: Positioned between statistics section and category navigation
+- Styling: Green gradient design (`#F0FDF4` to `#DCFCE7`) with AWS brand accent colors
+- Results: Grid layout with category badges, max height with scrolling
+- Clear button: Appears when search input has text, clicking resets search
 
 #### Category Quick Navigation
 - Category quick links section added below statistics section on index.html
@@ -414,3 +445,4 @@ All resources must work without internet:
 3. **Fast loading**: No build step, no bundling, instant page loads
 4. **Educational clarity**: Students can view source and learn web development basics
 5. **Maximum portability**: Works on any web server, USB drive, or local filesystem
+- 検索機能を新たに実装したことを追記してください
