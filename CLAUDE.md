@@ -50,13 +50,9 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `compute-applications/` - Compute and application services (EC2, Lambda, ECS, EFA, Auto Scaling, ALB)
 - `content-delivery-dns/` - Content delivery and DNS services (CloudFront, Route53, Global Accelerator)
 - `development-deployment/` - Development and deployment services (CloudFormation, Service Catalog, CDK, SAM, EventBridge, API Gateway)
-- `storage-database/` - Storage and database services (S3, EBS, EFS, RDS Aurora, ElastiCache, MSK)
-- `migration-transfer/` - Migration services (DMS, Migration Hub, DR strategies)
-- `migration-planning/` - Migration planning resources
-- `migration/` - Additional migration resources
-- `storage/` - Storage security resources
-- `analytics-bigdata/` - Analytics and operational services (Kinesis, cost tools, metrics, availability)
-- `data-analytics/` - Data analytics pipelines (Kinesis Firehose, Redshift, serverless data pipelines)
+- `storage-database/` - Storage and database services (S3, EBS, EFS, RDS Aurora, ElastiCache, MSK, S3 security)
+- `migration/` - Migration services (DMS, Migration Hub, DR strategies, Blue/Green deployments, migration planning)
+- `analytics-bigdata/` - Analytics and operational services (Kinesis, Kinesis Firehose, Redshift, cost tools, metrics, availability, data pipelines)
 - `organizational-complexity/` - Multi-account and organizational management (RAM, SCP, tag policies, Service Catalog)
 - `continuous-improvement/` - Operational excellence resources (Systems Manager, CodeDeploy, CloudTrail, WAF, CDK)
 - `cost-control/` - Cost optimization resources (S3 storage classes, Lambda concurrency)
