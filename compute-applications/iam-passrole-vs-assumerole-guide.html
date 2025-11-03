@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAM PassRole vs AssumeRole 完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #ff6b6b 75%, #feca57 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
+            border-radius: 15px;
+            border-left: 6px solid #f5576c;
+        }
+        
+        .intro h2 {
+            color: #be123c;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #881337;
+            line-height: 1.8;
+        }
+        
+        .assume-meaning-section {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #7c3aed;
+        }
+        
+        .assume-title {
+            color: #5b21b6;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .meaning-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .meaning-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .meaning-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+        }
+        
+        .meaning-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        
+        .meaning-card h4 {
+            color: #5b21b6;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        
+        .meaning-example {
+            background: #f5f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            color: #5b21b6;
+            line-height: 1.7;
+            font-size: 0.95em;
+        }
+        
+        .etymology-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .etymology-title {
+            color: #5b21b6;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .etymology-content {
+            color: #475569;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+        
+        .actor-analogy {
+            background: linear-gradient(to right, #fef3c7 0%, #fde68a 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .actor-analogy-title {
+            color: #92400e;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .comparison-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 50px 0;
+        }
+        
+        .concept-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .concept-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        
+        .passrole-card {
+            border-top: 8px solid #f59e0b;
+            background: linear-gradient(to bottom, #fffbeb 0%, white 100%);
+        }
+        
+        .assumerole-card {
+            border-top: 8px solid #3b82f6;
+            background: linear-gradient(to bottom, #eff6ff 0%, white 100%);
+        }
+        
+        .card-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .passrole-card .card-title {
+            color: #92400e;
+        }
+        
+        .assumerole-card .card-title {
+            color: #1e40af;
+        }
+        
+        .card-subtitle {
+            text-align: center;
+            font-size: 1.1em;
+            color: #64748b;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .feature-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+        
+        .passrole-card .feature-box {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .assumerole-card .feature-box {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .feature-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .passrole-card .feature-title {
+            color: #92400e;
+        }
+        
+        .assumerole-card .feature-title {
+            color: #1e40af;
+        }
+        
+        .feature-content {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .analogy-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .analogy-title {
+            color: #0c4a6e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card h3 {
+            color: #0c4a6e;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .analogy-description {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            color: #0c4a6e;
+            line-height: 1.8;
+            margin: 15px 0;
+        }
+        
+        .visual-flow {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .flow-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .flow-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .flow-scenario {
+            margin-bottom: 60px;
+        }
+        
+        .scenario-title {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .flow-step {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .flow-step-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .flow-step-title {
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .flow-step-desc {
+            color: #64748b;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .flow-arrow {
+            font-size: 2.5em;
+            color: #94a3b8;
+        }
+        
+        .code-example-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .code-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        .code-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .code-box {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 25px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.8;
+            overflow-x: auto;
+        }
+        
+        .code-box-title {
+            color: #60a5fa;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+        
+        .code-comment { color: #94a3b8; }
+        .code-keyword { color: #f472b6; }
+        .code-string { color: #34d399; }
+        
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .mistake-section {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ef4444;
+        }
+        
+        .mistake-title {
+            color: #991b1b;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .mistake-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .mistake-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .mistake-icon {
+            font-size: 2em;
+        }
+        
+        .mistake-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #991b1b;
+        }
+        
+        .mistake-explanation {
+            background: #fef2f2;
+            padding: 20px;
+            border-radius: 10px;
+            color: #7f1d1d;
+            line-height: 1.7;
+        }
+        
+        .tip-box {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border-left: 6px solid #10b981;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #065f46;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #064e3b;
+            line-height: 1.9;
+            font-size: 1.05em;
+        }
+        
+        .use-case-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .use-case-title {
+            color: #92400e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 25px;
+        }
+        
+        .use-case-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+        }
+        
+        .use-case-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .use-case-card h4 {
+            color: #92400e;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .use-case-description {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .use-case-roles {
+            background: #fffbeb;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .use-case-roles strong {
+            color: #92400e;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        @media (max-width: 1024px) {
+            .comparison-section,
+            .analogy-grid,
+            .code-grid,
+            .meaning-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-steps {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 IAM PassRole vs AssumeRole</h1>
+            <p>レストランの「代理店長制度」でたとえると超わかりやすい！完全ガイド</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>🍽️ レストランの代理店長で理解する2つの権限</h2>
+                <p class="intro-text">
+                    <strong>IAMロールは「役職」のようなもの</strong><br><br>
+                    PassRoleとAssumeRoleは、よく混同されがちですが、実は全く違う概念です。<br><br>
+                    <strong>PassRole</strong>：「この役職を使っていいよ」と許可を与える権限<br>
+                    <strong>AssumeRole</strong>：実際にその役職になりきって仕事をする行為<br><br>
+                    レストランの「代理店長制度」にたとえると一瞬で理解できます✨
+                </p>
+            </div>
+            
+            <!-- Assumeの意味セクション -->
+            <div class="assume-meaning-section">
+                <h2 class="assume-title">📖 「Assume」ってどういう意味？</h2>
+                
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <p style="font-size: 1.2em; color: #5b21b6; line-height: 1.8;">
+                        <strong>「AssumeRole」という名前の意味を理解すると、<br>概念がさらにクリアになります！</strong>
+                    </p>
+                </div>
+                
+                <div class="etymology-box">
+                    <div class="etymology-title">
+                        <span>🔤</span>
+                        <span>英単語「assume」の3つの意味</span>
+                    </div>
+                    <div class="meaning-grid">
+                        <div class="meaning-card">
+                            <div class="meaning-number">1</div>
+                            <h4>引き受ける・担う・就く</h4>
+                            <div class="meaning-example">
+                                <strong>← IAMで使われているのはコレ！</strong><br><br>
+                                📝 assume responsibility<br>
+                                　 （責任を引き受ける）<br><br>
+                                📝 assume the role<br>
+                                　 （役割を担う）<br><br>
+                                📝 assume office<br>
+                                　 （職務に就く）
+                            </div>
+                        </div>
+                        
+                        <div class="meaning-card">
+                            <div class="meaning-number">2</div>
+                            <h4>仮定する・推測する</h4>
+                            <div class="meaning-example">
+                                📝 assume that...<br>
+                                　 （〜と仮定する）<br><br>
+                                📝 Let's assume it's true<br>
+                                　 （それが真実だと仮定しよう）<br><br>
+                                ⚠️ この意味ではありません
+                            </div>
+                        </div>
+                        
+                        <div class="meaning-card">
+                            <div class="meaning-number">3</div>
+                            <h4>装う・ふりをする</h4>
+                            <div class="meaning-example">
+                                📝 assume a false identity<br>
+                                　 （偽の身分を装う）<br><br>
+                                📝 assume an air of innocence<br>
+                                　 （無邪気なふりをする）<br><br>
+                                ⚠️ この意味でもありません
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="actor-analogy">
+                    <div class="actor-analogy-title">
+                        <span>🎭</span>
+                        <span>レストランでの「assume」</span>
+                    </div>
+                    <div class="etymology-content">
+                        <strong>マネージャー：</strong>「田中さん、今日は代理店長をお願いします」<br>
+                        <strong>田中さん：</strong>「わかりました！代理店長の役割を<strong style="color: #92400e; font-size: 1.1em;">引き受けます</strong>」<br><br>
+                        
+                        <div style="background: white; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <strong style="color: #92400e;">↑ これが「assume the role」</strong><br><br>
+                            
+                            田中さんが：<br>
+                            • 代理店長という<strong>役割を引き受ける</strong> = <strong>assume the role</strong><br>
+                            • 代理店長として<strong>職務に就く</strong> = <strong>assume the position</strong><br>
+                            • 店長の<strong>責任を担う</strong> = <strong>assume the responsibility</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="etymology-box">
+                    <div class="etymology-title">
+                        <span>🔐</span>
+                        <span>なぜ「AssumeRole」という名前なのか？</span>
+                    </div>
+                    <div class="etymology-content">
+                        AWSは「<strong>あなたが一時的にそのロール（役割）になりきる</strong>」という行為を表現するために、この英語の「assume」を使いました。<br><br>
+                        
+                        <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f5f3ff;">
+                                    <th style="padding: 15px; text-align: left; color: #5b21b6; border-bottom: 2px solid #c4b5fd;">英語</th>
+                                    <th style="padding: 15px; text-align: left; color: #5b21b6; border-bottom: 2px solid #c4b5fd;">直訳</th>
+                                    <th style="padding: 15px; text-align: left; color: #5b21b6; border-bottom: 2px solid #c4b5fd;">意訳</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e9d5ff;"><strong>AssumeRole</strong></td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e9d5ff;">役割を引き受ける</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e9d5ff;"><strong>ロールになる</strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e9d5ff;"><strong>Assume a role</strong></td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e9d5ff;">ある役割を担う</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e9d5ff;"><strong>その立場に就く</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="actor-analogy">
+                    <div class="actor-analogy-title">
+                        <span>🎬</span>
+                        <span>俳優の演技でイメージすると</span>
+                    </div>
+                    <div class="etymology-content">
+                        俳優が舞台で役を演じるようなイメージです：<br><br>
+                        
+                        <div style="background: white; padding: 20px; border-radius: 10px; margin: 15px 0; font-family: monospace; font-size: 1.05em;">
+                            俳優（IAMユーザー）<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;↓ <strong style="color: #92400e;">assume the role of Hamlet</strong><br>
+                            ハムレット（役柄=ロール）として演技<br><br>
+                            
+                            この間、俳優は「ハムレット」として行動し、<br>
+                            自分自身の普段の性格は表に出さない
+                        </div>
+                        
+                        同様に：<br><br>
+                        
+                        <div style="background: white; padding: 20px; border-radius: 10px; margin: 15px 0; font-family: monospace; font-size: 1.05em;">
+                            IAMユーザー<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;↓ <strong style="color: #92400e;">AssumeRole</strong><br>
+                            ロールの権限で行動<br><br>
+                            
+                            この間、元のユーザー権限は使えず、<br>
+                            ロールの権限のみが有効
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="etymology-box">
+                    <div class="etymology-title">
+                        <span>💡</span>
+                        <span>他の類似表現との比較</span>
+                    </div>
+                    <div class="etymology-content">
+                        assumeと同じような意味で使われる英語表現：<br><br>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0;">
+                            <div style="background: #f5f3ff; padding: 20px; border-radius: 8px;">
+                                <strong style="color: #5b21b6;">take on a role</strong><br>
+                                役割を引き受ける
+                            </div>
+                            <div style="background: #f5f3ff; padding: 20px; border-radius: 8px;">
+                                <strong style="color: #5b21b6;">step into a role</strong><br>
+                                役割に入り込む
+                            </div>
+                            <div style="background: #f5f3ff; padding: 20px; border-radius: 8px;">
+                                <strong style="color: #5b21b6;">adopt a role</strong><br>
+                                役割を採用する
+                            </div>
+                        </div>
+                        
+                        <strong style="color: #5b21b6; font-size: 1.1em;">でも、AWSは「assume」を選びました。理由は：</strong><br><br>
+                        
+                        <div style="background: #dcfce7; padding: 20px; border-radius: 10px; margin: 15px 0; border-left: 4px solid #10b981;">
+                            ✅ 一時的な性質を表現できる<br>
+                            ✅ ビジネス・法律用語として正式<br>
+                            ✅ 「責任を伴う引き受け」のニュアンス
+                        </div>
+                        
+                        「assume」は単に役を「演じる」のではなく、その役職の<strong style="color: #5b21b6;">責任と権限を正式に引き受ける</strong>という重みのある言葉なんです！<br><br>
+                        
+                        <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; padding: 25px; border-radius: 12px; margin: 20px 0; text-align: center;">
+                            <strong style="font-size: 1.3em;">
+                                つまり、AssumeRole =<br>
+                                そのロールの立場に就いて、<br>
+                                その権限と責任を引き受ける
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 2つの概念の比較カード -->
+            <div class="comparison-section">
+                <div class="concept-card passrole-card">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">iam:PassRole</div>
+                    <div class="card-subtitle">「許可を出す」権限</div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🎯</span>
+                            <span>何をする権限？</span>
+                        </div>
+                        <div class="feature-content">
+                            他のAWSサービスに「このIAMロールを使っていいよ」と許可を出す権限。ロール自体を使うわけではなく、使う許可を与えるだけ。
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🍽️</span>
+                            <span>レストランでたとえると</span>
+                        </div>
+                        <div class="feature-content">
+                            <strong>マネージャーがスタッフに言う：</strong><br>
+                            「田中さん、今日は店長が休みだから、代理店長として働いていいよ」<br><br>
+                            → これが<strong>PassRole</strong>（許可を出す行為）
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>💼</span>
+                            <span>実際のAWSでの使用例</span>
+                        </div>
+                        <div class="feature-content">
+                            • Lambda関数にIAMロールを渡す<br>
+                            • EC2インスタンスにIAMロールを割り当てる<br>
+                            • CodePipelineにデプロイ用のロールを渡す<br>
+                            • ECSタスクにロールを指定する
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🔍</span>
+                            <span>誰が持つ権限？</span>
+                        </div>
+                        <div class="feature-content">
+                            <strong>リソースを作成・設定する人</strong>が持つ権限。<br>
+                            例：開発者、管理者、デプロイツール
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>⚠️</span>
+                            <span>重要なポイント</span>
+                        </div>
+                        <div class="feature-content">
+                            PassRoleを持っていても、<strong>そのロール自体の権限は使えない</strong>。あくまで「誰かに使わせる許可」を出せるだけ。
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="concept-card assumerole-card">
+                    <div class="card-icon">👤</div>
+                    <div class="card-title">sts:AssumeRole</div>
+                    <div class="card-subtitle">「役割を引き受ける」行為</div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🎯</span>
+                            <span>何をする行為？</span>
+                        </div>
+                        <div class="feature-content">
+                            実際にIAMロールになりきって、そのロールの権限を使って作業をする行為。一時的な認証情報を取得して、ロールの権限で行動する。
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🍽️</span>
+                            <span>レストランでたとえると</span>
+                        </div>
+                        <div class="feature-content">
+                            <strong>田中さんが実際に行動する：</strong><br>
+                            「わかりました！それでは代理店長として店を運営します」<br>
+                            （実際に店長の権限で売上管理、スタッフ指示などを実行）<br><br>
+                            → これが<strong>AssumeRole</strong>（役割を引き受ける行為）
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>💼</span>
+                            <span>実際のAWSでの使用例</span>
+                        </div>
+                        <div class="feature-content">
+                            • 開発者が本番環境のロールにスイッチ<br>
+                            • Lambda関数が実行時にロールを引き受ける<br>
+                            • クロスアカウントアクセスでロール切替<br>
+                            • CI/CDツールがデプロイ用ロールを使用
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🔍</span>
+                            <span>誰が行う行為？</span>
+                        </div>
+                        <div class="feature-content">
+                            <strong>実際に作業を実行するエンティティ</strong>が行う。<br>
+                            例：IAMユーザー、AWSサービス（Lambda、EC2など）
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>⚠️</span>
+                            <span>重要なポイント</span>
+                        </div>
+                        <div class="feature-content">
+                            AssumeRoleすると、<strong>元の権限は一時的に失われ</strong>、ロールの権限のみが使える状態になる。一時的な認証情報（1時間など）が発行される。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- たとえ話の詳細 -->
+            <div class="analogy-section">
+                <h2 class="analogy-title">🍽️ レストラン代理店長制度の完全シナリオ</h2>
+                
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <div class="analogy-icon">📋</div>
+                        <h3>PassRole<br>「許可を出す側」</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🎬 シーン1：マネージャーの権限</strong><br>
+                            マネージャー（管理者）は「誰が代理店長になれるか」を決める権限を持っています。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>📝 何を決められる？</strong><br>
+                            • 田中さんを代理店長に任命できる<br>
+                            • 鈴木さんも代理店長に任命できる<br>
+                            • でも山田さんは任命できない（スキル不足）
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>⚠️ 重要な制限</strong><br>
+                            マネージャー自身は代理店長ではないので、代理店長の仕事（売上管理、スタッフ評価など）は<strong>できません</strong>。<br><br>
+                            許可を出すことと、実際にやることは別物！
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>🔐 セキュリティの観点</strong><br>
+                            マネージャーは「誰に強力な権限を渡すか」を慎重に判断する必要があります。間違った人に渡すと大変なことに！
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-icon">👤</div>
+                        <h3>AssumeRole<br>「役割を引き受ける側」</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🎬 シーン2：田中さんの実行</strong><br>
+                            田中さんは許可をもらったので、実際に代理店長として働きます。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💼 何ができるようになる？</strong><br>
+                            • 売上レポートの確認<br>
+                            • スタッフへの指示<br>
+                            • 仕入れの承認<br>
+                            • クレーム対応の最終判断
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>⚠️ 重要な制限</strong><br>
+                            代理店長として働いている間、田中さんは<strong>普通のスタッフとしての仕事はできません</strong>。<br><br>
+                            接客や料理など、通常の業務は一時的にできない状態に。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>⏰ 時間制限</strong><br>
+                            代理店長の権限は「今日の営業時間中だけ」など、期限付き。翌日はまた許可が必要。<br><br>
+                            → AWSでは通常1〜12時間の一時的な認証情報
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- フロー図 -->
+            <div class="visual-flow">
+                <h2 class="flow-title">🔄 実際の動作フロー</h2>
+                
+                <div class="flow-container">
+                    <!-- PassRoleのフロー -->
+                    <div class="flow-scenario">
+                        <div class="scenario-title">📋 PassRole のフロー（許可を出す）</div>
+                        
+                        <div class="flow-steps">
+                            <div class="flow-step">
+                                <div class="flow-step-icon">👨‍💼</div>
+                                <div class="flow-step-title">開発者</div>
+                                <div class="flow-step-desc">Lambda関数を作成したい</div>
+                            </div>
+                            
+                            <div class="flow-arrow">→</div>
+                            
+                            <div class="flow-step">
+                                <div class="flow-step-icon">📋</div>
+                                <div class="flow-step-title">PassRole権限</div>
+                                <div class="flow-step-desc">開発者が持っている<br>「iam:PassRole」</div>
+                            </div>
+                            
+                            <div class="flow-arrow">→</div>
+                            
+                            <div class="flow-step">
+                                <div class="flow-step-icon">🎯</div>
+                                <div class="flow-step-title">ロールを指定</div>
+                                <div class="flow-step-desc">「LambdaExecutionRole」<br>をLambdaに渡す</div>
+                            </div>
+                            
+                            <div class="flow-arrow">→</div>
+                            
+                            <div class="flow-step">
+                                <div class="flow-step-icon">✅</div>
+                                <div class="flow-step-title">作成成功</div>
+                                <div class="flow-step-desc">Lambda関数が<br>ロール付きで作成される</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AssumeRoleのフロー -->
+                    <div class="flow-scenario">
+                        <div class="scenario-title">👤 AssumeRole のフロー（役割を引き受ける）</div>
+                        
+                        <div class="flow-steps">
+                            <div class="flow-step">
+                                <div class="flow-step-icon">⚡</div>
+                                <div class="flow-step-title">Lambda起動</div>
+                                <div class="flow-step-desc">関数が実行される</div>
+                            </div>
+                            
+                            <div class="flow-arrow">→</div>
+                            
+                            <div class="flow-step">
+                                <div class="flow-step-icon">👤</div>
+                                <div class="flow-step-title">AssumeRole実行</div>
+                                <div class="flow-step-desc">Lambdaが自動的に<br>ロールを引き受ける</div>
+                            </div>
+                            
+                            <div class="flow-arrow">→</div>
+                            
+                            <div class="flow-step">
+                                <div class="flow-step-icon">🎫</div>
+                                <div class="flow-step-title">一時認証情報</div>
+                                <div class="flow-step-desc">有効期限付きの<br>アクセスキー取得</div>
+                            </div>
+                            
+                            <div class="flow-arrow">→</div>
+                            
+                            <div class="flow-step">
+                                <div class="flow-step-icon">💼</div>
+                                <div class="flow-step-title">作業実行</div>
+                                <div class="flow-step-desc">ロールの権限で<br>S3やDynamoDBにアクセス</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- コード例 -->
+            <div class="code-example-section">
+                <h2 class="code-title">💻 実際のIAMポリシー例</h2>
+                
+                <div class="code-grid">
+                    <div class="code-box">
+                        <div class="code-box-title">📋 PassRole ポリシー例</div>
+<pre><span class="code-comment">// 開発者に付与するポリシー</span>
+{
+  <span class="code-keyword">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+  <span class="code-keyword">"Statement"</span>: [
+    {
+      <span class="code-keyword">"Effect"</span>: <span class="code-string">"Allow"</span>,
+      <span class="code-keyword">"Action"</span>: [
+        <span class="code-string">"iam:PassRole"</span>
+      ],
+      <span class="code-keyword">"Resource"</span>: 
+        <span class="code-string">"arn:aws:iam::123456789012:role/LambdaExecutionRole"</span>,
+      <span class="code-keyword">"Condition"</span>: {
+        <span class="code-keyword">"StringEquals"</span>: {
+          <span class="code-string">"iam:PassedToService"</span>: 
+            <span class="code-string">"lambda.amazonaws.com"</span>
+        }
+      }
+    }
+  ]
+}
+
+<span class="code-comment">// 解説：
+// この開発者は「LambdaExecutionRole」を
+// Lambda関数に渡すことができる
+// でも、そのロール自体は使えない！</span></pre>
+                    </div>
+                    
+                    <div class="code-box">
+                        <div class="code-box-title">👤 AssumeRole ポリシー例</div>
+<pre><span class="code-comment">// ロールの信頼ポリシー（Trust Policy）</span>
+{
+  <span class="code-keyword">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+  <span class="code-keyword">"Statement"</span>: [
+    {
+      <span class="code-keyword">"Effect"</span>: <span class="code-string">"Allow"</span>,
+      <span class="code-keyword">"Principal"</span>: {
+        <span class="code-keyword">"Service"</span>: <span class="code-string">"lambda.amazonaws.com"</span>
+      },
+      <span class="code-keyword">"Action"</span>: <span class="code-string">"sts:AssumeRole"</span>
+    }
+  ]
+}
+
+<span class="code-comment">// 解説：
+// このロールは「Lambda関数」が
+// AssumeRole（引き受ける）ことができる
+// Lambda起動時に自動的に実行される</span>
+
+<span class="code-comment">// ロールに付与する権限ポリシー</span>
+{
+  <span class="code-keyword">"Effect"</span>: <span class="code-string">"Allow"</span>,
+  <span class="code-keyword">"Action"</span>: [
+    <span class="code-string">"s3:GetObject"</span>,
+    <span class="code-string">"dynamodb:PutItem"</span>
+  ],
+  <span class="code-keyword">"Resource"</span>: <span class="code-string">"*"</span>
+}</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較表 -->
+            <div class="comparison-table">
+                <h2 class="table-title">📊 詳細比較表</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>iam:PassRole</th>
+                            <th>sts:AssumeRole</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>基本的な意味</strong></td>
+                            <td>「ロールを渡す許可」</td>
+                            <td>「ロールになる行為」</td>
+                        </tr>
+                        <tr>
+                            <td><strong>実行するのは？</strong></td>
+                            <td>リソースを作成する人・サービス</td>
+                            <td>実際に作業する人・サービス</td>
+                        </tr>
+                        <tr>
+                            <td><strong>どこに書く？</strong></td>
+                            <td>ユーザー/サービスのポリシー</td>
+                            <td>ロールの信頼ポリシー</td>
+                        </tr>
+                        <tr>
+                            <td><strong>いつ使う？</strong></td>
+                            <td>リソース作成・更新時</td>
+                            <td>リソース実行時</td>
+                        </tr>
+                        <tr>
+                            <td><strong>権限の使用</strong></td>
+                            <td>ロールの権限は使えない</td>
+                            <td>ロールの権限を使える</td>
+                        </tr>
+                        <tr>
+                            <td><strong>一時的？</strong></td>
+                            <td>永続的な許可</td>
+                            <td>一時的（1-12時間）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>認証情報</strong></td>
+                            <td>発行されない</td>
+                            <td>一時認証情報が発行される</td>
+                        </tr>
+                        <tr>
+                            <td><strong>典型的な用途</strong></td>
+                            <td>Lambda/EC2作成時にロール割当</td>
+                            <td>Lambda実行時、クロスアカウントアクセス</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- よくある誤解 -->
+            <div class="mistake-section">
+                <h2 class="mistake-title">⚠️ よくある誤解トップ5</h2>
+                
+                <div class="mistake-card">
+                    <div class="mistake-header">
+                        <div class="mistake-icon">❌</div>
+                        <div class="mistake-text">誤解1：「PassRoleがあればそのロールを使える」</div>
+                    </div>
+                    <div class="mistake-explanation">
+                        <strong>✅ 正しい理解：</strong><br>
+                        PassRoleは「他の人・サービスに渡す許可」であって、自分がそのロールを使えるわけではありません。<br><br>
+                        <strong>例：</strong>マネージャーが「田中さんを代理店長にしていいよ」と言えても、マネージャー自身が代理店長になれるわけではない。
+                    </div>
+                </div>
+                
+                <div class="mistake-card">
+                    <div class="mistake-header">
+                        <div class="mistake-icon">❌</div>
+                        <div class="mistake-text">誤解2：「AssumeRoleは管理者だけが使うもの」</div>
+                    </div>
+                    <div class="mistake-explanation">
+                        <strong>✅ 正しい理解：</strong><br>
+                        AssumeRoleは、Lambda、EC2、ECSなどのAWSサービスが自動的に実行します。人間だけでなく、サービスも常に使っています。<br><br>
+                        <strong>例：</strong>Lambda関数は起動のたびに自動的にAssumeRoleを実行して、権限を取得しています。
+                    </div>
+                </div>
+                
+                <div class="mistake-card">
+                    <div class="mistake-header">
+                        <div class="mistake-icon">❌</div>
+                        <div class="mistake-text">誤解3：「PassRoleがないとLambdaが動かない」</div>
+                    </div>
+                    <div class="mistake-explanation">
+                        <strong>✅ 正しい理解：</strong><br>
+                        PassRoleが必要なのは「Lambda関数を作成・更新する時」だけ。既にロールが割り当てられているLambdaの実行には不要。<br><br>
+                        <strong>例：</strong>既に代理店長が決まっていれば、毎日許可を出し直す必要はない。
+                    </div>
+                </div>
+                
+                <div class="mistake-card">
+                    <div class="mistake-header">
+                        <div class="mistake-icon">❌</div>
+                        <div class="mistake-text">誤解4：「どんなロールでもPassRoleできる」</div>
+                    </div>
+                    <div class="mistake-explanation">
+                        <strong>✅ 正しい理解：</strong><br>
+                        PassRoleはロールごとに許可が必要。すべてのロールを渡せるわけではありません。<br><br>
+                        <strong>例：</strong>マネージャーは「代理店長」に任命する権限はあっても、「会社の社長」に任命する権限はない。
+                    </div>
+                </div>
+                
+                <div class="mistake-card">
+                    <div class="mistake-header">
+                        <div class="mistake-icon">❌</div>
+                        <div class="mistake-text">誤解5：「AssumeRoleしても元の権限も使える」</div>
+                    </div>
+                    <div class="mistake-explanation">
+                        <strong>✅ 正しい理解：</strong><br>
+                        AssumeRoleすると、元の権限は一時的に使えなくなります。ロールの権限だけが有効になります。<br><br>
+                        <strong>例：</strong>田中さんが代理店長になったら、普通のスタッフとしての接客業務はできない。店長としての権限のみ。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ユースケース -->
+            <div class="use-case-section">
+                <h3 class="use-case-title">💼 実際のユースケース別ガイド</h3>
+                
+                <div class="use-case-grid">
+                    <div class="use-case-card">
+                        <div class="use-case-icon">⚡</div>
+                        <h4>Lambda関数の作成</h4>
+                        <div class="use-case-description">
+                            <strong>シナリオ：</strong><br>
+                            開発者がS3からデータを読み込むLambda関数を作成したい。<br><br>
+                            
+                            <div class="use-case-roles">
+                                <strong>必要な権限：</strong><br>
+                                1️⃣ <strong>開発者に</strong><br>
+                                • lambda:CreateFunction（Lambda作成権限）<br>
+                                • iam:PassRole（ロールを渡す権限）<br><br>
+                                
+                                2️⃣ <strong>Lambdaロールの信頼ポリシーに</strong><br>
+                                • sts:AssumeRole（Lambda用）<br><br>
+                                
+                                3️⃣ <strong>Lambdaロールの権限ポリシーに</strong><br>
+                                • s3:GetObject（実際にS3にアクセス）
+                            </div>
+                            
+                            <strong>動作の流れ：</strong><br>
+                            1. 開発者がPassRoleでロールを指定してLambda作成<br>
+                            2. Lambda起動時にAssumeRoleでロール引き受け<br>
+                            3. S3にアクセス
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🔄</div>
+                        <h4>クロスアカウントアクセス</h4>
+                        <div class="use-case-description">
+                            <strong>シナリオ：</strong><br>
+                            開発アカウントから本番アカウントのリソースにアクセスしたい。<br><br>
+                            
+                            <div class="use-case-roles">
+                                <strong>必要な権限：</strong><br>
+                                1️⃣ <strong>開発者（開発アカウント）に</strong><br>
+                                • sts:AssumeRole（本番ロールを引き受ける）<br><br>
+                                
+                                2️⃣ <strong>本番ロール（本番アカウント）の信頼ポリシーに</strong><br>
+                                • 開発アカウントからのAssumeRoleを許可<br><br>
+                                
+                                3️⃣ <strong>本番ロールの権限ポリシーに</strong><br>
+                                • 必要なリソースへのアクセス権限
+                            </div>
+                            
+                            <strong>動作の流れ：</strong><br>
+                            1. 開発者がAssumeRoleで本番ロールに切替<br>
+                            2. 一時認証情報取得<br>
+                            3. 本番環境のリソースにアクセス
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🚀</div>
+                        <h4>EC2インスタンスプロファイル</h4>
+                        <div class="use-case-description">
+                            <strong>シナリオ：</strong><br>
+                            EC2インスタンスからS3バケットにアクセスさせたい。<br><br>
+                            
+                            <div class="use-case-roles">
+                                <strong>必要な権限：</strong><br>
+                                1️⃣ <strong>管理者に</strong><br>
+                                • ec2:RunInstances（EC2起動権限）<br>
+                                • iam:PassRole（ロールを渡す権限）<br><br>
+                                
+                                2️⃣ <strong>EC2ロールの信頼ポリシーに</strong><br>
+                                • sts:AssumeRole（EC2用）<br><br>
+                                
+                                3️⃣ <strong>EC2ロールの権限ポリシーに</strong><br>
+                                • s3:PutObject（S3への書き込み）
+                            </div>
+                            
+                            <strong>動作の流れ：</strong><br>
+                            1. 管理者がPassRoleでロールを指定してEC2起動<br>
+                            2. EC2が自動的にAssumeRoleでロール引き受け<br>
+                            3. アプリケーションがS3にアクセス
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🔧</div>
+                        <h4>CodePipelineでのデプロイ</h4>
+                        <div class="use-case-description">
+                            <strong>シナリオ：</strong><br>
+                            CI/CDパイプラインで自動デプロイを実行したい。<br><br>
+                            
+                            <div class="use-case-roles">
+                                <strong>必要な権限：</strong><br>
+                                1️⃣ <strong>開発者に</strong><br>
+                                • codepipeline:CreatePipeline<br>
+                                • iam:PassRole（パイプラインにロール渡す）<br><br>
+                                
+                                2️⃣ <strong>パイプラインロールの信頼ポリシーに</strong><br>
+                                • sts:AssumeRole（CodePipeline用）<br><br>
+                                
+                                3️⃣ <strong>パイプラインロールの権限ポリシーに</strong><br>
+                                • codebuild:StartBuild<br>
+                                • cloudformation:CreateStack
+                            </div>
+                            
+                            <strong>動作の流れ：</strong><br>
+                            1. 開発者がPassRoleでパイプライン作成<br>
+                            2. パイプライン実行時にAssumeRole<br>
+                            3. デプロイ処理を実行
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ベストプラクティス -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>ベストプラクティス＆セキュリティのコツ</span>
+                </div>
+                <div class="tip-content">
+                    <strong>1. PassRoleには必ず条件を付ける：</strong><br>
+                    「iam:PassedToService」条件を使って、特定のサービスにのみロールを渡せるように制限しましょう。<br>
+                    例：Lambda専用ロールはLambdaにしか渡せないようにする。<br><br>
+                    
+                    <strong>2. 最小権限の原則を守る：</strong><br>
+                    • PassRoleは必要なロールだけに限定<br>
+                    • ロールの権限も必要最小限に<br>
+                    • ワイルドカード（*）の使用は避ける<br><br>
+                    
+                    <strong>3. 信頼ポリシーを適切に設定：</strong><br>
+                    AssumeRoleを許可する対象を明確に指定。誰でも引き受けられるロールは作らない。<br><br>
+                    
+                    <strong>4. ロールの命名規則を統一：</strong><br>
+                    • サービス名-環境-用途の形式がおすすめ<br>
+                    • 例：Lambda-Prod-S3Access、EC2-Dev-DynamoDBWrite<br><br>
+                    
+                    <strong>5. CloudTrailでログを監視：</strong><br>
+                    PassRoleとAssumeRoleは両方ともCloudTrailに記録されます。定期的に監査して、不正な使用がないか確認。<br><br>
+                    
+                    <strong>6. 外部IDを使用する（サードパーティアクセス時）：</strong><br>
+                    クロスアカウントでサードパーティサービスを使う場合は、外部ID（ExternalId）を必ず設定して、混乱した代理人問題を防ぐ。<br><br>
+                    
+                    <strong>7. ロールのセッション時間を適切に設定：</strong><br>
+                    長時間のセッションは避け、必要最小限の時間（デフォルト1時間）で設定。<br><br>
+                    
+                    <strong>8. タグ付けで管理を簡単に：</strong><br>
+                    ロールにタグを付けて、用途や所有者を明確に。コスト配分や監査にも役立ちます。
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 1100px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">🍽️ レストランの代理店長制度 = IAMロール</h3>
+                        <p style="font-size: 1.15em; line-height: 2;">
+                            PassRoleとAssumeRoleは全く違う概念！<br>
+                            <strong>許可を出すこと</strong>と<strong>実際にやること</strong>は別物です
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">📋</div>
+                            <strong style="font-size: 1.3em;">PassRole</strong><br><br>
+                            「この役職を使っていいよ」<br>と許可を出す権限<br><br>
+                            作成・設定時に必要
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">👤</div>
+                            <strong style="font-size: 1.3em;">AssumeRole</strong><br><br>
+                            実際にその役職になりきって<br>仕事をする行為<br><br>
+                            実行時に必要
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+                        <p style="font-size: 1.3em; line-height: 1.8;">
+                            <strong>🎯 覚えておくべき4つのポイント：</strong><br><br>
+                            
+                            1️⃣ <strong>PassRoleは「許可」、AssumeRoleは「実行」</strong><br>
+                            マネージャーが許可を出して、スタッフが実際に働く<br><br>
+                            
+                            2️⃣ <strong>PassRoleを持っていても、そのロールは使えない</strong><br>
+                            許可を出せるだけで、自分が代理店長になれるわけじゃない<br><br>
+                            
+                            3️⃣ <strong>AssumeRoleは一時的</strong><br>
+                            代理店長の権限は期限付き。元の権限は一時的に使えない<br><br>
+                            
+                            4️⃣ <strong>「Assume」=「引き受ける」という意味</strong><br>
+                            AssumeRoleは「役割を引き受ける」行為。責任と権限を正式に担うこと<br><br>
+                        </p>
+                    </div>
+                    
+                    <p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+                        <strong>「assume」=「引き受ける」</strong>という英語の意味を知れば、<br>
+                        AssumeRoleの概念がより深く理解できます！<br><br>
+                        この2つの違いを理解することで、<br>
+                        <strong>IAMロールのセキュリティ設計が劇的に向上</strong>します！<br>
+                        レストランのたとえを思い出して、適切に使い分けましょう🎉
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

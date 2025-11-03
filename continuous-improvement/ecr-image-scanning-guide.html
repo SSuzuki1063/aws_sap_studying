@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS ECR イメージスキャン完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #43e97b 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔍';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
+            border-radius: 15px;
+            border-left: 6px solid #f5576c;
+        }
+        
+        .intro h2 {
+            color: #be123c;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #881337;
+            line-height: 1.8;
+        }
+        
+        .comparison-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 50px 0;
+        }
+        
+        .scan-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .scan-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        
+        .basic-scan {
+            border-top: 8px solid #3b82f6;
+            background: linear-gradient(to bottom, #dbeafe 0%, white 100%);
+        }
+        
+        .enhanced-scan {
+            border-top: 8px solid #10b981;
+            background: linear-gradient(to bottom, #d1fae5 0%, white 100%);
+        }
+        
+        .card-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .basic-scan .card-title {
+            color: #1e40af;
+        }
+        
+        .enhanced-scan .card-title {
+            color: #065f46;
+        }
+        
+        .card-subtitle {
+            text-align: center;
+            font-size: 1.1em;
+            color: #64748b;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .feature-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+        
+        .basic-scan .feature-box {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .enhanced-scan .feature-box {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .feature-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .basic-scan .feature-title {
+            color: #1e40af;
+        }
+        
+        .enhanced-scan .feature-title {
+            color: #065f46;
+        }
+        
+        .feature-content {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .price-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+        
+        .badge-free {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .badge-paid {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .analogy-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .analogy-title {
+            color: #92400e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card h3 {
+            color: #92400e;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .analogy-description {
+            background: #fffbeb;
+            padding: 20px;
+            border-radius: 10px;
+            color: #78350f;
+            line-height: 1.8;
+            margin: 15px 0;
+        }
+        
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .check {
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .cross {
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .visual-flow {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .flow-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .flow-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            gap: 30px;
+        }
+        
+        .flow-column {
+            flex: 1;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .flow-column-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .basic-flow .flow-column-title {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .enhanced-flow .flow-column-title {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .flow-step {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid;
+            position: relative;
+        }
+        
+        .basic-flow .flow-step {
+            border-color: #3b82f6;
+        }
+        
+        .enhanced-flow .flow-step {
+            border-color: #10b981;
+        }
+        
+        .flow-step-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 35px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .flow-step-title {
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .flow-step-desc {
+            color: #475569;
+            line-height: 1.6;
+            margin-left: 45px;
+        }
+        
+        .flow-arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #94a3b8;
+            margin: 10px 0;
+        }
+        
+        .use-case-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .use-case-title {
+            color: #0c4a6e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .use-case-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(2, 132, 199, 0.3);
+        }
+        
+        .use-case-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .use-case-card h4 {
+            color: #0c4a6e;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .use-case-description {
+            color: #475569;
+            line-height: 1.7;
+            margin: 15px 0;
+        }
+        
+        .tip-box {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border-left: 6px solid #7c3aed;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #5b21b6;
+            line-height: 1.9;
+            font-size: 1.05em;
+        }
+        
+        .vulnerability-levels {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .vuln-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        .vuln-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .vuln-card {
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .vuln-critical {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-top: 5px solid #dc2626;
+        }
+        
+        .vuln-high {
+            background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+            border-top: 5px solid #ea580c;
+        }
+        
+        .vuln-medium {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-top: 5px solid #f59e0b;
+        }
+        
+        .vuln-low {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-top: 5px solid #3b82f6;
+        }
+        
+        .vuln-score {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        
+        .vuln-critical .vuln-score { color: #dc2626; }
+        .vuln-high .vuln-score { color: #ea580c; }
+        .vuln-medium .vuln-score { color: #f59e0b; }
+        .vuln-low .vuln-score { color: #3b82f6; }
+        
+        .vuln-label {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 1024px) {
+            .comparison-section,
+            .analogy-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-container {
+                flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            table {
+                font-size: 0.9em;
+            }
+            
+            th, td {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 AWS ECR イメージスキャン</h1>
+            <p>基本スキャン vs 拡張スキャン - どちらを選ぶべき?</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>🏥 健康診断で例えると超わかりやすい!</h2>
+                <p class="intro-text">
+                    <strong>ECRイメージスキャン = Dockerイメージの「健康診断」</strong><br><br>
+                    コンテナイメージに潜む脆弱性を見つけ出すセキュリティ機能です。<br>
+                    AWSは2つのスキャン方法を提供しています。<br><br>
+                    <strong>基本スキャン</strong>:年1回の簡易健康診断 🩺<br>
+                    <strong>拡張スキャン</strong>:24時間体制の健康モニタリング 🏥<br><br>
+                    どちらがあなたのプロジェクトに最適か、一緒に見ていきましょう!
+                </p>
+            </div>
+            
+            <!-- スキャン比較カード -->
+            <div class="comparison-section">
+                <div class="scan-card basic-scan">
+                    <div class="card-icon">🩺</div>
+                    <div class="card-title">基本スキャン</div>
+                    <div class="card-subtitle">Basic Scanning (Clair)</div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🎯</span>
+                            <span>仕組み</span>
+                        </div>
+                        <div class="feature-content">
+                            オープンソースのClairエンジンを使用。プッシュ時またはオンデマンドでイメージをスキャンします。
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>📋</span>
+                            <span>スキャン対象</span>
+                        </div>
+                        <div class="feature-content">
+                            • OSパッケージの脆弱性のみ<br>
+                            • CVEデータベースと照合<br>
+                            • Linux系OSパッケージが主な対象
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>⏰</span>
+                            <span>スキャンタイミング</span>
+                        </div>
+                        <div class="feature-content">
+                            • イメージプッシュ時に自動実行<br>
+                            • または手動でオンデマンド実行<br>
+                            • 1回限りのスキャン
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>✨</span>
+                            <span>メリット</span>
+                        </div>
+                        <div class="feature-content">
+                            • 完全無料!<br>
+                            • 設定が簡単<br>
+                            • 軽量で高速<br>
+                            • 基本的な脆弱性検出には十分
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <span class="price-badge badge-free">💰 完全無料</span>
+                    </div>
+                </div>
+                
+                <div class="scan-card enhanced-scan">
+                    <div class="card-icon">🏥</div>
+                    <div class="card-title">拡張スキャン</div>
+                    <div class="card-subtitle">Enhanced Scanning (Amazon Inspector)</div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>🎯</span>
+                            <span>仕組み</span>
+                        </div>
+                        <div class="feature-content">
+                            Amazon Inspectorと統合。AIと機械学習を活用した高度なスキャンエンジン。
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>📋</span>
+                            <span>スキャン対象</span>
+                        </div>
+                        <div class="feature-content">
+                            • OSパッケージの脆弱性<br>
+                            • プログラミング言語パッケージ<br>
+                            &nbsp;&nbsp;(Python, Node.js, Java, Go, Ruby, .NET等)<br>
+                            • アプリケーション依存関係の脆弱性
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>⏰</span>
+                            <span>スキャンタイミング</span>
+                        </div>
+                        <div class="feature-content">
+                            • 継続的な自動スキャン<br>
+                            • 新しい脆弱性が発見されたら自動再スキャン<br>
+                            • 24時間体制の監視
+                        </div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">
+                            <span>✨</span>
+                            <span>メリット</span>
+                        </div>
+                        <div class="feature-content">
+                            • より広範囲な脆弱性検出<br>
+                            • CVSSスコアリング対応<br>
+                            • 継続的な監視<br>
+                            • 詳細なレポートと修復ガイダンス<br>
+                            • Security Hubとの統合
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <span class="price-badge badge-paid">💰 有料(従量課金)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- たとえ話セクション -->
+            <div class="analogy-section">
+                <h2 class="analogy-title">🏥 健康診断のたとえ話</h2>
+                
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <div class="analogy-icon">🩺</div>
+                        <h3>基本スキャン<br>「年1回の健康診断」</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>📍 シチュエーション:</strong><br>
+                            会社の定期健康診断。身長、体重、血圧、基本的な血液検査だけ。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>🔍 何をチェック?</strong><br>
+                            • 基本的な健康状態(OSパッケージ)<br>
+                            • 明らかな問題の発見<br>
+                            • 一般的な病気の有無
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>⏰ いつチェック?</strong><br>
+                            年1回、または体調不良を感じた時だけ病院へ。<strong>普段は監視なし。</strong>
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💰 コスト:</strong><br>
+                            会社負担で無料!でも検査項目は限定的。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>🎯 こんな人向け:</strong><br>
+                            • 健康には自信がある<br>
+                            • 基本的なチェックで十分<br>
+                            • コストを抑えたい
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-icon">🏥</div>
+                        <h3>拡張スキャン<br>「24時間健康モニタリング」</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>📍 シチュエーション:</strong><br>
+                            スマートウォッチで心拍数、睡眠、運動量を24時間監視。異常があればすぐアラート。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>🔍 何をチェック?</strong><br>
+                            • 基本的な健康状態(OSパッケージ)<br>
+                            • 食生活・運動習慣(言語パッケージ)<br>
+                            • ストレスレベル(依存関係)<br>
+                            • 睡眠の質(アプリケーション層)
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>⏰ いつチェック?</strong><br>
+                            <strong>24時間365日監視。</strong>新しい病気が発見されたら、過去のデータも再チェック!
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💰 コスト:</strong><br>
+                            月額料金がかかるけど、健康リスクを早期発見できる安心感。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>🎯 こんな人向け:</strong><br>
+                            • 健康管理を徹底したい<br>
+                            • 早期発見・早期対応が重要<br>
+                            • 包括的な健康情報が欲しい
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 脆弱性レベル -->
+            <div class="vulnerability-levels">
+                <h2 class="vuln-title">⚠️ 脆弱性の深刻度レベル (CVSS)</h2>
+                
+                <div class="vuln-grid">
+                    <div class="vuln-card vuln-critical">
+                        <div class="vuln-label">CRITICAL</div>
+                        <div class="vuln-score">9.0-10.0</div>
+                        <div style="color: #991b1b; font-weight: 600;">
+                            緊急対応必須!<br>
+                            今すぐ修正
+                        </div>
+                    </div>
+                    
+                    <div class="vuln-card vuln-high">
+                        <div class="vuln-label">HIGH</div>
+                        <div class="vuln-score">7.0-8.9</div>
+                        <div style="color: #9a3412; font-weight: 600;">
+                            高リスク<br>
+                            優先的に対応
+                        </div>
+                    </div>
+                    
+                    <div class="vuln-card vuln-medium">
+                        <div class="vuln-label">MEDIUM</div>
+                        <div class="vuln-score">4.0-6.9</div>
+                        <div style="color: #92400e; font-weight: 600;">
+                            中リスク<br>
+                            計画的に対応
+                        </div>
+                    </div>
+                    
+                    <div class="vuln-card vuln-low">
+                        <div class="vuln-label">LOW</div>
+                        <div class="vuln-score">0.1-3.9</div>
+                        <div style="color: #1e40af; font-weight: 600;">
+                            低リスク<br>
+                            監視継続
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px; padding: 25px; background: #f8fafc; border-radius: 12px; border-left: 4px solid #7c3aed;">
+                    <strong style="color: #5b21b6; font-size: 1.1em;">💡 拡張スキャンの強み:</strong><br>
+                    <span style="color: #475569;">
+                    拡張スキャンでは、各脆弱性にCVSSスコア(0-10)が付与され、リスクの優先順位付けが簡単!基本スキャンでは単に「脆弱性あり/なし」の判定のみ。
+                    </span>
+                </div>
+            </div>
+            
+            <!-- フロー図 -->
+            <div class="visual-flow">
+                <h2 class="flow-title">🔄 スキャンの流れを比較</h2>
+                
+                <div class="flow-container">
+                    <div class="flow-column basic-flow">
+                        <div class="flow-column-title">基本スキャンの流れ</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">1</span>
+                                イメージプッシュ
+                            </div>
+                            <div class="flow-step-desc">
+                                Dockerイメージを<br>
+                                ECRにプッシュ
+                            </div>
+                        </div>
+                        
+                        <div class="flow-arrow">⬇️</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">2</span>
+                                スキャン実行
+                            </div>
+                            <div class="flow-step-desc">
+                                Clairエンジンが<br>
+                                OSパッケージをスキャン<br>
+                                (1回限り)
+                            </div>
+                        </div>
+                        
+                        <div class="flow-arrow">⬇️</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">3</span>
+                                結果確認
+                            </div>
+                            <div class="flow-step-desc">
+                                CVEリストで<br>
+                                脆弱性を確認<br>
+                                (基本情報のみ)
+                            </div>
+                        </div>
+                        
+                        <div class="flow-arrow">⬇️</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">4</span>
+                                完了
+                            </div>
+                            <div class="flow-step-desc">
+                                次のプッシュまで<br>
+                                監視なし<br>
+                                新しい脆弱性は検出されない
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-column enhanced-flow">
+                        <div class="flow-column-title">拡張スキャンの流れ</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">1</span>
+                                イメージプッシュ
+                            </div>
+                            <div class="flow-step-desc">
+                                Dockerイメージを<br>
+                                ECRにプッシュ
+                            </div>
+                        </div>
+                        
+                        <div class="flow-arrow">⬇️</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">2</span>
+                                初回スキャン
+                            </div>
+                            <div class="flow-step-desc">
+                                Amazon Inspectorが<br>
+                                OS + 言語パッケージを<br>
+                                包括的にスキャン
+                            </div>
+                        </div>
+                        
+                        <div class="flow-arrow">⬇️</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">3</span>
+                                継続監視
+                            </div>
+                            <div class="flow-step-desc">
+                                <strong>24時間監視継続!</strong><br>
+                                新しい脆弱性が発見されたら<br>
+                                自動で再スキャン
+                            </div>
+                        </div>
+                        
+                        <div class="flow-arrow">⬇️</div>
+                        
+                        <div class="flow-step">
+                            <div class="flow-step-title">
+                                <span class="flow-step-number">4</span>
+                                詳細レポート
+                            </div>
+                            <div class="flow-step-desc">
+                                CVSSスコア付き<br>
+                                修復方法の提案<br>
+                                Security Hub連携<br>
+                                EventBridge通知
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較表 -->
+            <div class="comparison-table">
+                <h2 class="table-title">📊 詳細比較表</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>基本スキャン</th>
+                            <th>拡張スキャン</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>スキャンエンジン</strong></td>
+                            <td>Clair (オープンソース)</td>
+                            <td>Amazon Inspector</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OSパッケージ</strong></td>
+                            <td><span class="check">✅ 対応</span></td>
+                            <td><span class="check">✅ 対応</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>言語パッケージ</strong></td>
+                            <td><span class="cross">❌ 非対応</span></td>
+                            <td><span class="check">✅ 対応(Python, Node.js, Java等)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>スキャン頻度</strong></td>
+                            <td>プッシュ時 or オンデマンド</td>
+                            <td>継続的(24/7)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>新規脆弱性検出</strong></td>
+                            <td><span class="cross">❌ 再スキャン必要</span></td>
+                            <td><span class="check">✅ 自動再スキャン</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>CVSSスコアリング</strong></td>
+                            <td><span class="cross">❌ なし</span></td>
+                            <td><span class="check">✅ あり(0-10)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>修復ガイダンス</strong></td>
+                            <td>基本的な情報のみ</td>
+                            <td>詳細な修復手順</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Security Hub統合</strong></td>
+                            <td><span class="cross">❌ 非対応</span></td>
+                            <td><span class="check">✅ 対応</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>EventBridge通知</strong></td>
+                            <td>基本的な通知</td>
+                            <td>詳細なイベント通知</td>
+                        </tr>
+                        <tr>
+                            <td><strong>料金</strong></td>
+                            <td><span class="check">✅ 完全無料</span></td>
+                            <td><span class="cross">⚠️ 有料(従量課金)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>推奨される用途</strong></td>
+                            <td>開発環境、個人プロジェクト</td>
+                            <td>本番環境、エンタープライズ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ユースケース -->
+            <div class="use-case-section">
+                <h3 class="use-case-title">💼 どちらを選ぶべき?シナリオ別ガイド</h3>
+                
+                <div class="use-case-grid">
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🩺</div>
+                        <h4>基本スキャンを選ぶべきケース</h4>
+                        <div class="use-case-description">
+                            <strong>✅ こんな状況ならコレ:</strong><br><br>
+                            • 個人プロジェクトや小規模開発<br>
+                            • 開発・検証環境のみ<br>
+                            • セキュリティ要件が比較的緩い<br>
+                            • コストを最小限に抑えたい<br>
+                            • OSレベルの脆弱性チェックで十分<br>
+                            • 定期的に手動でスキャンできる<br><br>
+                            <strong>💡 具体例:</strong><br>
+                            「趣味のWebアプリをコンテナ化。<br>
+                            基本的なセキュリティチェックができればOK」
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🏥</div>
+                        <h4>拡張スキャンを選ぶべきケース</h4>
+                        <div class="use-case-description">
+                            <strong>✅ こんな状況ならコレ:</strong><br><br>
+                            • 本番環境で稼働<br>
+                            • エンタープライズレベルのセキュリティ<br>
+                            • 顧客データを扱う<br>
+                            • コンプライアンス要件が厳しい<br>
+                            • Node.js、Python等の依存関係も監視<br>
+                            • ゼロデイ攻撃に備えたい<br>
+                            • Security Hubで一元管理<br><br>
+                            <strong>💡 具体例:</strong><br>
+                            「金融系SaaSサービス。常に最新の脆弱性情報でイメージを監視し、問題があれば即座に検知・対応したい」
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🎯</div>
+                        <h4>ハイブリッド戦略</h4>
+                        <div class="use-case-description">
+                            <strong>✅ 賢い組み合わせ方:</strong><br><br>
+                            <strong>開発環境:</strong><br>
+                            • 基本スキャンで初期チェック<br>
+                            • コストを抑えつつ基本的な問題を検出<br><br>
+                            <strong>ステージング環境:</strong><br>
+                            • 拡張スキャンでより詳細にチェック<br>
+                            • 本番投入前の最終確認<br><br>
+                            <strong>本番環境:</strong><br>
+                            • 拡張スキャンで24時間監視<br>
+                            • 最高レベルのセキュリティ保証<br><br>
+                            <strong>💡 メリット:</strong><br>
+                            コストと セキュリティのバランスを最適化!
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">📈</div>
+                        <h4>段階的な移行戦略</h4>
+                        <div class="use-case-description">
+                            <strong>✅ おすすめの導入ステップ:</strong><br><br>
+                            <strong>フェーズ1: 基本スキャンで開始</strong><br>
+                            • まずは無料で始めてみる<br>
+                            • スキャン結果の確認フローを確立<br><br>
+                            <strong>フェーズ2: 一部で拡張スキャンを試す</strong><br>
+                            • 重要なサービスから拡張に移行<br>
+                            • コストと効果を測定<br><br>
+                            <strong>フェーズ3: 本番環境全体に展開</strong><br>
+                            • ROIが確認できたら全面展開<br>
+                            • Security Hub連携で自動化<br><br>
+                            <strong>💡 ポイント:</strong><br>
+                            いきなり全部じゃなくて、段階的に!
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>選択のゴールデンルール</span>
+                </div>
+                <div class="tip-content">
+                    <strong>1. まずは無料の基本スキャンから始めよう:</strong><br>
+                    ECRを使い始めたら、まず基本スキャンを有効化。リスクゼロで始められる!<br><br>
+                    
+                    <strong>2. 本番環境には拡張スキャン一択:</strong><br>
+                    顧客データを扱う本番環境では、拡張スキャンの継続監視が必須。<br>
+                    セキュリティインシデントのコストと比較すれば、スキャン費用は安い投資。<br><br>
+                    
+                    <strong>3. 言語パッケージを使ってる?→拡張スキャン:</strong><br>
+                    Node.js、Python、Javaなどの依存関係が多いアプリケーションは、基本スキャンでは不十分。<br>
+                    npm、pip、mavenパッケージの脆弱性も検出できる拡張スキャンを選ぼう。<br><br>
+                    
+                    <strong>4. コンプライアンス要件を確認:</strong><br>
+                    • PCI DSS、HIPAA等の規制対象?→拡張スキャン必須<br>
+                    • 継続的な脆弱性管理が求められる?→拡張スキャン<br>
+                    • 監査証跡が必要?→拡張スキャン(Security Hub連携)<br><br>
+                    
+                    <strong>5. コストの考え方:</strong><br>
+                    拡張スキャンの料金は「イメージ数 × スキャン頻度」で決まる。<br>
+                    • 少数のイメージ→影響小<br>
+                    • 大量のイメージ→コストを事前計算<br>
+                    • 使わないイメージは定期的に削除してコスト削減!<br><br>
+                    
+                    <strong>6. 通知設定を忘れずに:</strong><br>
+                    スキャンしても結果を見なければ意味がない!<br>
+                    • EventBridgeでSlack/Teams通知<br>
+                    • Security Hubのダッシュボードで一元管理<br>
+                    • CRITICAL/HIGHは即座にアラート<br><br>
+                    
+                    <strong>7. 定期的な見直しを:</strong><br>
+                    3ヶ月ごとにスキャン結果とコストを見直し。<br>
+                    プロジェクトの成長に合わせて、基本→拡張への移行を検討しよう!
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 1100px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">🏥 健康診断 = ECRスキャン</h3>
+                        <p style="font-size: 1.15em; line-height: 2;">
+                            コンテナイメージのセキュリティは、人間の健康管理と同じ。<br>
+                            基本的なチェックから始めて、必要に応じて詳細な監視へ!
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🩺</div>
+                            <strong style="font-size: 1.3em;">基本スキャン</strong><br><br>
+                            年1回の健康診断<br>
+                            無料で基本的な<br>
+                            チェックができる
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🏥</div>
+                            <strong style="font-size: 1.3em;">拡張スキャン</strong><br><br>
+                            24時間健康監視<br>
+                            継続的に詳細な<br>
+                            チェックで安心
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+                        <p style="font-size: 1.3em; line-height: 1.8;">
+                            <strong>🎯 決定チャート:</strong><br><br>
+                            <span style="font-size: 1.1em;">
+                            <strong>本番環境で顧客データを扱う?</strong><br>
+                            → YES なら <span style="background: #10b981; padding: 5px 15px; border-radius: 20px;">拡張スキャン</span> 一択!<br><br>
+                            <strong>開発・テスト環境だけ?</strong><br>
+                            → <span style="background: #3b82f6; padding: 5px 15px; border-radius: 20px;">基本スキャン</span> でOK!<br><br>
+                            <strong>Node.js/Python/Java使ってる?</strong><br>
+                            → <span style="background: #10b981; padding: 5px 15px; border-radius: 20px;">拡張スキャン</span> で依存関係も監視!<br><br>
+                            <strong>迷ったら?</strong><br>
+                            → まず <span style="background: #3b82f6; padding: 5px 15px; border-radius: 20px;">基本スキャン</span> で始めて、<br>
+                            成長に合わせて <span style="background: #10b981; padding: 5px 15px; border-radius: 20px;">拡張スキャン</span> へ!
+                            </span>
+                        </p>
+                    </div>
+                    
+                    <p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+                        <strong>セキュリティは投資です!</strong><br>
+                        適切なスキャン方法を選んで、安全なコンテナ運用を実現しましょう!<br>
+                        まずは無料の基本スキャンから始めて、<br>
+                        プロジェクトの成長とともにステップアップ!🎉
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
