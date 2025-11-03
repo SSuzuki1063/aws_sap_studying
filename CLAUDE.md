@@ -73,6 +73,7 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `main.js` - Additional utility functions (verify usage before modifying)
 - `add_breadcrumbs.py` - Utility script to add breadcrumb navigation to all HTML files
 - `remove_breadcrumbs.py` - Utility script to remove breadcrumb navigation from HTML files
+- `add_toc.py` - Utility script to add page-internal table of contents to all HTML files
 - `integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files (see Automation Workflows section)
 
 ## Architecture
@@ -168,6 +169,18 @@ const searchData = [
 - Breadcrumbs show: Home > Major Category > Sub Category
 - Link back to index.html for easy navigation
 - Consistent styling with AWS brand colors
+
+#### Page-Internal Table of Contents (TOC)
+- All learning resource pages include a collapsible table of contents
+- Automatically generated from h2 and h3 heading tags
+- Features:
+  - Expandable/collapsible with toggle button
+  - Smooth scroll navigation to heading anchors
+  - Automatic ID generation for headings
+  - Mobile-responsive design
+  - Blue gradient styling matching AWS brand
+  - Positioned after breadcrumb navigation or first h1 tag
+- Implementation: Inline CSS and JavaScript for offline capability
 
 #### Quiz System
 - Interactive quiz application (`quiz.html`, `quiz-app.js`, `quiz-data-extended.js`)
@@ -309,6 +322,29 @@ The breadcrumb scripts automatically:
 - Map to appropriate major/minor category names
 - Insert breadcrumb navigation HTML at the top of each file
 - Maintain consistent styling across all pages
+
+#### Page-Internal Table of Contents (TOC) Management
+Add or update page-internal table of contents across all HTML files:
+
+```bash
+# Preview changes without applying (recommended first step)
+python3 add_toc.py --dry-run
+
+# Add/update TOC in all HTML files
+python3 add_toc.py
+
+# Use custom directory
+python3 add_toc.py --dir /path/to/directory
+```
+
+The TOC script automatically:
+- Extracts h2 and h3 headings from each HTML file
+- Generates unique IDs for headings (preserves existing IDs if present)
+- Creates collapsible table of contents with smooth scroll navigation
+- Inserts TOC after breadcrumb navigation or first h1 tag
+- Skips files with fewer than 2 headings
+- Excludes index.html, table-of-contents.html, quiz.html, and home.html
+- Updates existing TOC if script is run again (idempotent operation)
 
 #### Bulk HTML Integration
 The `integrate_new_html.py` script provides powerful automation:
