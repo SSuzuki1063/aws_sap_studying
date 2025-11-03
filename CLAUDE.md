@@ -175,12 +175,19 @@ const searchData = [
 - Automatically generated from h2 and h3 heading tags
 - Features:
   - Expandable/collapsible with toggle button
+  - **Default state: collapsed (folded)** - Users must click to expand
+  - **Right-aligned positioning** on desktop (max-width: 400px)
+  - Full-width display on mobile devices (screen width < 768px)
   - Smooth scroll navigation to heading anchors
   - Automatic ID generation for headings
   - Mobile-responsive design
   - Blue gradient styling matching AWS brand
   - Positioned after breadcrumb navigation or first h1 tag
 - Implementation: Inline CSS and JavaScript for offline capability
+- UI Controls:
+  - Toggle button shows `▶ 展開する` when collapsed
+  - Toggle button shows `▼ 折りたたむ` when expanded
+  - Smooth CSS transitions for expand/collapse animations
 
 #### Quiz System
 - Interactive quiz application (`quiz.html`, `quiz-app.js`, `quiz-data-extended.js`)
