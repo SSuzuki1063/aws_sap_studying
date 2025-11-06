@@ -18,6 +18,18 @@ The repository organizes content into 9 main categories:
 | `analytics-bigdata/` | 分析・運用・クイズ | Analytics, Operational Excellence |
 | `organizational-complexity/` | 組織・マルチアカウント | Multi-Account Strategy, Resource Sharing |
 
+### Additional Physical Directories
+
+**Note:** The repository has some additional physical directories that serve as staging or legacy locations. Files in these directories are logically categorized into the 9 main categories above when referenced in `index.html`:
+
+| Directory | Purpose | Status |
+|-----------|---------|--------|
+| `continuous-improvement/` | Legacy directory for operational excellence resources | Being phased out - files distributed to main categories |
+| `cost-control/` | Cost optimization resources | Small collection (2 files) - consider merging with main categories |
+| `new-solutions/` | Staging area for newly added resources | Files are logically assigned to main categories in navigation |
+
+**Important:** When adding new resources, prefer using the 9 main category directories. The `new-solutions/` directory can be used as a temporary staging area, but files should ultimately be moved to appropriate main categories or at least properly categorized in `index.html` navigation.
+
 ## AWS Service to Category Mapping
 
 This mapping is used by `integrate_new_html.py` for automatic categorization:
