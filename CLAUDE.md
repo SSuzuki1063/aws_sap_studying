@@ -457,8 +457,6 @@ python3 integrate_new_html.py --source custom_directory/
 - All content is in Japanese (日本語)
 - File paths and code use English
 - Comments and explanations in learning materials are in Japanese
-- 機能追加・機能変更・ソースコード変更といったあらゆる変更はgitにコミットし、リモートリポジトリに反映させるようにしてください。
-- webサイトの機能変更は、静的サイトの要素のみで機能変更を完結させること
 
 ## Design Constraints & Philosophy
 
@@ -484,4 +482,3 @@ All resources must work without internet:
 3. **Fast loading**: No build step, no bundling, instant page loads
 4. **Educational clarity**: Students can view source and learn web development basics
 5. **Maximum portability**: Works on any web server, USB drive, or local filesystem
-- 検索機能を新たに実装したことを追記してください
