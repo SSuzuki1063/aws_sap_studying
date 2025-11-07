@@ -12,10 +12,10 @@ This is an AWS SAP (Solutions Architect Professional) exam study resource reposi
 ```bash
 # 1. Place HTML files in new_html/ directory
 # 2. Preview integration
-python3 integrate_new_html.py --dry-run
+python3 scripts/html_management/integrate_new_html.py --dry-run
 
 # 3. Execute integration (moves files, updates index.html automatically)
-python3 integrate_new_html.py
+python3 scripts/html_management/integrate_new_html.py
 
 # 4. Test locally
 python3 server.py
@@ -64,13 +64,14 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `table-of-contents.html` - Comprehensive table of contents for all resources (static reference page)
 - `quiz.html` - Interactive quiz application for exam preparation
 - `quiz-app.js` - Quiz application logic
-- `quiz-data-extended.js` - Quiz question database (100+ questions across 9 categories)
+- `quiz-data-extended.js` - Quiz question database (194 questions across 13 categories)
 - `server.py` - Development server with CORS support
 - `main.js` - Additional utility functions (verify usage before modifying)
-- `add_breadcrumbs.py` - Utility script to add breadcrumb navigation to all HTML files
-- `remove_breadcrumbs.py` - Utility script to remove breadcrumb navigation from HTML files
-- `add_toc.py` - Utility script to add page-internal table of contents to all HTML files
-- `integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files (see Automation Workflows section)
+- `scripts/html_management/add_breadcrumbs.py` - Utility script to add breadcrumb navigation to all HTML files
+- `scripts/html_management/remove_breadcrumbs.py` - Utility script to remove breadcrumb navigation from HTML files
+- `scripts/html_management/add_toc.py` - Utility script to add page-internal table of contents to all HTML files
+- `scripts/html_management/integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files (see Automation Workflows section)
+- `scripts/quiz_management/analyze_quiz.py` - Quiz statistics and analysis tool
 
 ## Architecture
 
@@ -137,7 +138,7 @@ const searchData = [
 ];
 ```
 
-**Important**: When adding new resources via `integrate_new_html.py` or manually, the `searchData` array in `index.html` must be updated to include the new resource. The script does NOT automatically update the search data.
+**Important**: When adding new resources via `scripts/html_management/integrate_new_html.py` or manually, the `searchData` array in `index.html` must be updated to include the new resource. The script does NOT automatically update the search data.
 
 **Search Implementation:**
 - Location: Positioned between statistics section and category navigation
@@ -246,16 +247,16 @@ python3 server.py
 **IMPORTANT**: There are two workflows for adding new resources - automated (recommended) and manual:
 
 #### Option 1: Automated Integration (Recommended)
-Use the `integrate_new_html.py` script to automatically categorize and integrate new HTML files:
+Use the `scripts/html_management/integrate_new_html.py` script to automatically categorize and integrate new HTML files:
 
 1. Place new HTML files in `new_html/` directory
 2. Run integration script:
    ```bash
    # Dry run to preview changes
-   python3 integrate_new_html.py --dry-run
+   python3 scripts/html_management/integrate_new_html.py --dry-run
 
    # Execute integration
-   python3 integrate_new_html.py
+   python3 scripts/html_management/integrate_new_html.py
    ```
 3. The script will:
    - Analyze HTML title and content to determine appropriate category
@@ -314,10 +315,10 @@ Add or remove breadcrumb navigation across all HTML files:
 
 ```bash
 # Add breadcrumbs to all HTML files
-python3 add_breadcrumbs.py
+python3 scripts/html_management/add_breadcrumbs.py
 
 # Remove breadcrumbs from all HTML files
-python3 remove_breadcrumbs.py
+python3 scripts/html_management/remove_breadcrumbs.py
 ```
 
 The breadcrumb scripts automatically:
@@ -331,13 +332,13 @@ Add or update page-internal table of contents across all HTML files:
 
 ```bash
 # Preview changes without applying (recommended first step)
-python3 add_toc.py --dry-run
+python3 scripts/html_management/add_toc.py --dry-run
 
 # Add/update TOC in all HTML files
-python3 add_toc.py
+python3 scripts/html_management/add_toc.py
 
 # Use custom directory
-python3 add_toc.py --dir /path/to/directory
+python3 scripts/html_management/add_toc.py --dir /path/to/directory
 ```
 
 The TOC script automatically:
@@ -350,17 +351,17 @@ The TOC script automatically:
 - Updates existing TOC if script is run again (idempotent operation)
 
 #### Bulk HTML Integration
-The `integrate_new_html.py` script provides powerful automation:
+The `scripts/html_management/integrate_new_html.py` script provides powerful automation:
 
 ```bash
 # Preview what would happen (no changes made)
-python3 integrate_new_html.py --dry-run
+python3 scripts/html_management/integrate_new_html.py --dry-run
 
 # Integrate files from new_html/ directory
-python3 integrate_new_html.py
+python3 scripts/html_management/integrate_new_html.py
 
 # Use custom source directory
-python3 integrate_new_html.py --source custom_directory/
+python3 scripts/html_management/integrate_new_html.py --source custom_directory/
 ```
 
 **Categorization Algorithm:**
@@ -381,7 +382,7 @@ python3 integrate_new_html.py --source custom_directory/
 ### File Organization
 - When reorganizing files, search `index.html` for all references (sidebar + search data)
 - Maintain logical grouping by AWS service domains
-- Remove `.html:Zone.Identifier` files that appear from Windows downloads (automated by `integrate_new_html.py`)
+- Remove `.html:Zone.Identifier` files that appear from Windows downloads (automated by `scripts/html_management/integrate_new_html.py`)
 - Some files may have duplicates across directories (e.g., `new-solutions/` and domain-specific folders)
 - Use `table-of-contents.html` as static reference - it's NOT automatically updated by scripts
 
