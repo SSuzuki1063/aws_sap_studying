@@ -537,6 +537,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "ARC（Application Recovery Controller）はアプリケーションの可用性を監視し、リージョン障害時に readiness check と routing control により、確実で制御されたフェイルオーバーを実現します。"
+            },
+            {
+                id: 11,
+                question: "CloudFront の Field-Level Encryption の用途は？",
+                options: [
+                    "エッジロケーションでHTTPS接続を終端",
+                    "特定のフィールド（クレジットカード番号等）をエッジで公開鍵暗号化し、オリジンまで暗号化状態を維持",
+                    "オブジェクト全体の圧縮",
+                    "キャッシュヒット率の向上"
+                ],
+                correct: 1,
+                explanation: "Field-Level Encryptionは、POSTリクエスト内の特定フィールドをCloudFrontエッジで暗号化し、アプリケーションまで暗号化状態を保持します。PCI-DSSなど厳格なコンプライアンス要件で、機密データへのアクセスを最小限の権限者に限定できます。"
+            },
+            {
+                id: 12,
+                question: "Route53 Traffic Flow の主な利点は？",
+                options: [
+                    "DNS クエリの高速化",
+                    "複雑なルーティングポリシー（地理的、レイテンシ、加重、フェイルオーバーの組み合わせ）をビジュアルエディタで簡単に構築",
+                    "ドメイン登録の自動化",
+                    "DNSSEC署名の自動設定"
+                ],
+                correct: 1,
+                explanation: "Traffic Flowは、地理的ルーティング、レイテンシベースルーティング、加重ルーティング、ヘルスチェックを組み合わせた複雑なトラフィック管理ポリシーをビジュアルエディタで作成し、複数のホストゾーンに適用できる機能です。"
+            },
+            {
+                id: 13,
+                question: "CloudFront の Lambda@Edge と CloudFront Functions の使い分けは？",
+                options: [
+                    "機能は同じで名称のみ異なる",
+                    "Lambda@Edge: 複雑な処理（外部API呼び出し、ボディ変更）可能、CloudFront Functions: 軽量・高速（ヘッダー操作、URL書き換え）特化",
+                    "Lambda@Edge は有料、CloudFront Functions は無料",
+                    "Lambda@Edge は本番のみ、CloudFront Functions は開発のみ"
+                ],
+                correct: 1,
+                explanation: "Lambda@EdgeはNode.js/Pythonでより複雑な処理（外部API呼び出し、リクエスト/レスポンスボディ変更、1-5秒の実行時間）が可能。CloudFront FunctionsはJavaScriptでサブミリ秒の超高速実行に特化し、軽量な操作（ヘッダー操作、URL書き換え、リクエスト認証）に最適で、コストも1/6です。"
+            },
+            {
+                id: 14,
+                question: "Route53 の Geoproximity Routing の主な機能は？",
+                options: [
+                    "ユーザーの国に基づいてルーティング",
+                    "ユーザーとリソース間の地理的距離に基づき、バイアス値で影響範囲を調整可能なルーティング",
+                    "最も近いリージョンに自動ルーティング",
+                    "レイテンシが最小のエンドポイントにルーティング"
+                ],
+                correct: 1,
+                explanation: "Geoproximity Routingは、ユーザーとリソース間の地理的距離に基づいてルーティングし、バイアス値（-99～+99）で特定リソースへのトラフィック量を調整できます。これによりリージョン間の負荷分散やトラフィックシフトを細かく制御できます。"
+            },
+            {
+                id: 15,
+                question: "CloudFront の Real-Time Logs の活用シナリオは？",
+                options: [
+                    "月次レポートの作成のみ",
+                    "Kinesis Data Streams経由でリアルタイムにログを送信し、セキュリティ監視、パフォーマンス分析、異常検知を実施",
+                    "ログのバックアップのみ",
+                    "コスト削減のためのログ圧縮"
+                ],
+                correct: 1,
+                explanation: "CloudFront Real-Time Logsは、リクエストログを数秒以内にKinesis Data Streamsに送信します。これをLambda、Kinesis Data Analytics、外部SIEM（Splunk、Datadog）と連携し、不正アクセス検知、DDoS攻撃の早期発見、キャッシュヒット率のリアルタイム監視、地域別パフォーマンス分析が可能です。"
             }
         ]
     },
@@ -663,6 +723,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "CloudFormationは宣言的でシンプルな設定に適し、CDKはプログラミング言語の特性（条件分岐、ループ、クラス継承）を活用した複雑なインフラストラクチャ定義に適しています。"
+            },
+            {
+                id: 11,
+                question: "AWS CodePipeline で複数環境（Dev、Staging、Prod）への段階的デプロイを実装するベストプラクティスは？",
+                options: [
+                    "1つのパイプラインですべての環境に同時デプロイ",
+                    "各ステージに承認アクション（Manual Approval）を挿入し、環境ごとにデプロイを制御",
+                    "環境ごとに独立したパイプラインを作成",
+                    "すべて手動でデプロイ"
+                ],
+                correct: 1,
+                explanation: "CodePipelineでは、各環境へのデプロイステージの間にManual Approval Actionを配置することで、前の環境でのテスト完了後に承認者がレビュー・承認してから次の環境へデプロイする段階的リリースを実装できます。これにより、本番環境への影響を最小化できます。"
+            },
+            {
+                id: 12,
+                question: "AWS SAM (Serverless Application Model) の主な利点は？",
+                options: [
+                    "EC2インスタンスの管理を簡素化",
+                    "Lambda、API Gateway、DynamoDB等のサーバーレスリソースをシンプルな構文で定義し、デプロイを自動化",
+                    "コンテナイメージのビルド専用",
+                    "RDSデータベースの管理専用"
+                ],
+                correct: 1,
+                explanation: "AWS SAMはCloudFormationの拡張で、Lambda関数、API Gateway、DynamoDBテーブル等のサーバーレスアプリケーションを簡潔なYAML/JSON構文で定義できます。sam deployコマンドで、関数のパッケージング、S3アップロード、CloudFormationスタック作成を自動実行します。"
+            },
+            {
+                id: 13,
+                question: "AWS CDK のコードから生成されるものは？",
+                options: [
+                    "直接AWSリソースが作成される",
+                    "CloudFormation テンプレートが生成され、それを使ってデプロイ",
+                    "Terraform設定ファイル",
+                    "Ansible Playbook"
+                ],
+                correct: 1,
+                explanation: "CDKはプログラミング言語でインフラを定義し、cdk synthコマンドでCloudFormationテンプレートを生成します。その後cdk deployでCloudFormationを使って実際のリソースをデプロイします。これによりIDEの補完機能、型チェック、再利用可能なコンポーネント（Construct）が活用できます。"
+            },
+            {
+                id: 14,
+                question: "CodeDeploy の In-place デプロイと Blue/Green デプロイの違いは？",
+                options: [
+                    "機能は同じで名称のみ異なる",
+                    "In-place: 既存インスタンスにデプロイ、Blue/Green: 新インスタンスにデプロイ後トラフィック切替",
+                    "In-place は本番のみ、Blue/Green は開発のみ",
+                    "In-place の方が高速"
+                ],
+                correct: 1,
+                explanation: "In-placeデプロイは既存EC2インスタンスで旧バージョンを停止→新バージョンをデプロイするため短時間のダウンタイムが発生。Blue/Greenデプロイは新しいインスタンス群を構築し、ELBのトラフィックを切り替えることでゼロダウンタイムを実現し、問題時には即座にロールバック可能です。"
+            },
+            {
+                id: 15,
+                question: "EventBridge のイベントバスの活用シナリオは？",
+                options: [
+                    "HTTPリクエストのルーティングのみ",
+                    "AWSサービス、カスタムアプリ、SaaSからのイベントを受信し、複数ターゲットにルーティング",
+                    "ログの保存専用",
+                    "メトリクスの集計専用"
+                ],
+                correct: 1,
+                explanation: "EventBridgeは、EC2状態変化、S3バケットイベント、カスタムアプリケーションイベント、SaaSパートナーからのイベントを受信し、ルールに基づいて20以上のAWSサービスや外部HTTPエンドポイントにルーティングします。イベント駆動アーキテクチャの中核となるサービスです。"
             }
         ]
     },
@@ -1042,6 +1162,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Cost Explorer API を Lambda で定期実行し、コスト異常検出、予算超過アラート、部門別コスト分析レポート自動生成により、プロアクティブなコスト管理を実現できます。"
+            },
+            {
+                id: 11,
+                question: "Savings Plans と Reserved Instances の使い分けは？",
+                options: [
+                    "機能は同じで名称のみ異なる",
+                    "Savings Plans: 柔軟性高く複数サービス対応、RI: 特定インスタンスタイプに固定で最大割引率",
+                    "Savings Plans の方が常に割引率が高い",
+                    "小規模はSavings Plans、大規模はRI"
+                ],
+                correct: 1,
+                explanation: "Savings Plansは1年/3年のコミットメントで、EC2、Lambda、Fargateをまたいで柔軟に適用可能（最大72%割引）。Reserved Instancesは特定のインスタンスタイプ・リージョン・OSに固定されますが、最大75%の割引率を実現できます。ワークロードの予測可能性と柔軟性要件に応じて選択します。"
+            },
+            {
+                id: 12,
+                question: "AWS Compute Optimizer の推奨事項の実装ベストプラクティスは？",
+                options: [
+                    "すべての推奨を即座に適用",
+                    "推奨事項を評価し、テスト環境で検証後、段階的に本番環境に適用",
+                    "推奨事項を無視",
+                    "手動で判断せずに完全自動化"
+                ],
+                correct: 1,
+                explanation: "Compute Optimizerは機械学習でEC2、EBS、Lambda、Auto Scaling、ECSの最適化推奨を提供しますが、アプリケーション固有の要件（バースト性能、メモリ要件、I/O特性）を考慮し、テスト環境で負荷テストを実施してから本番適用することが重要です。"
+            },
+            {
+                id: 13,
+                question: "S3 Intelligent-Tiering のアーカイブ設定オプションの活用方法は？",
+                options: [
+                    "すべてのオブジェクトを即座にアーカイブ",
+                    "90日以上/180日以上アクセスのないオブジェクトを自動的にArchive/Deep Archiveに移行して大幅コスト削減",
+                    "アーカイブ機能は使用不可",
+                    "手動でのみアーカイブ可能"
+                ],
+                correct: 1,
+                explanation: "S3 Intelligent-Tieringのオプション設定で、90日以上アクセスのないデータをArchive Access層（Glacier相当）、180日以上をDeep Archive Access層（Glacier Deep Archive相当）に自動移行できます。ストレージコストを最大95%削減しつつ、必要時には自動的に取得可能です。"
+            },
+            {
+                id: 14,
+                question: "AWS Cost Anomaly Detection の仕組みと利点は？",
+                options: [
+                    "手動でコスト異常を検出",
+                    "機械学習で通常の支出パターンを学習し、異常なコスト増加を自動検出してアラート通知",
+                    "固定の閾値のみ監視",
+                    "月次レポートのみ提供"
+                ],
+                correct: 1,
+                explanation: "Cost Anomaly Detectionは機械学習で過去の支出パターンを分析し、サービス、リンクアカウント、コスト配分タグ単位で異常なコスト増加を自動検出します。SNS/Slack/Emailで即座に通知し、予期せぬコスト急増（インスタンス誤起動、設定ミス等）を早期に発見できます。"
+            },
+            {
+                id: 15,
+                question: "マルチアカウント環境でのコスト配分タグ戦略は？",
+                options: [
+                    "タグは不要",
+                    "Environment、Project、CostCenter等の統一タグをOrganizationsレベルで強制し、詳細なコスト配分と部門別チャージバックを実現",
+                    "各アカウントで独自のタグを使用",
+                    "タグはレポート目的のみ"
+                ],
+                correct: 1,
+                explanation: "AWS OrganizationsのTag Policiesで組織全体に統一的なタグ付けルールを強制します。Environment（本番/開発）、Project（プロジェクト名）、CostCenter（コストセンター）、Owner（所有者）などの標準タグにより、Cost ExplorerやCURで詳細なコスト分析、部門別/プロジェクト別のコスト配分、チャージバックが可能になります。"
             }
         ]
     },
@@ -1487,6 +1667,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Concurrency Scaling は、読み取りクエリのキューイングが発生した際に、追加の Redshift クラスターを自動起動してクエリを分散処理し、一貫したパフォーマンスを維持します。"
+            },
+            {
+                id: 11,
+                question: "Amazon Aurora Global Database の主な用途は？",
+                options: [
+                    "単一リージョン内の高可用性のみ",
+                    "複数リージョン間でのデータレプリケーションと1秒未満のRPOによるディザスタリカバリ",
+                    "データベースのバックアップ専用",
+                    "読み取り性能の向上のみ"
+                ],
+                correct: 1,
+                explanation: "Aurora Global Databaseは、最大5つのセカンダリリージョンに1秒未満のレイテンシでレプリケーションし、リージョン障害時には1分未満でフェイルオーバー可能です。グローバルな読み取りスケーリングとディザスタリカバリを同時に実現します。"
+            },
+            {
+                id: 12,
+                question: "Amazon S3 Glacier Instant Retrieval の適用シナリオは？",
+                options: [
+                    "頻繁にアクセスされるデータ",
+                    "四半期に1回程度アクセスされ、ミリ秒取得が必要なアーカイブデータ（医療画像、メディアアセット）",
+                    "リアルタイム処理データ",
+                    "1日複数回アクセスされるデータ"
+                ],
+                correct: 1,
+                explanation: "S3 Glacier Instant Retrievalは、年に数回しかアクセスされないが、必要時には即座（ミリ秒）に取得が必要なデータに最適です。S3 Standard-IAより68%低コストで、取得時間はS3 Standardと同等です。医療画像、ニュースアーカイブ、コンプライアンスデータに適しています。"
+            },
+            {
+                id: 13,
+                question: "Amazon DynamoDB の Auto Scaling と On-Demand モードの使い分けは？",
+                options: [
+                    "機能は同じ",
+                    "Auto Scaling: 予測可能なトラフィック、On-Demand: 予測不可能なスパイクトラフィック",
+                    "On-Demand は常に高コスト",
+                    "Auto Scaling はリアルタイム対応不可"
+                ],
+                correct: 1,
+                explanation: "Auto Scalingは予測可能なトラフィックパターンでコスト効率が良く、On-Demandモードはトラフィックが予測不可能、新規ワークロード、スパイク性トラフィックに適しています。On-Demandは事前容量プランニング不要で、使用量に応じた従量課金です。"
+            },
+            {
+                id: 14,
+                question: "Amazon RDS Proxy の主な利点は？",
+                options: [
+                    "データベースのバックアップ自動化",
+                    "データベース接続プーリングとフェイルオーバー時間短縮によるLambda等のサーバーレス接続最適化",
+                    "クエリの自動最適化",
+                    "ストレージ容量の自動拡張"
+                ],
+                correct: 1,
+                explanation: "RDS Proxyは、データベース接続をプールし、Lambda等のサーバーレスアプリケーションからの大量の短命接続を効率的に管理します。フェイルオーバー時間を最大66%短縮し、IAM認証、Secrets Manager統合によるセキュリティ強化も提供します。"
+            },
+            {
+                id: 15,
+                question: "Amazon EFS の Performance Mode と Throughput Mode の選択基準は？",
+                options: [
+                    "すべて同じ設定を使用",
+                    "Performance: 汎用/最大I/O、Throughput: バースティング/プロビジョンド/Elastic を要件に応じて選択",
+                    "Performance Modeのみ設定すればよい",
+                    "自動で最適化される"
+                ],
+                correct: 1,
+                explanation: "Performance Modeは汎用（レイテンシ重視）と最大I/O（高スループット・並列性重視）から選択。Throughput Modeはバースティング（小～中規模）、プロビジョンド（一定の高スループット）、Elastic（自動スケール、推奨）から選択します。ビッグデータ分析は最大I/O+Elastic、Webサーバーは汎用+バースティングが適しています。"
             }
         ]
     },
@@ -1739,6 +1979,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Application Signals は、分散アプリケーションのレスポンス時間、エラー率、スループットを自動計測し、SLI（Service Level Indicators）と SLO（Service Level Objectives）によるサービス品質管理を支援します。"
+            },
+            {
+                id: 11,
+                question: "CloudWatch Logs Insights の高度なクエリパターンは？",
+                options: [
+                    "固定フォーマットのログのみ検索可能",
+                    "SQLライクな構文で、フィルタ、集計、統計、可視化を実行し、アプリケーション問題を迅速に診断",
+                    "手動でログをダウンロードして分析",
+                    "単純なキーワード検索のみ"
+                ],
+                correct: 1,
+                explanation: "CloudWatch Logs Insightsは、fields、filter、stats、sort等のコマンドを使い、JSON/構造化ログから特定フィールドを抽出・集計・可視化できます。例：5xx エラーの時系列推移、レスポンスタイムのパーセンタイル分析、IPアドレス別アクセス数など。数十億行のログを数秒で分析可能です。"
+            },
+            {
+                id: 12,
+                question: "AWS Systems Manager OpsCenter の主な用途は？",
+                options: [
+                    "コスト管理専用",
+                    "運用上の問題（OpsItems）を一元管理し、CloudWatch、Config、EventBridgeと統合して問題解決を追跡",
+                    "データベースバックアップ専用",
+                    "ネットワーク設定専用"
+                ],
+                correct: 1,
+                explanation: "OpsCenterは、CloudWatchアラーム、Config非準拠、EventBridgeイベント、手動作成からOpsItems（運用問題チケット）を自動生成します。関連ログ、メトリクス、設定変更履歴を集約し、Runbook（自動化ドキュメント）と連携して問題解決を支援します。チーム間のコラボレーションとMTTR短縮を実現します。"
+            },
+            {
+                id: 13,
+                question: "CloudWatch Synthetics Canaries の活用シナリオは？",
+                options: [
+                    "サーバーのCPU監視のみ",
+                    "エンドユーザー視点でのWebサイト・APIの可用性とパフォーマンスを定期的に監視（合成監視）",
+                    "ログの収集専用",
+                    "データベースの監視専用"
+                ],
+                correct: 1,
+                explanation: "Synthetics Canariesは、Node.js/Pythonスクリプトで、Webサイトのマルチステップユーザージャーニー、REST API、UIワークフロー、リンク切れ、ログインフローを定期実行（1分～1時間間隔）し、エンドユーザーが問題に気づく前に障害を検出します。スクリーンショット、HAR ファイル、詳細ログを保存します。"
+            },
+            {
+                id: 14,
+                question: "Amazon Managed Grafana と Amazon Managed Service for Prometheus の統合メリットは？",
+                options: [
+                    "ログ収集の自動化",
+                    "Prometheusでメトリクス収集、Grafanaで可視化・アラートの統合オブザーバビリティプラットフォーム",
+                    "コスト削減専用",
+                    "セキュリティスキャン専用"
+                ],
+                correct: 1,
+                explanation: "Amazon Managed Service for Prometheus（AMP）でコンテナ、Kubernetes、アプリケーションメトリクスを収集・保存し、Amazon Managed Grafana（AMG）で可視化・ダッシュボード作成・アラート設定します。EKS、ECS、EC2、オンプレミスからのメトリクスを統合し、長期保存、高可用性、スケーラビリティをマネージドで実現します。"
+            },
+            {
+                id: 15,
+                question: "CloudWatch Contributor Insights の用途は？",
+                options: [
+                    "コスト分析専用",
+                    "ログデータからトップN項目（IPアドレス、エラーコード、ユーザーエージェント等）を特定し、異常なトラフィックパターンを発見",
+                    "データベース性能分析専用",
+                    "ネットワーク設定専用"
+                ],
+                correct: 1,
+                explanation: "Contributor Insightsは、VPC Flow Logs、CloudTrail、アプリケーションログから、トップ10のIPアドレス、最も頻繁なエラーコード、最大帯域幅消費者などを自動抽出します。DDoS攻撃の検出、ボトルネックの特定、異常なAPI呼び出し元の発見に有効です。ルールベースの分析で、リアルタイムに可視化されます。"
             }
         ]
     },
