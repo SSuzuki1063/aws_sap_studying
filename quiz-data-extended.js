@@ -909,6 +909,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Blackhole routeは特定のCIDRブロックへのトラフィックを明示的に破棄する設定で、セキュリティポリシーによる通信制御やトラブルシューティングに使用されます。"
+            },
+            {
+                id: 11,
+                question: "Transit Gateway の Route Table 分離による、セキュリティとコンプライアンスの実装方法は？",
+                options: [
+                    "すべてのVPCで同じルートテーブルを使用",
+                    "本番・開発・DMZごとに独立したルートテーブルを作成し、VPC間通信を制御",
+                    "ルートテーブルは1つのみ作成可能",
+                    "セキュリティグループのみで制御"
+                ],
+                correct: 1,
+                explanation: "Transit Gatewayの複数ルートテーブル機能により、本番VPC、開発VPC、DMZ VPCをそれぞれ異なるルートテーブルに関連付け、通信パターンを細かく制御できます。例：本番→開発の通信は拒否、DMZ→本番は許可、開発→共有サービスVPCのみ許可、など。"
+            },
+            {
+                id: 12,
+                question: "Transit Gateway Connect を使用したSD-WANとの統合の利点は？",
+                options: [
+                    "VPN接続よりも低コスト",
+                    "GRE/VXLANトンネルでSD-WANアプライアンスと高速接続し、複数のBGPセッションをサポート",
+                    "設定が不要",
+                    "オンプレミス接続専用"
+                ],
+                correct: 1,
+                explanation: "Transit Gateway Connectは、GRE（Generic Routing Encapsulation）トンネルを使用してSD-WANアプライアンス（Cisco Viptela、VMware VeloCloud等）とTransit Gatewayを統合します。1つのConnectアタッチメントで複数のBGPピアリングをサポートし、50 Gbpsまでのスループットを実現します。"
+            },
+            {
+                id: 13,
+                question: "Transit Gateway Peering で異なるリージョン間のVPCを接続する際のベストプラクティスは？",
+                options: [
+                    "各リージョンごとにVPC Peeringを使用",
+                    "各リージョンにTransit Gatewayを配置し、Transit Gateway Peeringで接続。各リージョン内のVPCはローカルのTGWに接続",
+                    "すべてのVPCを1つのリージョンに配置",
+                    "Direct Connectのみ使用"
+                ],
+                correct: 1,
+                explanation: "マルチリージョンアーキテクチャでは、各リージョンにTransit Gatewayを配置し、リージョン間はTransit Gateway Peering（AWSバックボーン経由）で接続します。これにより各リージョン内のVPC間通信はローカルTGWで処理され、リージョン間通信は最適化されたルートで転送されます。"
+            },
+            {
+                id: 14,
+                question: "Transit Gateway と AWS RAM (Resource Access Manager) を組み合わせた組織全体での共有方法は？",
+                options: [
+                    "各アカウントが独自のTransit Gatewayを作成",
+                    "中央アカウントでTransit Gatewayを作成し、RAMで他のAWSアカウント/OUと共有。各アカウントは自身のVPCをアタッチ",
+                    "手動で接続情報を共有",
+                    "Transit Gatewayは共有できない"
+                ],
+                correct: 1,
+                explanation: "Transit GatewayをAWS RAMで共有することで、中央ネットワークアカウントが1つのTransit Gatewayを管理し、組織内の他のアカウントがそれぞれのVPCをアタッチできます。これにより、管理の集中化、コスト削減、一貫したネットワークポリシー適用が実現します。"
+            },
+            {
+                id: 15,
+                question: "Transit Gateway の Network Manager を使用したグローバルネットワーク可視化の利点は？",
+                options: [
+                    "コストの自動削減",
+                    "オンプレミスサイト、Transit Gateway、VPCを含むグローバルネットワークのトポロジ、メトリクス、イベントを一元的に可視化・監視",
+                    "自動的にネットワークを最適化",
+                    "セキュリティスキャン専用"
+                ],
+                correct: 1,
+                explanation: "Transit Gateway Network Managerは、AWS Cloud WAN、Transit Gateway、VPN接続、オンプレミスサイトを含むグローバルWAN全体をダッシュボードで可視化します。ネットワークトポロジ、接続状態、パフォーマンスメトリクス、ルート分析、イベント監視を一元管理できます。"
             }
         ]
     },
@@ -1036,6 +1096,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Permission Set は、Portfolio に関連付けられたユーザーやグループが実行できる操作（起動、更新、削除等）を詳細に制御し、セルフサービス環境でのガバナンスを実現します。"
+            },
+            {
+                id: 11,
+                question: "AWS Control Tower の Account Factory によるアカウント作成の自動化のメリットは？",
+                options: [
+                    "手動でアカウント設定が必要",
+                    "事前設定されたベースライン（ネットワーク、セキュリティ、ログ）を持つ新規アカウントを数分で自動プロビジョニング",
+                    "アカウント作成のみで設定は不可",
+                    "単一アカウントのみ作成可能"
+                ],
+                correct: 1,
+                explanation: "Control Tower の Account Factory は、Service Catalog と統合されており、ユーザーがセルフサービスで新規アカウントを作成すると、事前定義されたネットワーク（VPC構成）、セキュリティ（Guardrails）、ログ（CloudTrail、Config）が自動適用され、ガバナンス基準に準拠したアカウントが即座にプロビジョニングされます。"
+            },
+            {
+                id: 12,
+                question: "AWS Organizations の Consolidated Billing で組織全体のボリュームディスカウントを最大化する方法は？",
+                options: [
+                    "各アカウントが個別に契約",
+                    "組織レベルで全アカウントの使用量が合算され、階層割引が自動適用",
+                    "手動で割引申請が必要",
+                    "特定のアカウントのみ割引適用"
+                ],
+                correct: 1,
+                explanation: "Consolidated Billing により、全メンバーアカウントの EC2、S3、データ転送等の使用量が自動的に合算され、AWS のボリューム階層割引（例: S3 の段階的価格、データ転送料金の階層）が組織全体に適用されます。また、Reserved Instance や Savings Plans も組織内で自動共有されます。"
+            },
+            {
+                id: 13,
+                question: "AWS Config Aggregator を組織全体で活用する際のベストプラクティスは？",
+                options: [
+                    "各アカウントで個別に Config を設定",
+                    "中央監査アカウントに Aggregator を配置し、全アカウントの Config データを集約して一元的にコンプライアンス監視",
+                    "Config は単一アカウントでのみ使用可能",
+                    "手動でレポートを収集"
+                ],
+                correct: 1,
+                explanation: "Config Aggregator を中央監査アカウント（Security/Compliance OU）に作成し、Organizations 統合を有効にすることで、全アカウント・全リージョンの Config データを集約できます。これにより、組織全体のコンプライアンス状態を単一ダッシュボードで監視し、Config Rules の違反を一元管理できます。"
+            },
+            {
+                id: 14,
+                question: "AWS SSO (現 IAM Identity Center) による組織全体のアクセス管理の利点は？",
+                options: [
+                    "各アカウントに個別のIAMユーザーが必要",
+                    "Single Sign-On で全アカウントへのアクセスを一元管理し、Active Directory や SAML 2.0 IdP と統合可能",
+                    "パスワードのみで認証",
+                    "単一アカウントでのみ使用可能"
+                ],
+                correct: 1,
+                explanation: "IAM Identity Center（旧 AWS SSO）は、組織内の全アカウントへのアクセスを一元管理し、Active Directory、Okta、Azure AD 等の既存 IdP と統合できます。ユーザーは一度のサインインで全アカウントにアクセスでき、Permission Sets により各アカウントでのロールベースアクセス制御を統一的に管理できます。"
+            },
+            {
+                id: 15,
+                question: "AWS Landing Zone と AWS Control Tower の関係は？",
+                options: [
+                    "同じサービスで名称のみ異なる",
+                    "Landing Zone は旧世代のソリューション、Control Tower はマネージドサービス化された後継",
+                    "Control Tower の方が機能が少ない",
+                    "Landing Zone の方が新しい"
+                ],
+                correct: 1,
+                explanation: "AWS Landing Zone は CloudFormation ベースの旧世代マルチアカウント環境構築ソリューションでしたが、AWS Control Tower はそれをマネージドサービス化した後継です。Control Tower は、Guardrails（予防・検出型ルール）、Account Factory、ダッシュボード、自動ドリフト検出等を提供し、マルチアカウント環境のセットアップと継続的ガバナンスを大幅に簡素化します。"
             }
         ]
     },
@@ -1853,6 +1973,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "MSK は KMS による保存時暗号化、TLS による転送時暗号化、IAM および SASL/SCRAM 認証、Kafka ACL によるトピック・コンシューマーグループレベルの詳細な権限制御を提供します。"
+            },
+            {
+                id: 11,
+                question: "Amazon Kinesis Data Analytics for Apache Flink の主な用途は？",
+                options: [
+                    "バッチ処理専用",
+                    "リアルタイムストリームデータの複雑な変換・集計・分析をSQL/Java/Scalaで実装",
+                    "静的データの分析のみ",
+                    "ログ保存専用"
+                ],
+                correct: 1,
+                explanation: "Kinesis Data Analytics for Apache Flink は、ストリーミングデータに対してウィンドウ集計、結合、パターン検出、機械学習推論などの複雑な処理を、Apache Flink の Java/Scala/SQL API で実装できるマネージドサービスです。自動スケーリング、チェックポイント、フォールトトレランスを提供します。"
+            },
+            {
+                id: 12,
+                question: "Amazon Redshift Spectrum の活用シーンは？",
+                options: [
+                    "Redshift クラスター内のデータのみクエリ可能",
+                    "S3 の Exabyte スケールのデータを Redshift クラスターにロードせずに直接 SQL クエリ",
+                    "リアルタイムデータ処理専用",
+                    "データのコピーが必須"
+                ],
+                correct: 1,
+                explanation: "Redshift Spectrum は、S3 上の構造化・半構造化データ（Parquet、ORC、JSON、CSV等）を Redshift クラスターにロードすることなく、標準 SQL でクエリできます。Redshift のテーブルと S3 のデータを JOIN することも可能で、コスト効率的なデータレイク分析を実現します。"
+            },
+            {
+                id: 13,
+                question: "AWS Glue DataBrew の主な用途は？",
+                options: [
+                    "データベースのバックアップ",
+                    "ビジュアルインターフェースでのデータクレンジング・正規化（コード不要のデータ準備）",
+                    "機械学習モデルのトレーニング",
+                    "リアルタイムストリーミング"
+                ],
+                correct: 1,
+                explanation: "AWS Glue DataBrew は、データアナリストやビジネスユーザーがコードを書かずに、ビジュアルインターフェースで250以上の事前構築済み変換を使用してデータのクレンジング、正規化、標準化を行えるサービスです。データ品質ルールの定義、異常値検出、データプロファイリングも可能です。"
+            },
+            {
+                id: 14,
+                question: "Amazon QuickSight の SPICE エンジンの利点は？",
+                options: [
+                    "データソースへ常に直接クエリ",
+                    "インメモリ計算エンジンで高速なビジュアル分析とダッシュボード応答性を実現",
+                    "データの保存は不可",
+                    "リアルタイムデータのみ対応"
+                ],
+                correct: 1,
+                explanation: "SPICE（Super-fast, Parallel, In-memory Calculation Engine）は、QuickSight のインメモリエンジンで、データを圧縮・最適化してメモリに格納し、数百万行のデータセットでも秒以下の応答時間を実現します。データソースへの負荷を削減し、コスト効率的な BI 分析を提供します。"
+            },
+            {
+                id: 15,
+                question: "AWS Lake Formation の主な機能とメリットは？",
+                options: [
+                    "S3 バケットの作成専用",
+                    "データレイクの構築・セキュリティ・ガバナンスを数日で実装（データ収集、カタログ化、クレンジング、アクセス制御の一元管理）",
+                    "データベースのバックアップ専用",
+                    "リアルタイム処理専用"
+                ],
+                correct: 1,
+                explanation: "Lake Formation は、S3 ベースのデータレイクを数日で構築できるサービスで、①データ取り込み（バッチ/ストリーミング）、②Glue データカタログとの統合、③行・列・セルレベルの詳細なアクセス制御、④データガバナンス（監査ログ、データ系列追跡）を一元管理します。複雑な IAM ポリシー設定が不要になります。"
             }
         ]
     },
@@ -2165,6 +2345,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Amazon Bedrock は、Anthropic Claude、Meta Llama 等の事前トレーニング済み基盤モデルを API 経由で利用でき、さらに独自データでのファインチューニングも可能なマネージドサービスです。"
+            },
+            {
+                id: 11,
+                question: "Amazon SageMaker の Multi-Model Endpoint の利点は？",
+                options: [
+                    "単一モデルのみホスティング可能",
+                    "1つのエンドポイントで数千の機械学習モデルをホストしてコスト削減（モデル間で推論インスタンスを共有）",
+                    "リアルタイム推論不可",
+                    "バッチ推論のみ対応"
+                ],
+                correct: 1,
+                explanation: "Multi-Model Endpoint は、S3 に保存された複数のモデルを 1 つの SageMaker エンドポイントでホストし、リクエストに応じて動的にモデルをロード・推論します。モデルごとにエンドポイントを作成する必要がなく、推論インスタンスのコストを最大70%削減できます。"
+            },
+            {
+                id: 12,
+                question: "Amazon SageMaker Autopilot の主な機能は？",
+                options: [
+                    "手動でのハイパーパラメータ調整が必要",
+                    "表形式データから自動的に最適な機械学習モデルを構築（AutoML）し、説明可能性レポートも生成",
+                    "画像データのみ対応",
+                    "モデルのデプロイは不可"
+                ],
+                correct: 1,
+                explanation: "SageMaker Autopilot は、CSV 形式の表形式データを入力すると、自動的にデータ前処理、特徴量エンジニアリング、アルゴリズム選択、ハイパーパラメータ最適化を実行し、最適なモデルを構築します。さらに、モデルの説明可能性レポート（SHAP値）も自動生成され、モデルの透明性を確保できます。"
+            },
+            {
+                id: 13,
+                question: "Amazon Rekognition Custom Labels の活用シーンは？",
+                options: [
+                    "一般的な物体検出のみ",
+                    "独自のビジネス固有オブジェクト（ロゴ、製品、欠陥品等）を少量の画像で学習し、カスタム画像分類・物体検出",
+                    "動画処理不可",
+                    "事前トレーニングされたモデルのみ使用可能"
+                ],
+                correct: 1,
+                explanation: "Rekognition Custom Labels は、数百枚程度の少量のラベル付き画像から、企業ロゴ、特定製品、製造業の欠陥品、医療画像の異常等、ビジネス固有のオブジェクトを認識するカスタム機械学習モデルを構築できます。転移学習により、少ないデータで高精度なモデルを実現します。"
+            },
+            {
+                id: 14,
+                question: "Amazon Comprehend Medical の主な用途は？",
+                options: [
+                    "一般的なテキスト分析",
+                    "医療テキストから病名、薬剤名、検査結果、治療法等の医療情報を自動抽出（HIPAA適格）",
+                    "画像の医療診断",
+                    "患者の予約管理"
+                ],
+                correct: 1,
+                explanation: "Amazon Comprehend Medical は、医師のノート、電子カルテ、臨床試験報告等の非構造化医療テキストから、Protected Health Information（PHI）、病名、薬剤、投与量、検査結果、治療法、解剖学的部位を自動抽出し、構造化データに変換します。HIPAA 適格サービスで医療データを安全に処理できます。"
+            },
+            {
+                id: 15,
+                question: "Amazon Kendra の企業検索における他の検索サービスとの違いは？",
+                options: [
+                    "キーワードマッチングのみ",
+                    "自然言語理解と機械学習により、質問の意図を理解して最も関連性の高い回答を抽出（セマンティック検索）",
+                    "ファイル検索のみ",
+                    "外部データソース非対応"
+                ],
+                correct: 1,
+                explanation: "Amazon Kendra は、自然言語処理と機械学習を活用した企業向けインテリジェント検索サービスで、「どのように〜するか？」等の質問形式のクエリから意図を理解し、S3、SharePoint、Salesforce、RDS、Confluence等の複数データソースから最適な回答を抽出します。単純なキーワード検索より遥かに高精度な検索結果を提供します。"
             }
         ]
     }
