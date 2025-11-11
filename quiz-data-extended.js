@@ -135,6 +135,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "VPC Lattice（2023年リリース）は、アプリケーションレイヤー（L7）サービスメッシュです。複数VPC、複数アカウント、オンプレミスにまたがるマイクロサービスを、サービス名ベースで検出・接続し、統一的な認証（IAM、SigV4）、きめ細かいアクセス制御、L7ロードバランシング、詳細な可観測性を提供します。従来のVPC Peering、Transit Gateway、PrivateLinkの複雑な組み合わせを簡素化します。"
+            },
+            {
+                id: 12,
+                question: "グローバル企業が東京、シンガポール、フランクフルトの3リージョンにVPCを構築し、オンプレミスのデータセンター（大阪、シドニー）と接続する必要があります。各リージョン間は低遅延で通信し、オンプレミスからは全リージョンにアクセス可能で、セキュリティポリシーによる通信制御も必要です。最適なネットワークアーキテクチャは？",
+                options: [
+                    "各VPC間にVPC Peeringを設定し、各データセンターから各VPCへDirect Connectを個別に接続する",
+                    "Transit Gatewayを東京に配置し、各VPCをアタッチ、両データセンターからDirect Connect Gatewayを介して接続する",
+                    "各リージョンにTransit Gatewayを配置してピアリングし、Transit Gateway Connect経由でオンプレミスと接続、ルートテーブルで詳細な通信制御を実施する",
+                    "AWS Global Acceleratorを使用してすべてのリージョンを接続する"
+                ],
+                correct: 2,
+                explanation: "マルチリージョン・ハイブリッド環境では、各リージョンにTransit Gatewayを配置し、Transit Gateway Peeringで接続するのがベストプラクティスです。Transit Gateway Connectでオンプレミスと統合し、各Transit Gatewayのルートテーブルで詳細な通信制御（どのVPCがどのリージョン/データセンターと通信可能か）を実現します。単一リージョンのTransit Gatewayでは他リージョンへの遅延が増加し、VPC Peeringでは管理が複雑になります（N×Nの接続管理）。"
+            },
+            {
+                id: 13,
+                question: "金融機関が本番環境とDR環境を異なるリージョンに構築しています。通常時はDR環境への通信を遮断し、災害発生時のみDR環境へのフェイルオーバーを自動化する必要があります。オンプレミスから両環境へのDirect Connect接続も必要です。どのような構成が最適ですか？",
+                options: [
+                    "各環境に独立したVPCを構築し、Route 53 Healthcheckと連動したフェイルオーバールーティングを設定する",
+                    "Transit GatewayでブラックホールルートとRoute 53 Application Recovery Controllerを組み合わせ、平常時はDR環境へのルートを無効化、災害時にRoute 53 ARCでルートを自動的に有効化する",
+                    "Global Acceleratorのエンドポイントグループで本番環境に100%のトラフィックウェイトを設定する",
+                    "CloudFrontのオリジングループでプライマリとセカンダリを設定する"
+                ],
+                correct: 1,
+                explanation: "この要件では、Transit Gatewayのルートテーブルで平常時はDR環境向けルートをブラックホール（破棄）に設定し、Route 53 Application Recovery Controller（ARC）で災害時にルート切り替えを自動化する構成が最適です。ARCはリージョン障害時の高速フェイルオーバー（数秒）を実現し、手動/自動切り替えの制御とルーティングコントロールを提供します。オンプレミスからはDirect Connect Gatewayを介して両リージョンのTransit Gatewayに接続し、平常時は本番環境のみアクセス可能にします。"
+            },
+            {
+                id: 14,
+                question: "SaaS企業が100以上の顧客企業向けにマルチテナントサービスを提供しています。各顧客のVPCから安全にSaaSサービスにアクセスさせ、顧客間のトラフィック分離、接続の監査ログ取得、顧客側のネットワーク設定変更を最小化する必要があります。最適なアーキテクチャは？",
+                options: [
+                    "各顧客とVPC Peeringを設定する",
+                    "PrivateLink VPC Endpoint Serviceを作成し、各顧客に専用のVPC Endpointを払い出す",
+                    "インターネット経由でAPI Gatewayを公開する",
+                    "Transit Gatewayで全顧客VPCを接続する"
+                ],
+                correct: 1,
+                explanation: "マルチテナントSaaSでは、PrivateLink VPC Endpoint Serviceが最適です。SaaS側がEndpoint Serviceを作成し、各顧客がVPC Endpoint（Interface型）を作成するだけで接続完了。トラフィックはAWSネットワーク内に閉じ、顧客間は完全に分離されます。接続受け入れ承認機能で制御でき、CloudWatch Logsで監査ログを記録可能。VPC Peeringは管理が煩雑（100件の個別設定）、Transit Gatewayは顧客間分離の設定が複雑、インターネット経由はセキュリティ要件を満たしません。"
+            },
+            {
+                id: 15,
+                question: "EC2インスタンスで動作するレガシーアプリケーションが、特定の送信元IPアドレスでサードパーティAPIにアクセスする必要があります。アプリケーションは複数AZで冗長化され、Auto Scalingで台数が変動します。IPアドレスの固定化とコスト最適化を両立する方法は？",
+                options: [
+                    "各インスタンスにElastic IPを割り当てる",
+                    "NAT Gatewayを各AZに配置し、各NAT GatewayにElastic IPを関連付ける",
+                    "単一AZにNAT Gatewayを1つだけ配置してコストを削減する",
+                    "PrivateLink VPC Endpointを使用する"
+                ],
+                correct: 1,
+                explanation: "Auto Scaling環境で送信元IP固定化が必要な場合、各AZにNAT Gatewayを配置し、それぞれにElastic IPを関連付けるのがベストプラクティスです。複数の固定IPアドレスをサードパーティに登録する必要がありますが、高可用性を確保できます。単一AZのNAT GatewayではそのAZ障害時に全サービスが停止します。各インスタンスへのElastic IP割り当ては台数変動時の管理が複雑になり、コストも増加します。PrivateLinkはAWSサービス/VPC間の接続用でサードパーティAPIには使用できません。"
+            },
+            {
+                id: 16,
+                question: "グローバルなeコマース企業が、US、EU、APACの3リージョンでマイクロサービスアーキテクチャを展開しています。各リージョン内の数十のサービス（異なるVPC、異なるAWSアカウント）と、オンプレミスのレガシーシステムが相互に通信する必要があります。サービスディスカバリ、L7ルーティング、詳細な認証・認可、可観測性を統一的に管理する必要があります。最新のベストプラクティスに基づく最適なソリューションは？",
+                options: [
+                    "ALBとRoute 53のプライベートホストゾーンを組み合わせてサービスメッシュを構築する",
+                    "VPC Latticeで各リージョンにService Networkを作成し、全サービスを登録、IAMとリソースポリシーで認証・認可を統一管理、CloudWatch Logsで可観測性を確保する",
+                    "Transit Gatewayですべてを接続し、NLBで負荷分散する",
+                    "Kubernetesクラスタを構築してIstioをデプロイする"
+                ],
+                correct: 1,
+                explanation: "VPC Lattice（2023年リリース）は、まさにこのような複雑なマルチアカウント・マルチVPC・ハイブリッド環境でのマイクロサービス通信を簡素化するために設計されたL7サービスメッシュです。Service Networkに各サービス（Lambda、ECS、EC2、オンプレミス）を登録するだけで、サービス名ベースの検出・接続が可能になります。IAM、SigV4、リソースベースポリシーで統一的な認証・認可を実現し、VPC Peering/Transit Gateway/PrivateLinkの複雑な組み合わせが不要になります。詳細なメトリクスとログをCloudWatchで一元管理でき、既存の複雑なネットワーク構成を大幅に簡素化します。"
             }
         ]
     },
@@ -273,6 +333,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "PCI-DSS準拠には包括的なセキュリティ対策が必須: ①ネットワーク分離（VPC）、②ロギング（CloudTrail全リージョン、VPC Flow Logs、Config）、③脅威検出（GuardDuty、Security Hub）、④暗号化（KMS、転送時・保管時暗号化）、⑤アクセス制御（IAM、MFA）、⑥コンプライアンス監視（Config Rules、Audit Manager）、⑦定期侵入テスト。AWS Artifact でPCI-DSSコンプライアンスレポートを入手できます。"
+            },
+            {
+                id: 12,
+                question: "大手製薬会社が複数のAWSアカウント（開発、ステージング、本番、データ分析）を使用しています。HIPAA準拠が必要で、本番環境のPHI（保護対象保健情報）へのアクセスは監査証跡を残し、開発環境への本番データの漏洩を防ぎ、全環境で統一的なセキュリティポリシーを適用する必要があります。最適なアーキテクチャは？",
+                options: [
+                    "各アカウントで個別にIAMポリシーとCloudTrailを設定する",
+                    "AWS Organizationsで組織を作成、SCPで開発環境から本番へのアクセスを制限、CloudTrail組織証跡とConfig組織ルールで全アカウント監視、Macie で PHI を検出・分類し、S3バケットポリシーと KMS キーポリシーでデータアクセスを制御する",
+                    "単一アカウントで複数VPCを使用して環境を分離する",
+                    "IAM Rolesのみで環境を分離する"
+                ],
+                correct: 1,
+                explanation: "HIPAA準拠のマルチアカウント環境では、AWS Organizationsによる統制が必須です。SCP（Service Control Policy）で組織単位/アカウント単位の権限を制限し、開発者が本番PHIにアクセスできないよう制御します。CloudTrail組織証跡で全アカウントのAPI呼び出しを一元監視、AWS Config組織ルールで暗号化・アクセス制御などのコンプライアンスを継続的に監視します。Amazon Macieで S3 内のPHIを自動検出・分類し、機密データの場所を可視化。KMS カスタマー管理キーでPHI暗号化を強制し、キーポリシーで本番データへのアクセスを本番アカウントのみに制限します。"
+            },
+            {
+                id: 13,
+                question: "グローバル企業が100以上のAWSアカウントを運用し、各事業部門が独自のAWSリソースを管理しています。セキュリティチームは、全アカウントのルートユーザー使用、MFA未設定、パブリックS3バケット、過度に権限の広いIAMポリシーをリアルタイムで検出し、自動修復する必要があります。どのようなアーキテクチャが最適ですか？",
+                options: [
+                    "各アカウントに個別のLambda関数をデプロイして監視する",
+                    "Security Hubで全アカウントのセキュリティ状態を集約、EventBridge + Lambda + Systems Manager Automationで自動修復、GuardDutyで異常アクティビティ検出、IAM Access Analyzerで過剰権限を可視化する",
+                    "CloudTrailのログを手動で確認する",
+                    "サードパーティのSIEMツールのみを使用する"
+                ],
+                correct: 1,
+                explanation: "大規模マルチアカウント環境のセキュリティ統制には、AWS Security Hubが中核となります。Security Hubは全アカウントのセキュリティ検出結果（GuardDuty、Inspector、Macie、IAM Access Analyzer、Config）を集約し、AWS Foundational Security Best Practicesなどの標準フレームワークで自動評価します。検出された問題はEventBridgeルールでキャッチし、Lambda関数またはSystems Manager Automationドキュメントで自動修復（例: パブリックS3バケットのブロック、MFAの強制通知、過剰権限IAMポリシーの修正提案）を実行します。GuardDutyはルートユーザーの使用や異常なAPI呼び出しをML検出、IAM Access Analyzerは意図しない外部アクセスを分析します。"
+            },
+            {
+                id: 14,
+                question: "金融機関が顧客の機密データを複数リージョンのS3に保存しています。規制要件により、データは保存時と転送時の両方で暗号化が必須で、暗号化キーへのアクセスは四半期ごとのローテーションと詳細な監査証跡が必要です。また、特定の地域のデータは他の地域に移動してはいけません（データレジデンシー）。最適な暗号化戦略は？",
+                options: [
+                    "S3のデフォルト暗号化（SSE-S3）を使用する",
+                    "各リージョンにKMS カスタマー管理キー（CMK）を作成し、自動ローテーション有効化、キーポリシーでアクセス制御、CloudTrail で KMS API 呼び出しを監査、S3 バケットポリシーで SSE-KMS 暗号化を強制、リージョン間レプリケーションは無効化またはリージョン別キーで暗号化する",
+                    "クライアント側暗号化のみを使用する",
+                    "S3 Glacier の自動暗号化に依存する"
+                ],
+                correct: 1,
+                explanation: "金融機関の厳格な要件には、KMSカスタマー管理キー（CMK）が必須です。各リージョンに独立したCMKを作成し、データレジデンシー要件を満たします。KMS自動ローテーション（年1回）を有効化し、キーポリシーで特定IAMロール/ユーザーのみにアクセスを制限します。S3バケットポリシーで「aws:SecureTransport」条件によりTLS転送を強制し、デフォルト暗号化でSSE-KMSを指定して保存時暗号化を保証します。CloudTrailのKMS API監査ログにより、いつ誰がどのキーを使用したか完全追跡可能です。リージョン間レプリケーションが必要な場合は、レプリケート先リージョンの独立したCMKで再暗号化し、データレジデンシーを維持します。SSE-S3はAWS管理キーで監査証跡が限定的、クライアント側暗号化のみではS3側での暗号化強制ができません。"
+            },
+            {
+                id: 15,
+                question: "SaaS企業が数千のエンタープライズ顧客にサービスを提供しています。各顧客の認証は顧客のIDプロバイダー（Okta、Azure AD、Google Workspace等）と連携し、シングルサインオン（SSO）を実現する必要があります。また、ユーザーごとに細かいアクセス権限を設定し、監査ログで全アクセスを追跡し、セッション管理も必要です。最適な認証・認可アーキテクチャは？",
+                options: [
+                    "各顧客向けに個別のIAMユーザーを作成する",
+                    "Amazon Cognito User PoolsにSAML/OIDC連携で各顧客のIDプロバイダーを統合、Cognito Groupsで権限管理、ALB認証とAPI Gateway Cognitoオーソライザーでアクセス制御、CloudWatch Logsでセッション監査する",
+                    "カスタムのJWT認証システムを構築する",
+                    "AWS SSOのみを使用する"
+                ],
+                correct: 1,
+                explanation: "マルチテナントSaaSでのエンタープライズSSO統合には、Amazon Cognito User Poolsが最適です。User PoolsはSAML 2.0とOpenID Connect（OIDC）をサポートし、数千の外部IDプロバイダーを統合可能です。各顧客のIDプロバイダーをUser Poolのフェデレーションとして設定し、属性マッピングでユーザー情報を取得します。Cognito Groupsで顧客ごと・ロールごとの権限を管理し、ALB認証機能やAPI Gateway Cognitoオーソライザーでアプリケーションレベルの認可を実装します。セッショントークンの有効期限管理、リフレッシュトークンによる長期セッション、MFA統合も可能です。CloudWatch LogsとCognito自体の監査ログで、すべての認証イベント（ログイン、ログアウト、失敗）を追跡できます。IAMユーザーは数千規模では管理不可能、AWS SSOはAWS内部リソース向けで外部SaaSアプリケーションには適しません。"
+            },
+            {
+                id: 16,
+                question: "医療機関が患者の画像データ（CTスキャン、MRI等）をS3に保存し、機械学習モデルで分析しています。セキュリティ要件として、①データは必ず暗号化、②アクセスは最小権限、③すべての操作を監査、④データの改ざん検出、⑤退職者のアクセス権自動削除が必要です。さらに、7年間のデータ保持が法的に義務付けられ、その間の削除や変更は禁止されています。包括的なセキュリティアーキテクチャは？",
+                options: [
+                    "S3デフォルト暗号化とIAMポリシーのみを使用する",
+                    "S3 SSE-KMS暗号化、S3 Object Lock（Complianceモード）で7年間保持、S3バケットポリシーと IAM ロール/ポリシーで最小権限アクセス、CloudTrail + S3 Access Logging + S3 Object Lambda で監査、AWS SSOと自動プロビジョニングで退職者アクセス削除、Amazon Macie で異常アクセス検出する",
+                    "オンプレミスストレージのみを使用する",
+                    "VPC Endpointのみでセキュリティを確保する"
+                ],
+                correct: 1,
+                explanation: "医療データの厳格なセキュリティ・コンプライアンス要件には包括的な対策が必要です。①暗号化: S3 SSE-KMSで保存時暗号化、TLS 1.2+で転送時暗号化。②最小権限: IAMロールで機械学習ワークロード専用の権限を付与し、S3バケットポリシーで特定VPC Endpointからのアクセスのみ許可。③監査: CloudTrail（データイベント）でS3オブジェクトレベルのAPI呼び出しを記録、S3 Access LoggingでHTTPアクセスを詳細記録。④改ざん検出と保持: S3 Object Lock（Complianceモード）で7年間の削除・変更を物理的に禁止（WORM）。⑤退職者対策: AWS SSOとSCIM自動プロビジョニングで、IDプロバイダー（Azure AD等）でのユーザー削除を検知し、AWSアクセス権を自動削除。Amazon Macieで異常なデータアクセスパターン（大量ダウンロード等）を検出します。"
             }
         ]
     },
@@ -411,6 +531,66 @@ const quizData = {
                 ],
                 correct: 1,
                 explanation: "Provisioned Concurrency は関数を事前に初期化・ウォーム状態に保ち、コールドスタート遅延（数秒）をゼロにします。レイテンシが重要なAPI、Alexaスキル等で使用。Reserved Concurrency は特定関数に同時実行枠を予約し、他の関数がアカウント全体の同時実行制限を使い切っても、その関数は確実に実行されるよう保証します。用途が異なるため、併用も可能です。"
+            },
+            {
+                id: 12,
+                question: "ニュースメディア企業が、重大ニュース発生時に数百万ユーザーが同時アクセスする動画配信サービスを運営しています。通常時は数千リクエスト/秒、ピーク時は数十万リクエスト/秒に急増します。動画エンコーディング処理も必要で、99.99%の可用性が求められます。コスト効率と自動スケーリングを両立する最適なアーキテクチャは？",
+                options: [
+                    "EC2 Auto Scalingグループのみでスケーリングする",
+                    "CloudFront + S3で静的コンテンツ配信、API Gateway + Lambda（Provisioned Concurrency）でAPI処理、MediaConvert でエンコーディング、DynamoDB（オンデマンド）でメタデータ管理、EventBridge + SQS + Lambda でイベント処理する",
+                    "単一の大型EC2インスタンスで処理する",
+                    "ECS on EC2のみを使用する"
+                ],
+                correct: 1,
+                explanation: "急激なトラフィック変動に対応するには、完全サーバーレスアーキテクチャが最適です。CloudFrontで動画をエッジキャッシュし、S3から配信することでオリジン負荷を削減。API Gateway + Lambdaで無制限のスケーラビリティを確保し、Provisioned Concurrencyでコールドスタートを排除。AWS MediaConvertは動画エンコーディングを自動スケールし、複数の解像度・ビットレートに変換します。DynamoDBのオンデマンドモードでトラフィックに応じて自動スケール。EventBridge + SQSで非同期処理を疎結合化し、Lambdaで処理します。EC2 Auto Scalingではスケールアウトに数分かかり、重大ニュース発生直後の急激なトラフィック増加に対応できません。"
+            },
+            {
+                id: 13,
+                question: "金融機関が株価データのリアルタイム処理システムを構築しています。毎秒10万件のデータを受信し、複雑な計算（移動平均、ボリンジャーバンド等）を実行し、結果を10ms以内にWebSocketでクライアントに配信する必要があります。処理の順序保証と正確に1回の処理（Exactly-Once）も必須です。最適なアーキテクチャは？",
+                options: [
+                    "Lambda + SQS で非同期処理する",
+                    "Kinesis Data Streams でストリーミング取り込み、Lambda（Enhanced Fan-Out）でリアルタイム処理、DynamoDB Streamsで状態管理、API Gateway WebSocket APIでクライアント配信、Kinesis Data Analyticsで複雑な計算を実行する",
+                    "EC2 + RDS のみで処理する",
+                    "S3 + Athena でバッチ処理する"
+                ],
+                correct: 1,
+                explanation: "高頻度ストリーミングデータの処理には、Kinesis Data Streamsが最適です。パーティションキー（銘柄コード等）でシャード分割し、順序保証を実現します。Lambda Enhanced Fan-Outで各Lambdaが専用のスループット（2MB/秒/シャード）を確保し、並列処理でレイテンシを最小化します。Kinesis Data Analyticsで複雑なSQL/Apache Flinkクエリ（タンブリングウィンドウ、ホッピングウィンドウ）を実行し、移動平均等を計算。結果はDynamoDBに保存し、DynamoDB StreamsでAPI Gateway WebSocket APIに変更を通知してリアルタイム配信します。Lambdaのイベントソースマッピングでチェックポイント管理により、Exactly-Once処理を保証します。SQSは順序保証が弱く（FIFOでも制限あり）、S3 + Athenaはバッチ処理でリアルタイム要件を満たしません。"
+            },
+            {
+                id: 14,
+                question: "eコマース企業が、ブラックフライデーのセール期間中に通常の100倍のトラフィックが予想されます。商品在庫は厳密に管理し、過剰販売を防ぐ必要があります。また、購入処理中のエラーでは必ずロールバックし、データ整合性を保証する必要があります。チェックアウトから決済までの処理で最適なアーキテクチャは？",
+                options: [
+                    "単一のLambda関数で在庫確認から決済まで処理する",
+                    "Step Functions（Standard Workflow）で在庫確認 → 決済 → 在庫減算をオーケストレーション、DynamoDBトランザクションで在庫管理、各ステップ失敗時は自動的にCompensationフロー（在庫復元）を実行、SQS Dead Letter Queueで失敗リトライを管理する",
+                    "EC2上のモノリシックアプリケーションで処理する",
+                    "RDSのストアドプロシージャで全処理を実行する"
+                ],
+                correct: 1,
+                explanation: "複雑な分散トランザクションには、AWS Step Functionsが最適です。Standard Workflowで在庫確認（DynamoDB条件付き書き込み）→ 決済API呼び出し → 在庫減算の各ステップをオーケストレーションします。DynamoDBトランザクションAPIで、在庫確認と仮予約をアトミックに実行し、過剰販売を防ぎます。決済失敗時はStep FunctionsのCatch句でCompensationステップ（在庫復元、キャンセル通知）を自動実行し、Sagaパターンで分散トランザクションの整合性を保証します。各ステップはLambdaで実装し、無制限にスケール。SQS DLQでリトライ不能な失敗を隔離します。単一Lambda関数では複雑なエラーハンドリングが困難で、タイムアウトリスクがあります。RDSはブラックフライデーのスケールに対応できず、書き込みスケーラビリティに限界があります。"
+            },
+            {
+                id: 15,
+                question: "AIスタートアップが機械学習推論APIを提供しています。GPUインスタンスでモデル推論を実行しますが、GPUコストが高く、アイドル時間のコスト削減が必要です。リクエストは不定期で、ゼロから数千リクエスト/分まで変動します。推論レイテンシは3秒以内が必須で、モデルのロード時間は30秒かかります。最適なアーキテクチャは？",
+                options: [
+                    "GPU EC2インスタンスを24時間稼働させる",
+                    "ECS on Fargate（GPU）+ Application Auto Scaling でタスク数を動的スケール、ALBでルーティング、CloudWatch メトリクスでリクエスト数監視、スケールアウト前にウォームアッププールを維持してコールドスタートを回避、リクエストゼロ時は1タスクのみ維持してコスト削減する",
+                    "Lambda関数でGPU推論を実行する",
+                    "オンデマンドのSpot Instancesのみを使用する"
+                ],
+                correct: 1,
+                explanation: "GPU推論でコスト効率とレイテンシ要件を両立するには、ECS on Fargateが最適です（Fargateは2023年からGPUサポート開始）。Application Auto Scalingで、ALBのリクエスト数やSQSキュー長に基づいてECSタスク数を動的に調整します。リクエストゼロ時は1タスクのみ稼働させ、モデルをメモリにロードした状態を維持（ウォームプール）することで、次のリクエスト時に30秒のコールドスタートを回避します。急激なトラフィック増加時は、Target Tracking Scalingで数分以内に数十タスクまでスケールアウト。ALBのヘルスチェックで異常タスクを自動置換します。24時間稼働のGPU EC2は無駄なコストが高く、LambdaはGPUをサポートせず、Spot Instancesは中断リスクで推論レイテンシSLAを保証できません。"
+            },
+            {
+                id: 16,
+                question: "グローバルSaaS企業が、複数リージョンでマイクロサービスを展開しています。各マイクロサービス（注文、在庫、決済、通知等）は独立したECSクラスタで動作し、サービス間通信が頻繁に発生します。各サービスのエンドポイント検出、負荷分散、ヘルスチェック、サーキットブレーカー、分散トレーシングを統一的に実装する必要があります。最適なアーキテクチャは？",
+                options: [
+                    "各サービスでハードコードされたエンドポイントを使用する",
+                    "App Mesh でサービスメッシュを構築、Envoy プロキシで全通信を制御、Cloud Map でサービスディスカバリ、X-Ray で分散トレーシング、App Mesh のリトライポリシーとサーキットブレーカーで耐障害性を確保、mTLS で暗号化通信を実現する",
+                    "各サービスで個別にロードバランサーを作成する",
+                    "Route 53のみでサービスディスカバリを行う"
+                ],
+                correct: 1,
+                explanation: "マイクロサービスの複雑なサービス間通信には、AWS App Meshが最適です。App Meshは、各ECSタスクにEnvoyプロキシサイドカーをインジェクトし、全サービス間通信をプロキシ経由で制御します。Cloud Mapでサービスレジストリを管理し、動的なサービスディスカバリを実現。App Meshのリトライポリシー（指数バックオフ）、タイムアウト設定、サーキットブレーカー（連続失敗時に一時的に通信遮断）で耐障害性を向上します。mTLS（相互TLS認証）で全サービス間通信を暗号化し、AWS X-Rayで分散トレーシング（リクエストフロー全体の可視化）を実現します。これらの機能をアプリケーションコードに実装する必要がなく、インフラレイヤーで統一的に管理できます。ハードコードされたエンドポイントは変更時にデプロイが必要で、Route 53のみでは負荷分散やサーキットブレーカーが実装できません。"
             }
         ]
     },
