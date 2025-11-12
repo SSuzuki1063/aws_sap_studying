@@ -22,16 +22,31 @@ class QuizApp {
 
         Object.keys(quizData).forEach(categoryKey => {
             const category = quizData[categoryKey];
+            const bestScore = QuizProgress.getBestScore(categoryKey);
+            const history = QuizProgress.getProgress(categoryKey);
+            const attemptCount = history.length;
+
             const categoryCard = document.createElement('div');
             categoryCard.className = `category-card ${categoryKey.replace('-', '')}`;
             categoryCard.onclick = () => this.startQuiz(categoryKey);
-            
+
+            let statsHTML = '';
+            if (attemptCount > 0) {
+                statsHTML = `
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.85em;">
+                        <div>🏆 最高スコア: ${bestScore}%</div>
+                        <div>📝 受験回数: ${attemptCount}回</div>
+                    </div>
+                `;
+            }
+
             categoryCard.innerHTML = `
                 <span class="category-icon">${category.icon}</span>
                 <div class="category-title">${category.title}</div>
                 <div class="question-count">${getTotalQuestions(categoryKey)}問</div>
+                ${statsHTML}
             `;
-            
+
             categoriesGrid.appendChild(categoryCard);
         });
     }
@@ -55,6 +70,73 @@ class QuizApp {
         document.getElementById('categorySelection').style.display = 'block';
         document.getElementById('quizSection').style.display = 'none';
         document.getElementById('resultsSection').style.display = 'none';
+
+        // 全体統計を表示
+        this.displayOverallStats();
+    }
+
+    displayOverallStats() {
+        const statsContainer = document.getElementById('overallStats');
+        if (!statsContainer) return;
+
+        const totalQuizzes = QuizProgress.getTotalQuizzesCompleted();
+
+        if (totalQuizzes === 0) {
+            statsContainer.innerHTML = `
+                <div style="text-align: center; color: #4a5568;">
+                    <h3 style="margin-bottom: 10px; color: #2c3e50;">📚 学習統計</h3>
+                    <p>まだクイズを開始していません。カテゴリを選択して始めましょう！</p>
+                </div>
+            `;
+            return;
+        }
+
+        // カテゴリごとの統計を集計
+        let totalScore = 0;
+        let totalQuestions = 0;
+        let categoriesCompleted = 0;
+
+        Object.keys(quizData).forEach(categoryKey => {
+            const history = QuizProgress.getProgress(categoryKey);
+            if (history.length > 0) {
+                categoriesCompleted++;
+                history.forEach(record => {
+                    totalScore += record.score;
+                    totalQuestions += record.total;
+                });
+            }
+        });
+
+        const overallAccuracy = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+
+        statsContainer.innerHTML = `
+            <div style="text-align: center;">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">📊 学習統計</h3>
+                <div style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                    margin-top: 15px;
+                ">
+                    <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 2rem; font-weight: bold; color: #74b9ff;">${totalQuizzes}</div>
+                        <div style="color: #6B7280; font-size: 0.9em; margin-top: 5px;">受験回数</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 2rem; font-weight: bold; color: #00b894;">${overallAccuracy}%</div>
+                        <div style="color: #6B7280; font-size: 0.9em; margin-top: 5px;">平均正答率</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 2rem; font-weight: bold; color: #fdcb6e;">${categoriesCompleted}</div>
+                        <div style="color: #6B7280; font-size: 0.9em; margin-top: 5px;">学習カテゴリ</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 2rem; font-weight: bold; color: #e17055;">${totalScore}/${totalQuestions}</div>
+                        <div style="color: #6B7280; font-size: 0.9em; margin-top: 5px;">正解数</div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     showQuizSection() {
@@ -199,6 +281,9 @@ class QuizApp {
         const totalQuestions = this.questions.length;
         const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
 
+        // 学習進捗を保存
+        QuizProgress.saveProgress(this.currentCategory, correctAnswers, totalQuestions);
+
         // 結果を表示
         document.getElementById('scoreDisplay').textContent = `${correctAnswers}/${totalQuestions}`;
         document.getElementById('correctCount').textContent = correctAnswers;
@@ -208,9 +293,9 @@ class QuizApp {
         // スコアに応じてスタイルとメッセージを設定
         const scoreDisplay = document.getElementById('scoreDisplay');
         let message = '';
-        
+
         scoreDisplay.className = 'score-display';
-        
+
         if (accuracy >= 90) {
             scoreDisplay.classList.add('score-excellent');
             message = '🌟 素晴らしい！完璧に近い理解度です。AWS SAP試験に向けて順調に進んでいますね！';
@@ -224,10 +309,67 @@ class QuizApp {
             scoreDisplay.classList.add('score-poor');
             message = '💪 まだ伸び代がたくさんあります！学習リソースを見直して再挑戦してみてください。';
         }
-        
+
         document.getElementById('scoreMessage').textContent = message;
-        
+
+        // 学習履歴を表示
+        this.displayLearningHistory();
+
         this.showResultsSection();
+    }
+
+    displayLearningHistory() {
+        const history = QuizProgress.getProgress(this.currentCategory);
+        const historyContainer = document.getElementById('learningHistory');
+
+        if (!historyContainer) return;
+
+        if (history.length === 0) {
+            historyContainer.innerHTML = '<p style="color: #6B7280; text-align: center;">まだ学習履歴がありません</p>';
+            return;
+        }
+
+        let historyHTML = '<div style="max-height: 300px; overflow-y: auto;">';
+        historyHTML += '<h3 style="margin-bottom: 15px; color: #2c3e50;">📊 最近の学習履歴（最大10回分）</h3>';
+        historyHTML += '<div style="display: grid; gap: 10px;">';
+
+        // 最新から順に表示（逆順）
+        history.slice().reverse().forEach((record, index) => {
+            const isLatest = index === 0;
+            const borderColor = record.accuracy >= 90 ? '#00b894' :
+                               record.accuracy >= 70 ? '#74b9ff' :
+                               record.accuracy >= 50 ? '#fdcb6e' : '#e17055';
+
+            historyHTML += `
+                <div style="
+                    background: ${isLatest ? '#f0f8ff' : 'white'};
+                    border-left: 4px solid ${borderColor};
+                    padding: 12px 15px;
+                    border-radius: 8px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    ${isLatest ? 'box-shadow: 0 2px 8px rgba(0,0,0,0.1);' : ''}
+                ">
+                    <div>
+                        <span style="font-weight: ${isLatest ? 'bold' : 'normal'}; color: #2c3e50;">
+                            ${isLatest ? '🎯 今回: ' : ''}${record.date}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <span style="color: #4a5568;">${record.score}/${record.total}問正解</span>
+                        <span style="
+                            font-weight: bold;
+                            color: ${borderColor};
+                            font-size: 1.1em;
+                        ">${record.accuracy}%</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        historyHTML += '</div></div>';
+        historyContainer.innerHTML = historyHTML;
     }
 
     restartQuiz() {
@@ -235,6 +377,8 @@ class QuizApp {
     }
 
     goBackToCategories() {
+        // カテゴリカードを再レンダリング（統計情報を更新するため）
+        this.renderCategories();
         this.showCategorySelection();
     }
 
