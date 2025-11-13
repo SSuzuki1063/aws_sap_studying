@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an AWS SAP (Solutions Architect Professional) exam study resource repository containing HTML-based learning materials. The repository serves as a comprehensive visual learning platform with infographics, technical diagrams, and detailed explanations of AWS services and concepts.
 
+**Live Site**: https://ssuzuki1063.github.io/aws_sap_studying/
+**Current Stats**: 120+ HTML learning resources, 194 quiz questions across 13 categories
+
 ## Quick Start Workflows
 
 ### Adding New HTML Learning Resources (Most Common Task)
@@ -40,6 +43,33 @@ python3 server.py
 
 ### Adding Quiz Questions
 Edit `quiz-data-extended.js` and add questions to appropriate category object. Question count updates automatically.
+
+### Analyzing Quiz Statistics
+```bash
+# View quiz statistics and category distribution
+python3 scripts/quiz_management/analyze_quiz.py
+```
+This displays:
+- Question count per category
+- Total questions and categories
+- Category balance analysis
+- Min/max questions by category
+
+### Using Claude Skills
+This repository includes a custom Claude skill for specialized workflows:
+
+```bash
+# Activate the aws-knowledge-organizer skill
+/skill aws-knowledge-organizer
+```
+
+The skill provides guided workflows for:
+- Adding new AWS learning resources with automated categorization
+- Creating quiz questions with templates and validation
+- Reorganizing content across categories
+- Bulk automation operations
+
+See `.claude/skills/aws-knowledge-organizer/SKILL.md` for detailed documentation.
 
 ## Directory Structure
 
@@ -188,10 +218,10 @@ const searchData = [
 
 #### Quiz System
 - Interactive quiz application (`quiz.html`, `quiz-app.js`, `quiz-data-extended.js`)
-- Category-based question selection across 9 AWS domains
+- Category-based question selection across 13 AWS domains
 - Real-time scoring and feedback with explanations
 - Progress tracking with visual progress bar
-- LocalStorage integration for tracking quiz history (optional feature via QuizProgress class)
+- **Quiz Progress Tracking**: The `QuizProgress` class in `quiz-app.js` provides localStorage-based progress tracking functionality. It saves quiz scores, dates, and performance metrics per category. This feature is implemented but not exposed in the UI by default - it can be enabled by adding UI controls to view saved progress data.
 - Responsive design for all device sizes
 
 Quiz data structure in `quiz-data-extended.js`:
@@ -427,6 +457,41 @@ python3 scripts/html_management/integrate_new_html.py --source custom_directory/
 5. Test mobile: Use browser dev tools to test responsive design
 6. Test quiz: Click "理解度クイズ" to verify quiz functionality
 
+### Testing Checklist for New Resources
+When adding new learning resources or quiz questions, verify:
+
+**HTML Learning Resources:**
+- [ ] File placed in correct category directory
+- [ ] File follows naming convention: `aws-[service]-[topic].html`
+- [ ] Breadcrumb navigation present and working
+- [ ] Page-internal TOC generated (if 2+ headings)
+- [ ] SVG diagrams are inline (not external links)
+- [ ] CSS uses AWS brand colors (#232F3E, #FF9900)
+- [ ] Content loads correctly in iframe
+- [ ] Mobile responsive (test at 768px and 1024px breakpoints)
+- [ ] Added to `index.html` sidebar navigation
+- [ ] Added to `searchData` array in `index.html`
+- [ ] No external dependencies (CDNs, external CSS/JS)
+- [ ] All links work correctly
+
+**Quiz Questions:**
+- [ ] Added to correct category in `quiz-data-extended.js`
+- [ ] Unique `id` field (format: `[service]-[topic]-[year]`)
+- [ ] Question text clear and specific
+- [ ] Exactly 4 options provided
+- [ ] `correct` index is 0-3
+- [ ] Explanation is comprehensive (2-4 sentences)
+- [ ] No syntax errors: `node -c quiz-data-extended.js`
+- [ ] Question displays correctly in quiz UI
+- [ ] All options display without truncation
+- [ ] Explanation shows after answer selection
+
+**Final Steps:**
+- [ ] Tested locally with `python3 server.py`
+- [ ] Git commit with descriptive message
+- [ ] Pushed to `gh-pages` branch
+- [ ] Verified on GitHub Pages site
+
 ### Debugging Content Loading Issues
 - Check browser console for 404 errors indicating missing files
 - Verify file paths in `index.html` match actual file locations
@@ -446,8 +511,11 @@ python3 scripts/html_management/integrate_new_html.py --source custom_directory/
 
 ### Deployment
 - Repository is deployed via GitHub Pages on the `gh-pages` branch
-- All commits to `gh-pages` will be automatically deployed
+- **Live Site**: https://ssuzuki1063.github.io/aws_sap_studying/
+- All commits to `gh-pages` will be automatically deployed within minutes
 - No build process - files are served as-is
+- Deployment is automatic upon push to `gh-pages`
+- Verify deployments by checking the live site after pushing changes
 
 ### Browser Compatibility
 - Designed for modern browsers with CSS Grid and Flexbox support
