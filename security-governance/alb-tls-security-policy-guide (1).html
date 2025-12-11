@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALB TLSセキュリティポリシー完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 25%, #6d28d9 50%, #a855f7 75%, #ec4899 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #6d28d9 50%, #ec4899 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            border-radius: 15px;
+            border-left: 6px solid #7c3aed;
+        }
+        
+        .intro h2 {
+            color: #5b21b6;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #4c1d95;
+            line-height: 1.8;
+        }
+        
+        /* ホテルのたとえセクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #10b981;
+        }
+        
+        .analogy-title {
+            color: #065f46;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card h3 {
+            color: #065f46;
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .analogy-description {
+            background: #f0fdf4;
+            padding: 20px;
+            border-radius: 10px;
+            color: #065f46;
+            line-height: 1.8;
+            margin: 15px 0;
+        }
+        
+        /* デフォルトポリシーセクション */
+        .default-policy-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px 30px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .policy-highlight {
+            background: linear-gradient(135deg, #1e3a8a 0%, #6d28d9 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .policy-name {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .policy-subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+        
+        .policy-badge {
+            display: inline-block;
+            background: #fbbf24;
+            color: #1e293b;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        /* TLSバージョン・暗号スイート */
+        .protocol-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .protocol-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            border-top: 5px solid;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .protocol-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .protocol-card:nth-child(1) { border-color: #10b981; }
+        .protocol-card:nth-child(2) { border-color: #3b82f6; }
+        .protocol-card:nth-child(3) { border-color: #f59e0b; }
+        .protocol-card:nth-child(4) { border-color: #ef4444; }
+        
+        .protocol-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .protocol-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .protocol-content {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .protocol-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .protocol-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .protocol-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .status-supported {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .status-not-supported {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        /* 互換性セクション */
+        .compatibility-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .compatibility-title {
+            color: #92400e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .client-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .client-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .client-card:hover {
+            transform: scale(1.03);
+        }
+        
+        .client-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .client-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .client-status {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .status-ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-ng {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .client-detail {
+            margin-top: 15px;
+            color: #64748b;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        /* ポリシー比較表 */
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 800px;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #1e3a8a 0%, #6d28d9 100%);
+            color: white;
+            padding: 18px 15px;
+            text-align: left;
+            font-size: 1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 18px 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .default-row {
+            background: linear-gradient(to right, #faf5ff 0%, white 100%);
+        }
+        
+        .check { color: #10b981; font-weight: bold; }
+        .cross { color: #ef4444; font-weight: bold; }
+        
+        /* ユースケース */
+        .use-case-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .use-case-title {
+            color: #0c4a6e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .use-case-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 132, 199, 0.2);
+        }
+        
+        .use-case-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .use-case-card h4 {
+            color: #0c4a6e;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .use-case-description {
+            color: #475569;
+            line-height: 1.7;
+            margin: 15px 0;
+        }
+        
+        .recommended-policy {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .recommended-policy strong {
+            color: #0369a1;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .policy-code {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            color: #22d3ee;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+        
+        /* 暗号スイート詳細 */
+        .cipher-section {
+            background: linear-gradient(to bottom, #1e293b 0%, #334155 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            color: white;
+        }
+        
+        .cipher-title {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 40px;
+        }
+        
+        .cipher-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .cipher-card {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cipher-card h4 {
+            color: #22d3ee;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .cipher-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .cipher-list li {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8;
+        }
+        
+        .cipher-list li:last-child {
+            border-bottom: none;
+        }
+        
+        /* Tipsボックス */
+        .tip-box {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border-left: 6px solid #7c3aed;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #5b21b6;
+            line-height: 1.9;
+            font-size: 1.05em;
+        }
+        
+        /* 警告ボックス */
+        .warning-box {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border-left: 6px solid #ef4444;
+        }
+        
+        .warning-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #991b1b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .warning-content {
+            color: #991b1b;
+            line-height: 1.8;
+        }
+        
+        /* フローチャート */
+        .decision-flow {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .flow-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .flow-step {
+            background: linear-gradient(135deg, #f8fafc 0%, white 100%);
+            padding: 25px 40px;
+            border-radius: 15px;
+            border: 3px solid;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .flow-question {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, white 100%);
+        }
+        
+        .flow-answer {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, white 100%);
+        }
+        
+        .flow-step h4 {
+            color: #1e293b;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .flow-step p {
+            color: #64748b;
+        }
+        
+        .flow-arrow {
+            font-size: 2em;
+            color: #94a3b8;
+        }
+        
+        .flow-branch {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .flow-branch .flow-step {
+            max-width: 300px;
+        }
+        
+        @media (max-width: 1024px) {
+            .analogy-grid,
+            .flow-branch {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .policy-name {
+                font-size: 1.5em;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 ALB TLSセキュリティポリシー</h1>
+            <p>デフォルトポリシーの内容と古いクライアントとの互換性を完全解説</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>🏨 高級ホテルの「入館セキュリティ」で例えると超わかりやすい！</h2>
+                <p class="intro-text">
+                    <strong>TLSセキュリティポリシー = ホテルの入館規則</strong><br><br>
+                    「どんな身分証明書を持っている人を入れるか」を決めるルールです。<br>
+                    最新のパスポートしか認めないか、古い免許証でもOKか...<br><br>
+                    <strong>セキュリティを高めれば</strong>安全だけど、古いお客様は入れなくなる<br>
+                    <strong>緩くすれば</strong>多くのお客様を受け入れられるけど、リスクも上がる<br><br>
+                    このバランスを理解しましょう！✨
+                </p>
+            </div>
+            
+            <!-- ホテルのたとえ -->
+            <div class="analogy-section">
+                <h2 class="analogy-title">🏨 ホテルの入館システムで理解するTLSポリシー</h2>
+                
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <div class="analogy-icon">🔑</div>
+                        <h3>TLSプロトコル = 鍵の種類</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>📝 たとえ話：</strong><br>
+                            ホテルの部屋の鍵には世代があります。<br><br>
+                            🔑 <strong>TLS 1.3</strong> = 最新のスマートロック<br>
+                            🗝️ <strong>TLS 1.2</strong> = ICカードキー<br>
+                            🔐 <strong>TLS 1.1</strong> = 古いマグネットキー<br>
+                            🗃️ <strong>TLS 1.0</strong> = 昔ながらの金属キー
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💡 ポイント：</strong><br>
+                            新しい鍵ほど<strong>セキュリティが高い</strong>けど、<br>
+                            古いお客様（ブラウザ）は対応していないことも。
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-icon">📋</div>
+                        <h3>暗号スイート = 本人確認方法</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>📝 たとえ話：</strong><br>
+                            ホテルでの本人確認にも種類があります。<br><br>
+                            🛂 <strong>AES-256-GCM</strong> = 顔認証 + 指紋 + パスポート<br>
+                            📱 <strong>AES-128-GCM</strong> = 顔認証 + ICカード<br>
+                            💳 <strong>AES-256-CBC</strong> = ICカード + 暗証番号<br>
+                            📝 <strong>3DES</strong> = 紙の宿泊台帳（古い）
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💡 ポイント：</strong><br>
+                            セキュリティポリシーは<strong>「どの本人確認方法を許可するか」</strong>を決めるルール！
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- デフォルトポリシー -->
+            <div class="default-policy-section">
+                <h2 class="section-title">⭐ ALBのデフォルトTLSポリシー</h2>
+                
+                <div class="policy-highlight">
+                    <div class="policy-name">ELBSecurityPolicy-TLS13-1-2-2021-06</div>
+                    <div class="policy-subtitle">2023年以降に作成されたリスナーのデフォルト</div>
+                    <div class="policy-badge">🏆 推奨ポリシー</div>
+                </div>
+                
+                <div class="protocol-grid">
+                    <div class="protocol-card">
+                        <div class="protocol-icon">✅</div>
+                        <div class="protocol-title">サポートするTLSバージョン</div>
+                        <div class="protocol-content">
+                            <ul class="protocol-list">
+                                <li><span class="status-supported">✅ TLS 1.3</span> 最新・最強</li>
+                                <li><span class="status-supported">✅ TLS 1.2</span> 現在の主流</li>
+                                <li><span class="status-not-supported">❌ TLS 1.1</span> 非対応</li>
+                                <li><span class="status-not-supported">❌ TLS 1.0</span> 非対応</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="protocol-card">
+                        <div class="protocol-icon">🛡️</div>
+                        <div class="protocol-title">セキュリティレベル</div>
+                        <div class="protocol-content">
+                            <ul class="protocol-list">
+                                <li>🔒 <strong>Forward Secrecy</strong> 対応</li>
+                                <li>🔐 <strong>AEAD暗号</strong>（GCM）対応</li>
+                                <li>⚡ <strong>高速化</strong>（TLS 1.3）</li>
+                                <li>🏅 <strong>PCI DSS</strong> 準拠</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="protocol-card">
+                        <div class="protocol-icon">🎯</div>
+                        <div class="protocol-title">バランス重視</div>
+                        <div class="protocol-content">
+                            <ul class="protocol-list">
+                                <li>📊 <strong>セキュリティ：</strong>高い</li>
+                                <li>🌐 <strong>互換性：</strong>良好</li>
+                                <li>⚡ <strong>パフォーマンス：</strong>優秀</li>
+                                <li>✨ <strong>おすすめ度：</strong>★★★★★</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="protocol-card">
+                        <div class="protocol-icon">📅</div>
+                        <div class="protocol-title">対応ブラウザ最低要件</div>
+                        <div class="protocol-content">
+                            <ul class="protocol-list">
+                                <li>🌐 Chrome 30以降</li>
+                                <li>🦊 Firefox 27以降</li>
+                                <li>🧭 Safari 7以降</li>
+                                <li>📱 iOS 9以降</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 古いクライアントとの互換性 -->
+            <div class="compatibility-section">
+                <h2 class="compatibility-title">📱 古いクライアントとの互換性チェック</h2>
+                
+                <p style="text-align: center; color: #92400e; font-size: 1.2em; margin-bottom: 30px;">
+                    <strong>デフォルトポリシー（TLS13-1-2-2021-06）</strong>で接続できるクライアント
+                </p>
+                
+                <div class="client-grid">
+                    <div class="client-card">
+                        <div class="client-icon">💻</div>
+                        <div class="client-name">Windows 10/11</div>
+                        <span class="client-status status-ok">✅ 完全対応</span>
+                        <div class="client-detail">
+                            Edge、Chrome、Firefoxすべて問題なし。<br>
+                            TLS 1.2/1.3両方サポート。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">🍎</div>
+                        <div class="client-name">macOS 10.13以降</div>
+                        <span class="client-status status-ok">✅ 完全対応</span>
+                        <div class="client-detail">
+                            Safari、Chrome、Firefoxすべて対応。<br>
+                            High Sierra以降なら安心。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">📱</div>
+                        <div class="client-name">iOS 12以降</div>
+                        <span class="client-status status-ok">✅ 完全対応</span>
+                        <div class="client-detail">
+                            iPhone 5s以降、iPad Air以降。<br>
+                            TLS 1.3もサポート。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">🤖</div>
+                        <div class="client-name">Android 7以降</div>
+                        <span class="client-status status-ok">✅ 完全対応</span>
+                        <div class="client-detail">
+                            2016年以降の端末なら問題なし。<br>
+                            Chrome for Androidは自動更新。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">🖥️</div>
+                        <div class="client-name">Windows 7</div>
+                        <span class="client-status status-warning">⚠️ 要注意</span>
+                        <div class="client-detail">
+                            IE11はTLS 1.2対応だが設定が必要。<br>
+                            Chrome/Firefoxなら問題なし。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">📟</div>
+                        <div class="client-name">IE10以前</div>
+                        <span class="client-status status-ng">❌ 非対応</span>
+                        <div class="client-detail">
+                            TLS 1.0/1.1のみサポート。<br>
+                            接続不可。アップグレード必須。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">📱</div>
+                        <div class="client-name">iOS 8以前</div>
+                        <span class="client-status status-ng">❌ 非対応</span>
+                        <div class="client-detail">
+                            iPhone 4以前の古い端末。<br>
+                            TLS 1.2非サポートのため接続不可。
+                        </div>
+                    </div>
+                    
+                    <div class="client-card">
+                        <div class="client-icon">🤖</div>
+                        <div class="client-name">Android 4.x</div>
+                        <span class="client-status status-ng">❌ 非対応</span>
+                        <div class="client-detail">
+                            2013年以前の古い端末。<br>
+                            TLS 1.2対応が不完全。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 警告ボックス -->
+            <div class="warning-box">
+                <div class="warning-title">
+                    <span>⚠️</span>
+                    <span>古いクライアントをサポートする必要がある場合</span>
+                </div>
+                <div class="warning-content">
+                    <strong>以下のようなケースでは、別のポリシーを検討してください：</strong><br><br>
+                    • 社内システムで古いWindows 7 + IE11ユーザーがいる<br>
+                    • 組み込み機器やIoTデバイスが古いTLSしか対応していない<br>
+                    • 海外の一部地域で古い端末の利用率が高い<br><br>
+                    <strong>→ ただし、セキュリティリスクを十分に理解した上で判断してください！</strong>
+                </div>
+            </div>
+            
+            <!-- ポリシー比較表 -->
+            <div class="comparison-table">
+                <h2 class="table-title">📊 主要TLSポリシー比較表</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ポリシー名</th>
+                            <th>TLS 1.3</th>
+                            <th>TLS 1.2</th>
+                            <th>TLS 1.1</th>
+                            <th>TLS 1.0</th>
+                            <th>用途</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="default-row">
+                            <td><strong>TLS13-1-2-2021-06</strong><br><small>⭐ デフォルト推奨</small></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td>通常のWebサービス</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TLS13-1-3-2021-06</strong><br><small>最高セキュリティ</small></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td>最新クライアント限定</td>
+                        </tr>
+                        <tr>
+                            <td><strong>FS-1-2-Res-2020-10</strong><br><small>Forward Secrecy重視</small></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td>金融・医療系</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TLS-1-2-2017-01</strong><br><small>TLS 1.2限定</small></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td>標準的なセキュリティ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TLS-1-1-2017-01</strong><br><small>⚠️ レガシー</small></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="cross">❌</span></td>
+                            <td>古いクライアント対応</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TLS-1-0-2015-04</strong><br><small>⛔ 非推奨</small></td>
+                            <td><span class="cross">❌</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td><span class="check">✅</span></td>
+                            <td>最大互換性（非推奨）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 暗号スイート詳細 -->
+            <div class="cipher-section">
+                <h2 class="cipher-title">🔐 デフォルトポリシーの暗号スイート詳細</h2>
+                
+                <div class="cipher-grid">
+                    <div class="cipher-card">
+                        <h4>⚡ TLS 1.3 暗号スイート</h4>
+                        <ul class="cipher-list">
+                            <li>TLS_AES_128_GCM_SHA256</li>
+                            <li>TLS_AES_256_GCM_SHA384</li>
+                            <li>TLS_CHACHA20_POLY1305_SHA256</li>
+                        </ul>
+                        <p style="color: #22d3ee; margin-top: 15px; font-size: 0.9em;">
+                            🚀 すべてAEAD暗号で高速・高セキュリティ
+                        </p>
+                    </div>
+                    
+                    <div class="cipher-card">
+                        <h4>🛡️ TLS 1.2 暗号スイート（ECDHE系）</h4>
+                        <ul class="cipher-list">
+                            <li>ECDHE-ECDSA-AES128-GCM-SHA256</li>
+                            <li>ECDHE-RSA-AES128-GCM-SHA256</li>
+                            <li>ECDHE-ECDSA-AES256-GCM-SHA384</li>
+                            <li>ECDHE-RSA-AES256-GCM-SHA384</li>
+                            <li>ECDHE-ECDSA-AES128-SHA256</li>
+                            <li>ECDHE-RSA-AES128-SHA256</li>
+                        </ul>
+                        <p style="color: #22d3ee; margin-top: 15px; font-size: 0.9em;">
+                            🔒 Forward Secrecy対応で安全
+                        </p>
+                    </div>
+                    
+                    <div class="cipher-card">
+                        <h4>📋 暗号強度の説明</h4>
+                        <ul class="cipher-list">
+                            <li><strong>GCM</strong> = 認証付き暗号（推奨）</li>
+                            <li><strong>AES-256</strong> = 最強の対称暗号</li>
+                            <li><strong>AES-128</strong> = 十分に強力</li>
+                            <li><strong>ECDHE</strong> = 楕円曲線鍵交換</li>
+                            <li><strong>SHA-384</strong> = 強力なハッシュ</li>
+                        </ul>
+                        <p style="color: #22d3ee; margin-top: 15px; font-size: 0.9em;">
+                            💎 すべて業界標準を満たす強度
+                        </p>
+                    </div>
+                    
+                    <div class="cipher-card">
+                        <h4>❌ サポートしない暗号（安全のため）</h4>
+                        <ul class="cipher-list">
+                            <li><s>RC4</s> - 脆弱性あり</li>
+                            <li><s>3DES</s> - 古い・遅い</li>
+                            <li><s>MD5</s> - 衝突攻撃に脆弱</li>
+                            <li><s>EXPORT暗号</s> - 意図的に弱い</li>
+                            <li><s>NULL暗号</s> - 暗号化なし</li>
+                        </ul>
+                        <p style="color: #ef4444; margin-top: 15px; font-size: 0.9em;">
+                            🚫 これらを使うポリシーは避けましょう
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ユースケース別推奨 -->
+            <div class="use-case-section">
+                <h2 class="use-case-title">💼 ユースケース別：どのポリシーを選ぶ？</h2>
+                
+                <div class="use-case-grid">
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🌐</div>
+                        <h4>一般的なWebサービス</h4>
+                        <div class="use-case-description">
+                            ECサイト、企業サイト、SaaS アプリケーションなど、<br>
+                            幅広いユーザーにサービスを提供する場合。
+                        </div>
+                        <div class="recommended-policy">
+                            <strong>🎯 推奨ポリシー：</strong>
+                            <span class="policy-code">ELBSecurityPolicy-TLS13-1-2-2021-06</span>
+                            <p style="color: #475569; margin-top: 10px; font-size: 0.9em;">
+                                デフォルトのままでOK！セキュリティと互換性のベストバランス。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🏦</div>
+                        <h4>金融・医療系システム</h4>
+                        <div class="use-case-description">
+                            銀行、証券、保険、医療機関など<br>
+                            最高レベルのセキュリティが求められる場合。
+                        </div>
+                        <div class="recommended-policy">
+                            <strong>🎯 推奨ポリシー：</strong>
+                            <span class="policy-code">ELBSecurityPolicy-TLS13-1-3-2021-06</span>
+                            <p style="color: #475569; margin-top: 10px; font-size: 0.9em;">
+                                TLS 1.3のみ。最新クライアント限定で最強セキュリティ。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🏢</div>
+                        <h4>社内システム（レガシー環境）</h4>
+                        <div class="use-case-description">
+                            古いWindows 7やIE11を使用するユーザーがいる<br>
+                            社内システムやイントラネット。
+                        </div>
+                        <div class="recommended-policy">
+                            <strong>🎯 推奨ポリシー：</strong>
+                            <span class="policy-code">ELBSecurityPolicy-TLS-1-2-2017-01</span>
+                            <p style="color: #475569; margin-top: 10px; font-size: 0.9em;">
+                                TLS 1.2のみ。より多くの暗号スイートをサポート。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🔧</div>
+                        <h4>IoT・組み込み機器</h4>
+                        <div class="use-case-description">
+                            古いファームウェアの機器や、<br>
+                            アップデートが難しいIoTデバイスとの通信。
+                        </div>
+                        <div class="recommended-policy">
+                            <strong>🎯 推奨ポリシー：</strong>
+                            <span class="policy-code">ELBSecurityPolicy-TLS-1-1-2017-01</span>
+                            <p style="color: #ef4444; margin-top: 10px; font-size: 0.9em;">
+                                ⚠️ TLS 1.1は脆弱。可能な限り機器のアップグレードを検討。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 判断フローチャート -->
+            <div class="decision-flow">
+                <h2 class="flow-title">🤔 ポリシー選択フローチャート</h2>
+                
+                <div class="flow-container">
+                    <div class="flow-step flow-question">
+                        <h4>❓ 古いクライアント（TLS 1.1以下）をサポートする必要がある？</h4>
+                    </div>
+                    
+                    <div class="flow-arrow">⬇️</div>
+                    
+                    <div class="flow-branch">
+                        <div class="flow-step flow-answer" style="border-color: #10b981;">
+                            <h4>NO（通常はこっち）</h4>
+                            <p>→ <strong>デフォルトポリシーでOK！</strong><br>
+                            TLS13-1-2-2021-06</p>
+                        </div>
+                        
+                        <div class="flow-step flow-answer" style="border-color: #f59e0b;">
+                            <h4>YES</h4>
+                            <p>→ レガシーポリシーを検討<br>
+                            ⚠️ リスクを理解した上で</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-arrow">⬇️</div>
+                    
+                    <div class="flow-step flow-question">
+                        <h4>❓ 最高レベルのセキュリティが必要？（金融・医療など）</h4>
+                    </div>
+                    
+                    <div class="flow-arrow">⬇️</div>
+                    
+                    <div class="flow-branch">
+                        <div class="flow-step flow-answer" style="border-color: #10b981;">
+                            <h4>YES</h4>
+                            <p>→ <strong>TLS 1.3専用ポリシー</strong><br>
+                            TLS13-1-3-2021-06</p>
+                        </div>
+                        
+                        <div class="flow-step flow-answer" style="border-color: #3b82f6;">
+                            <h4>NO（通常のセキュリティ）</h4>
+                            <p>→ <strong>デフォルトで十分！</strong><br>
+                            TLS13-1-2-2021-06</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>TLSポリシー選択のベストプラクティス</span>
+                </div>
+                <div class="tip-content">
+                    <strong>1. 迷ったらデフォルトを使う：</strong><br>
+                    AWSが推奨するデフォルトポリシーは、セキュリティと互換性のバランスが最適化されています。<br><br>
+                    
+                    <strong>2. 定期的に見直す：</strong><br>
+                    TLSの世界は進化しています。年に1回は最新の推奨ポリシーをチェックしましょう。<br><br>
+                    
+                    <strong>3. 古いポリシーは避ける：</strong><br>
+                    TLS 1.0/1.1をサポートするポリシーは、特別な理由がない限り使用しないでください。<br><br>
+                    
+                    <strong>4. テスト環境で確認：</strong><br>
+                    ポリシー変更前に、実際のクライアントで接続テストを行いましょう。<br><br>
+                    
+                    <strong>5. CloudWatchでモニタリング：</strong><br>
+                    TLSネゴシエーション失敗をアラートで監視し、互換性問題を早期発見しましょう。
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #6d28d9 50%, #ec4899 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 1100px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">🏨 ホテルの入館規則 = TLSセキュリティポリシー</h3>
+                        <p style="font-size: 1.15em; line-height: 2;">
+                            「どんな鍵（プロトコル）」と「どんな本人確認（暗号スイート）」を許可するか<br>
+                            セキュリティと互換性のバランスを決めるルールです
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">⭐</div>
+                            <strong style="font-size: 1.2em;">デフォルト推奨</strong><br><br>
+                            TLS13-1-2-2021-06<br>
+                            ほとんどのケースで<br>これでOK！
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🛡️</div>
+                            <strong style="font-size: 1.2em;">サポート範囲</strong><br><br>
+                            TLS 1.2 / 1.3<br>
+                            2015年以降の<br>ほぼ全ブラウザ対応
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">⚠️</div>
+                            <strong style="font-size: 1.2em;">注意点</strong><br><br>
+                            IE10以前、iOS 8以前<br>Android 4.xは<br>接続不可
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+                        🎯 <strong>結論：</strong>特別な理由がなければ<br>
+                        <span style="background: #10b981; padding: 5px 15px; border-radius: 20px; margin: 5px;">デフォルトポリシーを使おう！</span><br><br>
+                        古いクライアント対応が必要なら、リスクを理解した上で<br>
+                        レガシーポリシーを検討しましょう 🔐
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route 53 DNSSEC完全ガイド - DNS Security Extensions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 25%, #3498db 50%, #1abc9c 75%, #16a085 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2980b9 50%, #1abc9c 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header::after {
+            content: '🛡️';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.08;
+            bottom: -30px;
+            left: -30px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #e8f6f3 0%, #d1f2eb 100%);
+            border-radius: 15px;
+            border-left: 6px solid #1abc9c;
+        }
+        
+        .intro h2 {
+            color: #0e6655;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #145a32;
+            line-height: 1.8;
+        }
+        
+        /* 問題提起セクション */
+        .problem-section {
+            background: linear-gradient(135deg, #fdf2f2 0%, #fce4e4 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #e74c3c;
+        }
+        
+        .problem-title {
+            color: #922b21;
+            font-size: 2em;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .attack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 25px;
+        }
+        
+        .attack-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.2);
+            transition: all 0.3s ease;
+            border-top: 5px solid #e74c3c;
+        }
+        
+        .attack-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(231, 76, 60, 0.3);
+        }
+        
+        .attack-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .attack-card h4 {
+            color: #922b21;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .attack-description {
+            color: #5d6d7e;
+            line-height: 1.7;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #fef9e7 0%, #fcf3cf 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f1c40f;
+        }
+        
+        .analogy-title {
+            color: #7d6608;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-card.without-seal {
+            border-top: 6px solid #e74c3c;
+        }
+        
+        .analogy-card.with-seal {
+            border-top: 6px solid #27ae60;
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card h3 {
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .analogy-card.without-seal h3 {
+            color: #922b21;
+        }
+        
+        .analogy-card.with-seal h3 {
+            color: #1e8449;
+        }
+        
+        .analogy-description {
+            padding: 20px;
+            border-radius: 10px;
+            line-height: 1.8;
+            margin: 15px 0;
+        }
+        
+        .analogy-card.without-seal .analogy-description {
+            background: #fdf2f2;
+            color: #922b21;
+        }
+        
+        .analogy-card.with-seal .analogy-description {
+            background: #eafaf1;
+            color: #1e8449;
+        }
+        
+        /* DNSSEC仕組みセクション */
+        .mechanism-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px 30px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .mechanism-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .chain-of-trust {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .trust-level {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .trust-marker {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: white;
+            border: 6px solid;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            z-index: 2;
+            flex-shrink: 0;
+        }
+        
+        .trust-level:nth-child(1) .trust-marker { border-color: #9b59b6; background: linear-gradient(135deg, #f5eef8 0%, #ebdef0 100%); }
+        .trust-level:nth-child(2) .trust-marker { border-color: #3498db; background: linear-gradient(135deg, #ebf5fb 0%, #d6eaf8 100%); }
+        .trust-level:nth-child(3) .trust-marker { border-color: #1abc9c; background: linear-gradient(135deg, #e8f8f5 0%, #d1f2eb 100%); }
+        .trust-level:nth-child(4) .trust-marker { border-color: #27ae60; background: linear-gradient(135deg, #eafaf1 0%, #d5f5e3 100%); }
+        
+        .trust-content {
+            flex: 1;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            margin-left: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            border-left: 5px solid;
+        }
+        
+        .trust-level:nth-child(1) .trust-content { border-color: #9b59b6; }
+        .trust-level:nth-child(2) .trust-content { border-color: #3498db; }
+        .trust-level:nth-child(3) .trust-content { border-color: #1abc9c; }
+        .trust-level:nth-child(4) .trust-content { border-color: #27ae60; }
+        
+        .trust-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .trust-role {
+            color: #64748b;
+            line-height: 1.7;
+        }
+        
+        .trust-arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #94a3b8;
+            margin: 10px 0 10px 60px;
+        }
+        
+        /* キーの種類 */
+        .keys-section {
+            background: linear-gradient(135deg, #eaf2f8 0%, #d4e6f1 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #2980b9;
+        }
+        
+        .keys-title {
+            color: #1a5276;
+            font-size: 2.5em;
+            margin-bottom: 35px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .keys-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .key-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .key-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .key-card.ksk {
+            border-top: 6px solid #9b59b6;
+        }
+        
+        .key-card.zsk {
+            border-top: 6px solid #3498db;
+        }
+        
+        .key-icon {
+            font-size: 3.5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .key-card h3 {
+            font-size: 1.6em;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .key-card.ksk h3 { color: #7d3c98; }
+        .key-card.zsk h3 { color: #2471a3; }
+        
+        .key-subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        
+        .key-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .key-detail-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 12px 0;
+        }
+        
+        .key-detail-icon {
+            font-size: 1.3em;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .key-detail-text {
+            color: #475569;
+            line-height: 1.6;
+        }
+        
+        .key-analogy {
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .key-card.ksk .key-analogy {
+            background: #f5eef8;
+            border-left: 4px solid #9b59b6;
+        }
+        
+        .key-card.zsk .key-analogy {
+            background: #ebf5fb;
+            border-left: 4px solid #3498db;
+        }
+        
+        .key-analogy-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .key-card.ksk .key-analogy-title { color: #7d3c98; }
+        .key-card.zsk .key-analogy-title { color: #2471a3; }
+        
+        /* フロー図 */
+        .flow-section {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .flow-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        .flow-step {
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+            padding: 25px 15px;
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            position: relative;
+        }
+        
+        .flow-step-number {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .flow-step-icon {
+            font-size: 3em;
+            margin: 15px 0;
+        }
+        
+        .flow-step-title {
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .flow-step-desc {
+            color: #64748b;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        
+        .flow-arrow {
+            font-size: 2.5em;
+            color: #1abc9c;
+            flex-shrink: 0;
+        }
+        
+        /* 比較テーブル */
+        .comparison-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2980b9 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .status-safe {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .status-danger {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        /* 設定手順 */
+        .setup-section {
+            background: linear-gradient(135deg, #e8f8f5 0%, #d1f2eb 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #1abc9c;
+        }
+        
+        .setup-title {
+            color: #0e6655;
+            font-size: 2.5em;
+            margin-bottom: 35px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .setup-steps {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .setup-step {
+            display: flex;
+            margin: 25px 0;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .setup-step-number {
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+            color: white;
+            padding: 25px 30px;
+            font-size: 2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+        }
+        
+        .setup-step-content {
+            padding: 25px 30px;
+            flex: 1;
+        }
+        
+        .setup-step-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #0e6655;
+            margin-bottom: 10px;
+        }
+        
+        .setup-step-desc {
+            color: #5d6d7e;
+            line-height: 1.7;
+        }
+        
+        .setup-step-code {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+        
+        /* ユースケース */
+        .usecase-section {
+            background: linear-gradient(135deg, #fef9e7 0%, #fcf3cf 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f39c12;
+        }
+        
+        .usecase-title {
+            color: #9a7d0a;
+            font-size: 2.5em;
+            margin-bottom: 35px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .usecase-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .usecase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(243, 156, 18, 0.2);
+        }
+        
+        .usecase-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-card h4 {
+            color: #9a7d0a;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .usecase-description {
+            color: #5d6d7e;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-benefit {
+            background: #fef9e7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .usecase-benefit strong {
+            color: #9a7d0a;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        /* 注意点 */
+        .warning-section {
+            background: linear-gradient(135deg, #fdf2f2 0%, #fce4e4 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #e74c3c;
+        }
+        
+        .warning-title {
+            color: #922b21;
+            font-size: 2em;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .warning-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .warning-item {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(231, 76, 60, 0.1);
+        }
+        
+        .warning-item-title {
+            font-weight: bold;
+            color: #922b21;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .warning-item-desc {
+            color: #5d6d7e;
+            line-height: 1.7;
+        }
+        
+        /* Tips */
+        .tip-box {
+            background: linear-gradient(135deg, #d4efdf 0%, #abebc6 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border-left: 6px solid #27ae60;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #1e8449;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #1e8449;
+            line-height: 1.9;
+            font-size: 1.05em;
+        }
+        
+        /* コスト情報 */
+        .cost-section {
+            background: linear-gradient(135deg, #e8f6f3 0%, #d1f2eb 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .cost-title {
+            text-align: center;
+            font-size: 2em;
+            color: #0e6655;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .cost-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .cost-item {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .cost-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .cost-label {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .cost-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #0e6655;
+        }
+        
+        .cost-note {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 1024px) {
+            .analogy-comparison,
+            .keys-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .trust-level {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .trust-content {
+                margin-left: 0;
+                margin-top: 15px;
+            }
+            
+            .trust-arrow {
+                margin-left: 0;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Route 53 DNSSEC</h1>
+            <p>「公印付き証明書」で理解する！DNSセキュリティ拡張の完全ガイド</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>📬 役所の公印システムで例えると超わかりやすい！</h2>
+                <p class="intro-text">
+                    <strong>DNSSECは「DNS回答に公印を押す」仕組み！</strong><br><br>
+                    役所から届く重要な書類には必ず「公印」が押されていますよね。<br>
+                    なぜなら、<strong>偽造された書類かどうかを判別できる</strong>から。<br><br>
+                    DNSSECも同じ！インターネット上の「住所案内」であるDNSに<br>
+                    <strong>電子的な公印（デジタル署名）</strong>を付けることで、<br>
+                    「この回答は本物ですよ」と証明できるのです✨
+                </p>
+            </div>
+            
+            <!-- 問題提起 -->
+            <div class="problem-section">
+                <h2 class="problem-title">😱 DNSSECがないと何が危険？</h2>
+                <p style="text-align: center; color: #922b21; font-size: 1.15em; margin-bottom: 25px;">
+                    DNSは元々「信頼ベース」で設計されたため、悪意ある攻撃に弱い...
+                </p>
+                
+                <div class="attack-grid">
+                    <div class="attack-card">
+                        <div class="attack-icon">🎭</div>
+                        <h4>DNSスプーフィング</h4>
+                        <div class="attack-description">
+                            <strong>偽の住所案内を送りつける攻撃</strong><br><br>
+                            攻撃者が「example.com? それは192.168.1.1だよ」と<strong>嘘の回答</strong>を送信。<br><br>
+                            📬 例えるなら：<br>
+                            郵便配達員になりすまして、偽の住所を教える詐欺師のようなもの。
+                        </div>
+                    </div>
+                    
+                    <div class="attack-card">
+                        <div class="attack-icon">☠️</div>
+                        <h4>DNSキャッシュポイズニング</h4>
+                        <div class="attack-description">
+                            <strong>DNSサーバーの記憶を汚染する攻撃</strong><br><br>
+                            DNSサーバーのキャッシュに<strong>偽の情報を注入</strong>。多くのユーザーが被害に。<br><br>
+                            📬 例えるなら：<br>
+                            役所の住所録を改ざんして、みんなを偽の住所に案内するようなもの。
+                        </div>
+                    </div>
+                    
+                    <div class="attack-card">
+                        <div class="attack-icon">🏴‍☠️</div>
+                        <h4>中間者攻撃（MITM）</h4>
+                        <div class="attack-description">
+                            <strong>通信を傍受・改ざんする攻撃</strong><br><br>
+                            DNSクエリと回答の間に入り込み、<strong>回答を書き換える</strong>。<br><br>
+                            📬 例えるなら：<br>
+                            郵便物を途中で開封し、中身を偽物にすり替える犯罪者のようなもの。
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: center;">
+                    <p style="font-size: 1.2em; color: #922b21;">
+                        <strong>😰 これらの攻撃の結果...</strong><br><br>
+                        ユーザーは気づかないうちに<strong>偽サイト</strong>へ誘導され、<br>
+                        パスワード漏洩 💳 フィッシング詐欺 🎣 マルウェア感染 🦠 などの被害に！
+                    </p>
+                </div>
+            </div>
+            
+            <!-- たとえ話 -->
+            <div class="analogy-section">
+                <h2 class="analogy-title">📜 「公印付き証明書」で理解するDNSSEC</h2>
+                
+                <div class="analogy-comparison">
+                    <div class="analogy-card without-seal">
+                        <div class="analogy-icon">📄</div>
+                        <h3>❌ DNSSECなし<br>（公印のない書類）</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🏢 役所からの書類を想像してください...</strong><br><br>
+                            あなた宛に「住民票」が届きました。<br>
+                            でも、<strong>公印がない</strong>！<br><br>
+                            📝 これは本物？偽物？<br>
+                            → 判断できない！
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💻 DNS的に言うと...</strong><br><br>
+                            「example.comのIPアドレスは93.184.216.34です」<br>
+                            という回答が来たけど...<br><br>
+                            🤔 これは本物のDNSサーバーからの回答？<br>
+                            → <strong>確認する手段がない！</strong>
+                        </div>
+                        
+                        <div style="background: #fdf2f2; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong style="color: #922b21;">⚠️ リスク：</strong><br>
+                            攻撃者が偽の回答を送っても見分けられない
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card with-seal">
+                        <div class="analogy-icon">📜</div>
+                        <h3>✅ DNSSECあり<br>（公印付き証明書）</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🏢 役所からの書類を想像してください...</strong><br><br>
+                            あなた宛に「住民票」が届きました。<br>
+                            <strong>しっかり公印が押されている</strong>！<br><br>
+                            ✅ 公印を確認 → 本物と判断できる！
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>💻 DNS的に言うと...</strong><br><br>
+                            「example.comのIPアドレスは93.184.216.34です」<br>
+                            という回答に<strong>デジタル署名</strong>が付いている！<br><br>
+                            ✅ 署名を検証 → <strong>改ざんされていないと確認できる！</strong>
+                        </div>
+                        
+                        <div style="background: #eafaf1; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong style="color: #1e8449;">🛡️ 保護効果：</strong><br>
+                            攻撃者が偽の回答を送っても署名が合わないので拒否できる
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 信頼の連鎖 -->
+            <div class="mechanism-section">
+                <h2 class="mechanism-title">🔗 信頼の連鎖（Chain of Trust）</h2>
+                <p style="text-align: center; color: #64748b; font-size: 1.15em; margin-bottom: 40px;">
+                    DNSSECは「上位機関が下位機関を保証する」階層的な信頼システム
+                </p>
+                
+                <div class="chain-of-trust">
+                    <div class="trust-level">
+                        <div class="trust-marker">🌍</div>
+                        <div class="trust-content">
+                            <div class="trust-name">ルートゾーン（最上位）</div>
+                            <div class="trust-role">
+                                📜 <strong>例え：</strong>国の中央政府<br>
+                                💡 <strong>役割：</strong>すべてのDNS信頼の起点。ICANNが管理。<br>
+                                🔑 <strong>持っている鍵：</strong>ルートKSK（最も重要な鍵）
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trust-arrow">⬇️ 信頼を委譲</div>
+                    
+                    <div class="trust-level">
+                        <div class="trust-marker">🏛️</div>
+                        <div class="trust-content">
+                            <div class="trust-name">TLDゾーン（.com, .jpなど）</div>
+                            <div class="trust-role">
+                                📜 <strong>例え：</strong>都道府県庁<br>
+                                💡 <strong>役割：</strong>各TLDを管理。.comはVerisign、.jpはJPRSが管理。<br>
+                                🔑 <strong>持っている鍵：</strong>TLDのKSK/ZSK
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trust-arrow">⬇️ 信頼を委譲</div>
+                    
+                    <div class="trust-level">
+                        <div class="trust-marker">🏢</div>
+                        <div class="trust-content">
+                            <div class="trust-name">セカンドレベルドメイン（example.com）</div>
+                            <div class="trust-role">
+                                📜 <strong>例え：</strong>市区町村役場<br>
+                                💡 <strong>役割：</strong>あなたのドメインを管理。Route 53で設定。<br>
+                                🔑 <strong>持っている鍵：</strong>あなたのKSK/ZSK
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trust-arrow">⬇️ 信頼を委譲</div>
+                    
+                    <div class="trust-level">
+                        <div class="trust-marker">📋</div>
+                        <div class="trust-content">
+                            <div class="trust-name">DNSレコード（署名付き回答）</div>
+                            <div class="trust-role">
+                                📜 <strong>例え：</strong>公印付きの各種証明書<br>
+                                💡 <strong>役割：</strong>実際のDNS回答（A, AAAA, MXレコードなど）<br>
+                                🔑 <strong>保護：</strong>ZSKで署名され、改ざん検知が可能
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #e8f8f5; padding: 25px; border-radius: 12px; margin-top: 40px; text-align: center;">
+                    <p style="font-size: 1.15em; color: #0e6655;">
+                        <strong>🔗 この連鎖のポイント：</strong><br><br>
+                        上位機関が下位機関の「公開鍵のハッシュ（DSレコード）」を持つことで、<br>
+                        <strong>「この下位機関は本物ですよ」</strong>と保証できる仕組み！
+                    </p>
+                </div>
+            </div>
+            
+            <!-- キーの種類 -->
+            <div class="keys-section">
+                <h2 class="keys-title">🔑 2種類の鍵を理解しよう</h2>
+                
+                <div class="keys-grid">
+                    <div class="key-card ksk">
+                        <div class="key-icon">🗝️</div>
+                        <h3>KSK（Key Signing Key）</h3>
+                        <div class="key-subtitle">鍵署名鍵 - 「金庫の鍵」</div>
+                        
+                        <div class="key-details">
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">📋</span>
+                                <span class="key-detail-text"><strong>役割：</strong>ZSKに署名するための「親鍵」</span>
+                            </div>
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">🔒</span>
+                                <span class="key-detail-text"><strong>特徴：</strong>長い鍵長（2048ビット）で強力</span>
+                            </div>
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">🔄</span>
+                                <span class="key-detail-text"><strong>ローテーション：</strong>1年に1回程度（稀に）</span>
+                            </div>
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">📤</span>
+                                <span class="key-detail-text"><strong>公開先：</strong>上位ゾーン（DSレコードとして）</span>
+                            </div>
+                        </div>
+                        
+                        <div class="key-analogy">
+                            <div class="key-analogy-title">📜 例えるなら...</div>
+                            <p style="color: #5d6d7e; line-height: 1.7;">
+                                <strong>「理事長の実印」</strong>のようなもの。<br>
+                                めったに使わないが、最も重要。部長の印（ZSK）を承認するために使用。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="key-card zsk">
+                        <div class="key-icon">🔐</div>
+                        <h3>ZSK（Zone Signing Key）</h3>
+                        <div class="key-subtitle">ゾーン署名鍵 - 「仕事用の印鑑」</div>
+                        
+                        <div class="key-details">
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">📋</span>
+                                <span class="key-detail-text"><strong>役割：</strong>実際のDNSレコードに署名</span>
+                            </div>
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">⚡</span>
+                                <span class="key-detail-text"><strong>特徴：</strong>短い鍵長（1024ビット）で高速処理</span>
+                            </div>
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">🔄</span>
+                                <span class="key-detail-text"><strong>ローテーション：</strong>頻繁（数週間〜数ヶ月）</span>
+                            </div>
+                            <div class="key-detail-item">
+                                <span class="key-detail-icon">📝</span>
+                                <span class="key-detail-text"><strong>署名対象：</strong>A, AAAA, MX, CNAMEなど全レコード</span>
+                            </div>
+                        </div>
+                        
+                        <div class="key-analogy">
+                            <div class="key-analogy-title">📜 例えるなら...</div>
+                            <p style="color: #5d6d7e; line-height: 1.7;">
+                                <strong>「部長の認印」</strong>のようなもの。<br>
+                                日常業務で頻繁に使用。各書類（DNSレコード）への押印を担当。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 15px; margin-top: 35px;">
+                    <h4 style="color: #1a5276; font-size: 1.4em; margin-bottom: 20px; text-align: center;">🔄 鍵の関係性</h4>
+                    <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 20px;">
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 2.5em;">🗝️</div>
+                            <div style="font-weight: bold; color: #7d3c98;">KSK</div>
+                        </div>
+                        <div style="font-size: 2em; color: #9b59b6;">→ 署名 →</div>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 2.5em;">🔐</div>
+                            <div style="font-weight: bold; color: #2471a3;">ZSK</div>
+                        </div>
+                        <div style="font-size: 2em; color: #3498db;">→ 署名 →</div>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 2.5em;">📋</div>
+                            <div style="font-weight: bold; color: #27ae60;">DNSレコード</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DNSクエリのフロー -->
+            <div class="flow-section">
+                <h2 class="flow-title">🔄 DNSSEC検証フロー</h2>
+                <p style="text-align: center; color: #64748b; font-size: 1.1em; margin-bottom: 40px;">
+                    DNSSECが有効な場合、DNSクエリはこのように処理されます
+                </p>
+                
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="flow-step-number">1</div>
+                        <div class="flow-step-icon">💻</div>
+                        <div class="flow-step-title">ユーザーが問い合わせ</div>
+                        <div class="flow-step-desc">
+                            「example.comの<br>IPアドレスは？」<br>
+                            とDNSに問い合わせ
+                        </div>
+                    </div>
+                    
+                    <div class="flow-arrow">→</div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">2</div>
+                        <div class="flow-step-icon">🌐</div>
+                        <div class="flow-step-title">DNSサーバーが回答</div>
+                        <div class="flow-step-desc">
+                            IPアドレス +<br>
+                            <strong>デジタル署名</strong><br>
+                            （RRSIG）を返す
+                        </div>
+                    </div>
+                    
+                    <div class="flow-arrow">→</div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">3</div>
+                        <div class="flow-step-icon">🔍</div>
+                        <div class="flow-step-title">署名を検証</div>
+                        <div class="flow-step-desc">
+                            リゾルバがZSKで<br>
+                            署名を検証。<br>
+                            信頼の連鎖をたどる
+                        </div>
+                    </div>
+                    
+                    <div class="flow-arrow">→</div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">4</div>
+                        <div class="flow-step-icon">✅</div>
+                        <div class="flow-step-title">検証成功！</div>
+                        <div class="flow-step-desc">
+                            署名が有効なら<br>
+                            回答を信頼して<br>
+                            ユーザーに返す
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #fdf2f2; padding: 25px; border-radius: 12px; margin-top: 40px; text-align: center;">
+                    <p style="font-size: 1.15em; color: #922b21;">
+                        <strong>❌ 署名が無効な場合（攻撃検知）：</strong><br><br>
+                        リゾルバは「SERVFAIL」を返し、<strong>偽の回答を拒否</strong>！<br>
+                        ユーザーは偽サイトに誘導されることなく、安全が守られます🛡️
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 比較テーブル -->
+            <div class="comparison-section">
+                <h2 class="comparison-title">📊 DNSSECあり/なし 比較表</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>❌ DNSSECなし</th>
+                            <th>✅ DNSSECあり</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>回答の信頼性</strong></td>
+                            <td class="status-danger">検証不可能 😰</td>
+                            <td class="status-safe">デジタル署名で検証 ✅</td>
+                        </tr>
+                        <tr>
+                            <td><strong>スプーフィング対策</strong></td>
+                            <td class="status-danger">攻撃に脆弱 🎭</td>
+                            <td class="status-safe">署名不一致で検出 🛡️</td>
+                        </tr>
+                        <tr>
+                            <td><strong>キャッシュポイズニング</strong></td>
+                            <td class="status-danger">汚染される可能性 ☠️</td>
+                            <td class="status-safe">偽データは拒否 🚫</td>
+                        </tr>
+                        <tr>
+                            <td><strong>中間者攻撃</strong></td>
+                            <td class="status-danger">改ざん検知不可 🏴‍☠️</td>
+                            <td class="status-safe">改ざんを即座に検知 🔍</td>
+                        </tr>
+                        <tr>
+                            <td><strong>設定の複雑さ</strong></td>
+                            <td>シンプル（従来通り）</td>
+                            <td>Route 53なら簡単（数クリック）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>追加コスト</strong></td>
+                            <td>なし</td>
+                            <td>DNSSEC署名: $1.00/月/ゾーン</td>
+                        </tr>
+                        <tr>
+                            <td><strong>クエリサイズ</strong></td>
+                            <td>小さい</td>
+                            <td>やや大きい（署名データ分）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Route 53での設定手順 -->
+            <div class="setup-section">
+                <h2 class="setup-title">⚙️ Route 53でのDNSSEC設定手順</h2>
+                <p style="text-align: center; color: #0e6655; font-size: 1.15em; margin-bottom: 35px;">
+                    Route 53ならDNSSECの有効化は驚くほど簡単！
+                </p>
+                
+                <div class="setup-steps">
+                    <div class="setup-step">
+                        <div class="setup-step-number">1</div>
+                        <div class="setup-step-content">
+                            <div class="setup-step-title">🔑 KMS鍵を作成（または選択）</div>
+                            <div class="setup-step-desc">
+                                Route 53のDNSSEC署名には、<strong>カスタマー管理のKMSキー</strong>が必要です。<br>
+                                ⚠️ 重要：<strong>us-east-1リージョン</strong>にKMSキーを作成する必要があります！
+                            </div>
+                            <div class="setup-step-code">
+                                aws kms create-key \<br>
+                                &nbsp;&nbsp;--region us-east-1 \<br>
+                                &nbsp;&nbsp;--key-spec ECC_NIST_P256 \<br>
+                                &nbsp;&nbsp;--key-usage SIGN_VERIFY \<br>
+                                &nbsp;&nbsp;--description "DNSSEC KSK for example.com"
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <div class="setup-step-number">2</div>
+                        <div class="setup-step-content">
+                            <div class="setup-step-title">✍️ DNSSEC署名を有効化</div>
+                            <div class="setup-step-desc">
+                                Route 53コンソールでホストゾーンを選択し、<br>
+                                「DNSSEC署名」→「署名を有効化」をクリック。<br>
+                                作成したKMSキーを選択してKSKを作成します。
+                            </div>
+                            <div class="setup-step-code">
+                                aws route53 enable-hosted-zone-dnssec \<br>
+                                &nbsp;&nbsp;--hosted-zone-id Z1234567890ABC
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <div class="setup-step-number">3</div>
+                        <div class="setup-step-content">
+                            <div class="setup-step-title">📤 DSレコードを親ゾーンに登録</div>
+                            <div class="setup-step-desc">
+                                Route 53が生成した<strong>DSレコード情報</strong>を、<br>
+                                ドメインレジストラ（お名前.comなど）に登録します。<br>
+                                これにより「信頼の連鎖」が完成します！
+                            </div>
+                            <div class="setup-step-code">
+                                # Route 53コンソールで表示されるDS情報例：<br>
+                                # Key Tag: 12345<br>
+                                # Algorithm: 13 (ECDSAP256SHA256)<br>
+                                # Digest Type: 2 (SHA-256)<br>
+                                # Digest: ABC123DEF456...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <div class="setup-step-number">4</div>
+                        <div class="setup-step-content">
+                            <div class="setup-step-title">✅ 検証して完了！</div>
+                            <div class="setup-step-desc">
+                                設定が完了したら、DNSSECが正しく機能しているか検証します。<br>
+                                オンラインツールやdigコマンドで確認できます。
+                            </div>
+                            <div class="setup-step-code">
+                                # digコマンドで検証<br>
+                                dig example.com +dnssec<br><br>
+                                # RRSIG（署名）が含まれていれば成功！<br>
+                                # flags: ... ad（Authenticated Data）が表示される
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ユースケース -->
+            <div class="usecase-section">
+                <h2 class="usecase-title">💼 DNSSECが特に重要な業界・用途</h2>
+                
+                <div class="usecase-grid">
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🏦</div>
+                        <h4>金融機関</h4>
+                        <div class="usecase-description">
+                            オンラインバンキングやモバイル決済サービスでは、<strong>フィッシングサイトへの誘導</strong>が致命的な被害につながります。
+                        </div>
+                        <div class="usecase-benefit">
+                            <strong>DNSSECのメリット：</strong>
+                            偽の銀行サイトへの誘導を防ぎ、顧客の資産と信頼を守る
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🏥</div>
+                        <h4>医療機関</h4>
+                        <div class="usecase-description">
+                            電子カルテシステムや医療ポータルへのアクセスでは、<strong>患者データの保護</strong>が最優先です。
+                        </div>
+                        <div class="usecase-benefit">
+                            <strong>DNSSECのメリット：</strong>
+                            HIPAAコンプライアンス対応の一環として、DNS改ざんによるデータ漏洩を防止
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🏛️</div>
+                        <h4>政府機関</h4>
+                        <div class="usecase-description">
+                            市民サービスポータルや行政手続きサイトでは、<strong>なりすまし防止</strong>が国民の信頼につながります。
+                        </div>
+                        <div class="usecase-benefit">
+                            <strong>DNSSECのメリット：</strong>
+                            .govドメインの信頼性を高め、市民を偽サイトから保護
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🛒</div>
+                        <h4>ECサイト</h4>
+                        <div class="usecase-description">
+                            クレジットカード情報を扱うオンラインショップでは、<strong>PCI DSS準拠</strong>とセキュリティ強化が必須です。
+                        </div>
+                        <div class="usecase-benefit">
+                            <strong>DNSSECのメリット：</strong>
+                            偽の決済ページへの誘導を防ぎ、カード情報の漏洩を防止
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">📧</div>
+                        <h4>メールサービス</h4>
+                        <div class="usecase-description">
+                            企業のメールサーバーが狙われると、<strong>フィッシングメール</strong>やビジネスメール詐欺の被害につながります。
+                        </div>
+                        <div class="usecase-benefit">
+                            <strong>DNSSECのメリット：</strong>
+                            MXレコードの改ざんを防ぎ、メールの正しい配送を保証
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🎮</div>
+                        <h4>オンラインゲーム</h4>
+                        <div class="usecase-description">
+                            ゲーム内通貨やアイテムを扱うサービスでは、<strong>アカウント乗っ取り</strong>が深刻な問題になります。
+                        </div>
+                        <div class="usecase-benefit">
+                            <strong>DNSSECのメリット：</strong>
+                            ログインページの偽装を防ぎ、ユーザーアカウントを保護
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 注意点 -->
+            <div class="warning-section">
+                <h2 class="warning-title">
+                    <span>⚠️</span>
+                    <span>DNSSEC導入時の注意点</span>
+                </h2>
+                
+                <div class="warning-grid">
+                    <div class="warning-item">
+                        <div class="warning-item-title">
+                            <span>🔑</span>
+                            <span>鍵のローテーション管理</span>
+                        </div>
+                        <div class="warning-item-desc">
+                            KSKのローテーション時は、<strong>親ゾーンのDSレコードも更新</strong>が必要。タイミングを誤るとDNS解決に失敗します。Route 53は自動ローテーション機能をサポート。
+                        </div>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <div class="warning-item-title">
+                            <span>📏</span>
+                            <span>レスポンスサイズの増加</span>
+                        </div>
+                        <div class="warning-item-desc">
+                            署名データが追加されるため、<strong>DNSレスポンスが大きく</strong>なります。UDP512バイトを超えるとTCPフォールバックが発生する場合があります。
+                        </div>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <div class="warning-item-title">
+                            <span>🔄</span>
+                            <span>署名の有効期限</span>
+                        </div>
+                        <div class="warning-item-desc">
+                            RRSIGには<strong>有効期限</strong>があります。Route 53は自動で再署名しますが、署名が切れると検証に失敗するため注意が必要です。
+                        </div>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <div class="warning-item-title">
+                            <span>🌐</span>
+                            <span>リゾルバの対応</span>
+                        </div>
+                        <div class="warning-item-desc">
+                            すべてのDNSリゾルバがDNSSEC検証に対応しているわけではありません。ただし、<strong>Google Public DNS (8.8.8.8)</strong>やCloudflare (1.1.1.1)は対応済み。
+                        </div>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <div class="warning-item-title">
+                            <span>⏱️</span>
+                            <span>TTL設定の考慮</span>
+                        </div>
+                        <div class="warning-item-desc">
+                            DNSSECを有効にする前に、<strong>TTLを短く</strong>しておくことを推奨。問題発生時に素早くロールバックできます。
+                        </div>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <div class="warning-item-title">
+                            <span>🔗</span>
+                            <span>CDN/外部サービスとの連携</span>
+                        </div>
+                        <div class="warning-item-desc">
+                            CloudFrontなどのCDNを使用している場合、<strong>CNAME設定時の注意</strong>が必要。DNSSECはCNAMEチェーン全体をカバーする必要があります。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- コスト情報 -->
+            <div class="cost-section">
+                <h2 class="cost-title">💰 Route 53 DNSSECのコスト</h2>
+                
+                <div class="cost-grid">
+                    <div class="cost-item">
+                        <div class="cost-icon">✍️</div>
+                        <div class="cost-label">DNSSEC署名</div>
+                        <div class="cost-value">$1.00</div>
+                        <div class="cost-note">月額/ホストゾーン</div>
+                    </div>
+                    
+                    <div class="cost-item">
+                        <div class="cost-icon">🔑</div>
+                        <div class="cost-label">KMS鍵使用料</div>
+                        <div class="cost-value">$1.00</div>
+                        <div class="cost-note">月額/鍵（非対称鍵）</div>
+                    </div>
+                    
+                    <div class="cost-item">
+                        <div class="cost-icon">📊</div>
+                        <div class="cost-label">KMS API呼び出し</div>
+                        <div class="cost-value">$0.03</div>
+                        <div class="cost-note">1万リクエストあたり</div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: center;">
+                    <p style="font-size: 1.15em; color: #0e6655;">
+                        <strong>💡 コスト目安：</strong><br><br>
+                        1つのドメインでDNSSECを有効にする場合、<br>
+                        <strong>月額約$2〜3程度</strong>（DNSSEC署名 + KMS鍵）<br><br>
+                        🎯 セキュリティ強化のコストとしては非常にリーズナブル！
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>DNSSEC導入のベストプラクティス</span>
+                </div>
+                <div class="tip-content">
+                    <strong>1. まずはテスト環境で試す：</strong><br>
+                    本番ドメインの前に、テスト用サブドメインでDNSSECを試験的に導入しましょう。<br><br>
+                    
+                    <strong>2. TTLを短くしてから有効化：</strong><br>
+                    問題発生時に素早く対応できるよう、事前にTTLを300秒程度に短縮。安定後に元に戻す。<br><br>
+                    
+                    <strong>3. 監視アラートを設定：</strong><br>
+                    CloudWatchでDNSSEC関連のメトリクスを監視。署名エラーや検証失敗を早期検知。<br><br>
+                    
+                    <strong>4. DSレコード登録は慎重に：</strong><br>
+                    親ゾーンへのDSレコード登録は、DNSSEC署名が完全に有効になった後に実行。<br><br>
+                    
+                    <strong>5. ドキュメント化を忘れずに：</strong><br>
+                    KMS鍵のARN、KSKのキータグ、ローテーションスケジュールなどを記録しておく。<br><br>
+                    
+                    <strong>6. 無効化手順も準備：</strong><br>
+                    緊急時にDNSSECを無効化する手順を事前に確認。DSレコード削除 → 署名無効化の順序が重要。
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2980b9 50%, #1abc9c 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 1100px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">📜 公印付き証明書 = DNSSEC</h3>
+                        <p style="font-size: 1.15em; line-height: 2;">
+                            DNSSECは、DNS回答に<strong>デジタル署名</strong>を付けることで<br>
+                            「この回答は本物ですよ」と証明する仕組み
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🛡️</div>
+                            <strong style="font-size: 1.2em;">防御</strong><br><br>
+                            スプーフィング<br>キャッシュポイズニング<br>中間者攻撃を防止
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🔗</div>
+                            <strong style="font-size: 1.2em;">信頼の連鎖</strong><br><br>
+                            ルート → TLD →<br>ドメインと階層的に<br>信頼を委譲
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">⚙️</div>
+                            <strong style="font-size: 1.2em;">Route 53</strong><br><br>
+                            数クリックで<br>DNSSEC有効化<br>KMSと自動連携
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2em; margin-bottom: 10px;">🗝️ KSK</div>
+                            <p>鍵署名鍵<br>「理事長の実印」<br>ZSKを承認する親鍵</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2em; margin-bottom: 10px;">🔐 ZSK</div>
+                            <p>ゾーン署名鍵<br>「部長の認印」<br>DNSレコードに署名</p>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+                        🎯 <strong>DNSSECは「DNSのHTTPS化」のようなもの！</strong><br><br>
+                        月額$2〜3の投資で、DNSレベルのセキュリティを大幅強化。<br>
+                        特に金融・医療・政府機関などの重要サービスでは<strong>必須</strong>のセキュリティ対策です🔐
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

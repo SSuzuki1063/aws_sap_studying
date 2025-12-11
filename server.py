@@ -23,8 +23,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     PORT = 8080
-    os.chdir('/home/suzuki100603/aws_sap')
-    
+    # Use script directory as web root
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(script_dir)
+
     with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
         print(f"サーバーが起動しました: http://localhost:{PORT}/")
         print("Ctrl+C で停止します")

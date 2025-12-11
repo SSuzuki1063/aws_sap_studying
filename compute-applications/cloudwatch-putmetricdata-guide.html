@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudWatch カスタムメトリクス & PutMetricData 完全ガイド</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #1a1a2e 100%);
+            padding: 20px;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 25%, #48dbfb 50%, #ff9ff3 75%, #54a0ff 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '📊';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.15;
+            top: -40px;
+            right: -40px;
+            transform: rotate(-15deg);
+        }
+        
+        .header::after {
+            content: '🔑';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.1;
+            bottom: -30px;
+            left: -20px;
+            transform: rotate(15deg);
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+            font-weight: 900;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .badge-container {
+            margin-top: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.25);
+            padding: 10px 25px;
+            border-radius: 30px;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+            margin: 5px;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 45px;
+            background: linear-gradient(135deg, #fff9db 0%, #ffeaa7 100%);
+            border-radius: 20px;
+            border-left: 8px solid #f39c12;
+            position: relative;
+        }
+        
+        .intro::before {
+            content: '🏥';
+            position: absolute;
+            font-size: 5em;
+            opacity: 0.15;
+            top: 20px;
+            right: 30px;
+        }
+        
+        .intro h2 {
+            color: #d35400;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+            font-weight: 900;
+        }
+        
+        .intro-text {
+            font-size: 1.15em;
+            color: #7f5539;
+            line-height: 2;
+        }
+        
+        .analogy-section {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 50px;
+            border-radius: 24px;
+            margin: 50px 0;
+            border-left: 8px solid #43a047;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .analogy-section::before {
+            content: '🩺';
+            position: absolute;
+            font-size: 15em;
+            opacity: 0.08;
+            bottom: -30px;
+            right: -30px;
+        }
+        
+        .analogy-title {
+            color: #2e7d32;
+            font-size: 2.3em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 900;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .analogy-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card h3 {
+            color: #2e7d32;
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .analogy-description {
+            background: #f1f8e9;
+            padding: 20px;
+            border-radius: 12px;
+            color: #33691e;
+            line-height: 1.9;
+            margin: 15px 0;
+        }
+        
+        .concept-section {
+            background: linear-gradient(to bottom, #f8f9fa 0%, white 100%);
+            padding: 50px;
+            border-radius: 24px;
+            margin: 50px 0;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        
+        .concept-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: 900;
+        }
+        
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+        
+        .concept-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border-top: 6px solid;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .concept-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .concept-card:nth-child(1) { border-color: #ff6b6b; }
+        .concept-card:nth-child(2) { border-color: #48dbfb; }
+        .concept-card:nth-child(3) { border-color: #feca57; }
+        
+        .concept-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+        
+        .concept-card h4 {
+            font-size: 1.4em;
+            color: #1e293b;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .concept-card p {
+            color: #64748b;
+            line-height: 1.8;
+        }
+        
+        .flow-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 50px;
+            border-radius: 24px;
+            margin: 50px 0;
+            border-left: 8px solid #1976d2;
+        }
+        
+        .flow-title {
+            color: #0d47a1;
+            font-size: 2.3em;
+            margin-bottom: 40px;
+            text-align: center;
+            font-weight: 900;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+        
+        .flow-step {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 200px;
+            position: relative;
+        }
+        
+        .flow-step-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .flow-step-title {
+            font-weight: 700;
+            color: #1565c0;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .flow-step-desc {
+            color: #64748b;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .flow-arrow {
+            font-size: 2.5em;
+            color: #1976d2;
+        }
+        
+        .iam-section {
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%);
+            padding: 50px;
+            border-radius: 24px;
+            margin: 50px 0;
+            border-left: 8px solid #e91e63;
+        }
+        
+        .iam-title {
+            color: #880e4f;
+            font-size: 2.3em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 900;
+        }
+        
+        .iam-explanation {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .iam-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin: 25px 0;
+            padding: 20px;
+            background: #fef4f7;
+            border-radius: 15px;
+            border-left: 5px solid #e91e63;
+        }
+        
+        .iam-point-icon {
+            font-size: 2.5em;
+            flex-shrink: 0;
+        }
+        
+        .iam-point-content h4 {
+            color: #880e4f;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .iam-point-content p {
+            color: #6d4c5e;
+            line-height: 1.8;
+        }
+        
+        .code-section {
+            background: #1a1a2e;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 40px 0;
+            overflow-x: auto;
+        }
+        
+        .code-title {
+            color: #48dbfb;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .code-block {
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.9;
+            color: #f8f9fa;
+        }
+        
+        .code-comment { color: #6c757d; }
+        .code-key { color: #ff6b6b; }
+        .code-string { color: #54a0ff; }
+        .code-value { color: #feca57; }
+        
+        .permission-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: 900;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-weight: 700;
+        }
+        
+        th:first-child { border-radius: 12px 0 0 0; }
+        th:last-child { border-radius: 0 12px 0 0; }
+        
+        td {
+            padding: 18px 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        tr:hover { background: #f8fafc; }
+        
+        .action-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        
+        .required-badge {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+        
+        .optional-badge {
+            display: inline-block;
+            background: #48dbfb;
+            color: #1a1a2e;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+        
+        .use-case-section {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            padding: 50px;
+            border-radius: 24px;
+            margin: 50px 0;
+            border-left: 8px solid #ff9800;
+        }
+        
+        .use-case-title {
+            color: #e65100;
+            font-size: 2.3em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 900;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+        
+        .use-case-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(255, 152, 0, 0.3);
+        }
+        
+        .use-case-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .use-case-card h4 {
+            color: #e65100;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .use-case-content {
+            color: #5d4037;
+            line-height: 1.8;
+        }
+        
+        .use-case-metrics {
+            background: #fff8e1;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+        }
+        
+        .use-case-metrics strong {
+            color: #ef6c00;
+        }
+        
+        .tip-section {
+            background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 40px 0;
+            border-left: 8px solid #3f51b5;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: 900;
+            color: #1a237e;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tip-content {
+            color: #303f9f;
+            line-height: 2;
+        }
+        
+        .tip-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #3f51b5;
+        }
+        
+        .tip-item strong {
+            color: #1a237e;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            padding: 30px;
+            border-radius: 16px;
+            margin: 30px 0;
+            border-left: 6px solid #f44336;
+        }
+        
+        .warning-title {
+            font-size: 1.4em;
+            font-weight: 900;
+            color: #c62828;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .warning-content {
+            color: #b71c1c;
+            line-height: 1.9;
+        }
+        
+        .summary {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 25%, #48dbfb 50%, #ff9ff3 75%, #54a0ff 100%);
+            color: white;
+            padding: 60px;
+            border-radius: 24px;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            font-weight: 900;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .summary-box {
+            background: rgba(255,255,255,0.2);
+            padding: 35px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            margin: 30px auto;
+            max-width: 900px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-item-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-item strong {
+            font-size: 1.2em;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .key-point {
+            background: rgba(255,255,255,0.25);
+            padding: 25px 35px;
+            border-radius: 16px;
+            font-size: 1.2em;
+            line-height: 1.9;
+            margin-top: 30px;
+        }
+        
+        .key-point code {
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        @media (max-width: 1024px) {
+            .analogy-grid,
+            .use-case-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .concept-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .flow-step {
+                width: 100%;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 CloudWatch カスタムメトリクス<br>& PutMetricData 完全ガイド</h1>
+            <p>病院の健康診断で理解する！IAMアクションの仕組みと設定方法</p>
+            <div class="badge-container">
+                <span class="header-badge">🔑 IAMアクション</span>
+                <span class="header-badge">📈 カスタムメトリクス</span>
+                <span class="header-badge">☁️ CloudWatch</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- イントロダクション -->
+            <div class="intro">
+                <h2>🏥 病院の健康診断で例えると超わかりやすい！</h2>
+                <p class="intro-text">
+                    <strong>CloudWatchは「病院の健康診断センター」のようなもの！</strong><br><br>
+                    AWSの標準メトリクス = 基本的な健康診断（身長・体重・血圧）<br>
+                    <strong>カスタムメトリクス = あなた独自の検査項目</strong>（コレステロール値、肝機能など）<br><br>
+                    でも検査結果を送るには<strong>「許可証」</strong>が必要ですよね？<br>
+                    その許可証が <code>cloudwatch:PutMetricData</code> という<strong>IAMアクション</strong>です！✨
+                </p>
+            </div>
+            
+            <!-- たとえ話セクション -->
+            <div class="analogy-section">
+                <h2 class="analogy-title">🩺 病院のたとえ話で完全理解！</h2>
+                
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <div class="analogy-icon">🏥</div>
+                        <h3>CloudWatch<br>= 健康診断センター</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🎯 役割：</strong><br>
+                            病院には「健康診断センター」がありますよね。<br>
+                            ここにすべての検査結果が集まり、医師が確認できます。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>☁️ AWSでは：</strong><br>
+                            CloudWatchがまさにこれ！<br>
+                            CPU使用率やメモリ使用量など、あらゆる「健康状態」を監視・記録する場所です。
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-icon">📝</div>
+                        <h3>カスタムメトリクス<br>= 独自の検査項目</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🎯 役割：</strong><br>
+                            基本健診以外にも「腫瘍マーカー」「アレルギー検査」など<br>
+                            オプションで追加できる検査がありますよね。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>☁️ AWSでは：</strong><br>
+                            カスタムメトリクスがこれ！<br>
+                            「ログイン回数」「カート追加数」「API応答時間」など<br>
+                            <strong>あなたのビジネスに特化した数値</strong>を送れます。
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-icon">🔑</div>
+                        <h3>PutMetricData<br>= 検査結果提出の許可証</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🎯 役割：</strong><br>
+                            検査結果を健康診断センターに提出するには<br>
+                            「この人は検査結果を提出していいよ」という許可証が必要です。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>☁️ AWSでは：</strong><br>
+                            <code>cloudwatch:PutMetricData</code> というIAMアクションがこれ！<br>
+                            <strong>この権限がないと、メトリクスを送信できません。</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-icon">👨‍⚕️</div>
+                        <h3>IAMポリシー<br>= 院内規則書</h3>
+                        
+                        <div class="analogy-description">
+                            <strong>🎯 役割：</strong><br>
+                            「誰が」「どの検査室に」「どんな検査結果を」提出できるか<br>
+                            を定めた院内規則書です。
+                        </div>
+                        
+                        <div class="analogy-description">
+                            <strong>☁️ AWSでは：</strong><br>
+                            IAMポリシーがまさにこれ！<br>
+                            「このEC2インスタンスは」「CloudWatchに」「メトリクスを送信できる」<br>
+                            という<strong>許可ルール</strong>を定義します。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 3つの重要概念 -->
+            <div class="concept-section">
+                <h2 class="concept-title">📚 3つの重要概念をマスター！</h2>
+                
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="concept-icon">📊</div>
+                        <h4>標準メトリクス</h4>
+                        <p>
+                            AWSが<strong>自動で収集</strong>してくれる基本的な数値。<br><br>
+                            EC2なら「CPU使用率」「ネットワークI/O」など。<br>
+                            <strong>追加料金なし</strong>で利用可能！
+                        </p>
+                    </div>
+                    
+                    <div class="concept-card">
+                        <div class="concept-icon">🎨</div>
+                        <h4>カスタムメトリクス</h4>
+                        <p>
+                            あなたが<strong>自分で送信</strong>する独自の数値。<br><br>
+                            「アクティブユーザー数」「購入完了率」など<br>
+                            <strong>ビジネス指標</strong>を監視できる！
+                        </p>
+                    </div>
+                    
+                    <div class="concept-card">
+                        <div class="concept-icon">🔐</div>
+                        <h4>PutMetricData</h4>
+                        <p>
+                            カスタムメトリクスを<strong>送信する権限</strong>。<br><br>
+                            このIAMアクションがないと<br>
+                            <strong>データを送れない！</strong>必須の許可です。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- データの流れ -->
+            <div class="flow-section">
+                <h2 class="flow-title">🔄 カスタムメトリクス送信の流れ</h2>
+                
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="flow-step-icon">💻</div>
+                        <div class="flow-step-title">1. アプリケーション</div>
+                        <div class="flow-step-desc">EC2やLambdaで<br>独自の数値を計測</div>
+                    </div>
+                    
+                    <div class="flow-arrow">➡️</div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🔑</div>
+                        <div class="flow-step-title">2. IAM権限チェック</div>
+                        <div class="flow-step-desc">PutMetricData<br>の許可を確認</div>
+                    </div>
+                    
+                    <div class="flow-arrow">➡️</div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-icon">📤</div>
+                        <div class="flow-step-title">3. API呼び出し</div>
+                        <div class="flow-step-desc">CloudWatch APIに<br>メトリクスを送信</div>
+                    </div>
+                    
+                    <div class="flow-arrow">➡️</div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-icon">📊</div>
+                        <div class="flow-step-title">4. CloudWatch</div>
+                        <div class="flow-step-desc">データを保存<br>グラフ化・アラーム設定</div>
+                    </div>
+                </div>
+                
+                <div class="warning-box">
+                    <div class="warning-title">
+                        <span>⚠️</span>
+                        <span>権限がないとどうなる？</span>
+                    </div>
+                    <div class="warning-content">
+                        <strong>AccessDenied エラー</strong>が発生してメトリクスを送信できません！<br>
+                        「検査結果を提出しようとしたら、受付で門前払いされた」状態です。<br><br>
+                        <strong>エラーメッセージ例：</strong><br>
+                        <code>User: arn:aws:iam::123456789012:user/myuser is not authorized to perform: cloudwatch:PutMetricData</code>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- IAM設定の詳細 -->
+            <div class="iam-section">
+                <h2 class="iam-title">🔐 PutMetricData IAMアクション詳解</h2>
+                
+                <div class="iam-explanation">
+                    <div class="iam-point">
+                        <div class="iam-point-icon">📋</div>
+                        <div class="iam-point-content">
+                            <h4>アクション名</h4>
+                            <p>
+                                <code>cloudwatch:PutMetricData</code><br><br>
+                                CloudWatchサービスの「メトリクスデータを送信（Put）する」アクションです。<br>
+                                このアクションを許可しないと、カスタムメトリクスは一切送信できません。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="iam-point">
+                        <div class="iam-point-icon">🌍</div>
+                        <div class="iam-point-content">
+                            <h4>リソース指定</h4>
+                            <p>
+                                <strong>リソースレベルの制限はできません</strong>（Resource: "*" のみ）<br><br>
+                                これは「どの名前空間にでも送信できる」という意味です。<br>
+                                ただし、送信できるかどうかは <strong>Action の許可/拒否</strong>で制御します。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="iam-point">
+                        <div class="iam-point-icon">🏷️</div>
+                        <div class="iam-point-content">
+                            <h4>条件キー（Condition）での制限</h4>
+                            <p>
+                                <code>cloudwatch:namespace</code> 条件キーで<strong>名前空間を制限</strong>できます！<br><br>
+                                例：「MyApp/Production」名前空間にのみ送信を許可<br>
+                                これで他のチームのメトリクスに誤って上書きすることを防げます。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 基本ポリシー -->
+                <div class="code-section">
+                    <div class="code-title">
+                        <span>📝</span>
+                        <span>基本的なIAMポリシー（最小権限）</span>
+                    </div>
+                    <div class="code-block">
+<pre><span class="code-comment">// カスタムメトリクス送信に必要な最小限のポリシー</span>
+{
+    <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+    <span class="code-key">"Statement"</span>: [
+        {
+            <span class="code-key">"Effect"</span>: <span class="code-string">"Allow"</span>,
+            <span class="code-key">"Action"</span>: [
+                <span class="code-string">"cloudwatch:PutMetricData"</span>
+            ],
+            <span class="code-key">"Resource"</span>: <span class="code-string">"*"</span>
+        }
+    ]
+}</pre>
+                    </div>
+                </div>
+                
+                <!-- 条件付きポリシー -->
+                <div class="code-section">
+                    <div class="code-title">
+                        <span>🔒</span>
+                        <span>名前空間を制限した安全なポリシー（推奨）</span>
+                    </div>
+                    <div class="code-block">
+<pre><span class="code-comment">// 特定の名前空間にのみ送信を許可（ベストプラクティス）</span>
+{
+    <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+    <span class="code-key">"Statement"</span>: [
+        {
+            <span class="code-key">"Effect"</span>: <span class="code-string">"Allow"</span>,
+            <span class="code-key">"Action"</span>: [
+                <span class="code-string">"cloudwatch:PutMetricData"</span>
+            ],
+            <span class="code-key">"Resource"</span>: <span class="code-string">"*"</span>,
+            <span class="code-key">"Condition"</span>: {
+                <span class="code-key">"StringEquals"</span>: {
+                    <span class="code-key">"cloudwatch:namespace"</span>: <span class="code-string">"MyApp/Production"</span>
+                }
+            }
+        }
+    ]
+}
+
+<span class="code-comment">// 複数の名前空間を許可する場合</span>
+{
+    <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+    <span class="code-key">"Statement"</span>: [
+        {
+            <span class="code-key">"Effect"</span>: <span class="code-string">"Allow"</span>,
+            <span class="code-key">"Action"</span>: [
+                <span class="code-string">"cloudwatch:PutMetricData"</span>
+            ],
+            <span class="code-key">"Resource"</span>: <span class="code-string">"*"</span>,
+            <span class="code-key">"Condition"</span>: {
+                <span class="code-key">"StringLike"</span>: {
+                    <span class="code-key">"cloudwatch:namespace"</span>: <span class="code-string">"MyApp/*"</span>
+                }
+            }
+        }
+    ]
+}</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 関連IAMアクション一覧 -->
+            <div class="permission-table">
+                <h2 class="table-title">📋 CloudWatch メトリクス関連のIAMアクション一覧</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IAMアクション</th>
+                            <th>説明</th>
+                            <th>カスタムメトリクス送信に</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="action-badge">cloudwatch:PutMetricData</span></td>
+                            <td>メトリクスデータを送信する</td>
+                            <td><span class="required-badge">必須 🔑</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="action-badge">cloudwatch:GetMetricData</span></td>
+                            <td>メトリクスデータを取得する</td>
+                            <td><span class="optional-badge">任意（閲覧用）</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="action-badge">cloudwatch:GetMetricStatistics</span></td>
+                            <td>メトリクス統計を取得する</td>
+                            <td><span class="optional-badge">任意（分析用）</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="action-badge">cloudwatch:ListMetrics</span></td>
+                            <td>利用可能なメトリクスを一覧表示</td>
+                            <td><span class="optional-badge">任意（確認用）</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="action-badge">cloudwatch:PutMetricAlarm</span></td>
+                            <td>アラームを作成・更新する</td>
+                            <td><span class="optional-badge">任意（アラーム設定用）</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="tip-section" style="margin-top: 30px;">
+                    <div class="tip-title">
+                        <span>💡</span>
+                        <span>最小権限の原則</span>
+                    </div>
+                    <div class="tip-content">
+                        <strong>カスタムメトリクスを送信するだけなら <code>cloudwatch:PutMetricData</code> のみでOK！</strong><br><br>
+                        他のアクションは「メトリクスを見たい」「アラームを設定したい」など<br>
+                        追加の要件がある場合にのみ付与しましょう。<br>
+                        <strong>不要な権限は付与しない</strong>のがセキュリティのベストプラクティスです。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ユースケース -->
+            <div class="use-case-section">
+                <h2 class="use-case-title">💼 実際のユースケース</h2>
+                
+                <div class="use-case-grid">
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🛒</div>
+                        <h4>ECサイト</h4>
+                        <div class="use-case-content">
+                            <strong>監視したい指標：</strong><br>
+                            • カート追加数<br>
+                            • 購入完了率<br>
+                            • 商品閲覧数<br>
+                            • 決済処理時間
+                        </div>
+                        <div class="use-case-metrics">
+                            <strong>名前空間例：</strong><br>
+                            <code>MyECShop/Sales</code><br>
+                            <code>MyECShop/Performance</code>
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🎮</div>
+                        <h4>ゲームアプリ</h4>
+                        <div class="use-case-content">
+                            <strong>監視したい指標：</strong><br>
+                            • 同時接続プレイヤー数<br>
+                            • マッチング待ち時間<br>
+                            • ガチャ実行回数<br>
+                            • 課金イベント数
+                        </div>
+                        <div class="use-case-metrics">
+                            <strong>名前空間例：</strong><br>
+                            <code>MyGame/Players</code><br>
+                            <code>MyGame/Monetization</code>
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">📱</div>
+                        <h4>SaaSアプリケーション</h4>
+                        <div class="use-case-content">
+                            <strong>監視したい指標：</strong><br>
+                            • アクティブユーザー数<br>
+                            • API呼び出し回数<br>
+                            • 機能利用率<br>
+                            • エラー発生率
+                        </div>
+                        <div class="use-case-metrics">
+                            <strong>名前空間例：</strong><br>
+                            <code>MySaaS/Usage</code><br>
+                            <code>MySaaS/Health</code>
+                        </div>
+                    </div>
+                    
+                    <div class="use-case-card">
+                        <div class="use-case-icon">🏭</div>
+                        <h4>IoT・製造業</h4>
+                        <div class="use-case-content">
+                            <strong>監視したい指標：</strong><br>
+                            • センサー温度<br>
+                            • 機械稼働率<br>
+                            • 製品不良率<br>
+                            • エネルギー消費量
+                        </div>
+                        <div class="use-case-metrics">
+                            <strong>名前空間例：</strong><br>
+                            <code>Factory/Sensors</code><br>
+                            <code>Factory/Production</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 実装例 -->
+            <div class="code-section">
+                <div class="code-title">
+                    <span>🐍</span>
+                    <span>Python (boto3) でカスタムメトリクスを送信する例</span>
+                </div>
+                <div class="code-block">
+<pre><span class="code-comment"># pip install boto3</span>
+import boto3
+from datetime import datetime
+
+<span class="code-comment"># CloudWatchクライアントを作成</span>
+cloudwatch = boto3.client(<span class="code-string">'cloudwatch'</span>)
+
+<span class="code-comment"># カスタムメトリクスを送信</span>
+response = cloudwatch.put_metric_data(
+    <span class="code-key">Namespace</span>=<span class="code-string">'MyApp/Production'</span>,  <span class="code-comment"># 名前空間（必須）</span>
+    <span class="code-key">MetricData</span>=[
+        {
+            <span class="code-key">'MetricName'</span>: <span class="code-string">'ActiveUsers'</span>,      <span class="code-comment"># メトリクス名</span>
+            <span class="code-key">'Value'</span>: <span class="code-value">150</span>,                       <span class="code-comment"># 値</span>
+            <span class="code-key">'Unit'</span>: <span class="code-string">'Count'</span>,                    <span class="code-comment"># 単位</span>
+            <span class="code-key">'Timestamp'</span>: datetime.utcnow(),    <span class="code-comment"># タイムスタンプ</span>
+            <span class="code-key">'Dimensions'</span>: [                     <span class="code-comment"># ディメンション（任意）</span>
+                {
+                    <span class="code-key">'Name'</span>: <span class="code-string">'Environment'</span>,
+                    <span class="code-key">'Value'</span>: <span class="code-string">'Production'</span>
+                },
+            ],
+        },
+    ]
+)
+
+print(<span class="code-string">'メトリクス送信成功！'</span>)</pre>
+                </div>
+            </div>
+            
+            <div class="code-section">
+                <div class="code-title">
+                    <span>💻</span>
+                    <span>AWS CLI でカスタムメトリクスを送信する例</span>
+                </div>
+                <div class="code-block">
+<pre><span class="code-comment"># 単一のメトリクスを送信</span>
+aws cloudwatch put-metric-data \
+    --namespace <span class="code-string">"MyApp/Production"</span> \
+    --metric-name <span class="code-string">"ActiveUsers"</span> \
+    --value <span class="code-value">150</span> \
+    --unit <span class="code-string">"Count"</span>
+
+<span class="code-comment"># ディメンション付きで送信</span>
+aws cloudwatch put-metric-data \
+    --namespace <span class="code-string">"MyApp/Production"</span> \
+    --metric-name <span class="code-string">"ResponseTime"</span> \
+    --value <span class="code-value">0.5</span> \
+    --unit <span class="code-string">"Seconds"</span> \
+    --dimensions <span class="code-string">"Environment=Production,Service=API"</span>
+
+<span class="code-comment"># JSONファイルから複数のメトリクスを送信</span>
+aws cloudwatch put-metric-data \
+    --namespace <span class="code-string">"MyApp/Production"</span> \
+    --metric-data file://metrics.json</pre>
+                </div>
+            </div>
+            
+            <!-- ベストプラクティス -->
+            <div class="tip-section">
+                <div class="tip-title">
+                    <span>🏆</span>
+                    <span>ベストプラクティス</span>
+                </div>
+                <div class="tip-content">
+                    <div class="tip-item">
+                        <strong>1. 名前空間で制限をかける：</strong><br>
+                        IAMポリシーの Condition で <code>cloudwatch:namespace</code> を指定し、送信先を限定しましょう。<br>
+                        「MyApp/*」のようなワイルドカードも使えます。
+                    </div>
+                    
+                    <div class="tip-item">
+                        <strong>2. IAMロールを使う：</strong><br>
+                        EC2やLambdaには IAMロール を割り当て、アクセスキーのハードコーディングを避けましょう。<br>
+                        セキュリティと管理性が大幅に向上します。
+                    </div>
+                    
+                    <div class="tip-item">
+                        <strong>3. バッチ送信を活用：</strong><br>
+                        <code>put_metric_data</code> は1回の呼び出しで最大1,000個のメトリクスを送信できます。<br>
+                        APIコールを減らしてコストと効率を最適化しましょう。
+                    </div>
+                    
+                    <div class="tip-item">
+                        <strong>4. エラーハンドリング：</strong><br>
+                        送信失敗時のリトライロジックを実装しましょう。<br>
+                        一時的なネットワーク障害でデータが欠落するのを防げます。
+                    </div>
+                    
+                    <div class="tip-item">
+                        <strong>5. コストを意識：</strong><br>
+                        カスタムメトリクスは課金対象です。送信頻度と保存期間を適切に設定し、<br>
+                        不要なメトリクスは削除しましょう。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div class="summary">
+                <h2>🎓 まとめ</h2>
+                
+                <div class="summary-box">
+                    <h3 style="font-size: 1.8em; margin-bottom: 20px;">🏥 病院の健康診断 = CloudWatch</h3>
+                    <p style="font-size: 1.15em; line-height: 2;">
+                        カスタムメトリクスを送信するには<br>
+                        <strong>「検査結果提出の許可証」</strong>が必要です！
+                    </p>
+                </div>
+                
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-item-icon">🔑</div>
+                        <strong>必須アクション</strong>
+                        <p>cloudwatch:<br>PutMetricData</p>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-item-icon">🎯</div>
+                        <strong>役割</strong>
+                        <p>カスタムメトリクス<br>送信の許可</p>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-item-icon">🔒</div>
+                        <strong>推奨設定</strong>
+                        <p>名前空間で<br>アクセスを制限</p>
+                    </div>
+                </div>
+                
+                <div class="key-point">
+                    <strong>🎯 覚えておくべきこと：</strong><br><br>
+                    カスタムメトリクス送信 = <code>cloudwatch:PutMetricData</code> が必須！<br>
+                    最小権限の原則を守り、<code>cloudwatch:namespace</code> 条件で制限をかけよう！🎉
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
