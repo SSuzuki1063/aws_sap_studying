@@ -432,10 +432,128 @@ python3 scripts/html_management/integrate_new_html.py --source custom_directory/
   - Types: `feat` (new feature), `fix` (bug fix), `docs` (documentation), `refactor` (code restructuring)
 
 ### Branching Strategy
-- Current branch: `gh-pages` (GitHub Pages deployment)
-- No main/master branch configured in this repository
-- Create feature branches for significant additions: `feature/[service-name]` or `feature/[topic]`
-- Merge completed features back to gh-pages after testing
+
+This repository uses a two-branch workflow with feature branches for development:
+
+#### Main Branches
+
+**`gh-pages` (Production/Deployment Branch)**
+- **Purpose**: Live production environment deployed to GitHub Pages
+- **URL**: https://ssuzuki1063.github.io/aws_sap_studying/
+- **Auto-deployment**: All commits are automatically deployed within minutes
+- **Usage**: Direct commits for hotfixes and small updates; merge feature branches here after testing
+- **Protection**: This is the current active branch - always verify changes work before pushing
+
+**`master` (Development Base Branch)**
+- **Purpose**: Main development branch and base for pull requests
+- **Usage**: Use as the base branch when creating PRs for code review
+- **Workflow**: Feature branches should be created from `master` and merged back via PR
+- **Sync**: Should be kept in sync with `gh-pages` for consistency
+
+#### Feature Branches
+
+Create feature branches for significant additions or experimental changes:
+
+**Naming Conventions:**
+- `feature/[service-name]` - New AWS service learning resources (e.g., `feature/lambda-monitoring`)
+- `feature/[topic]` - New features or enhancements (e.g., `feature/quiz-categories`)
+- `fix/[issue]` - Bug fixes (e.g., `fix/navigation-mobile`)
+- `refactor/[component]` - Code refactoring (e.g., `refactor/search-function`)
+
+**Feature Branch Workflow:**
+```bash
+# Create feature branch from master
+git checkout master
+git pull origin master
+git checkout -b feature/new-service-guide
+
+# Make changes and commit
+git add .
+git commit -m "feat: Add new service guide"
+
+# Push feature branch
+git push origin feature/new-service-guide
+
+# Create PR to master for review
+gh pr create --base master --head feature/new-service-guide
+
+# After PR approval, merge to master
+# Then merge master to gh-pages for deployment
+git checkout gh-pages
+git merge master
+git push origin gh-pages
+```
+
+#### Development Workflows
+
+**Option 1: Direct Commit to gh-pages (Quick Updates)**
+Use for small, tested changes that don't require review:
+```bash
+# Work directly on gh-pages
+git checkout gh-pages
+git pull origin gh-pages
+
+# Make changes
+python3 scripts/html_management/integrate_new_html.py
+
+# Test locally
+python3 server.py
+# Verify at http://localhost:8080/
+
+# Commit and deploy
+git add .
+git commit -m "feat: 新規AWS学習リソースを追加"
+git push origin gh-pages
+
+# Site automatically deploys in 1-2 minutes
+```
+
+**Option 2: Feature Branch + PR (Complex Changes)**
+Use for significant features, refactoring, or changes that benefit from review:
+```bash
+# Create feature branch from master
+git checkout master
+git checkout -b feature/quiz-improvements
+
+# Develop and test
+# ... make changes ...
+python3 server.py  # Test locally
+
+# Commit to feature branch
+git add .
+git commit -m "feat: クイズシステムを改善"
+git push origin feature/quiz-improvements
+
+# Create pull request
+gh pr create --base master --title "クイズシステム改善" --body "詳細な説明"
+
+# After review and approval, merge to master
+# Then deploy to gh-pages
+git checkout gh-pages
+git merge master
+git push origin gh-pages
+```
+
+#### Branch Synchronization
+
+Keep `master` and `gh-pages` in sync to avoid divergence:
+
+```bash
+# Sync master with gh-pages
+git checkout master
+git merge gh-pages
+git push origin master
+
+# Or sync gh-pages with master
+git checkout gh-pages
+git merge master
+git push origin gh-pages
+```
+
+**When to sync:**
+- After direct commits to `gh-pages` → sync to `master`
+- After merging PRs to `master` → sync to `gh-pages` for deployment
+- Before creating new feature branches → ensure `master` is current
 
 ### Change Tracking Best Practices
 - Commit frequently to track incremental progress on learning materials
