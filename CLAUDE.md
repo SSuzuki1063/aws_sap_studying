@@ -436,6 +436,40 @@ python3 scripts/html_management/integrate_new_html.py --source custom_directory/
 - Commit messages should follow the format: `[Type]: Brief description`
   - Types: `feat` (new feature), `fix` (bug fix), `docs` (documentation), `refactor` (code restructuring)
 
+### Push to Remote Repository
+**CRITICAL WORKFLOW**: After committing changes locally, ALWAYS push to the remote repository immediately.
+
+```bash
+# Standard workflow for gh-pages branch
+git add .
+git commit -m "feat: Your descriptive commit message"
+git push origin gh-pages  # REQUIRED: Push to remote immediately
+
+# For other branches
+git push origin <branch-name>
+```
+
+**Why this is critical:**
+- **GitHub Pages deployment**: Changes to `gh-pages` branch trigger automatic deployment
+- **Backup**: Ensures your work is backed up to GitHub
+- **Collaboration**: Makes your changes visible to other collaborators
+- **CI/CD**: Triggers automated testing and deployment pipelines
+- **History preservation**: Remote repository serves as the source of truth
+
+**Common mistake to avoid:**
+- ❌ Committing locally but forgetting to push
+- ✅ Always follow: `git add` → `git commit` → `git push`
+
+**Verification after push:**
+```bash
+# Verify push was successful
+git status
+# Should show: "Your branch is up to date with 'origin/gh-pages'"
+
+# For gh-pages branch specifically, verify deployment
+# Visit https://ssuzuki1063.github.io/aws_sap_studying/ after 1-2 minutes
+```
+
 ### Branching Strategy
 
 This repository uses a two-branch workflow with feature branches for development:
