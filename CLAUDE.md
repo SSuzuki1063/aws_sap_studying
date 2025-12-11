@@ -14,6 +14,7 @@ This is an AWS SAP (Solutions Architect Professional) exam study resource reposi
 ### Adding New HTML Learning Resources (Most Common Task)
 ```bash
 # 1. Place HTML files in new_html/ directory
+
 # 2. Preview integration
 python3 scripts/html_management/integrate_new_html.py --dry-run
 
@@ -24,10 +25,14 @@ python3 scripts/html_management/integrate_new_html.py
 python3 server.py
 # Visit http://localhost:8080/
 
-# 5. Commit changes
+# 5. Commit and deploy to GitHub Pages
 git add .
 git commit -m "feat: 新規AWS学習リソースを追加"
 git push origin gh-pages
+
+# 6. Verify deployment (wait 1-2 minutes)
+# Visit https://ssuzuki1063.github.io/aws_sap_studying/
+# GitHub Pagesが自動的にgh-pagesブランチの変更を検出してウェブページを更新します
 ```
 
 ### Local Development & Testing
@@ -441,8 +446,10 @@ This repository uses a two-branch workflow with feature branches for development
 - **Purpose**: Live production environment deployed to GitHub Pages
 - **URL**: https://ssuzuki1063.github.io/aws_sap_studying/
 - **Auto-deployment**: All commits are automatically deployed within minutes
+- **ウェブページ更新**: このブランチへのコミット＆プッシュがGitHub Pagesのウェブページ更新をトリガーします
 - **Usage**: Direct commits for hotfixes and small updates; merge feature branches here after testing
 - **Protection**: This is the current active branch - always verify changes work before pushing
+- **Deployment Flow**: `git push origin gh-pages` → GitHub Pagesが自動検出 → 1〜2分で本番サイト更新
 
 **`master` (Development Base Branch)**
 - **Purpose**: Main development branch and base for pull requests
@@ -628,12 +635,69 @@ When adding new learning resources or quiz questions, verify:
 ## Important Notes
 
 ### Deployment
-- Repository is deployed via GitHub Pages on the `gh-pages` branch
-- **Live Site**: https://ssuzuki1063.github.io/aws_sap_studying/
-- All commits to `gh-pages` will be automatically deployed within minutes
-- No build process - files are served as-is
-- Deployment is automatic upon push to `gh-pages`
-- Verify deployments by checking the live site after pushing changes
+
+このリポジトリはGitHub Pagesを使用してウェブページを公開しています。
+
+#### GitHub Pages自動デプロイメントの仕組み
+
+**デプロイメントソース**: `gh-pages`ブランチ
+**公開URL**: https://ssuzuki1063.github.io/aws_sap_studying/
+
+**重要**: `gh-pages`ブランチへのコミットがウェブページ更新のトリガーになります。
+
+#### デプロイメントプロセス
+
+1. **ローカルで変更を加える**
+   ```bash
+   # ファイルを編集・追加
+   python3 scripts/html_management/integrate_new_html.py
+   ```
+
+2. **ローカルでテストする**
+   ```bash
+   python3 server.py
+   # http://localhost:8080/ でテスト
+   ```
+
+3. **gh-pagesブランチにコミット＆プッシュ**
+   ```bash
+   git add .
+   git commit -m "feat: 新規学習リソースを追加"
+   git push origin gh-pages
+   ```
+
+4. **GitHub Pagesが自動的にデプロイ**
+   - プッシュ後、GitHubが自動的にgh-pagesブランチの内容を検出
+   - 1〜2分以内に本番サイトへ自動デプロイ
+   - ビルドプロセスなし - 静的ファイルがそのまま配信される
+
+5. **デプロイメント確認**
+   ```bash
+   # ブラウザで公開サイトを確認
+   # https://ssuzuki1063.github.io/aws_sap_studying/
+   ```
+
+#### デプロイメント設定
+
+- **ソースブランチ**: `gh-pages`（GitHubリポジトリ設定で指定）
+- **公開ディレクトリ**: ルートディレクトリ `/`
+- **ビルドプロセス**: なし（静的HTMLファイルをそのまま配信）
+- **カスタムドメイン**: 未設定（GitHub提供のドメインを使用）
+
+#### デプロイメント時の注意事項
+
+- **即座に公開される**: `gh-pages`へのプッシュは1〜2分で本番反映されます
+- **テストを忘れずに**: 本番反映前に必ずローカルでテストしてください
+- **大きな変更はPRを使用**: 複雑な変更は`master`ブランチでPRレビューしてから`gh-pages`へマージ
+- **デプロイメント履歴**: GitHubのActions/Pagesタブでデプロイメント履歴を確認可能
+
+#### トラブルシューティング
+
+デプロイメントが反映されない場合：
+1. GitHubリポジトリのSettings > Pagesでgh-pagesブランチが選択されているか確認
+2. ブラウザのキャッシュをクリア（Ctrl+Shift+R / Cmd+Shift+R）
+3. GitHub ActionsタブでPages buildエラーがないか確認
+4. `index.html`が正しくコミットされているか確認
 
 ### Browser Compatibility
 - Designed for modern browsers with CSS Grid and Flexbox support
