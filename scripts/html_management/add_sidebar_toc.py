@@ -42,7 +42,7 @@ class SidebarTOCGenerator:
 <style>
     /* ページ全体のレイアウト調整 */
     body {{
-        padding-left: 300px;
+        padding-left: 360px;
         transition: padding-left 0.3s ease;
     }}
 
@@ -55,7 +55,7 @@ class SidebarTOCGenerator:
         position: fixed;
         left: 0;
         top: 0;
-        width: 280px;
+        width: 340px;
         height: 100vh;
         background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
         border-right: 4px solid #3b82f6;
@@ -135,7 +135,7 @@ class SidebarTOCGenerator:
     /* 折りたたみボタン */
     .sidebar-toc-toggle {{
         position: fixed;
-        left: 280px;
+        left: 340px;
         top: 20px;
         background: #3b82f6;
         color: white;
@@ -193,7 +193,7 @@ class SidebarTOCGenerator:
         }}
 
         .sidebar-toc {{
-            width: 250px;
+            width: 280px;
             transform: translateX(-100%);
         }}
 
@@ -224,15 +224,15 @@ class SidebarTOCGenerator:
     /* タブレット対応 */
     @media (min-width: 769px) and (max-width: 1024px) {{
         body {{
-            padding-left: 250px;
+            padding-left: 310px;
         }}
 
         .sidebar-toc {{
-            width: 230px;
+            width: 290px;
         }}
 
         .sidebar-toc-toggle {{
-            left: 230px;
+            left: 290px;
         }}
 
         body.sidebar-collapsed .sidebar-toc-toggle {{
