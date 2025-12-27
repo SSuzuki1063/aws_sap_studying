@@ -25,12 +25,18 @@ python3 scripts/html_management/integrate_new_html.py
 python3 server.py
 # Visit http://localhost:8080/
 
-# 5. Commit and deploy to GitHub Pages
+# 5. W3C Validation (REQUIRED)
+# Validate all modified HTML files
+# Visit https://validator.w3.org/
+# Upload or paste HTML content to check for errors and warnings
+# Fix all errors before committing
+
+# 6. Commit and deploy to GitHub Pages
 git add .
 git commit -m "feat: 新規AWS学習リソースを追加"
 git push origin gh-pages
 
-# 6. Verify deployment (wait 1-2 minutes)
+# 7. Verify deployment (wait 1-2 minutes)
 # Visit https://ssuzuki1063.github.io/aws_sap_studying/
 # GitHub Pagesが自動的にgh-pagesブランチの変更を検出してウェブページを更新します
 ```
@@ -299,8 +305,12 @@ Use the `scripts/html_management/integrate_new_html.py` script to automatically 
    - Update `index.html` navigation sidebar automatically
    - Update resource counts for affected categories
    - Remove Zone.Identifier files from Windows downloads
-4. Review changes and commit to git
-5. Test via local server: `python3 server.py`
+4. **W3C Validation (REQUIRED)**: Validate all modified HTML files
+   - Visit https://validator.w3.org/
+   - Upload or paste HTML content to check for errors and warnings
+   - Fix all errors and warnings before proceeding
+5. Review changes and commit to git
+6. Test via local server: `python3 server.py`
 
 **Script features:**
 - AI-powered keyword detection for smart categorization
@@ -316,10 +326,14 @@ If you prefer manual control or the script categorizes incorrectly:
    - Alternative: `[service]_[topic]_infographic.html` (e.g., `ecs_infographic.html`)
 2. Use consistent CSS styling with AWS brand colors (#232F3E, #FF9900)
 3. Include inline SVG diagrams for visual explanations
-4. **Manually update `table-of-contents.html`**: This is a static reference page that should be kept in sync
-5. Place file in appropriate topical directory matching AWS SAP exam domains
-6. Ensure content is self-contained with inline CSS and SVG for offline use
-7. Test loading via local server to verify paths and functionality
+4. **W3C Validation (REQUIRED)**: Validate the HTML file
+   - Visit https://validator.w3.org/
+   - Upload or paste HTML content to check for errors and warnings
+   - Fix all errors and warnings before integration
+5. **Manually update `table-of-contents.html`**: This is a static reference page that should be kept in sync
+6. Place file in appropriate topical directory matching AWS SAP exam domains
+7. Ensure content is self-contained with inline CSS and SVG for offline use
+8. Test loading via local server to verify paths and functionality
 
 **Note**: The automated script updates `index.html` but NOT `table-of-contents.html`. Keep the TOC page in sync manually if using automation.
 
@@ -420,6 +434,108 @@ python3 scripts/html_management/integrate_new_html.py --source custom_directory/
 - Remove `.html:Zone.Identifier` files that appear from Windows downloads (automated by `scripts/html_management/integrate_new_html.py`)
 - Some files may have duplicates across directories (e.g., `new-solutions/` and domain-specific folders)
 - Use `table-of-contents.html` as static reference - it's NOT automatically updated by scripts
+
+### HTML Quality Assurance
+
+**W3C Validation is REQUIRED for all HTML files** - This ensures code quality, accessibility, and cross-browser compatibility.
+
+#### Why W3C Validation Matters
+1. **Standards Compliance**: Ensures HTML follows official W3C standards
+2. **Cross-browser Compatibility**: Valid HTML works consistently across all browsers
+3. **Accessibility**: Proper HTML structure is essential for screen readers and assistive technologies
+4. **SEO Benefits**: Search engines favor well-structured, valid HTML
+5. **Maintainability**: Valid code is easier to debug and maintain
+6. **Professional Quality**: Demonstrates commitment to web development best practices
+
+#### How to Validate HTML Files
+
+**Official W3C Validator**: https://validator.w3.org/
+
+**Validation Methods:**
+
+1. **Upload File** (Recommended for new files)
+   - Go to https://validator.w3.org/
+   - Click "Validate by File Upload" tab
+   - Select your HTML file
+   - Click "Check" button
+   - Review errors and warnings
+
+2. **Direct Input** (Good for quick checks)
+   - Go to https://validator.w3.org/
+   - Click "Validate by Direct Input" tab
+   - Copy and paste your HTML content
+   - Click "Check" button
+   - Review errors and warnings
+
+3. **URL Validation** (For deployed pages)
+   - Go to https://validator.w3.org/
+   - Enter the full URL: `https://ssuzuki1063.github.io/aws_sap_studying/[path]/[filename].html`
+   - Click "Check" button
+   - Review errors and warnings
+
+#### Common HTML Validation Issues to Watch For
+
+**Critical Errors (MUST FIX):**
+- Unclosed tags (missing closing tags like `</div>`, `</section>`)
+- Mismatched tags (opening `<div>` but closing `</span>`)
+- Missing required attributes (e.g., `alt` attribute on `<img>` tags)
+- Duplicate IDs (ID attributes must be unique within a page)
+- Invalid nesting (e.g., `<p>` inside another `<p>`)
+- Missing DOCTYPE declaration
+
+**Warnings (SHOULD FIX):**
+- Missing `lang` attribute on `<html>` tag
+- Empty heading tags (`<h1></h1>`)
+- Obsolete attributes or elements
+- Missing `alt` text on images
+- Consecutive heading levels skipped (e.g., `<h1>` directly to `<h3>`)
+
+#### Validation Workflow
+
+**When creating new HTML files:**
+```bash
+# 1. Create HTML file
+# 2. Validate at https://validator.w3.org/ (upload file or paste content)
+# 3. Fix all errors and warnings
+# 4. Re-validate until clean (no errors)
+# 5. Proceed with integration workflow
+```
+
+**When modifying existing HTML files:**
+```bash
+# 1. Make modifications
+# 2. Validate modified file at https://validator.w3.org/
+# 3. Fix any new errors introduced by changes
+# 4. Re-validate until clean
+# 5. Test locally with python3 server.py
+# 6. Commit and push
+```
+
+#### Integration with Development Workflow
+
+W3C validation is integrated into all HTML workflows:
+- **Quick Start Workflow**: Step 5 (before commit)
+- **Automated Integration**: Step 4 (after script execution)
+- **Manual Integration**: Step 4 (before placing in directory)
+- **Testing Checklist**: Third item in HTML Learning Resources section
+
+**CRITICAL**: Do not skip W3C validation. Invalid HTML can cause:
+- Rendering issues in different browsers
+- Accessibility problems for users with disabilities
+- SEO penalties
+- Maintenance headaches
+- Unprofessional appearance
+
+#### Tips for Efficient Validation
+
+1. **Validate early and often** - Don't wait until the end
+2. **Use HTML5 DOCTYPE** - `<!DOCTYPE html>`
+3. **Include language attribute** - `<html lang="ja">` for Japanese content
+4. **Use semantic HTML** - `<article>`, `<section>`, `<nav>`, `<header>`, `<footer>`
+5. **Always include alt text** - Essential for accessibility
+6. **Check for typos** - Misspelled tag names cause errors
+7. **Validate SVG separately** - Inline SVG should also be valid
+8. **Test in multiple browsers** - Even valid HTML can have browser quirks
 
 ## Git Operations and Version Control
 
@@ -537,6 +653,10 @@ git pull origin gh-pages
 # Make changes
 python3 scripts/html_management/integrate_new_html.py
 
+# W3C Validation (REQUIRED)
+# Validate all modified HTML files at https://validator.w3.org/
+# Fix all errors before committing
+
 # Test locally
 python3 server.py
 # Verify at http://localhost:8080/
@@ -558,6 +678,11 @@ git checkout -b feature/quiz-improvements
 
 # Develop and test
 # ... make changes ...
+
+# W3C Validation (REQUIRED)
+# Validate all modified HTML files at https://validator.w3.org/
+# Fix all errors before committing
+
 python3 server.py  # Test locally
 
 # Commit to feature branch
@@ -622,6 +747,7 @@ When adding new learning resources or quiz questions, verify:
 **HTML Learning Resources:**
 - [ ] File placed in correct category directory
 - [ ] File follows naming convention: `aws-[service]-[topic].html`
+- [ ] **W3C Validation passed**: All HTML validated at https://validator.w3.org/ with no errors
 - [ ] Breadcrumb navigation present and working
 - [ ] Page-internal TOC generated (if 2+ headings)
 - [ ] SVG diagrams are inline (not external links)
