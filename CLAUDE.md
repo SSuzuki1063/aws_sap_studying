@@ -893,3 +893,105 @@ All resources must work without internet:
 3. **Fast loading**: No build step, no bundling, instant page loads
 4. **Educational clarity**: Students can view source and learn web development basics
 5. **Maximum portability**: Works on any web server, USB drive, or local filesystem
+
+## Coding Standards
+
+### Data-Driven Development Principles
+
+When writing code for this repository, **STRICTLY ADHERE** to the following rules to maintain separation of concerns and code maintainability:
+
+#### Rule 1: HTML Structure Preservation
+**DO NOT modify HTML structure** (header, main, section, footer, and other semantic tags).
+- Existing HTML tag hierarchy must remain unchanged
+- No reorganization of DOM structure
+- Preserve semantic HTML5 structure
+
+#### Rule 2: No Manual HTML Tag Manipulation
+**DO NOT add, remove, or change nesting of HTML tags manually**.
+- No inserting new `<div>`, `<section>`, `<article>` tags
+- No deleting existing structural tags
+- No changing parent-child relationships between tags
+
+#### Rule 3: Content as Pure Data
+**ALL content must be defined as JavaScript data structures** (arrays, objects).
+- Content lives in separate data files (e.g., `data.js`, `quiz-data-extended.js`)
+- Use objects and arrays to represent content hierarchies
+- Keep data files focused on data only, not presentation logic
+
+#### Rule 4: Single Template Function Pattern
+**HTML generation must happen in ONE centralized template function**.
+- Create a single rendering function that consumes data
+- All HTML output is generated programmatically from this function
+- No scattered HTML generation across multiple files
+
+#### Rule 5: No Manual Closing Tags
+**DO NOT manually write closing tags** - let template functions handle them.
+- Template functions should automatically generate matching closing tags
+- Use template literals or DOM methods that enforce proper tag closure
+- Prevent unclosed tag bugs through automated generation
+
+#### Rule 6: Pure Data in Data Files
+**data.js and similar files must contain ONLY pure data** - no HTML tags.
+- No HTML strings embedded in data objects
+- Content as plain text, numbers, or structured objects
+- Markdown acceptable for simple formatting if processed programmatically
+
+### Example: Correct Data-Driven Pattern
+
+**❌ WRONG - HTML mixed with data:**
+```javascript
+// data.js
+const content = {
+  title: '<h2>AWS Lambda</h2>',
+  description: '<p>Serverless compute service</p>'
+};
+```
+
+**✅ CORRECT - Pure data with template function:**
+```javascript
+// data.js (pure data only)
+const content = {
+  title: 'AWS Lambda',
+  description: 'Serverless compute service'
+};
+
+// render.js (single template function)
+function renderContent(data) {
+  return `
+    <h2>${data.title}</h2>
+    <p>${data.description}</p>
+  `;
+}
+```
+
+### Benefits of This Approach
+
+1. **Maintainability**: Data changes don't risk breaking HTML structure
+2. **Scalability**: Adding new content is as simple as adding data objects
+3. **Testability**: Data and rendering logic can be tested independently
+4. **Separation of Concerns**: Content editors work with data, developers work with templates
+5. **Consistency**: Single template ensures uniform HTML structure across all content
+6. **Error Prevention**: Automated tag generation eliminates unclosed tag bugs
+
+### When These Rules Apply
+
+**ALWAYS apply these rules when:**
+- Adding new quiz questions to `quiz-data-extended.js`
+- Creating new learning content
+- Modifying existing content
+- Building new features that render dynamic content
+
+**Exceptions (these are static files, rules don't apply):**
+- Editing individual HTML learning resource files (`aws-*.html`)
+- Modifying `index.html` navigation structure (must be done carefully)
+- Updating static pages like `home.html`, `table-of-contents.html`
+
+### Code Review Checklist
+
+Before committing code changes, verify:
+- [ ] No HTML tags present in data files
+- [ ] Content defined as pure JavaScript objects/arrays
+- [ ] Single template function handles all HTML generation
+- [ ] No manual HTML structure modifications
+- [ ] Closing tags generated automatically by template function
+- [ ] Data and presentation logic are completely separated
