@@ -28,20 +28,38 @@ class QuizApp {
 
             const categoryCard = document.createElement('div');
             categoryCard.className = `category-card ${categoryKey.replace('-', '')}`;
+
+            // アクセシビリティ: キーボードナビゲーション対応
+            categoryCard.setAttribute('role', 'button');
+            categoryCard.setAttribute('tabindex', '0');
+            categoryCard.setAttribute('aria-label',
+                `${category.title}カテゴリ、${getTotalQuestions(categoryKey)}問` +
+                (attemptCount > 0 ? `、最高スコア${bestScore}%、受験回数${attemptCount}回` : '')
+            );
+
+            // クリックイベント
             categoryCard.onclick = () => this.startQuiz(categoryKey);
+
+            // キーボードイベント（Enter と Space キー）
+            categoryCard.onkeypress = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.startQuiz(categoryKey);
+                }
+            };
 
             let statsHTML = '';
             if (attemptCount > 0) {
                 statsHTML = `
                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.85em;">
-                        <div>🏆 最高スコア: ${bestScore}%</div>
-                        <div>📝 受験回数: ${attemptCount}回</div>
+                        <div><span aria-hidden="true">🏆</span> 最高スコア: ${bestScore}%</div>
+                        <div><span aria-hidden="true">📝</span> 受験回数: ${attemptCount}回</div>
                     </div>
                 `;
             }
 
             categoryCard.innerHTML = `
-                <span class="category-icon">${category.icon}</span>
+                <span class="category-icon" aria-hidden="true">${category.icon}</span>
                 <div class="category-title">${category.title}</div>
                 <div class="question-count">${getTotalQuestions(categoryKey)}問</div>
                 ${statsHTML}
