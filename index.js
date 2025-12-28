@@ -14,6 +14,7 @@ const searchData = [
     { title: 'Transit Gateway 共有', category: 'ネットワーキング', file: 'organizational-complexity/aws-ram-tgw-sharing.html' },
     { title: 'AWS Directory Service 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-directory-service-guide.html' },
     { title: 'S3バケットポリシー Principal要素 完全ガイド', category: 'ネットワーキング', file: 'networking/s3-bucket-policy-principal-guide.html' },
+    { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', category: 'ネットワーキング', file: 'networking/nacl-sg-comparison-guide.html' },
 
     // セキュリティ・ガバナンス
     { title: 'AWS Cognito インフォグラフィック', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-cognito-infographic.html' },
@@ -45,6 +46,17 @@ const searchData = [
     { title: 'OpenSearch Dashboards によるログデータの可視化 - 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/opensearch-dashboards-guide.html' },
     { title: 'IAM Access Analyzer ポリシー生成機能 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-access-analyzer-policy-generation-guide.html' },
     { title: 'AWS Config コンフォーマンスパック & StackSets 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-conformance-stacksets-guide.html' },
+    { title: 'IAM Access Analyzer 完全ガイド - AWS初心者向け図解', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-access-analyzer-guide.html' },
+    { title: 'IAM 権限評価モデル & 操作経路 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-permission-evaluation-guide.html' },
+    { title: 'IAM MFA緊急時の救済ガイド - コンソールの限界とAPI直接操作', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-mfa-emergency-rescue-guide.html' },
+    { title: 'Amazon Cognito Pre Sign-up Lambda トリガー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cognito-pre-signup-trigger-guide.html' },
+    { title: 'AWS CLI 認証情報の指定方法 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-cli-credentials-guide.html' },
+    { title: 'IAM パーミッションバウンダリー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-permission-boundary-guide.html' },
+    { title: 'AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み', category: 'セキュリティ・ガバナンス', file: 'security-governance/kms-grants-guide.html' },
+    { title: 'AWS マネージドポリシー vs カスタマーマネージドポリシー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-managed-vs-customer-managed-policies.html' },
+    { title: 'AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-monitoring-guide.html' },
+    { title: 'GuardDuty EKS Protection 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/guardduty-eks-protection-guide.html' },
+    { title: 'Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館', category: 'セキュリティ・ガバナンス', file: 'security-governance/security-lake-guide.html' },
 
     // コンピュート・アプリケーション
     { title: 'EC2 キャパシティ インフォグラフィック', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws-ec2-capacity-infographic.html' },
@@ -75,6 +87,10 @@ const searchData = [
     { title: 'Patch Manager 自動パッチ適用', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws_patch_manager_infographic.html' },
     { title: 'Systems Manager ハイブリッド環境完全ガイド', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/systems-manager-hybrid-guide.html' },
     { title: 'CloudWatch カスタムメトリクス & PutMetricData 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/cloudwatch-putmetricdata-guide.html' },
+    { title: 'CodePipeline Deploy Stage と DeploymentGroup の関係', category: 'コンピュート・アプリケーション', file: 'compute-applications/codepipeline-deploymentgroup-guide.html' },
+    { title: 'ALB ターゲットグループ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb-target-group-guide.html' },
+    { title: 'CodeシリーズでECS Fargateローリングデプロイ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ecs-fargate-rolling-deploy-complete-guide.html' },
+    { title: 'VPC DHCP オプションとカスタム DNS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/vpc-dhcp-options-guide.html' },
 
     // コンテンツ配信・DNS
     { title: 'DNSレコード完全ガイド - 住所録で理解するAWS Route 53', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/dns-records-guide.html' },
@@ -89,6 +105,7 @@ const searchData = [
     { title: 'OSI参照モデル × AWSサービス完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/osi-aws-services-guide.html' },
     { title: 'ACM DNS検証 - 超かんたん図解ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/acm-dns-simple-guide.html' },
     { title: 'ALB × PFS 暗号スイート完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/alb-pfs-cipher-suites-guide.html' },
+    { title: 'ALB セキュリティポリシー完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/alb-security-policy-guide.html' },
 
     // 開発・デプロイメント
     { title: 'CloudFormation インフォグラフィック', category: '開発・デプロイメント', file: 'development-deployment/aws-cloudformation-infographic.html' },
@@ -104,6 +121,7 @@ const searchData = [
     { title: 'CodePipeline & タスク概要 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/codepipeline_infographic_v2.html' },
     { title: 'Amazon Inspector ECRスキャン完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/amazon-inspector-ecr-scanning-guide.html' },
     { title: 'CloudFormation Guard (cfn-guard) 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/cfn-guard-infographic.html' },
+    { title: 'AWS GuardDuty 抑制ルール（Suppression Rule）完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/guardduty-suppression-rules.html' },
 
     // ストレージ・データベース
     { title: 'S3 インフォグラフィック', category: 'ストレージ・データベース', file: 'storage-database/aws_s3_infographic.html' },

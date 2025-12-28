@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS GuardDuty 抑制ルール（Suppression Rule）完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* ヘッダー */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(233, 69, 96, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(180deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            position: relative;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+        }
+
+        .service-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 30px;
+            margin-top: 15px;
+            font-weight: bold;
+            position: relative;
+        }
+
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .analogy-section h2 {
+            color: #ffeaa7;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .analogy-box {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border-radius: 20px;
+            padding: 30px;
+            border-left: 5px solid #f39c12;
+        }
+
+        .analogy-title {
+            font-size: 1.5em;
+            color: #f39c12;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .analogy-content {
+            line-height: 1.9;
+            font-size: 1.1em;
+        }
+
+        .analogy-content p {
+            margin-bottom: 15px;
+        }
+
+        /* 図解セクション */
+        .diagram-section {
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .diagram-section h2 {
+            color: #74b9ff;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            padding: 20px 30px;
+            border-radius: 16px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+            transition: transform 0.3s;
+        }
+
+        .flow-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .flow-box.alert {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+        }
+
+        .flow-box.suppression {
+            background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
+            box-shadow: 0 8px 25px rgba(243, 156, 18, 0.4);
+        }
+
+        .flow-box.archive {
+            background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+
+        .flow-box.pass {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            box-shadow: 0 8px 25px rgba(155, 89, 182, 0.4);
+        }
+
+        .flow-box .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .flow-box .label {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .flow-arrow {
+            font-size: 2em;
+            color: #74b9ff;
+        }
+
+        .flow-arrow.vertical {
+            transform: rotate(90deg);
+        }
+
+        /* 比較図 */
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comparison-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .comparison-box.without {
+            border: 3px solid #e74c3c;
+        }
+
+        .comparison-box.with {
+            border: 3px solid #27ae60;
+        }
+
+        .comparison-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .comparison-box.without .comparison-title {
+            color: #e74c3c;
+        }
+
+        .comparison-box.with .comparison-title {
+            color: #27ae60;
+        }
+
+        .alert-list {
+            list-style: none;
+        }
+
+        .alert-list li {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+
+        .alert-list li.noise {
+            background: rgba(231, 76, 60, 0.2);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .alert-list li.real {
+            background: rgba(231, 76, 60, 0.3);
+        }
+
+        .alert-list li.suppressed {
+            background: rgba(243, 156, 18, 0.3);
+            border-left: 4px solid #f39c12;
+        }
+
+        /* 仕組み説明 */
+        .how-it-works {
+            background: linear-gradient(135deg, #2c3e50 0%, #4a6741 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .how-it-works h2 {
+            color: #2ecc71;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .mechanism-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .mechanism-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 25px;
+            border-top: 4px solid #2ecc71;
+            transition: transform 0.3s;
+        }
+
+        .mechanism-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .mechanism-card .step-num {
+            display: inline-block;
+            background: #2ecc71;
+            color: #1a1a2e;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .mechanism-card h3 {
+            color: #2ecc71;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .mechanism-card p {
+            line-height: 1.7;
+            color: #bdc3c7;
+        }
+
+        /* フィルター条件 */
+        .filter-section {
+            background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .filter-section h2 {
+            color: #e1bee7;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .filter-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .filter-card:hover {
+            border-color: #e1bee7;
+            transform: scale(1.03);
+        }
+
+        .filter-card .icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .filter-card h3 {
+            color: #ce93d8;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .filter-card p {
+            font-size: 0.9em;
+            color: #d1c4e9;
+            line-height: 1.6;
+        }
+
+        /* ユースケース */
+        .usecase-section {
+            background: linear-gradient(135deg, #006266 0%, #009432 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .usecase-section h2 {
+            color: #a8e6cf;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+        }
+
+        .usecase-card {
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 25px;
+            border-left: 5px solid #55efc4;
+        }
+
+        .usecase-card h3 {
+            color: #55efc4;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .usecase-card .scenario {
+            background: rgba(85, 239, 196, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .usecase-card .scenario-label {
+            color: #81ecec;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+
+        .usecase-card .rule-example {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            color: #dfe6e9;
+            margin-top: 10px;
+        }
+
+        /* 注意点 */
+        .warning-section {
+            background: linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .warning-section h2 {
+            color: #ffcdd2;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .warning-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .warning-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 25px;
+            border: 2px solid #ef9a9a;
+        }
+
+        .warning-card h3 {
+            color: #ffcdd2;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-card p {
+            line-height: 1.7;
+            color: #ffebee;
+        }
+
+        /* ベストプラクティス */
+        .bestpractice-section {
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .bestpractice-section h2 {
+            color: #bbdefb;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .practice-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .practice-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .practice-item .check-icon {
+            font-size: 2em;
+            flex-shrink: 0;
+        }
+
+        .practice-item h3 {
+            color: #90caf9;
+            margin-bottom: 10px;
+        }
+
+        .practice-item p {
+            color: #e3f2fd;
+            line-height: 1.7;
+        }
+
+        /* コード例 */
+        .code-section {
+            background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .code-section h2 {
+            color: #80cbc4;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 25px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .code-block pre {
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .code-label {
+            background: #80cbc4;
+            color: #263238;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        /* キーワード */
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; }
+        .property { color: #9cdcfe; }
+        .value { color: #b5cea8; }
+
+        /* まとめ */
+        .summary-section {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 24px;
+            padding: 40px;
+            border: 3px solid #e94560;
+        }
+
+        .summary-section h2 {
+            color: #e94560;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .summary-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-point {
+            background: rgba(233, 69, 96, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .summary-point .icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .summary-point h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+
+        .summary-point p {
+            color: #bdc3c7;
+            line-height: 1.6;
+        }
+
+        /* フッター */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1>🛡️ GuardDuty 抑制ルール</h1>
+            <p class="subtitle">Suppression Rule で「オオカミ少年」問題を解決！</p>
+            <span class="service-badge">AWS Security Services</span>
+        </div>
+
+        <!-- たとえ話セクション -->
+        <div class="analogy-section">
+            <h2>💡 たとえ話で理解しよう</h2>
+            <div class="analogy-box">
+                <div class="analogy-title">
+                    🏢 ビルの警備員さんに例えると...
+                </div>
+                <div class="analogy-content">
+                    <p>
+                        GuardDutyは<strong>24時間体制のセキュリティ警備員</strong>のようなものです。
+                        不審な人物を見つけると、すぐに報告してくれます。
+                    </p>
+                    <p>
+                        しかし、毎日来る<strong>清掃業者さん</strong>や<strong>定期便の配達員さん</strong>まで
+                        「不審者発見！」と報告されたら、本当に危険な時に気づけなくなりますよね？🤔
+                    </p>
+                    <p>
+                        そこで登場するのが<strong style="color: #f39c12;">抑制ルール（Suppression Rule）</strong>！
+                        これは警備員さんに渡す<strong>「顔パスリスト」</strong>のようなものです。
+                    </p>
+                    <p>
+                        「この人は毎日来る清掃業者さんだから、いちいち報告しなくていいよ」と
+                        事前に教えておくことで、<strong>本当に重要なアラートだけに集中</strong>できるようになります！✨
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 図解セクション -->
+        <div class="diagram-section">
+            <h2>📊 抑制ルールの仕組み</h2>
+            
+            <div class="flow-diagram">
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <div class="icon">🔍</div>
+                        <div class="label">GuardDuty<br>脅威を検出</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box alert">
+                        <div class="icon">🚨</div>
+                        <div class="label">Finding<br>（検出結果）生成</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box suppression">
+                        <div class="icon">📋</div>
+                        <div class="label">抑制ルールで<br>フィルタリング</div>
+                    </div>
+                </div>
+                
+                <div class="flow-arrow vertical">↓</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box archive">
+                        <div class="icon">📦</div>
+                        <div class="label">マッチ → 自動アーカイブ<br>（非表示）</div>
+                    </div>
+                    <div style="padding: 20px; font-size: 1.5em;">または</div>
+                    <div class="flow-box pass">
+                        <div class="icon">🔔</div>
+                        <div class="label">マッチしない → 通常表示<br>（要対応）</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 比較図 -->
+            <div class="comparison-container">
+                <div class="comparison-box without">
+                    <div class="comparison-title">
+                        ❌ 抑制ルールなし
+                    </div>
+                    <ul class="alert-list">
+                        <li class="noise">🔔 ポートスキャン検出（開発テスト）</li>
+                        <li class="noise">🔔 異常なAPIコール（自動化ツール）</li>
+                        <li class="real">🔔 不正ログイン試行 ⚠️ 重要！</li>
+                        <li class="noise">🔔 DNS異常（内部DNS）</li>
+                        <li class="noise">🔔 EC2外部通信（正規バックアップ）</li>
+                    </ul>
+                    <p style="color: #e74c3c; margin-top: 15px; text-align: center;">
+                        😵 ノイズが多くて重要なアラートを見逃す！
+                    </p>
+                </div>
+                
+                <div class="comparison-box with">
+                    <div class="comparison-title">
+                        ✅ 抑制ルールあり
+                    </div>
+                    <ul class="alert-list">
+                        <li class="suppressed">📦 ポートスキャン → 自動アーカイブ</li>
+                        <li class="suppressed">📦 異常なAPIコール → 自動アーカイブ</li>
+                        <li class="real">🔔 不正ログイン試行 ⚠️ すぐ対応！</li>
+                        <li class="suppressed">📦 DNS異常 → 自動アーカイブ</li>
+                        <li class="suppressed">📦 EC2外部通信 → 自動アーカイブ</li>
+                    </ul>
+                    <p style="color: #27ae60; margin-top: 15px; text-align: center;">
+                        😊 本当に重要なアラートに集中できる！
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 仕組み説明 -->
+        <div class="how-it-works">
+            <h2>⚙️ 抑制ルールの動作ステップ</h2>
+            <div class="mechanism-grid">
+                <div class="mechanism-card">
+                    <span class="step-num">1</span>
+                    <h3>ルールを作成</h3>
+                    <p>「この条件に合うFindingは重要じゃない」というフィルター条件を設定します。検出タイプ、重大度、リソースなどで指定可能。</p>
+                </div>
+                <div class="mechanism-card">
+                    <span class="step-num">2</span>
+                    <h3>Finding生成時に照合</h3>
+                    <p>GuardDutyが新しい脅威を検出してFindingを生成すると、自動的に抑制ルールと照合されます。</p>
+                </div>
+                <div class="mechanism-card">
+                    <span class="step-num">3</span>
+                    <h3>マッチしたら自動アーカイブ</h3>
+                    <p>ルールにマッチしたFindingは自動的にアーカイブ状態に。コンソールのデフォルト表示から除外されます。</p>
+                </div>
+                <div class="mechanism-card">
+                    <span class="step-num">4</span>
+                    <h3>いつでも確認可能</h3>
+                    <p>アーカイブされたFindingは削除されません。フィルターを変更すればいつでも確認できます。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- フィルター条件 -->
+        <div class="filter-section">
+            <h2>🎯 フィルタリングできる条件</h2>
+            <div class="filter-grid">
+                <div class="filter-card">
+                    <div class="icon">📝</div>
+                    <h3>Finding Type</h3>
+                    <p>検出タイプで絞り込み<br>例: Recon:EC2/PortProbeUnprotectedPort</p>
+                </div>
+                <div class="filter-card">
+                    <div class="icon">⚠️</div>
+                    <h3>Severity</h3>
+                    <p>重大度で絞り込み<br>Low / Medium / High</p>
+                </div>
+                <div class="filter-card">
+                    <div class="icon">🖥️</div>
+                    <h3>Resource Type</h3>
+                    <p>リソース種類で絞り込み<br>EC2 / S3 / IAM など</p>
+                </div>
+                <div class="filter-card">
+                    <div class="icon">🏷️</div>
+                    <h3>Resource Tags</h3>
+                    <p>タグで絞り込み<br>Environment: dev など</p>
+                </div>
+                <div class="filter-card">
+                    <div class="icon">🌐</div>
+                    <h3>IP Address</h3>
+                    <p>送信元/宛先IPで絞り込み<br>特定のIPを除外</p>
+                </div>
+                <div class="filter-card">
+                    <div class="icon">🔑</div>
+                    <h3>Account ID</h3>
+                    <p>AWSアカウントで絞り込み<br>マルチアカウント環境向け</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ユースケース -->
+        <div class="usecase-section">
+            <h2>💼 よくある使用シーン</h2>
+            <div class="usecase-grid">
+                <div class="usecase-card">
+                    <h3>🧪 開発環境のテスト活動</h3>
+                    <div class="scenario">
+                        <div class="scenario-label">シナリオ</div>
+                        開発チームがペネトレーションテストを実施。大量のポートスキャン検出が発生。
+                    </div>
+                    <div class="rule-example">
+                        Finding Type: Recon:EC2/*<br>
+                        Resource Tag: Environment = dev
+                    </div>
+                </div>
+                
+                <div class="usecase-card">
+                    <h3>🤖 自動化ツールの正常動作</h3>
+                    <div class="scenario">
+                        <div class="scenario-label">シナリオ</div>
+                        CI/CDパイプラインやバックアップツールによるAPI呼び出しが異常検出される。
+                    </div>
+                    <div class="rule-example">
+                        Finding Type: UnauthorizedAccess:IAMUser/*<br>
+                        Principal: automation-role
+                    </div>
+                </div>
+                
+                <div class="usecase-card">
+                    <h3>🏢 既知の社内IPアドレス</h3>
+                    <div class="scenario">
+                        <div class="scenario-label">シナリオ</div>
+                        オフィスのNAT GatewayからのアクセスがTor/VPNとして誤検出される。
+                    </div>
+                    <div class="rule-example">
+                        Finding Type: UnauthorizedAccess:*<br>
+                        Service.Action.NetworkConnectionAction<br>
+                        .RemoteIpDetails.IpAddressV4 = 203.0.113.10
+                    </div>
+                </div>
+                
+                <div class="usecase-card">
+                    <h3>📊 低重大度の大量アラート</h3>
+                    <div class="scenario">
+                        <div class="scenario-label">シナリオ</div>
+                        Lowレベルの検出結果が大量に発生し、重要なアラートが埋もれる。
+                    </div>
+                    <div class="rule-example">
+                        Severity: Low<br>
+                        ※ 慎重に使用すること！
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 注意点 -->
+        <div class="warning-section">
+            <h2>⚠️ 注意すべきポイント</h2>
+            <div class="warning-grid">
+                <div class="warning-card">
+                    <h3>🙈 過剰な抑制は危険</h3>
+                    <p>抑制ルールを広く設定しすぎると、本当の脅威も見逃す可能性があります。最小限の範囲で、具体的な条件を設定しましょう。</p>
+                </div>
+                <div class="warning-card">
+                    <h3>📝 定期的なレビュー</h3>
+                    <p>環境は変化します。設定した抑制ルールが今でも適切か、定期的に見直しましょう。不要になったルールは削除を。</p>
+                </div>
+                <div class="warning-card">
+                    <h3>🗂️ アーカイブは削除ではない</h3>
+                    <p>抑制されたFindingは削除されず、アーカイブに残ります。必要に応じてフィルターを変更して確認できることを覚えておきましょう。</p>
+                </div>
+                <div class="warning-card">
+                    <h3>🔄 EventBridgeとの関係</h3>
+                    <p>抑制されたFindingも、EventBridgeには送信されます。EventBridge側でも同様のフィルタリングが必要な場合があります。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ベストプラクティス -->
+        <div class="bestpractice-section">
+            <h2>✨ ベストプラクティス</h2>
+            <div class="practice-list">
+                <div class="practice-item">
+                    <span class="check-icon">✅</span>
+                    <div>
+                        <h3>具体的な条件を設定</h3>
+                        <p>「すべてのLow重大度を抑制」ではなく、「特定のFinding Typeで、特定のリソースに対するものだけ」のように具体的に指定しましょう。</p>
+                    </div>
+                </div>
+                <div class="practice-item">
+                    <span class="check-icon">✅</span>
+                    <div>
+                        <h3>理由を説明に記載</h3>
+                        <p>抑制ルールには説明（Description）を必ず追加。なぜこのルールが必要なのか、誰が承認したのかを記録しておきましょう。</p>
+                    </div>
+                </div>
+                <div class="practice-item">
+                    <span class="check-icon">✅</span>
+                    <div>
+                        <h3>タグを活用</h3>
+                        <p>リソースに適切なタグを付けておくことで、環境（dev/prod）や用途に基づいた柔軟な抑制ルールが作成できます。</p>
+                    </div>
+                </div>
+                <div class="practice-item">
+                    <span class="check-icon">✅</span>
+                    <div>
+                        <h3>アーカイブを定期確認</h3>
+                        <p>月に一度など、アーカイブされたFindingを確認する運用を入れましょう。想定外のものが抑制されていないかチェック。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- コード例 -->
+        <div class="code-section">
+            <h2>💻 抑制ルールの作成例</h2>
+            
+            <span class="code-label">AWS CLI</span>
+            <div class="code-block">
+<pre><span class="comment"># 開発環境のポートスキャン検出を抑制</span>
+aws guardduty create-filter \
+    --detector-id <span class="string">12abc34d567e8fa901bc2d34e56789f0</span> \
+    --name <span class="string">"SuppressDevPortScan"</span> \
+    --description <span class="string">"開発環境のペネトレーションテストによる検出を除外"</span> \
+    --action <span class="keyword">ARCHIVE</span> \
+    --finding-criteria '{
+        <span class="property">"Criterion"</span>: {
+            <span class="property">"type"</span>: {
+                <span class="property">"Eq"</span>: [<span class="string">"Recon:EC2/PortProbeUnprotectedPort"</span>]
+            },
+            <span class="property">"resource.tags.value"</span>: {
+                <span class="property">"Eq"</span>: [<span class="string">"development"</span>]
+            }
+        }
+    }'</pre>
+            </div>
+            
+            <span class="code-label">CloudFormation</span>
+            <div class="code-block">
+<pre><span class="keyword">AWSTemplateFormatVersion</span>: <span class="string">'2010-09-09'</span>
+<span class="keyword">Resources</span>:
+  <span class="property">DevSuppressionRule</span>:
+    <span class="keyword">Type</span>: AWS::GuardDuty::Filter
+    <span class="keyword">Properties</span>:
+      <span class="property">DetectorId</span>: !Ref GuardDutyDetector
+      <span class="property">Name</span>: <span class="string">SuppressDevEnvironment</span>
+      <span class="property">Description</span>: <span class="string">開発環境の低重大度アラートを抑制</span>
+      <span class="property">Action</span>: <span class="keyword">ARCHIVE</span>
+      <span class="property">Rank</span>: <span class="value">1</span>
+      <span class="property">FindingCriteria</span>:
+        <span class="property">Criterion</span>:
+          <span class="property">severity</span>:
+            <span class="property">Lt</span>:
+              - <span class="value">4</span>  <span class="comment"># Low severity (1-3)</span>
+          <span class="property">resource.resourceType</span>:
+            <span class="property">Eq</span>:
+              - <span class="string">Instance</span>
+          <span class="property">resource.tags.value</span>:
+            <span class="property">Eq</span>:
+              - <span class="string">dev</span></pre>
+            </div>
+        </div>
+
+        <!-- まとめ -->
+        <div class="summary-section">
+            <h2>📌 まとめ</h2>
+            <div class="summary-points">
+                <div class="summary-point">
+                    <div class="icon">🎯</div>
+                    <h3>目的</h3>
+                    <p>既知の誤検知や許容されているアクティビティをフィルタリングし、重要なアラートに集中</p>
+                </div>
+                <div class="summary-point">
+                    <div class="icon">⚙️</div>
+                    <h3>仕組み</h3>
+                    <p>条件にマッチしたFindingを自動的にアーカイブ状態にする（削除はしない）</p>
+                </div>
+                <div class="summary-point">
+                    <div class="icon">🔑</div>
+                    <h3>ポイント</h3>
+                    <p>具体的な条件設定・定期的なレビュー・理由の記録を忘れずに</p>
+                </div>
+                <div class="summary-point">
+                    <div class="icon">💼</div>
+                    <h3>活用シーン</h3>
+                    <p>開発テスト・自動化ツール・既知IPアドレスなど、正当なアクティビティの除外に最適</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>AWS GuardDuty Suppression Rules Guide | Created for AWS Beginners 🚀</p>
+        </div>
+    </div>
+</body>
+</html>

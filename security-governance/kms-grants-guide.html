@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e2e8f0;
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* ヘッダー */
+        .header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #e94560 0%, #0f3460 50%, #533483 100%);
+            border-radius: 24px;
+            margin-bottom: 50px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(233, 69, 96, 0.2) 0%, transparent 50%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .service-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #ffd700, #ff6b6b, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.4em;
+            color: #f1f5f9;
+            margin-bottom: 25px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        /* セクション共通 */
+        .section {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #f1f5f9;
+        }
+
+        .section-title .icon {
+            font-size: 1.3em;
+        }
+
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #533483 0%, #0f3460 100%);
+            border: 2px solid #e94560;
+        }
+
+        .analogy-box {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(83, 52, 131, 0.15));
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 30px;
+            border-left: 5px solid #e94560;
+        }
+
+        .analogy-title {
+            font-size: 1.5em;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 25px;
+        }
+
+        .analogy-card {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(233, 69, 96, 0.2);
+        }
+
+        .analogy-card:hover {
+            transform: translateY(-5px);
+            border-color: #e94560;
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.2);
+        }
+
+        .analogy-card .emoji {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .analogy-card h4 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .analogy-card p {
+            color: #94a3b8;
+            font-size: 0.95em;
+        }
+
+        /* 結論ボックス */
+        .conclusion-box {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 107, 107, 0.2));
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            border: 2px solid #ffd700;
+            text-align: center;
+        }
+
+        .conclusion-box h3 {
+            color: #ffd700;
+            font-size: 1.6em;
+            margin-bottom: 15px;
+        }
+
+        .conclusion-box p {
+            font-size: 1.2em;
+            color: #f1f5f9;
+        }
+
+        /* 図解セクション */
+        .diagram-container {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .diagram-title {
+            text-align: center;
+            font-size: 1.4em;
+            color: #ffd700;
+            margin-bottom: 40px;
+        }
+
+        /* グラントフロー図 */
+        .grant-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .entity-box {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+            padding: 20px 30px;
+            border-radius: 16px;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 5px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .entity-box .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .entity-box span {
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .key-box {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            padding: 30px 40px;
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(255, 215, 0, 0.4);
+            animation: keyGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes keyGlow {
+            0%, 100% { box-shadow: 0 10px 40px rgba(255, 215, 0, 0.4); }
+            50% { box-shadow: 0 10px 60px rgba(255, 215, 0, 0.6); }
+        }
+
+        .key-box .key-icon {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .key-box h3 {
+            font-size: 1.4em;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+        }
+
+        .key-box p {
+            font-size: 0.9em;
+            color: #1a1a2e;
+            opacity: 0.8;
+        }
+
+        .grant-card {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            padding: 20px 30px;
+            border-radius: 16px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.3);
+            position: relative;
+        }
+
+        .grant-card::before {
+            content: '🎫';
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            font-size: 2em;
+        }
+
+        .grant-card .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .arrow-down {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #ffd700;
+            font-size: 2em;
+            padding: 10px 0;
+        }
+
+        .arrow-label {
+            font-size: 0.5em;
+            background: rgba(255, 215, 0, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 5px;
+        }
+
+        .arrow-right {
+            color: #ffd700;
+            font-size: 2em;
+        }
+
+        /* 比較セクション */
+        .comparison-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .compare-card {
+            background: linear-gradient(135deg, rgba(30, 58, 95, 0.8), rgba(15, 23, 42, 0.8));
+            padding: 30px;
+            border-radius: 16px;
+            border-top: 5px solid;
+        }
+
+        .compare-card.iam {
+            border-color: #3b82f6;
+        }
+
+        .compare-card.grant {
+            border-color: #e94560;
+        }
+
+        .compare-card h4 {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .compare-card.iam h4 {
+            color: #60a5fa;
+        }
+
+        .compare-card.grant h4 {
+            color: #ff6b6b;
+        }
+
+        .compare-list {
+            list-style: none;
+        }
+
+        .compare-list li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .compare-list li:last-child {
+            border-bottom: none;
+        }
+
+        .compare-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            font-size: 1.5em;
+        }
+
+        .compare-card.iam .compare-list li::before {
+            color: #3b82f6;
+        }
+
+        .compare-card.grant .compare-list li::before {
+            color: #e94560;
+        }
+
+        /* 操作一覧 */
+        .operations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .operation-card {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.1), rgba(83, 52, 131, 0.1));
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .operation-card:hover {
+            transform: translateY(-3px);
+            border-color: #e94560;
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(83, 52, 131, 0.2));
+        }
+
+        .operation-card .op-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .operation-card h4 {
+            color: #ff6b6b;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .operation-card p {
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        /* ユースケース */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .usecase-card {
+            background: linear-gradient(135deg, #1e3a5f, #0f172a);
+            border-radius: 16px;
+            padding: 30px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .usecase-card:nth-child(1) { border-color: #f59e0b; }
+        .usecase-card:nth-child(2) { border-color: #10b981; }
+        .usecase-card:nth-child(3) { border-color: #ec4899; }
+        .usecase-card:nth-child(4) { border-color: #8b5cf6; }
+
+        .usecase-card:hover {
+            transform: translateX(5px);
+        }
+
+        .usecase-card h4 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .usecase-card:nth-child(1) h4 { color: #fbbf24; }
+        .usecase-card:nth-child(2) h4 { color: #34d399; }
+        .usecase-card:nth-child(3) h4 { color: #f472b6; }
+        .usecase-card:nth-child(4) h4 { color: #a78bfa; }
+
+        .usecase-card p {
+            color: #94a3b8;
+            font-size: 0.95em;
+        }
+
+        /* ステップ説明 */
+        .steps-container {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .step-item::before {
+            content: '';
+            position: absolute;
+            left: 35px;
+            top: 70px;
+            height: calc(100% + 15px);
+            width: 3px;
+            background: linear-gradient(to bottom, #e94560, transparent);
+        }
+
+        .step-item:last-child::before {
+            display: none;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #ff6b6b;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .step-content p {
+            color: #94a3b8;
+        }
+
+        /* コード例 */
+        .code-example {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            overflow-x: auto;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .code-title {
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .code-block {
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            font-size: 0.9em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .code-comment { color: #64748b; }
+        .code-keyword { color: #e94560; }
+        .code-string { color: #ffd700; }
+        .code-param { color: #10b981; }
+
+        /* 注意点 */
+        .caution-box {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.1));
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .caution-box h4 {
+            color: #fbbf24;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .caution-list {
+            list-style: none;
+        }
+
+        .caution-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #fcd34d;
+        }
+
+        .caution-list li::before {
+            content: '⚠️';
+            position: absolute;
+            left: 0;
+        }
+
+        /* ヒント */
+        .tip-box {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1));
+            border: 1px solid #10b981;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .tip-box h4 {
+            color: #34d399;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tip-box p {
+            color: #6ee7b7;
+        }
+
+        /* まとめ */
+        .summary-section {
+            background: linear-gradient(135deg, #e94560, #533483);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .summary-section h2 {
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            color: #fff;
+        }
+
+        .summary-points {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .summary-point {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        /* テーブル */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .info-table th {
+            background: linear-gradient(135deg, #e94560, #533483);
+            color: white;
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .info-table td {
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            color: #cbd5e1;
+        }
+
+        .info-table tr:hover td {
+            background: rgba(233, 69, 96, 0.05);
+        }
+
+        .info-table td:first-child {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .section {
+                padding: 25px;
+            }
+
+            .comparison-section {
+                grid-template-columns: 1fr;
+            }
+
+            .flow-row {
+                flex-direction: column;
+            }
+
+            .arrow-right {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="header-content">
+                <span class="service-icon">🎫</span>
+                <h1>AWS KMS グラント（Grants）</h1>
+                <p class="subtitle">暗号キーへの「一時入室許可証」を理解しよう</p>
+                <span class="badge">動的なアクセス許可の仕組み</span>
+            </div>
+        </header>
+
+        <!-- 結論ファースト -->
+        <section class="section">
+            <div class="conclusion-box">
+                <h3>🎯 結論：グラントとは？</h3>
+                <p>
+                    KMSキーへの<strong style="color: #ffd700;">「一時的なアクセス許可証」</strong>のこと。<br>
+                    IAMポリシーを変更せずに、プログラムから動的に権限を付与・取り消しできる仕組みです。
+                </p>
+            </div>
+
+            <div style="background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(83, 52, 131, 0.15)); padding: 25px; border-radius: 16px;">
+                <p style="font-size: 1.1em; text-align: center; color: #e2e8f0;">
+                    AWSサービス（EBS、RDS、Lambdaなど）がKMSキーを使うとき、<br>
+                    <strong style="color: #ff6b6b;">自動的にグラントが発行</strong>されて一時的に暗号化・復号の権限が与えられます
+                </p>
+            </div>
+        </section>
+
+        <!-- たとえ話セクション -->
+        <section class="section analogy-section">
+            <h2 class="section-title">
+                <span class="icon">📖</span>
+                たとえ話で理解するグラント
+            </h2>
+            
+            <div class="analogy-box">
+                <div class="analogy-title">
+                    <span>🏨</span>
+                    グラント = ホテルの「一時入室カード」
+                </div>
+                <p>
+                    高級ホテルの金庫室を想像してください。通常、金庫室に入れるのは正規スタッフ（IAMポリシーで許可された人）だけです。
+                    でも、ルームサービスのスタッフが一時的に金庫室の物を取り出す必要があるとき...
+                    <strong style="color: #ff6b6b;">「一時入室カード」（グラント）</strong>を発行して、限られた操作だけを許可します。
+                </p>
+                
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <span class="emoji">🔐</span>
+                        <h4>金庫室 = KMSキー</h4>
+                        <p>大切なデータを暗号化・復号する「秘密の鍵」が保管されている場所</p>
+                    </div>
+                    <div class="analogy-card">
+                        <span class="emoji">👔</span>
+                        <h4>正規スタッフ = IAMポリシー</h4>
+                        <p>事前に登録された人だけが入れる。変更には人事部（管理者）の承認が必要</p>
+                    </div>
+                    <div class="analogy-card">
+                        <span class="emoji">🎫</span>
+                        <h4>一時入室カード = グラント</h4>
+                        <p>必要なときだけ発行。「取り出し」だけ許可など、操作を限定できる</p>
+                    </div>
+                    <div class="analogy-card">
+                        <span class="emoji">🍽️</span>
+                        <h4>ルームサービス = AWSサービス</h4>
+                        <p>EBS、RDS、Lambdaなど。一時的にキーを使う必要があるサービス</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 図解セクション -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">📊</span>
+                グラントの仕組みを図解
+            </h2>
+
+            <div class="diagram-container">
+                <div class="diagram-title">🔄 グラントによるアクセス許可の流れ</div>
+                
+                <div class="grant-flow">
+                    <!-- 登場人物 -->
+                    <div class="flow-row">
+                        <div class="entity-box">
+                            <span class="icon">👤</span>
+                            <span>グラント発行者<br><small>（管理者・サービス）</small></span>
+                        </div>
+                        <div class="arrow-right">➡️</div>
+                        <div class="grant-card">
+                            <span class="icon">📝</span>
+                            <span>グラント作成<br><small>CreateGrant</small></span>
+                        </div>
+                        <div class="arrow-right">➡️</div>
+                        <div class="entity-box">
+                            <span class="icon">🤖</span>
+                            <span>グラント受領者<br><small>（Grantee Principal）</small></span>
+                        </div>
+                    </div>
+
+                    <div class="arrow-down">
+                        ⬇️
+                        <span class="arrow-label">グラントで許可された操作のみ実行可能</span>
+                    </div>
+
+                    <!-- KMSキー -->
+                    <div class="key-box">
+                        <span class="key-icon">🔑</span>
+                        <h3>KMS キー</h3>
+                        <p>暗号化・復号の実行</p>
+                    </div>
+
+                    <div class="arrow-down">
+                        ⬇️
+                        <span class="arrow-label">暗号化されたデータ</span>
+                    </div>
+
+                    <!-- データ -->
+                    <div class="flow-row">
+                        <div class="entity-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                            <span class="icon">💾</span>
+                            <span>EBSボリューム</span>
+                        </div>
+                        <div class="entity-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                            <span class="icon">🗄️</span>
+                            <span>RDSデータベース</span>
+                        </div>
+                        <div class="entity-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                            <span class="icon">📦</span>
+                            <span>S3オブジェクト</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- IAMポリシーとの比較 -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">⚖️</span>
+                IAMポリシー vs グラント
+            </h2>
+
+            <div class="comparison-section">
+                <div class="compare-card iam">
+                    <h4>📋 IAMポリシー</h4>
+                    <ul class="compare-list">
+                        <li><strong>静的な権限管理</strong><br>事前に設定、変更には管理者の操作が必要</li>
+                        <li><strong>永続的</strong><br>削除するまで有効</li>
+                        <li><strong>管理が必要</strong><br>ポリシーの作成・変更・削除は管理者が行う</li>
+                        <li><strong>ユーザー/ロール向け</strong><br>人やアプリケーションに直接付与</li>
+                        <li><strong>広範な権限</strong><br>複数のキーや操作をまとめて許可できる</li>
+                    </ul>
+                </div>
+
+                <div class="compare-card grant">
+                    <h4>🎫 グラント</h4>
+                    <ul class="compare-list">
+                        <li><strong>動的な権限管理</strong><br>プログラムから即座に作成・取り消し可能</li>
+                        <li><strong>一時的</strong><br>使い終わったら取り消すのがベストプラクティス</li>
+                        <li><strong>自動化向き</strong><br>AWSサービスが自動で作成・管理</li>
+                        <li><strong>サービス向け</strong><br>EBS、RDSなどが一時的に使用</li>
+                        <li><strong>特定の操作のみ</strong><br>必要最小限の権限だけを付与</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tip-box">
+                <h4>💡 使い分けのポイント</h4>
+                <p>
+                    <strong>IAMポリシー</strong>：ユーザーやアプリケーションが継続的にキーを使う場合<br>
+                    <strong>グラント</strong>：AWSサービスが一時的にキーを使う場合、または動的に権限を付与したい場合
+                </p>
+            </div>
+        </section>
+
+        <!-- グラントで許可できる操作 -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">🔧</span>
+                グラントで許可できる操作
+            </h2>
+
+            <div class="operations-grid">
+                <div class="operation-card">
+                    <span class="op-icon">🔒</span>
+                    <h4>Encrypt</h4>
+                    <p>データを暗号化</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">🔓</span>
+                    <h4>Decrypt</h4>
+                    <p>データを復号</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">🔑</span>
+                    <h4>GenerateDataKey</h4>
+                    <p>データキーを生成</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">🔄</span>
+                    <h4>ReEncryptFrom/To</h4>
+                    <p>別のキーで再暗号化</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">🎫</span>
+                    <h4>CreateGrant</h4>
+                    <p>さらにグラントを作成</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">📋</span>
+                    <h4>DescribeKey</h4>
+                    <p>キー情報を取得</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">🗑️</span>
+                    <h4>RetireGrant</h4>
+                    <p>グラントを無効化</p>
+                </div>
+                <div class="operation-card">
+                    <span class="op-icon">✅</span>
+                    <h4>GenerateDataKeyWithoutPlaintext</h4>
+                    <p>暗号化済みキーのみ生成</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- グラントの構成要素 -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">📦</span>
+                グラントの構成要素
+            </h2>
+
+            <table class="info-table">
+                <thead>
+                    <tr>
+                        <th>要素</th>
+                        <th>説明</th>
+                        <th>例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Key ID</td>
+                        <td>対象となるKMSキーのID</td>
+                        <td>arn:aws:kms:ap-northeast-1:123456789012:key/xxxx</td>
+                    </tr>
+                    <tr>
+                        <td>Grantee Principal</td>
+                        <td>権限を受け取るプリンシパル</td>
+                        <td>IAMロール、AWSサービス</td>
+                    </tr>
+                    <tr>
+                        <td>Operations</td>
+                        <td>許可する操作のリスト</td>
+                        <td>Decrypt, Encrypt</td>
+                    </tr>
+                    <tr>
+                        <td>Retiring Principal</td>
+                        <td>グラントを無効化できるプリンシパル</td>
+                        <td>IAMユーザー、ロール</td>
+                    </tr>
+                    <tr>
+                        <td>Constraints</td>
+                        <td>追加の制約条件</td>
+                        <td>暗号化コンテキストの制限</td>
+                    </tr>
+                    <tr>
+                        <td>Grant Token</td>
+                        <td>グラント作成直後に使用するトークン</td>
+                        <td>即時利用時に必要</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ユースケース -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">🎯</span>
+                グラントが使われる主なシーン
+            </h2>
+
+            <div class="usecase-grid">
+                <div class="usecase-card">
+                    <h4>💾 EBSボリュームの暗号化</h4>
+                    <p>EC2インスタンスがEBSボリュームをアタッチするとき、EC2サービスがKMSキーへのグラントを自動作成。ボリュームのデータを復号できるようになります。</p>
+                </div>
+                <div class="usecase-card">
+                    <h4>🗄️ RDSデータベースの暗号化</h4>
+                    <p>RDSインスタンスが暗号化されたデータベースを起動するとき、RDSサービスがグラントを取得。データの読み書き時に自動で暗号化・復号が行われます。</p>
+                </div>
+                <div class="usecase-card">
+                    <h4>⚡ Lambda関数の実行</h4>
+                    <p>Lambda関数が暗号化された環境変数や、KMSで暗号化されたS3オブジェクトにアクセスするとき、一時的なグラントで復号権限を取得します。</p>
+                </div>
+                <div class="usecase-card">
+                    <h4>🔄 クロスアカウントアクセス</h4>
+                    <p>別のAWSアカウントのサービスがKMSキーを使う必要があるとき、グラントで一時的なアクセス権を付与できます。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 実際の動作 -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">⚙️</span>
+                グラントの動作フロー
+            </h2>
+
+            <div class="steps-container">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>グラントの作成</h4>
+                        <p>CreateGrant APIでグラントを作成。誰が（Grantee）、どのキーで、何の操作ができるかを指定します。AWSサービスの場合は自動で作成されます。</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>グラントトークンの発行</h4>
+                        <p>グラント作成直後は反映に数分かかる場合があります。即座に使いたい場合は「グラントトークン」を使って操作を実行します。</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>操作の実行</h4>
+                        <p>Granteeがグラントで許可された操作（Encrypt、Decryptなど）をKMSキーに対して実行できるようになります。</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>グラントの無効化（Retire）</h4>
+                        <p>使い終わったらRetireGrant APIでグラントを無効化。セキュリティのベストプラクティスとして、不要になったグラントは速やかに削除しましょう。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- コード例 -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">💻</span>
+                AWS CLIでのグラント操作
+            </h2>
+
+            <div class="code-example">
+                <div class="code-title">📝 グラントの作成</div>
+                <div class="code-block"><span class="code-comment"># グラントを作成（Decrypt操作を許可）</span>
+<span class="code-keyword">aws kms</span> create-grant \
+    <span class="code-param">--key-id</span> <span class="code-string">"arn:aws:kms:ap-northeast-1:123456789012:key/xxxx"</span> \
+    <span class="code-param">--grantee-principal</span> <span class="code-string">"arn:aws:iam::123456789012:role/MyAppRole"</span> \
+    <span class="code-param">--operations</span> <span class="code-string">"Decrypt"</span> <span class="code-string">"GenerateDataKey"</span></div>
+            </div>
+
+            <div class="code-example">
+                <div class="code-title">📋 グラントの一覧表示</div>
+                <div class="code-block"><span class="code-comment"># キーに関連付けられたグラントを表示</span>
+<span class="code-keyword">aws kms</span> list-grants \
+    <span class="code-param">--key-id</span> <span class="code-string">"arn:aws:kms:ap-northeast-1:123456789012:key/xxxx"</span></div>
+            </div>
+
+            <div class="code-example">
+                <div class="code-title">🗑️ グラントの無効化</div>
+                <div class="code-block"><span class="code-comment"># グラントを無効化（retire）</span>
+<span class="code-keyword">aws kms</span> retire-grant \
+    <span class="code-param">--grant-token</span> <span class="code-string">"AQpAM2..."</span>
+
+<span class="code-comment"># または grant-id を使用</span>
+<span class="code-keyword">aws kms</span> revoke-grant \
+    <span class="code-param">--key-id</span> <span class="code-string">"arn:aws:kms:ap-northeast-1:123456789012:key/xxxx"</span> \
+    <span class="code-param">--grant-id</span> <span class="code-string">"1234567890abcdef..."</span></div>
+            </div>
+        </section>
+
+        <!-- 注意点 -->
+        <section class="section">
+            <h2 class="section-title">
+                <span class="icon">⚠️</span>
+                グラント利用時の注意点
+            </h2>
+
+            <div class="caution-box">
+                <h4>⚡ 知っておくべきポイント</h4>
+                <ul class="caution-list">
+                    <li><strong>反映時間</strong>：グラント作成後、最大5分程度で反映。即座に使いたい場合はグラントトークンを使用</li>
+                    <li><strong>クォータ制限</strong>：1つのKMSキーに対して最大10,000個までのグラントを作成可能</li>
+                    <li><strong>自動作成</strong>：EBS、RDSなどのサービスはグラントを自動作成するため、意図せず増える場合がある</li>
+                    <li><strong>クリーンアップ</strong>：不要なグラントは定期的に削除（retire/revoke）することを推奨</li>
+                    <li><strong>監査</strong>：グラントの作成・使用はCloudTrailでログが記録される</li>
+                </ul>
+            </div>
+
+            <div class="tip-box">
+                <h4>💡 ベストプラクティス</h4>
+                <p>
+                    ✅ 最小権限の原則：必要な操作のみを許可する<br>
+                    ✅ 暗号化コンテキスト：制約条件（Constraints）を使って範囲を限定<br>
+                    ✅ 定期的な棚卸し：list-grantsで不要なグラントがないか確認<br>
+                    ✅ Retiring Principalの設定：誰がグラントを無効化できるか明確にする
+                </p>
+            </div>
+        </section>
+
+        <!-- まとめ -->
+        <section class="summary-section">
+            <h2>📝 まとめ</h2>
+            <p style="font-size: 1.1em; margin-bottom: 20px;">
+                KMSグラントは、暗号キーへの<strong>「一時的な入室許可証」</strong><br>
+                AWSサービスが自動で使用し、動的な権限管理を実現します
+            </p>
+            
+            <div class="summary-points">
+                <span class="summary-point">🎫 一時的なアクセス許可</span>
+                <span class="summary-point">🤖 AWSサービスが自動作成</span>
+                <span class="summary-point">🔧 動的な権限管理</span>
+                <span class="summary-point">📋 IAMポリシーを補完</span>
+                <span class="summary-point">🔒 最小権限の実現</span>
+            </div>
+            
+            <p style="margin-top: 30px; opacity: 0.9;">
+                EBS、RDS、Lambdaなどを使っているなら、<br>
+                裏側でグラントが活躍していることを覚えておきましょう！ 🎉
+            </p>
+        </section>
+    </div>
+</body>
+</html>

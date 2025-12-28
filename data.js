@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 15,
+    count: 16,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -24,14 +24,15 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 6,
+        count: 7,
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html' },
           { title: 'VPC PrivateLink CIDR オーバーラップ', href: 'new-solutions/vpc_privatelink_cidr_overlap.html' },
           { title: 'RAM VPC プレフィックス', href: 'organizational-complexity/aws_ram_vpc_prefix_infographic.html' },
           { title: 'AWS Directory Service 完全ガイド', href: 'networking/aws-directory-service-guide.html' },
-          { title: 'S3バケットポリシー Principal要素 完全ガイド', href: 'networking/s3-bucket-policy-principal-guide.html' }
+          { title: 'S3バケットポリシー Principal要素 完全ガイド', href: 'networking/s3-bucket-policy-principal-guide.html' },
+          { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', href: 'networking/nacl-sg-comparison-guide.html' }
         ]
       },
       {
@@ -49,12 +50,12 @@ const categoriesData = [
     id: 'security-governance',
     title: 'セキュリティ・ガバナンス',
     icon: '🔒',
-    count: 35,
+    count: 46,
     sections: [
       {
         title: 'IAM & 認証・認可',
         icon: '👤',
-        count: 9,
+        count: 15,
         resources: [
           { title: 'AWS Cognito インフォグラフィック', href: 'security-governance/aws-cognito-infographic.html' },
           { title: 'IAM フェデレーション', href: 'continuous-improvement/iam_federation_infographic.html' },
@@ -63,22 +64,29 @@ const categoriesData = [
           { title: 'SAML証明書ローテーション完全ガイド', href: 'security-governance/saml-certificate-rotation-guide.html' },
           { title: 'AWS ログインユーザーの種類 - 完全ガイド', href: 'security-governance/aws-login-users-guide.html' },
           { title: 'IAM ロール：権限ポリシー vs 信頼ポリシー完全ガイド', href: 'security-governance/iam-role-policies-guide.html' },
-          { title: 'IAM Access Analyzer ポリシー生成機能 完全ガイド', href: 'security-governance/iam-access-analyzer-policy-generation-guide.html' }
+          { title: 'IAM Access Analyzer ポリシー生成機能 完全ガイド', href: 'security-governance/iam-access-analyzer-policy-generation-guide.html' },
+          { title: 'IAM Access Analyzer 完全ガイド - AWS初心者向け図解', href: 'security-governance/iam-access-analyzer-guide.html' },
+          { title: 'IAM 権限評価モデル & 操作経路 完全ガイド', href: 'security-governance/iam-permission-evaluation-guide.html' },
+          { title: 'IAM MFA緊急時の救済ガイド - コンソールの限界とAPI直接操作', href: 'security-governance/iam-mfa-emergency-rescue-guide.html' },
+          { title: 'Amazon Cognito Pre Sign-up Lambda トリガー 完全ガイド', href: 'security-governance/cognito-pre-signup-trigger-guide.html' },
+          { title: 'AWS CLI 認証情報の指定方法 完全ガイド', href: 'security-governance/aws-cli-credentials-guide.html' },
+          { title: 'IAM パーミッションバウンダリー 完全ガイド', href: 'security-governance/iam-permission-boundary-guide.html' }
         ]
       },
       {
         title: '暗号化 & 証明書管理',
         icon: '🔐',
-        count: 3,
+        count: 4,
         resources: [
           { title: 'ACM SAN インフォグラフィック', href: 'security-governance/acm-san-infographic.html' },
-          { title: 'CMK インフォグラフィック', href: 'security-governance/aws_cmk_infographic.html' }
+          { title: 'CMK インフォグラフィック', href: 'security-governance/aws_cmk_infographic.html' },
+          { title: 'AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み', href: 'security-governance/kms-grants-guide.html' }
         ]
       },
       {
         title: 'Organizations & ガバナンス',
         icon: '🏢',
-        count: 17,
+        count: 19,
         resources: [
           { title: 'AWS CodeArtifact 完全ガイド', href: 'security-governance/codeartifact-guide.html' },
           { title: 'Cognito IDプールIAMロール完全ガイド', href: 'security-governance/cognito-identity-pool-roles-guide.html' },
@@ -95,20 +103,24 @@ const categoriesData = [
           { title: 'Control Tower 自動展開 (CfCT) ガイド', href: 'organizational-complexity/control-tower-cfct-guide.html' },
           { title: 'CIS AWS Foundations ベンチマーク継続評価ガイド', href: 'security-governance/cis-benchmark-security-hub-config-guide.html' },
           { title: 'OpenSearch Dashboards によるログデータの可視化 - 完全ガイド', href: 'security-governance/opensearch-dashboards-guide.html' },
-          { title: 'AWS Config コンフォーマンスパック & StackSets 完全ガイド', href: 'security-governance/aws-config-conformance-stacksets-guide.html' }
+          { title: 'AWS Config コンフォーマンスパック & StackSets 完全ガイド', href: 'security-governance/aws-config-conformance-stacksets-guide.html' },
+          { title: 'AWS マネージドポリシー vs カスタマーマネージドポリシー 完全ガイド', href: 'security-governance/aws-managed-vs-customer-managed-policies.html' },
+          { title: 'AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド', href: 'security-governance/aws-monitoring-guide.html' }
         ]
       },
       {
         title: 'セキュリティ監視・脅威検知',
         icon: '🛡️',
-        count: 6,
+        count: 8,
         resources: [
           { title: 'AWS WAF インフォグラフィック', href: 'continuous-improvement/aws_waf_infographic.html' },
           { title: 'AWS EDR インフォグラフィック', href: 'continuous-improvement/aws_edr_infographic.html' },
           { title: 'SSM RunCommand インフォグラフィック', href: 'continuous-improvement/aws_ssm_runcommand_infographic.html' },
           { title: 'GuardDuty ログソース完全ガイド', href: 'security-governance/guardduty-log-sources-guide.html' },
           { title: 'VPC トラフィックミラーリング完全ガイド', href: 'security-governance/vpc-traffic-mirroring-guide.html' },
-          { title: 'ALB TLSセキュリティポリシー完全ガイド', href: 'security-governance/alb-tls-security-policy-guide.html' }
+          { title: 'ALB TLSセキュリティポリシー完全ガイド', href: 'security-governance/alb-tls-security-policy-guide.html' },
+          { title: 'GuardDuty EKS Protection 完全ガイド', href: 'security-governance/guardduty-eks-protection-guide.html' },
+          { title: 'Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館', href: 'security-governance/security-lake-guide.html' }
         ]
       }
     ]
@@ -117,7 +129,7 @@ const categoriesData = [
     id: 'compute-applications',
     title: 'コンピュート・アプリケーション',
     icon: '💻',
-    count: 31,
+    count: 35,
     sections: [
       {
         title: 'EC2 & インスタンス管理',
@@ -135,7 +147,7 @@ const categoriesData = [
       {
         title: 'Auto Scaling & ロードバランシング',
         icon: '⚖️',
-        count: 14,
+        count: 18,
         resources: [
           { title: 'IAM PassRole vs AssumeRole 完全ガイド', href: 'compute-applications/iam-passrole-vs-assumerole-guide.html' },
           { title: 'Auto Scaling安全なOSアップデート戦略完全ガイド', href: 'compute-applications/autoscaling-safe-os-update-guide.html' },
@@ -150,7 +162,11 @@ const categoriesData = [
           { title: 'Auto Scaling インフォグラフィック', href: 'compute-applications/auto_scaling_infographic.html' },
           { title: 'EC2 Auto Scaling ライフサイクル', href: 'new-solutions/ec2-autoscaling-lifecycle-hooks.html' },
           { title: 'Auto Scaling ライフサイクル完全ガイド', href: 'compute-applications/autoscaling-lifecycle-guide.html' },
-          { title: 'ALB スティッキーセッション', href: 'compute-applications/alb_sticky_session_infographic.html' }
+          { title: 'ALB スティッキーセッション', href: 'compute-applications/alb_sticky_session_infographic.html' },
+          { title: 'CodePipeline Deploy Stage と DeploymentGroup の関係', href: 'compute-applications/codepipeline-deploymentgroup-guide.html' },
+          { title: 'ALB ターゲットグループ完全ガイド', href: 'compute-applications/alb-target-group-guide.html' },
+          { title: 'CodeシリーズでECS Fargateローリングデプロイ完全ガイド', href: 'compute-applications/ecs-fargate-rolling-deploy-complete-guide.html' },
+          { title: 'VPC DHCP オプションとカスタム DNS 完全ガイド', href: 'compute-applications/vpc-dhcp-options-guide.html' }
         ]
       },
       {
@@ -191,12 +207,12 @@ const categoriesData = [
     id: 'content-delivery-dns',
     title: 'コンテンツ配信・DNS',
     icon: '🚀',
-    count: 13,
+    count: 14,
     sections: [
       {
         title: 'CloudFront & コンテンツ配信',
         icon: '⚡',
-        count: 8,
+        count: 9,
         resources: [
           { title: 'DNSレコード完全ガイド - 住所録で理解するAWS Route 53', href: 'content-delivery-dns/dns-records-guide.html' },
           { title: 'CloudFront キャッシュ', href: 'content-delivery-dns/cloudfront-cache-infographic.html' },
@@ -205,7 +221,8 @@ const categoriesData = [
           { title: 'Global Accelerator インフォグラフィック', href: 'content-delivery-dns/global_accelerator_infographic.html' },
           { title: 'OSI参照モデル × AWSサービス完全ガイド', href: 'content-delivery-dns/osi-aws-services-guide.html' },
           { title: 'ACM DNS検証 - 超かんたん図解ガイド', href: 'content-delivery-dns/acm-dns-simple-guide.html' },
-          { title: 'ALB × PFS 暗号スイート完全ガイド', href: 'content-delivery-dns/alb-pfs-cipher-suites-guide.html' }
+          { title: 'ALB × PFS 暗号スイート完全ガイド', href: 'content-delivery-dns/alb-pfs-cipher-suites-guide.html' },
+          { title: 'ALB セキュリティポリシー完全ガイド', href: 'content-delivery-dns/alb-security-policy-guide.html' }
         ]
       },
       {
@@ -225,12 +242,12 @@ const categoriesData = [
     id: 'development-deployment',
     title: '開発・デプロイメント',
     icon: '🛠️',
-    count: 13,
+    count: 14,
     sections: [
       {
         title: 'IaC & CloudFormation',
         icon: '📜',
-        count: 9,
+        count: 10,
         resources: [
           { title: 'CloudFormation インフォグラフィック', href: 'development-deployment/aws-cloudformation-infographic.html' },
           { title: 'CloudFormation 保護ガイド', href: 'development-deployment/cloudformation-protection-guide.html' },
@@ -240,7 +257,8 @@ const categoriesData = [
           { title: 'CloudFormation StackSets インフォグラフィック', href: 'development-deployment/stacksets_infographic.html' },
           { title: 'Amazon Inspector ECRスキャン完全ガイド', href: 'development-deployment/amazon-inspector-ecr-scanning-guide.html' },
           { title: 'CloudFormation Guard (cfn-guard) 完全ガイド', href: 'development-deployment/cfn-guard-infographic.html' },
-          { title: 'CodePipeline & タスク概要 完全ガイド', href: 'development-deployment/codepipeline_infographic_v2.html' }
+          { title: 'CodePipeline & タスク概要 完全ガイド', href: 'development-deployment/codepipeline_infographic_v2.html' },
+          { title: 'AWS GuardDuty 抑制ルール（Suppression Rule）完全ガイド', href: 'development-deployment/guardduty-suppression-rules.html' }
         ]
       },
       {
@@ -385,11 +403,11 @@ const categoriesData = [
 
 // カテゴリクイックナビゲーション用データ
 const categoryQuickNav = [
-  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 15 },
-  { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 35 },
-  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 31 },
-  { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 13 },
-  { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 13 },
+  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 16 },
+  { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 46 },
+  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 35 },
+  { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 14 },
+  { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 14 },
   { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 10 },
   { id: 'migration', icon: '🔄', text: '移行・転送', count: 11 },
   { id: 'analytics-operations', icon: '📊', text: '分析・運用・クイズ', count: 11 }
@@ -399,7 +417,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '133+',
+  totalResources: '151+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
   lastUpdated: '2025/12/28'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです

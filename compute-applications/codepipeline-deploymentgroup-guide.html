@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodePipeline Deploy Stage と DeploymentGroup の関係</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🚀';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
+            border-radius: 15px;
+            border-left: 6px solid #f5576c;
+        }
+        
+        .intro h2 {
+            color: #be123c;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+        
+        .intro-text {
+            font-size: 1.2em;
+            color: #881337;
+            line-height: 1.8;
+        }
+        
+        /* 宅配ピザの例えセクション */
+        .analogy-hero {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .analogy-hero-title {
+            color: #92400e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .pizza-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .pizza-step {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .pizza-step-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+        
+        .pizza-step-title {
+            font-weight: bold;
+            color: #92400e;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .pizza-step-aws {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        .pizza-arrow {
+            font-size: 2.5em;
+            color: #f59e0b;
+        }
+        
+        /* 関係性図解 */
+        .relationship-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .relationship-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .visual-diagram {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .pipeline-container {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 4px solid #3b82f6;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .pipeline-header {
+            background: #3b82f6;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .stages-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .stage-box {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 3px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .stage-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .stage-source { border-color: #10b981; }
+        .stage-build { border-color: #f59e0b; }
+        .stage-deploy { border-color: #ef4444; background: linear-gradient(to bottom, #fef2f2, white); }
+        
+        .stage-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .stage-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #1e293b;
+        }
+        
+        .stage-arrow {
+            font-size: 2em;
+            color: #64748b;
+        }
+        
+        .deploy-detail {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 4px dashed #ef4444;
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+        
+        .deploy-detail-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .deploy-detail-title {
+            font-size: 1.8em;
+            color: #991b1b;
+            font-weight: bold;
+        }
+        
+        .deploy-detail-subtitle {
+            color: #b91c1c;
+            font-size: 1.1em;
+        }
+        
+        .codedeploy-box {
+            background: white;
+            border: 3px solid #dc2626;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .codedeploy-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .codedeploy-icon {
+            font-size: 2.5em;
+        }
+        
+        .codedeploy-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #991b1b;
+        }
+        
+        .deployment-groups-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .deployment-group {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 3px solid #10b981;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .deployment-group:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        .dg-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .dg-name {
+            font-weight: bold;
+            color: #065f46;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .dg-targets {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #047857;
+        }
+        
+        /* 詳細説明カード */
+        .detail-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }
+        
+        .detail-card {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-top: 6px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .detail-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+        
+        .detail-card.pipeline { border-color: #3b82f6; }
+        .detail-card.stage { border-color: #ef4444; }
+        .detail-card.group { border-color: #10b981; }
+        
+        .detail-card-icon {
+            font-size: 3.5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .detail-card-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .detail-card.pipeline .detail-card-title { color: #1e40af; }
+        .detail-card.stage .detail-card-title { color: #991b1b; }
+        .detail-card.group .detail-card-title { color: #065f46; }
+        
+        .detail-content {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+        }
+        
+        .detail-content h4 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .detail-card.pipeline .detail-content h4 { color: #1e40af; }
+        .detail-card.stage .detail-content h4 { color: #991b1b; }
+        .detail-card.group .detail-content h4 { color: #065f46; }
+        
+        .detail-content p {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        /* 連携の流れ */
+        .flow-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .flow-section-title {
+            color: #0c4a6e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .flow-steps {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 25px;
+            margin: 30px 0;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .flow-step-number {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .flow-step-content {
+            flex: 1;
+        }
+        
+        .flow-step-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #0c4a6e;
+            margin-bottom: 10px;
+        }
+        
+        .flow-step-desc {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .flow-step-highlight {
+            background: #f0f9ff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 12px;
+            border-left: 4px solid #0284c7;
+            color: #0369a1;
+            font-weight: 500;
+        }
+        
+        /* 設定例 */
+        .config-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .config-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        .code-example {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 30px;
+            border-radius: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.8;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .code-title {
+            color: #60a5fa;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .code-comment { color: #94a3b8; }
+        .code-keyword { color: #f472b6; }
+        .code-string { color: #34d399; }
+        .code-highlight { color: #fbbf24; background: rgba(251, 191, 36, 0.2); padding: 2px 6px; border-radius: 4px; }
+        
+        /* ユースケース */
+        .usecase-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .usecase-title {
+            color: #92400e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .usecase-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .usecase-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .usecase-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-card h4 {
+            color: #92400e;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .usecase-desc {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-config {
+            background: #fffbeb;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .usecase-config strong {
+            color: #92400e;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .usecase-config code {
+            background: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #b45309;
+        }
+        
+        /* 比較表 */
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+            vertical-align: top;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        /* Tips */
+        .tip-box {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border-left: 6px solid #7c3aed;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #5b21b6;
+            line-height: 1.9;
+            font-size: 1.05em;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .faq-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .faq-question {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            color: #475569;
+            line-height: 1.8;
+            padding-left: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .pizza-flow {
+                flex-direction: column;
+            }
+            
+            .pizza-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .stages-flow {
+                flex-direction: column;
+            }
+            
+            .stage-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CodePipeline Deploy Stage<br>& DeploymentGroup</h1>
+            <p>宅配ピザで理解する！2つの関係と役割の完全ガイド</p>
+        </div>
+        
+        <div class="content">
+            <!-- イントロ -->
+            <div class="intro">
+                <h2>🍕 宅配ピザ店の配達システムで例えると超わかりやすい！</h2>
+                <p class="intro-text">
+                    <strong>CodePipelineの「Deploy Stage」と「DeploymentGroup」の関係は、<br>
+                    宅配ピザ店の「配達指示」と「配達エリア」の関係と同じ！</strong><br><br>
+                    「配達して！」という指示（Deploy Stage）と、<br>
+                    「どこに届けるか」というエリア定義（DeploymentGroup）<br><br>
+                    この2つがあって初めて、ピザ（アプリ）がお客様（サーバー）に届きます🍕✨
+                </p>
+            </div>
+            
+            <!-- 宅配ピザの例え -->
+            <div class="analogy-hero">
+                <h2 class="analogy-hero-title">🍕 宅配ピザ店で理解するCI/CDパイプライン</h2>
+                
+                <div class="pizza-flow">
+                    <div class="pizza-step">
+                        <div class="pizza-step-icon">📝</div>
+                        <div class="pizza-step-title">注文受付</div>
+                        <p>お客様からの注文を受ける</p>
+                        <div class="pizza-step-aws">Source Stage</div>
+                    </div>
+                    
+                    <div class="pizza-arrow">→</div>
+                    
+                    <div class="pizza-step">
+                        <div class="pizza-step-icon">👨‍🍳</div>
+                        <div class="pizza-step-title">ピザ作り</div>
+                        <p>生地をこねて焼き上げる</p>
+                        <div class="pizza-step-aws">Build Stage</div>
+                    </div>
+                    
+                    <div class="pizza-arrow">→</div>
+                    
+                    <div class="pizza-step" style="background: linear-gradient(to bottom, #fef2f2, white); border: 3px solid #ef4444;">
+                        <div class="pizza-step-icon">🛵</div>
+                        <div class="pizza-step-title">配達指示</div>
+                        <p>「このピザを配達して！」</p>
+                        <div class="pizza-step-aws" style="background: linear-gradient(135deg, #ef4444, #dc2626);">Deploy Stage</div>
+                    </div>
+                    
+                    <div class="pizza-arrow">→</div>
+                    
+                    <div class="pizza-step" style="background: linear-gradient(to bottom, #f0fdf4, white); border: 3px solid #10b981;">
+                        <div class="pizza-step-icon">🏘️</div>
+                        <div class="pizza-step-title">配達エリア</div>
+                        <p>「〇〇地区の5軒に届ける」</p>
+                        <div class="pizza-step-aws" style="background: linear-gradient(135deg, #10b981, #059669);">DeploymentGroup</div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px; text-align: center;">
+                    <p style="font-size: 1.3em; color: #92400e; line-height: 1.8;">
+                        <strong>🎯 ポイント：</strong><br>
+                        <span style="color: #ef4444; font-weight: bold;">Deploy Stage</span> = 「配達して！」という<strong>指示・命令</strong><br>
+                        <span style="color: #10b981; font-weight: bold;">DeploymentGroup</span> = 「どこに届けるか」という<strong>届け先の定義</strong><br><br>
+                        指示だけあっても届け先がないとピザは届かない！<br>
+                        両方セットで初めて配達（デプロイ）が完了します✨
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 関係性の図解 -->
+            <div class="relationship-section">
+                <h2 class="relationship-title">🔗 全体構成と関係性の図解</h2>
+                
+                <div class="visual-diagram">
+                    <!-- CodePipeline全体 -->
+                    <div class="pipeline-container">
+                        <div class="pipeline-header">🔄 CodePipeline（注文〜配達までの全工程）</div>
+                        
+                        <div class="stages-flow">
+                            <div class="stage-box stage-source">
+                                <div class="stage-icon">📦</div>
+                                <div class="stage-name">Source Stage</div>
+                                <p style="font-size: 0.9em; color: #64748b; margin-top: 8px;">コード取得</p>
+                            </div>
+                            
+                            <div class="stage-arrow">→</div>
+                            
+                            <div class="stage-box stage-build">
+                                <div class="stage-icon">🔨</div>
+                                <div class="stage-name">Build Stage</div>
+                                <p style="font-size: 0.9em; color: #64748b; margin-top: 8px;">ビルド・テスト</p>
+                            </div>
+                            
+                            <div class="stage-arrow">→</div>
+                            
+                            <div class="stage-box stage-deploy">
+                                <div class="stage-icon">🚀</div>
+                                <div class="stage-name">Deploy Stage</div>
+                                <p style="font-size: 0.9em; color: #64748b; margin-top: 8px;">デプロイ指示</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Deploy Stageの詳細 -->
+                    <div class="deploy-detail">
+                        <div class="deploy-detail-header">
+                            <div class="deploy-detail-title">🎯 Deploy Stage の中身</div>
+                            <div class="deploy-detail-subtitle">Deploy Stageは「どのサービスでデプロイするか」を指定</div>
+                        </div>
+                        
+                        <div class="codedeploy-box">
+                            <div class="codedeploy-header">
+                                <div class="codedeploy-icon">⚙️</div>
+                                <div class="codedeploy-title">CodeDeploy（デプロイ実行サービス）</div>
+                            </div>
+                            
+                            <p style="color: #475569; margin-bottom: 20px; text-align: center;">
+                                CodeDeployが「DeploymentGroup」を見て、<br>
+                                <strong>どのサーバーに配置するかを決定</strong>します
+                            </p>
+                            
+                            <div style="text-align: center; font-size: 2em; margin: 20px 0;">⬇️</div>
+                            
+                            <div class="deployment-groups-container">
+                                <div class="deployment-group">
+                                    <div class="dg-icon">🏢</div>
+                                    <div class="dg-name">本番環境グループ</div>
+                                    <div class="dg-targets">
+                                        EC2: prod-web-1, prod-web-2<br>
+                                        タグ: Environment=Production
+                                    </div>
+                                </div>
+                                
+                                <div class="deployment-group">
+                                    <div class="dg-icon">🧪</div>
+                                    <div class="dg-name">ステージング環境</div>
+                                    <div class="dg-targets">
+                                        EC2: stg-web-1<br>
+                                        タグ: Environment=Staging
+                                    </div>
+                                </div>
+                                
+                                <div class="deployment-group">
+                                    <div class="dg-icon">💻</div>
+                                    <div class="dg-name">開発環境グループ</div>
+                                    <div class="dg-targets">
+                                        EC2: dev-web-1<br>
+                                        タグ: Environment=Development
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 詳細説明カード -->
+            <div class="detail-cards">
+                <div class="detail-card pipeline">
+                    <div class="detail-card-icon">🔄</div>
+                    <div class="detail-card-title">CodePipeline</div>
+                    
+                    <div class="detail-content">
+                        <h4>🍕 ピザ店で例えると</h4>
+                        <p>注文受付から配達完了までの<strong>全工程を管理するシステム</strong>。店長のように全体を見渡す。</p>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <h4>💻 AWS での役割</h4>
+                        <p>CI/CDの<strong>オーケストレーター</strong>。ソースコード取得→ビルド→デプロイの流れを自動化・管理する。</p>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <h4>📋 主な設定項目</h4>
+                        <p>
+                            • パイプライン名<br>
+                            • 各ステージの定義<br>
+                            • ステージ間の接続<br>
+                            • 実行トリガー（プッシュ時など）
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="detail-card stage">
+                    <div class="detail-card-icon">🚀</div>
+                    <div class="detail-card-title">Deploy Stage</div>
+                    
+                    <div class="detail-content">
+                        <h4>🍕 ピザ店で例えると</h4>
+                        <p>「このピザを配達して！」という<strong>配達指示</strong>。何を使って配達するか（バイク？車？）を決める。</p>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <h4>💻 AWS での役割</h4>
+                        <p>パイプラインの中の1ステージ。<strong>どのデプロイサービスを使うか</strong>（CodeDeploy, ECS, S3など）を指定する。</p>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <h4>📋 主な設定項目</h4>
+                        <p>
+                            • デプロイプロバイダー選択<br>
+                            • アプリケーション名<br>
+                            • <strong>DeploymentGroup名</strong><br>
+                            • 入力アーティファクト
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="detail-card group">
+                    <div class="detail-card-icon">🏘️</div>
+                    <div class="detail-card-title">DeploymentGroup</div>
+                    
+                    <div class="detail-content">
+                        <h4>🍕 ピザ店で例えると</h4>
+                        <p>「〇〇地区の5軒」という<strong>配達エリア・届け先リスト</strong>。どこに届けるかの定義。</p>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <h4>💻 AWS での役割</h4>
+                        <p><strong>CodeDeployの設定</strong>の一部。デプロイ先のEC2インスタンスやLambda関数を定義する。</p>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <h4>📋 主な設定項目</h4>
+                        <p>
+                            • ターゲットEC2のタグ条件<br>
+                            • Auto Scaling グループ<br>
+                            • デプロイ設定（方式）<br>
+                            • ロードバランサー設定
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 連携の流れ -->
+            <div class="flow-section">
+                <h2 class="flow-section-title">📋 デプロイ実行の流れ（Step by Step）</h2>
+                
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-number">1</div>
+                        <div class="flow-step-content">
+                            <div class="flow-step-title">パイプラインがDeploy Stageに到達</div>
+                            <div class="flow-step-desc">
+                                Source Stage、Build Stageを経て、いよいよデプロイの番。<br>
+                                ビルドされたアーティファクト（ピザ）が準備完了。
+                            </div>
+                            <div class="flow-step-highlight">
+                                🍕 ピザが焼き上がって、配達の準備OK！
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">2</div>
+                        <div class="flow-step-content">
+                            <div class="flow-step-title">Deploy StageがCodeDeployを呼び出す</div>
+                            <div class="flow-step-desc">
+                                Deploy Stageに設定された「CodeDeploy」プロバイダーが起動。<br>
+                                設定されたアプリケーション名とDeploymentGroup名を参照。
+                            </div>
+                            <div class="flow-step-highlight">
+                                🛵 「〇〇配達員さん、この注文お願い！」と配達を依頼
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">3</div>
+                        <div class="flow-step-content">
+                            <div class="flow-step-title">CodeDeployがDeploymentGroupを参照</div>
+                            <div class="flow-step-desc">
+                                CodeDeployは指定されたDeploymentGroupの設定を確認。<br>
+                                「どのEC2インスタンスにデプロイするか」を特定。
+                            </div>
+                            <div class="flow-step-highlight">
+                                📋 配達員が配達先リストを確認！「今日は〇〇地区の3軒だな」
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">4</div>
+                        <div class="flow-step-content">
+                            <div class="flow-step-title">ターゲットインスタンスを特定</div>
+                            <div class="flow-step-desc">
+                                DeploymentGroupのタグ条件やAuto Scalingグループに基づいて、<br>
+                                実際のデプロイ先インスタンスを特定。
+                            </div>
+                            <div class="flow-step-highlight">
+                                🏠 「Environment=Production のタグがついたサーバーは...この3台！」
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">5</div>
+                        <div class="flow-step-content">
+                            <div class="flow-step-title">CodeDeploy Agentがデプロイ実行</div>
+                            <div class="flow-step-desc">
+                                各EC2上のCodeDeploy Agentがアーティファクトをダウンロードし、<br>
+                                appspec.ymlに従ってデプロイを実行。
+                            </div>
+                            <div class="flow-step-highlight">
+                                🍕 ピザを各家庭に配達！「お届け物でーす！」
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flow-step">
+                        <div class="flow-step-number">6</div>
+                        <div class="flow-step-content">
+                            <div class="flow-step-title">デプロイ完了・結果をPipelineに報告</div>
+                            <div class="flow-step-desc">
+                                全インスタンスへのデプロイが完了したら、<br>
+                                結果をCodePipelineに報告。成功/失敗がパイプライン上に表示。
+                            </div>
+                            <div class="flow-step-highlight">
+                                ✅ 「配達完了しました！」と本部に報告
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 設定例 -->
+            <div class="config-section">
+                <h2 class="config-title">⚙️ 設定例（CodePipeline + CodeDeploy）</h2>
+                
+                <div class="code-example">
+                    <div class="code-title">📄 CodePipeline の Deploy Stage 設定（YAML）</div>
+<pre><span class="code-comment"># CodePipeline の定義</span>
+<span class="code-keyword">Resources:</span>
+  MyPipeline:
+    <span class="code-keyword">Type:</span> AWS::CodePipeline::Pipeline
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">Name:</span> <span class="code-string">my-application-pipeline</span>
+      <span class="code-keyword">Stages:</span>
+        <span class="code-comment"># ... Source Stage, Build Stage の設定 ...</span>
+        
+        <span class="code-comment"># Deploy Stage の設定</span>
+        - <span class="code-keyword">Name:</span> <span class="code-string">Deploy</span>
+          <span class="code-keyword">Actions:</span>
+            - <span class="code-keyword">Name:</span> <span class="code-string">DeployToProduction</span>
+              <span class="code-keyword">ActionTypeId:</span>
+                <span class="code-keyword">Category:</span> <span class="code-string">Deploy</span>
+                <span class="code-keyword">Provider:</span> <span class="code-highlight">CodeDeploy</span>  <span class="code-comment"># ← デプロイサービスの指定</span>
+              <span class="code-keyword">Configuration:</span>
+                <span class="code-keyword">ApplicationName:</span> <span class="code-highlight">MyApplication</span>  <span class="code-comment"># ← CodeDeployアプリ名</span>
+                <span class="code-keyword">DeploymentGroupName:</span> <span class="code-highlight">ProductionGroup</span>  <span class="code-comment"># ← ★DeploymentGroup名！</span>
+              <span class="code-keyword">InputArtifacts:</span>
+                - <span class="code-keyword">Name:</span> <span class="code-string">BuildOutput</span></pre>
+                </div>
+                
+                <div class="code-example">
+                    <div class="code-title">📄 DeploymentGroup の設定（CloudFormation）</div>
+<pre><span class="code-comment"># DeploymentGroup の定義（CodeDeployの設定）</span>
+<span class="code-keyword">Resources:</span>
+  ProductionDeploymentGroup:
+    <span class="code-keyword">Type:</span> AWS::CodeDeploy::DeploymentGroup
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">DeploymentGroupName:</span> <span class="code-highlight">ProductionGroup</span>  <span class="code-comment"># ← Pipeline側と名前を一致！</span>
+      <span class="code-keyword">ApplicationName:</span> <span class="code-highlight">MyApplication</span>
+      <span class="code-keyword">ServiceRoleArn:</span> !GetAtt CodeDeployServiceRole.Arn
+      
+      <span class="code-comment"># ★ デプロイ先の定義（タグでフィルタリング）</span>
+      <span class="code-keyword">Ec2TagFilters:</span>
+        - <span class="code-keyword">Key:</span> <span class="code-string">Environment</span>
+          <span class="code-keyword">Value:</span> <span class="code-string">Production</span>
+          <span class="code-keyword">Type:</span> <span class="code-string">KEY_AND_VALUE</span>
+        - <span class="code-keyword">Key:</span> <span class="code-string">Application</span>
+          <span class="code-keyword">Value:</span> <span class="code-string">MyApp</span>
+          <span class="code-keyword">Type:</span> <span class="code-string">KEY_AND_VALUE</span>
+      
+      <span class="code-comment"># デプロイ設定（Blue/Green or In-Place）</span>
+      <span class="code-keyword">DeploymentConfigName:</span> <span class="code-string">CodeDeployDefault.OneAtATime</span>
+      
+      <span class="code-comment"># ロードバランサー設定（オプション）</span>
+      <span class="code-keyword">LoadBalancerInfo:</span>
+        <span class="code-keyword">TargetGroupInfoList:</span>
+          - <span class="code-keyword">Name:</span> <span class="code-string">my-target-group</span></pre>
+                </div>
+                
+                <div style="background: #fef3c7; padding: 25px; border-radius: 12px; margin-top: 25px; border-left: 5px solid #f59e0b;">
+                    <h4 style="color: #92400e; margin-bottom: 15px; font-size: 1.2em;">🔑 重要なポイント</h4>
+                    <p style="color: #78350f; line-height: 1.8;">
+                        <strong>1. 名前の一致が必須：</strong><br>
+                        　Deploy Stageの<code style="background: white; padding: 2px 8px; border-radius: 4px;">DeploymentGroupName</code>と<br>
+                        　DeploymentGroupの<code style="background: white; padding: 2px 8px; border-radius: 4px;">DeploymentGroupName</code>が一致していないとエラー！<br><br>
+                        <strong>2. タグ条件でターゲットを絞る：</strong><br>
+                        　<code style="background: white; padding: 2px 8px; border-radius: 4px;">Ec2TagFilters</code>で「どのEC2に配置するか」を定義<br><br>
+                        <strong>3. 複数のDeploymentGroupで環境を分ける：</strong><br>
+                        　本番用、ステージング用など、用途別にグループを作成可能
+                    </p>
+                </div>
+            </div>
+            
+            <!-- ユースケース -->
+            <div class="usecase-section">
+                <h2 class="usecase-title">💼 実践ユースケース</h2>
+                
+                <div class="usecase-grid">
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🌍</div>
+                        <h4>環境別デプロイ</h4>
+                        <div class="usecase-desc">
+                            開発→ステージング→本番と段階的にデプロイ。<br>
+                            各環境ごとにDeploymentGroupを作成して管理。
+                        </div>
+                        <div class="usecase-config">
+                            <strong>設定例：</strong>
+                            <code>DevelopmentGroup</code><br>
+                            <code>StagingGroup</code><br>
+                            <code>ProductionGroup</code>
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🔄</div>
+                        <h4>Blue/Greenデプロイ</h4>
+                        <div class="usecase-desc">
+                            新旧環境を並行稼働させ、問題なければ切り替え。<br>
+                            DeploymentGroupでBlue/Green設定を定義。
+                        </div>
+                        <div class="usecase-config">
+                            <strong>設定：</strong>
+                            <code>DeploymentStyle: BLUE_GREEN</code><br>
+                            ロードバランサー連携必須
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">📊</div>
+                        <h4>カナリアデプロイ</h4>
+                        <div class="usecase-desc">
+                            一部のサーバーに先行デプロイして様子を見る。<br>
+                            問題なければ残りにも展開。
+                        </div>
+                        <div class="usecase-config">
+                            <strong>設定：</strong>
+                            <code>CodeDeployDefault.LambdaCanary10Percent5Minutes</code>
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🏢</div>
+                        <h4>マルチリージョン展開</h4>
+                        <div class="usecase-desc">
+                            東京・大阪など複数リージョンに同時展開。<br>
+                            リージョンごとにDeploymentGroupを作成。
+                        </div>
+                        <div class="usecase-config">
+                            <strong>設定例：</strong>
+                            <code>TokyoProductionGroup</code><br>
+                            <code>OsakaProductionGroup</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較表 -->
+            <div class="comparison-table">
+                <h2 class="table-title">📊 Deploy Stage vs DeploymentGroup 比較表</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>🚀 Deploy Stage</th>
+                            <th>🏘️ DeploymentGroup</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>所属サービス</strong></td>
+                            <td>CodePipeline</td>
+                            <td>CodeDeploy</td>
+                        </tr>
+                        <tr>
+                            <td><strong>役割</strong></td>
+                            <td>「デプロイを実行せよ」という<strong>指示</strong></td>
+                            <td>「どこにデプロイするか」という<strong>定義</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>🍕 ピザで例えると</strong></td>
+                            <td>「このピザを配達して！」という命令</td>
+                            <td>「〇〇地区の5軒」という届け先リスト</td>
+                        </tr>
+                        <tr>
+                            <td><strong>設定する内容</strong></td>
+                            <td>
+                                • デプロイプロバイダー（CodeDeploy等）<br>
+                                • アプリケーション名<br>
+                                • DeploymentGroup名の指定
+                            </td>
+                            <td>
+                                • ターゲットEC2のタグ条件<br>
+                                • デプロイ方式（Blue/Green等）<br>
+                                • ロードバランサー設定
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>複数作成</strong></td>
+                            <td>パイプラインに複数のDeploy Stageを定義可能</td>
+                            <td>1アプリに複数のDeploymentGroup作成可能</td>
+                        </tr>
+                        <tr>
+                            <td><strong>作成タイミング</strong></td>
+                            <td>パイプライン作成時</td>
+                            <td>CodeDeployアプリケーション作成後</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Tips -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>設計のベストプラクティス</span>
+                </div>
+                <div class="tip-content">
+                    <strong>1. 環境ごとにDeploymentGroupを分ける：</strong><br>
+                    開発・ステージング・本番で別々のDeploymentGroupを作成。タグで明確に区別しよう。<br><br>
+                    
+                    <strong>2. 命名規則を統一する：</strong><br>
+                    <code>{アプリ名}-{環境名}-deployment-group</code> のような命名規則で管理を楽に。<br>
+                    例：<code>myapp-production-deployment-group</code><br><br>
+                    
+                    <strong>3. パイプラインは1本で複数環境に展開：</strong><br>
+                    1つのパイプラインに複数のDeploy Stageを設置し、<br>
+                    ステージング→承認→本番のように段階的デプロイが実現できる。<br><br>
+                    
+                    <strong>4. タグ設計は慎重に：</strong><br>
+                    DeploymentGroupのタグフィルターが間違っていると、<br>
+                    意図しないサーバーにデプロイされる危険あり！本番前に必ず確認。<br><br>
+                    
+                    <strong>5. ロールバック設定を忘れずに：</strong><br>
+                    DeploymentGroupの設定で自動ロールバックを有効化しておくと安心。<br>
+                    デプロイ失敗時に自動で前のバージョンに戻せる。
+                </div>
+            </div>
+            
+            <!-- FAQ -->
+            <div class="faq-section">
+                <h2 class="faq-title">❓ よくある質問（FAQ）</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q.</span>
+                        Deploy StageでCodeDeploy以外も使える？
+                    </div>
+                    <div class="faq-answer">
+                        <strong>はい！</strong>Deploy Stageのプロバイダーには以下が選べます：<br>
+                        • <strong>CodeDeploy</strong>：EC2/オンプレミス/Lambda向け<br>
+                        • <strong>ECS</strong>：コンテナ向け（Fargate含む）<br>
+                        • <strong>S3</strong>：静的ファイルのデプロイ<br>
+                        • <strong>Elastic Beanstalk</strong>：マネージド環境向け<br>
+                        • <strong>CloudFormation</strong>：インフラのデプロイ<br>
+                        用途に応じて選択しましょう！
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q.</span>
+                        DeploymentGroupは複数作れる？
+                    </div>
+                    <div class="faq-answer">
+                        <strong>作れます！</strong>1つのCodeDeployアプリケーションに対して、<br>
+                        複数のDeploymentGroupを作成可能です。<br><br>
+                        典型的な使い方：<br>
+                        • 環境別：Development / Staging / Production<br>
+                        • リージョン別：Tokyo / Osaka / Singapore<br>
+                        • 用途別：WebServers / BatchServers / APIServers
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q.</span>
+                        DeploymentGroupの名前を間違えたらどうなる？
+                    </div>
+                    <div class="faq-answer">
+                        <strong>パイプラインがエラーになります！</strong><br>
+                        Deploy Stageで指定したDeploymentGroup名が存在しない場合、<br>
+                        「DeploymentGroup not found」エラーで失敗します。<br><br>
+                        <strong>対策：</strong><br>
+                        • CloudFormationで両方を一緒に管理する<br>
+                        • 命名規則を統一して間違いを防ぐ<br>
+                        • デプロイ前にAWSコンソールで存在確認
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q.</span>
+                        タグ条件に一致するEC2が0台の場合は？
+                    </div>
+                    <div class="faq-answer">
+                        <strong>デプロイは成功扱いになることも！</strong><br>
+                        対象が0台でも「デプロイ完了」となる場合があるので注意。<br><br>
+                        <strong>対策：</strong><br>
+                        • デプロイ前にターゲット台数を確認するステップを追加<br>
+                        • CloudWatchでデプロイ対象台数を監視<br>
+                        • Auto Scalingグループを使用している場合は最小台数を設定
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+                <h2 style="font-size: 2.5em; margin-bottom: 30px;">🎓 まとめ</h2>
+                
+                <div style="max-width: 1100px; margin: 0 auto;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px;">🍕 宅配ピザ = CI/CDパイプライン</h3>
+                        <p style="font-size: 1.15em; line-height: 2;">
+                            Deploy StageとDeploymentGroupは<br>
+                            <strong>「配達指示」と「届け先リスト」</strong>の関係！<br>
+                            両方揃って初めてデプロイが完了します
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🔄</div>
+                            <strong style="font-size: 1.2em;">CodePipeline</strong><br><br>
+                            全体の流れを<br>管理する<br>オーケストレーター
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🚀</div>
+                            <strong style="font-size: 1.2em;">Deploy Stage</strong><br><br>
+                            「デプロイして！」<br>という<br><strong>指示・命令</strong>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">🏘️</div>
+                            <strong style="font-size: 1.2em;">DeploymentGroup</strong><br><br>
+                            「どこに届けるか」<br>という<br><strong>届け先の定義</strong>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+                        🎯 <strong>覚えておくべきこと：</strong><br><br>
+                        ① Deploy StageはCodePipelineの一部<br>
+                        ② DeploymentGroupはCodeDeployの一部<br>
+                        ③ Deploy StageがDeploymentGroupを<strong>参照</strong>して連携<br>
+                        ④ 名前の一致が超重要！🔑
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
