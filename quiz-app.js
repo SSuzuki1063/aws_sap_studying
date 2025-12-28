@@ -198,13 +198,18 @@ class QuizApp {
         question.options.forEach((option, index) => {
             const optionItem = document.createElement('li');
             optionItem.className = 'option-item';
-            
+
             const optionButton = document.createElement('button');
             optionButton.className = 'option-button';
+            optionButton.type = 'button'; // 明示的にtype属性を設定
             optionButton.textContent = option;
             optionButton.onclick = () => this.selectAnswer(index);
             optionButton.disabled = false; // 初期状態では有効
-            
+
+            // アクセシビリティ: aria-label で選択肢の文脈を明確化
+            const optionLabel = ['A', 'B', 'C', 'D'][index];
+            optionButton.setAttribute('aria-label', `選択肢${optionLabel}: ${option}`);
+
             optionItem.appendChild(optionButton);
             optionsList.appendChild(optionItem);
         });
@@ -251,16 +256,52 @@ class QuizApp {
 
         // 選択肢に正解/不正解のスタイルを適用
         const optionButtons = document.querySelectorAll('.option-button');
+        const correctLabel = ['A', 'B', 'C', 'D'][question.correct];
+
         optionButtons.forEach((button, index) => {
             button.disabled = true; // 回答提出後はすべて無効化
             button.classList.remove('selected');
-            
+
             if (index === question.correct) {
                 button.classList.add('correct');
+                // アクセシビリティ: 正解ボタンのaria-labelを更新
+                const optionText = button.textContent;
+                button.setAttribute('aria-label', `正解: 選択肢${['A', 'B', 'C', 'D'][index]}: ${optionText}`);
+
+                // 正解アイコンを追加
+                if (!button.querySelector('.result-icon')) {
+                    const correctIcon = document.createElement('span');
+                    correctIcon.className = 'result-icon';
+                    correctIcon.setAttribute('aria-hidden', 'true');
+                    correctIcon.textContent = ' ✅';
+                    button.appendChild(correctIcon);
+                }
             } else if (index === this.selectedAnswer && !isCorrect) {
                 button.classList.add('incorrect');
+                // アクセシビリティ: 不正解ボタンのaria-labelを更新
+                const optionText = button.textContent;
+                button.setAttribute('aria-label', `不正解: 選択肢${['A', 'B', 'C', 'D'][index]}: ${optionText}`);
+
+                // 不正解アイコンを追加
+                if (!button.querySelector('.result-icon')) {
+                    const incorrectIcon = document.createElement('span');
+                    incorrectIcon.className = 'result-icon';
+                    incorrectIcon.setAttribute('aria-hidden', 'true');
+                    incorrectIcon.textContent = ' ❌';
+                    button.appendChild(incorrectIcon);
+                }
             }
         });
+
+        // アクセシビリティ: ARIA live regionで結果をアナウンス
+        const answerFeedback = document.getElementById('answerFeedback');
+        if (answerFeedback) {
+            if (isCorrect) {
+                answerFeedback.textContent = '正解です！';
+            } else {
+                answerFeedback.textContent = `不正解です。正解は選択肢${correctLabel}です。`;
+            }
+        }
 
         // 解説を表示
         document.getElementById('explanationText').textContent = question.explanation;
