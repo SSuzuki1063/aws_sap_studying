@@ -290,13 +290,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateLastModifiedDate() {
     const lastUpdatedElement = document.getElementById('last-updated-date');
 
-    // GitHubからの最終コミット日時を取得
-    // このプレースホルダーはスクリプトで自動更新されます
-    const gitLastCommitDate = '2025/12/27';
-
-    if (gitLastCommitDate && gitLastCommitDate !== '<!-- GIT_LAST_COMMIT_DATE -->') {
-        // Gitのコミット日時が埋め込まれている場合
-        lastUpdatedElement.textContent = gitLastCommitDate;
+    // data.jsのsiteStats.lastUpdatedから最終更新日を取得
+    if (typeof siteStats !== 'undefined' && siteStats.lastUpdated) {
+        // siteStats.lastUpdatedが存在する場合（推奨）
+        lastUpdatedElement.textContent = siteStats.lastUpdated;
     } else {
         // フォールバック: document.lastModifiedを使用
         const lastModified = new Date(document.lastModified);

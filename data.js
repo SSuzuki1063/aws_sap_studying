@@ -400,5 +400,7 @@ const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
   totalResources: '133+',
-  offlineSupport: '100%'
+  offlineSupport: '100%',
+  // メタデータ（自動更新スクリプトで管理）
+  lastUpdated: '2025/12/28'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };
