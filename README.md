@@ -67,19 +67,27 @@ aws_sap/
 ├── 📄 server.py                     # 開発サーバー
 ├── 📄 CLAUDE.md                     # Claude Code用指示書
 ├── 📁 docs/                         # ドキュメント
-│   ├── QUIZ_UPDATE_SUMMARY.md
-│   ├── UPDATE_COMPLETED.md
-│   └── quiz_improvement_report.md
+│   ├── ARCHITECTURE.md              # アーキテクチャ文書
+│   ├── DEVELOPMENT_GUIDE.md         # 開発ガイド
+│   ├── GIT_WORKFLOW.md              # Git運用ガイド
+│   ├── CODING_STANDARDS.md          # コーディング規約
+│   ├── WCAG21_GUIDELINES.md         # アクセシビリティガイド
+│   └── ACCESSIBILITY_AUDIT.md       # アクセシビリティ監査
 ├── 📁 scripts/                      # 自動化スクリプト
 │   ├── html_management/             # HTML管理スクリプト
 │   │   ├── add_breadcrumbs.py       # パンくず追加
 │   │   ├── remove_breadcrumbs.py    # パンくず削除
 │   │   ├── add_toc.py               # 目次追加
-│   │   └── integrate_new_html.py    # 新規HTML統合
-│   └── quiz_management/             # クイズ管理スクリプト
-│       ├── analyze_quiz.py          # クイズ統計分析
-│       └── README.md                # スクリプト使用方法
-├── 📁 archive/                      # 旧バージョン（削除候補）
+│   │   ├── integrate_new_html.py    # 新規HTML統合
+│   │   ├── add_home_button.py       # ホームボタン追加
+│   │   └── add_svg_alt_text.py      # SVG代替テキスト追加
+│   ├── quiz_management/             # クイズ管理スクリプト
+│   │   ├── analyze_quiz.py          # クイズ統計分析
+│   │   └── README.md                # スクリプト使用方法
+│   └── accessibility/               # アクセシビリティスクリプト
+│       ├── check_contrast_ratio.py  # コントラスト比検証
+│       ├── suggest_color_fixes.py   # 色修正提案
+│       └── check_heading_hierarchy.py # 見出し階層チェック
 ├── 📁 networking/                   # 学習コンテンツ
 ├── 📁 security-governance/
 ├── 📁 compute-applications/
