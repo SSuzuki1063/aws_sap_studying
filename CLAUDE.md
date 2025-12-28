@@ -82,6 +82,79 @@ The skill provides guided workflows for:
 
 See `.claude/skills/aws-knowledge-organizer/SKILL.md` for detailed documentation.
 
+## Quick Reference: Common Tasks
+
+### Adding a New HTML Resource (Manual Method)
+
+**Step 1: Place the HTML file**
+- Put file in appropriate category directory (e.g., `networking/`, `security-governance/`)
+- Use naming convention: `aws-[service]-[topic].html`
+
+**Step 2: Update data.js**
+```javascript
+// Find the appropriate category and section, then add:
+{
+  title: 'Your Resource Title',
+  href: 'category/your-resource.html'
+}
+// Update section.count and category.count
+```
+
+**Step 3: Update index.js**
+```javascript
+// Add to the searchData array:
+const searchData = [
+  // ... existing entries ...
+  {
+    title: 'Your Resource Title',
+    category: 'カテゴリ名',
+    file: 'category/your-resource.html'
+  }
+];
+```
+
+**Step 4: Test**
+```bash
+python3 server.py
+# Visit http://localhost:8080/ and verify:
+# - Resource appears in navigation
+# - Search finds the resource
+# - Resource loads correctly
+```
+
+### Testing Changes Locally
+
+```bash
+# Start development server
+python3 server.py
+
+# Open browser to http://localhost:8080/
+
+# Test checklist:
+# - Navigation works
+# - Search finds resources
+# - Mobile responsive (use browser dev tools)
+# - All links work
+```
+
+### Deploying to GitHub Pages
+
+```bash
+# 1. Test locally first!
+python3 server.py
+
+# 2. W3C validate all modified HTML files
+# Visit https://validator.w3.org/
+
+# 3. Commit and push to gh-pages
+git add .
+git commit -m "feat: descriptive message"
+git push origin gh-pages
+
+# 4. Verify deployment (wait 1-2 minutes)
+# Visit https://ssuzuki1063.github.io/aws_sap_studying/
+```
+
 ## Directory Structure
 
 The repository is organized into topical categories aligned with AWS SAP exam domains:
@@ -100,19 +173,35 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `new-solutions/` - Newly added solution architectures and patterns
 
 ### Key Files
-- `index.html` - Main navigation interface with collapsible sidebar, search, and category-based navigation
+
+**Main Application Files:**
+- `index.html` - Main navigation interface (uses data-driven architecture with data.js + render.js)
+- `data.js` - **CRITICAL**: Pure data definitions for categories, resources, and quick navigation
+- `render.js` - Template functions that generate HTML from data.js
+- `index.js` - UI event handlers (search, scroll, category navigation)
+- `knowledge-base.html` - Alternative table-based navigation with advanced filtering
 - `home.html` - Default homepage content loaded on initial page load
-- `table-of-contents.html` - Comprehensive table of contents for all resources (static reference page)
+- `table-of-contents.html` - Comprehensive table of contents for all resources (static reference page, manually maintained)
+
+**Quiz Application:**
 - `quiz.html` - Interactive quiz application for exam preparation
 - `quiz-app.js` - Quiz application logic
 - `quiz-data-extended.js` - Quiz question database (194 questions across 13 categories)
+
+**Development Tools:**
 - `server.py` - Development server with CORS support
-- `main.js` - Additional utility functions (verify usage before modifying)
-- `scripts/html_management/add_breadcrumbs.py` - Utility script to add breadcrumb navigation to all HTML files
-- `scripts/html_management/remove_breadcrumbs.py` - Utility script to remove breadcrumb navigation from HTML files
-- `scripts/html_management/add_toc.py` - Utility script to add page-internal table of contents to all HTML files
-- `scripts/html_management/integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files (see Automation Workflows section)
+
+**Automation Scripts:**
+- `scripts/html_management/add_breadcrumbs.py` - Add breadcrumb navigation to all HTML files
+- `scripts/html_management/remove_breadcrumbs.py` - Remove breadcrumb navigation from HTML files
+- `scripts/html_management/add_toc.py` - Add page-internal table of contents to all HTML files
+- `scripts/html_management/integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files
 - `scripts/quiz_management/analyze_quiz.py` - Quiz statistics and analysis tool
+
+**Note on Script Duplication:** Automation scripts exist in two locations:
+- `scripts/` - Main scripts for direct CLI usage (primary location)
+- `.claude/skills/aws-knowledge-organizer/scripts/` - Copies for the Claude skill workflow
+These should be kept in sync when making script changes.
 
 ## Architecture
 
@@ -155,6 +244,77 @@ Key JavaScript functions in index.html:
 - `toggleMobileMenu()` - Mobile hamburger menu toggle
 - `loadQuiz()` - Opens quiz.html in new tab
 
+#### Data-Driven Architecture (index.html Refactor)
+
+**Recent Refactor (2025)**: The main `index.html` page has been refactored into a data-driven architecture that separates data, rendering logic, and UI interactions.
+
+**File Structure:**
+```
+index.html          ← Shell page with HTML structure
+├── data.js         ← Pure data definitions (NO HTML)
+├── render.js       ← Template functions (data → HTML)
+└── index.js        ← UI event handlers (search, scroll, etc.)
+```
+
+**Core Data Structures (data.js):**
+- `categoriesData` - Array of major categories with sections and resources
+- `categoryQuickNav` - Quick navigation links data
+- `searchData` - Search index for all resources (**MUST be updated when adding resources**)
+
+**Template Functions (render.js):**
+- `renderCategoryQuickNav(navData)` - Generates quick navigation HTML
+- `renderResourceList(resources)` - Generates resource list HTML
+- `renderSection(section)` - Generates section (subcategory) HTML
+- `renderMajorCategory(category)` - Generates major category HTML
+- `renderAllCategories(categoriesData)` - Generates all categories HTML
+- `renderQuickNavToDOM(containerId, data)` - Renders to specific DOM element
+- `renderCategoriesToDOM(containerId, data)` - Renders categories to DOM
+
+**Critical Workflow: Adding New Resources**
+
+When adding a new HTML learning resource, you **MUST** update **TWO** places:
+
+1. **Update `data.js`:**
+   ```javascript
+   // Add to appropriate section's resources array
+   {
+     title: 'New Resource Title',
+     href: 'category/new-resource.html'
+   }
+   // Also update section.count and category.count
+   ```
+
+2. **Update `index.js`:**
+   ```javascript
+   // Add to searchData array (search won't work without this!)
+   const searchData = [
+     // ... existing entries ...
+     {
+       title: 'New Resource Title',
+       category: 'カテゴリ名',
+       file: 'category/new-resource.html'
+     }
+   ];
+   ```
+
+**Why This Architecture?**
+1. **Maintainability**: Content changes don't risk breaking HTML structure
+2. **Consistency**: Single template ensures uniform output
+3. **Scalability**: Adding content = adding data objects
+4. **Testability**: Data and rendering are separate concerns
+5. **Error Prevention**: Automated tag generation prevents HTML errors
+
+**Important**: The `integrate_new_html.py` script does NOT automatically update `data.js` or `searchData` in `index.js`. These must be updated manually when adding resources.
+
+#### Knowledge Base Interface
+
+The `knowledge-base.html` file provides an alternative navigation interface:
+- **Table-based layout** for quick browsing of all resources
+- **Advanced filtering** by category, service, or keyword
+- **Sortable columns** for different organization views
+- **Complements index.html** - different UX for resource discovery
+- **Same offline-first design** - no external dependencies
+
 #### Resource Search System
 The site includes a comprehensive search functionality for finding learning resources:
 
@@ -167,7 +327,7 @@ The site includes a comprehensive search functionality for finding learning reso
 - **Visual feedback**: Search results count, category badges, and "no results" message
 - **Responsive design**: Grid layout adapts to screen size
 
-**Search Data Structure:**
+**Search Data Structure (defined in index.js):**
 ```javascript
 const searchData = [
   {
@@ -179,7 +339,7 @@ const searchData = [
 ];
 ```
 
-**Important**: When adding new resources via `scripts/html_management/integrate_new_html.py` or manually, the `searchData` array in `index.html` must be updated to include the new resource. The script does NOT automatically update the search data.
+**CRITICAL**: When adding new resources via `scripts/html_management/integrate_new_html.py` or manually, the `searchData` array in `index.js` must be updated to include the new resource. The script does NOT automatically update the search data. Without this update, the resource will not appear in search results.
 
 **Search Implementation:**
 - Location: Positioned between statistics section and category navigation
@@ -337,13 +497,30 @@ If you prefer manual control or the script categorizes incorrectly:
 
 **Note**: The automated script updates `index.html` but NOT `table-of-contents.html`. Keep the TOC page in sync manually if using automation.
 
+**CRITICAL**: After using the automated script OR manual integration, you MUST also manually update:
+1. **`data.js`** - Add resource to appropriate `section.resources` array and update counts
+2. **`index.js`** - Add resource to `searchData` array (required for search functionality)
+
+Without these updates, the resource won't appear in the navigation or search results on the main page.
+
 ### Modifying Navigation
-- Update `index.html` sidebar structure in category sections to add/remove categories
-- Add `<div class="category">` blocks with `toggleCategory()` onclick handlers
-- Each resource needs `<div class="resource-item">` with `loadContent()` onclick handler
-- **Critical**: Update search data array (`const searchData`) when adding/removing resources
-- Ensure category organization aligns with AWS SAP exam domains
-- Test mobile responsiveness after navigation changes
+
+**Current Architecture (Data-Driven):**
+- **Primary method**: Update `data.js` to modify categories, sections, and resources
+- **Search**: Update `searchData` array in `index.js` when adding/removing resources
+- **Rendering**: The `render.js` functions automatically generate HTML from data
+
+**Legacy Information (Pre-2025 Refactor):**
+- Old method was to directly edit `index.html` sidebar structure
+- This is no longer recommended - use `data.js` instead
+- `index.html` now only contains the shell structure
+
+**When modifying navigation:**
+1. Edit `data.js` to add/remove/reorganize categories and resources
+2. Update `index.js` `searchData` array for search functionality
+3. Ensure category organization aligns with AWS SAP exam domains
+4. Test with `python3 server.py` to verify navigation and search work
+5. Test mobile responsiveness after navigation changes
 
 ### Adding Quiz Questions
 1. Edit `quiz-data-extended.js` and add to appropriate category
@@ -754,8 +931,10 @@ When adding new learning resources or quiz questions, verify:
 - [ ] CSS uses AWS brand colors (#232F3E, #FF9900)
 - [ ] Content loads correctly in iframe
 - [ ] Mobile responsive (test at 768px and 1024px breakpoints)
-- [ ] Added to `index.html` sidebar navigation
-- [ ] Added to `searchData` array in `index.html`
+- [ ] **CRITICAL**: Added to `data.js` (section.resources array and updated counts)
+- [ ] **CRITICAL**: Added to `searchData` array in `index.js`
+- [ ] Resource appears in navigation on index.html
+- [ ] Search functionality finds the resource
 - [ ] No external dependencies (CDNs, external CSS/JS)
 - [ ] All links work correctly
 
