@@ -141,13 +141,106 @@ Before committing code changes, verify:
 
 ### Color Palette
 
-Use AWS brand colors consistently:
+**WCAG 2.1 レベルAA適合カラーパレット (検証済み - 2025-12-28)**
 
-- **Primary Dark**: `#232F3E` (AWS dark blue)
-- **Accent Orange**: `#FF9900` (AWS orange)
-- **Text Gray**: `#374151` (dark gray for readable text)
-- **Background**: `#F9FAFB` (light gray for backgrounds)
-- **Border**: `#E5E7EB` (medium gray for borders)
+全ての色の組み合わせはWCAG 2.1コントラスト比要件を満たしています：
+- **通常テキスト**: 4.5:1以上
+- **大きいテキスト** (18pt以上 or 14pt太字以上): 3:1以上
+- **UIコンポーネント**: 3:1以上
+
+#### AWS Brand Colors
+
+| 色 | カラーコード | 用途 | コントラスト比 | 適合レベル |
+|----|------------|------|--------------|-----------|
+| **AWS Dark** | `#232F3E` | ヘッダー、メイン見出し | 12.98:1 (on #F9FAFB) | ✅ AA/AAA |
+| **AWS Orange (Original)** | `#FF9900` | 大きいテキストのみ使用可 | 2.14:1 (on white) | ⚠️ 要注意 |
+| **AWS Orange (Accessible)** | `#dc7600` | 大きいテキスト・アクセント | 3.17:1 (on white) | ✅ AA (large) |
+
+**⚠️ 重要**: `#FF9900` (AWS公式オレンジ) は通常テキストでは使用不可。大きいテキスト（見出しなど）専用、またはアクセシブル代替色 `#dc7600` を使用すること。
+
+#### Text Colors
+
+| 色 | カラーコード | 用途 | コントラスト比 | 適合レベル |
+|----|------------|------|--------------|-----------|
+| **Primary Text** | `#374151` | メインテキスト、リンク | 9.86:1 (on #F9FAFB) | ✅ AA/AAA |
+| **Secondary Text** | `#6B7280` | ラベル、補助テキスト | 4.83:1 (on white) | ✅ AA |
+| **Tertiary Text** | `#6f7682` | Breadcrumb separator | 4.58:1 (on white) | ✅ AA |
+
+#### Background Colors
+
+| 色 | カラーコード | 用途 |
+|----|------------|------|
+| **Light Background** | `#F9FAFB` | カード背景、リスト項目 |
+| **White Background** | `#FFFFFF` | メインコンテンツ背景 |
+
+#### Border & UI Component Colors
+
+| 色 | カラーコード | 用途 | コントラスト比 | 適合レベル |
+|----|------------|------|--------------|-----------|
+| **Border (Original)** | `#E5E7EB` | ❌ 廃止予定 | 1.24:1 | ❌ 不適合 |
+| **Border (Accessible)** | `#909296` | ボーダー、UIコンポーネント | 3.12:1 (on white) | ✅ AA |
+
+#### Quiz Application Colors (WCAG 2.1 適合版)
+
+| 色 | カラーコード | 用途 | コントラスト比 | 適合レベル |
+|----|------------|------|--------------|-----------|
+| **Quiz Good (Original)** | `#74b9ff` | ❌ 廃止予定 | 2.07:1 | ❌ 不適合 |
+| **Quiz Good (Accessible)** | `#3378be` | スコア表示 (Good) | 4.59:1 | ✅ AA |
+| **Quiz Excellent (Original)** | `#00b894` | ❌ 廃止予定 | 2.54:1 | ❌ 不適合 |
+| **Quiz Excellent (Accessible)** | `#008662` | 正解表示 | 4.58:1 | ✅ AA |
+| **Quiz Poor (Original)** | `#e17055` | ❌ 廃止予定 | 3.16:1 | ❌ 不適合 |
+| **Quiz Poor (Accessible)** | `#c35237` | 不正解表示 | 4.58:1 | ✅ AA |
+| **Quiz Fair (Original)** | `#fdcb6e` | ❌ 廃止予定 | 1.51:1 | ❌ 不適合 |
+| **Quiz Fair (Accessible)** | `#9e6c0f` | スコア表示 (Fair) | 4.56:1 | ✅ AA |
+
+#### CSS Variables Example
+
+```css
+/* WCAG 2.1 レベルAA適合カラーパレット */
+:root {
+    /* AWS Brand Colors */
+    --color-aws-dark: #232F3E;
+    --color-aws-orange: #dc7600;  /* アクセシブル版 */
+    --color-aws-orange-original: #FF9900;  /* 大きいテキスト専用 */
+
+    /* Text Colors */
+    --color-text-primary: #374151;
+    --color-text-secondary: #6B7280;
+    --color-text-tertiary: #6f7682;
+
+    /* Background Colors */
+    --color-bg-light: #F9FAFB;
+    --color-bg-white: #FFFFFF;
+
+    /* Border Colors */
+    --color-border: #909296;
+
+    /* Quiz Colors */
+    --color-quiz-good: #3378be;
+    --color-quiz-excellent: #008662;
+    --color-quiz-poor: #c35237;
+    --color-quiz-fair: #9e6c0f;
+}
+```
+
+#### Color Usage Guidelines
+
+1. **新しい色を追加する前に**: `scripts/accessibility/check_contrast_ratio.py` を実行してコントラスト比を検証
+2. **色だけで情報を伝えない**: アイコン、テキストラベル、パターンを併用
+3. **ブランドカラーの使用**: AWS Orange (#FF9900) は大きいテキスト専用に限定
+4. **検証ツール**: WebAIM Contrast Checker (https://webaim.org/resources/contrastchecker/) で再確認
+
+#### Verification Scripts
+
+コントラスト比検証スクリプトが利用可能です：
+
+```bash
+# 全ての色の組み合わせを検証
+python3 scripts/accessibility/check_contrast_ratio.py
+
+# 代替色の提案を取得
+python3 scripts/accessibility/suggest_color_fixes.py
+```
 
 ### Responsive Breakpoints
 
