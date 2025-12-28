@@ -77,20 +77,29 @@ This displays:
 
 ### Using Claude Skills
 
-This repository includes a custom Claude skill for specialized workflows:
+This repository includes custom Claude skills for specialized workflows:
 
+**Primary Development Skill (Recommended):**
 ```bash
-# Activate the aws-knowledge-organizer skill
+# Activate the aws-sap-dev skill for development workflows
+/skill aws-sap-dev
+```
+
+The `aws-sap-dev` skill provides:
+- Complete guided workflows for adding HTML resources and quiz questions
+- Data-driven architecture compliance checking (TWO-place update requirement)
+- W3C HTML validation integration
+- GitHub Pages deployment workflows
+- Reference documentation and templates
+- Troubleshooting guides
+
+**Alternative Skill:**
+```bash
+# Activate the aws-knowledge-organizer skill for legacy workflows
 /skill aws-knowledge-organizer
 ```
 
-The skill provides guided workflows for:
-- Adding new AWS learning resources with automated categorization
-- Creating quiz questions with templates and validation
-- Reorganizing content across categories
-- Bulk automation operations
-
-See `.claude/skills/aws-knowledge-organizer/SKILL.md` for detailed documentation.
+See `.claude/skills/aws-sap-dev/SKILL.md` or `.claude/skills/aws-knowledge-organizer/SKILL.md` for detailed documentation.
 
 ## Quick Reference: Common Tasks
 
@@ -207,6 +216,10 @@ The repository is organized into topical categories aligned with AWS SAP exam do
 - `scripts/html_management/add_toc.py` - Add page-internal table of contents to all HTML files
 - `scripts/html_management/integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files
 - `scripts/quiz_management/analyze_quiz.py` - Quiz statistics and analysis tool
+- `scripts/git_hooks/update_last_modified.py` - Automatic last modified date updater (called by pre-commit hook)
+
+**Git Hooks:**
+- `.git/hooks/pre-commit` - **ACTIVE**: Automatically updates `data.js` lastUpdated field on every commit
 
 **Note on Script Duplication:** Automation scripts exist in two locations:
 - `scripts/` - Main scripts for direct CLI usage (primary location)
@@ -285,10 +298,28 @@ This is a **fully static website** with:
 - Fix all errors and warnings
 - Ensures accessibility, cross-browser compatibility, and professional quality
 
+## Git Hook System
+
+This repository uses a Git pre-commit hook to **automatically update the last modified date** in `data.js`:
+
+**How it works:**
+1. When you run `git commit`, the pre-commit hook triggers automatically
+2. The hook executes `scripts/git_hooks/update_last_modified.py`
+3. The script updates the `lastUpdated` field in `data.js` with the current commit date
+4. The updated `data.js` is automatically staged and included in the commit
+
+**No manual action required** - the system works transparently during normal Git operations.
+
+**Troubleshooting:**
+- If the hook doesn't execute: `chmod +x .git/hooks/pre-commit`
+- To skip the hook temporarily (not recommended): `git commit --no-verify`
+- For details: See `scripts/git_hooks/README.md`
+
 ## Getting Help
 
 - **Architecture questions**: See [@docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Development workflows**: See [@docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)
 - **Git operations**: See [@docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)
 - **Coding standards**: See [@docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)
-- **Claude skill**: Use `/skill aws-knowledge-organizer` for guided workflows
+- **Git hooks**: See [@scripts/git_hooks/README.md](scripts/git_hooks/README.md)
+- **Claude skills**: Use `/skill aws-sap-dev` for comprehensive development workflows
