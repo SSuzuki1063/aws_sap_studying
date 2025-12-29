@@ -52,7 +52,6 @@ class AWSServiceDetector:
 
         パターン:
         - aws-{service}-*.html → service
-        - amazon_{service}_infographic.html → service
         - {service}_infographic.html → service
         - {service}-guide.html → service
 
@@ -68,25 +67,19 @@ class AWSServiceDetector:
             service = match.group(1)
             return self._normalize_service_key(service)
 
-        # パターン2: amazon_{service}_infographic.html または aws_{service}_infographic.html
-        match = re.search(r'(?:amazon|aws)_([a-z0-9-]+)_infographic', filename)
-        if match:
-            service = match.group(1)
-            return self._normalize_service_key(service)
-
-        # パターン3: {service}_infographic.html
+        # パターン2: {service}_infographic.html
         match = re.search(r'^([a-z0-9-]+)_infographic', filename)
         if match:
             service = match.group(1)
             return self._normalize_service_key(service)
 
-        # パターン4: {service}-guide.html
+        # パターン3: {service}-guide.html
         match = re.search(r'^([a-z0-9-]+)-guide\.html', filename)
         if match:
             service = match.group(1)
             return self._normalize_service_key(service)
 
-        # パターン5: {service}.html
+        # パターン4: {service}.html
         match = re.search(r'^([a-z0-9-]+)\.html', filename)
         if match:
             service = match.group(1)
