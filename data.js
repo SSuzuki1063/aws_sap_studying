@@ -362,7 +362,7 @@ const categoriesData = [
     id: 'analytics-operations',
     title: '分析・運用・クイズ',
     icon: '📊',
-    count: 11,
+    count: 14,
     sections: [
       {
         title: '分析・運用',
@@ -389,9 +389,12 @@ const categoriesData = [
       {
         title: '理解度クイズ・用語集',
         icon: '✏️',
-        count: 4,
+        count: 7,
         resources: [
           { title: '🗺️ 開発向けロードマップ', href: 'development-roadmap.html' },
+          { title: '📊 開発フローチャート', href: 'development-flowchart.html' },
+          { title: '💡 開発ユースケース', href: 'development-usecase.html' },
+          { title: '📚 学習リソース集', href: 'learning-resources.html' },
           { title: 'AWS SAP ナレッジベース', href: 'knowledge-base.html' },
           { title: 'AWS SAP 理解度クイズ', href: 'quiz.html' },
           { title: 'AWS SAP 用語集', href: 'aws_glossary.html' }
@@ -410,14 +413,14 @@ const categoryQuickNav = [
   { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 14 },
   { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 10 },
   { id: 'migration', icon: '🔄', text: '移行・転送', count: 11 },
-  { id: 'analytics-operations', icon: '📊', text: '分析・運用・クイズ', count: 11 }
+  { id: 'analytics-operations', icon: '📊', text: '分析・運用・クイズ', count: 14 }
 ];
 
 // 統計データ
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '151+',
+  totalResources: '154+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
   lastUpdated: '2025/12/29'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです

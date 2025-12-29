@@ -148,6 +148,9 @@ const searchData = [
 
     // 分析・運用・クイズ
     { title: '開発向けロードマップ', category: '分析・運用・クイズ', file: 'development-roadmap.html' },
+    { title: '開発フローチャート', category: '分析・運用・クイズ', file: 'development-flowchart.html' },
+    { title: '開発ユースケース', category: '分析・運用・クイズ', file: 'development-usecase.html' },
+    { title: '学習リソース集', category: '分析・運用・クイズ', file: 'learning-resources.html' },
     { title: 'コストツール', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-cost-tools.html' },
     { title: 'ディスクメトリクス', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-disk-metrics.html' },
     { title: 'エラー インフォグラフィック', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-errors-infographic.html' },
