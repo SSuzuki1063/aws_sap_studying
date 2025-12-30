@@ -392,8 +392,8 @@ def main():
     parser.add_argument(
         '--dir',
         type=str,
-        default='/home/suzuki100603/aws_sap',
-        help='処理対象のルートディレクトリ（デフォルト: /home/suzuki100603/aws_sap）'
+        default='/home/meme1/aws_sap_studying',
+        help='処理対象のルートディレクトリ（デフォルト: /home/meme1/aws_sap_studying）'
     )
 
     args = parser.parse_args()
