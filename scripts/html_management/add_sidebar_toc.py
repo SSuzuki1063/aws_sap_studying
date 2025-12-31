@@ -17,8 +17,8 @@ class SidebarTOCGenerator:
     """左サイドバー目次生成クラス"""
 
     # 除外するディレクトリとファイル
-    EXCLUDE_DIRS = {'new_html', '.git', '__pycache__'}
-    EXCLUDE_FILES = {'index.html', 'table-of-contents.html', 'quiz.html', 'home.html'}
+    EXCLUDE_DIRS = {'new_html', '.git', '__pycache__', '.claude'}
+    EXCLUDE_FILES = {'index.html', 'table-of-contents.html', 'quiz.html', 'home.html', 'knowledge-base.html'}
 
     # 左サイドバー目次のHTMLテンプレート
     SIDEBAR_TOC_TEMPLATE = '''
@@ -535,6 +535,13 @@ class SidebarTOCGenerator:
 
         # 全HTMLファイルを検索
         html_files = []
+
+        # ルートディレクトリ直下のHTMLファイルを追加
+        for html_file in root_dir.glob('*.html'):
+            if html_file.name not in self.EXCLUDE_FILES:
+                html_files.append(html_file)
+
+        # カテゴリディレクトリ内のHTMLファイルを追加
         for category_dir in root_dir.iterdir():
             if not category_dir.is_dir():
                 continue
