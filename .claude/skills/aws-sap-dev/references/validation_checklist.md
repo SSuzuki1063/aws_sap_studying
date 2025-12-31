@@ -70,6 +70,29 @@ node -c quiz-data-extended.js
 # Error messages = fix syntax before committing
 ```
 
+## Automated Integration Workflow
+
+When using the `integrate_resource_complete.py` orchestration script:
+
+- [ ] Files placed in new_html/ directory
+- [ ] Dry-run executed successfully
+- [ ] Complete integration executed without critical errors
+- [ ] Breadcrumbs added to all new files (check for warnings)
+- [ ] Page-internal TOC added to all new files (check for warnings)
+- [ ] Manual data.js updates completed
+- [ ] Manual index.js updates completed
+- [ ] All automated and manual steps verified
+
+Script command:
+```bash
+python3 scripts/html_management/integrate_resource_complete.py --dry-run
+python3 scripts/html_management/integrate_resource_complete.py
+```
+
+See [automation_workflow.md](automation_workflow.md) for complete documentation.
+
+---
+
 ## HTML Learning Resource Checklist
 
 Use this checklist when adding new HTML learning resources:

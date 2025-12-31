@@ -19,7 +19,7 @@ This skill provides guided workflows for developing and deploying learning resou
 
 This is the primary workflow for adding new AWS learning content to the repository.
 
-#### Option A: Automated Integration (Recommended)
+#### Option A: Complete Automated Integration (RECOMMENDED)
 
 **When to use:** When you have new HTML files ready to be categorized and integrated.
 
@@ -27,20 +27,20 @@ This is the primary workflow for adding new AWS learning content to the reposito
 
 1. **Place HTML files** in `new_html/` directory
 
-2. **Preview integration** (dry-run):
+2. **Preview complete integration** (dry-run):
    ```bash
-   python3 scripts/html_management/integrate_new_html.py --dry-run
+   python3 scripts/html_management/integrate_resource_complete.py --dry-run
    ```
 
-3. **Execute integration**:
+3. **Execute complete integration**:
    ```bash
-   python3 scripts/html_management/integrate_new_html.py
+   python3 scripts/html_management/integrate_resource_complete.py
    ```
 
-   The script automatically:
-   - Analyzes HTML title and content for categorization
-   - Moves files to appropriate directory (e.g., `networking/`, `security-governance/`)
-   - **NOTE:** The script does NOT update data.js or index.js - you must do this manually in the next step
+   This orchestration script automatically runs in sequence:
+   - `integrate_new_html.py` - Categorizes and moves files
+   - `add_breadcrumbs.py` - Adds breadcrumb navigation
+   - `add_toc.py` - Adds page-internal table of contents
 
 4. **CRITICAL: Manual data updates** (TWO places required):
 
@@ -49,11 +49,11 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - Add resource object to `section.resources` array
    - Increment `section.count`
    - Increment `category.count`
-   - See [data_structure_guide.md](references/data_structure_guide.md) for detailed instructions
+   - See [data_structure_guide.md](references/data_structure_guide.md)
 
    b. **Update index.js:**
    - Add entry to `searchData` array with exact matching title and file path
-   - See [data_structure_guide.md](references/data_structure_guide.md) for detailed instructions
+   - See [data_structure_guide.md](references/data_structure_guide.md)
 
 5. **W3C Validation** (REQUIRED):
    - Visit https://validator.w3.org/
@@ -80,7 +80,35 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - Visit https://ssuzuki1063.github.io/aws_sap_studying/
    - Confirm resource appears and loads correctly
 
-#### Option B: Manual Creation
+#### Option B: Individual Script Execution (Advanced)
+
+**When to use:** When you need fine-grained control over each step or are debugging issues.
+
+**Steps:**
+
+Run scripts individually in this order:
+
+1. **Categorize and move files:**
+   ```bash
+   python3 scripts/html_management/integrate_new_html.py --dry-run
+   python3 scripts/html_management/integrate_new_html.py
+   ```
+
+2. **Add breadcrumbs:**
+   ```bash
+   python3 scripts/html_management/add_breadcrumbs.py
+   ```
+
+3. **Add TOC:**
+   ```bash
+   python3 scripts/html_management/add_toc.py
+   ```
+
+4. **Continue with manual data updates** (same as Option A, steps 4-8)
+
+See [automation_workflow.md](references/automation_workflow.md) for detailed documentation.
+
+#### Option C: Manual Creation
 
 **When to use:** Creating a new HTML resource from scratch.
 
@@ -156,35 +184,59 @@ This is the primary workflow for adding new AWS learning content to the reposito
 
 ### 3. Running Automation Scripts
 
-**Breadcrumb Management:**
+#### Complete Integration Workflow (Recommended)
 
-Add breadcrumb navigation to all HTML files:
+Use the orchestration script for streamlined integration:
+
+```bash
+# Preview complete workflow
+python3 scripts/html_management/integrate_resource_complete.py --dry-run
+
+# Execute complete workflow
+python3 scripts/html_management/integrate_resource_complete.py
+
+# Custom source directory
+python3 scripts/html_management/integrate_resource_complete.py --source custom_html/
+
+# Verbose output for debugging
+python3 scripts/html_management/integrate_resource_complete.py --verbose
+```
+
+This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_toc.py`
+
+See [automation_workflow.md](references/automation_workflow.md) for comprehensive documentation.
+
+#### Individual Script Usage
+
+For fine-grained control, run scripts separately:
+
+**Breadcrumb Management:**
 ```bash
 python3 scripts/html_management/add_breadcrumbs.py
 ```
 
-Remove breadcrumbs:
-```bash
-python3 scripts/html_management/remove_breadcrumbs.py
-```
+Adds breadcrumb navigation (Home > Category > SubCategory) to all HTML files.
 
-**Table of Contents Management:**
-
-Add page-internal TOC to all HTML files:
+**TOC Management:**
 ```bash
 # Preview changes
 python3 scripts/html_management/add_toc.py --dry-run
 
 # Execute
 python3 scripts/html_management/add_toc.py
+
+# Custom directory
+python3 scripts/html_management/add_toc.py --dir /path/to/directory
 ```
 
-**Quiz Statistics:**
+Generates page-internal collapsible table of contents from h2/h3 headings.
 
-Analyze quiz question distribution:
+**Quiz Statistics:**
 ```bash
 python3 scripts/quiz_management/analyze_quiz.py
 ```
+
+Displays question count per category and balance analysis.
 
 ### 4. Data-Driven Architecture Compliance
 
