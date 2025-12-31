@@ -293,7 +293,7 @@ def add_breadcrumb_to_file(file_path, major, sub, title):
 
 def main():
     """メイン処理"""
-    base_dir = Path('/home/suzuki100603/aws_sap')
+    base_dir = Path('/home/meme1/aws_sap_studying')
 
     # 対象ディレクトリ
     target_dirs = [
