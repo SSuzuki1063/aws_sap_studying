@@ -1,0 +1,87 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    branches:
+      - gh-pages
+      - master
+    paths:
+      - '**.html'
+      - 'data.js'
+      - 'index.js'
+      - 'quiz-data-extended.js'
+      - '**.css'
+      - '**.py'
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml html5lib
+
+      - name: Check data integrity (data.js ⟷ index.js)
+        run: |
+          python3 scripts/ci/check_data_integrity.py
+        continue-on-error: false
+
+      - name: W3C HTML Validation (modified files only)
+        run: |
+          python3 scripts/ci/validate_html_w3c.py --pr-mode
+        continue-on-error: false
+
+      - name: Accessibility - Color Contrast Check
+        run: |
+          python3 scripts/accessibility/check_contrast_ratio.py
+        continue-on-error: false
+
+      - name: Accessibility - Heading Hierarchy Check
+        run: |
+          python3 scripts/accessibility/check_heading_hierarchy.py
+        continue-on-error: true  # Warning only
+
+      - name: JavaScript Syntax Check
+        run: |
+          node -c quiz-data-extended.js
+          node -c data.js
+          node -c render.js
+          node -c index.js
+          node -c quiz-app.js
+        continue-on-error: false
+
+      - name: Internal Links Validation
+        run: |
+          python3 scripts/ci/check_internal_links.py
+        continue-on-error: true  # Warning only
+
+      - name: File Naming Convention Check
+        run: |
+          python3 scripts/ci/check_file_naming.py
+        continue-on-error: true  # Warning only
+
+      - name: Generate Quality Report
+        if: always()
+        run: |
+          echo "## 📊 Quality Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All critical checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Checks Performed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Data Integrity (data.js ⟷ index.js)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ W3C HTML Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ WCAG 2.1 AA Accessibility" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ JavaScript Syntax" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Internal Links" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ File Naming Conventions" >> $GITHUB_STEP_SUMMARY

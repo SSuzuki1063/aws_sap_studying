@@ -241,6 +241,41 @@ See `scripts/accessibility/w3c_validation_guide.md` for detailed guidance.
 - Updates `data.js` lastUpdated field with current commit date
 - Troubleshooting: `chmod +x .git/hooks/pre-commit` if hook doesn't execute
 
+## CI/CD Pipeline
+
+**Automated quality checks** run on every Pull Request:
+
+**Critical Checks (PR blocked if failed):**
+- ✅ Data Integrity Check - Verifies data.js ⟷ index.js synchronization
+- ✅ W3C HTML Validation - Modified files only (PR mode)
+- ✅ Accessibility Checks - WCAG 2.1 AA color contrast
+- ✅ JavaScript Syntax Check - All JS files
+
+**Warning Checks (non-blocking):**
+- ⚠️ Internal Links Validation - Broken link detection
+- ⚠️ File Naming Convention - Recommended patterns check
+
+**Run checks locally before PR:**
+```bash
+# Setup (one-time)
+uv venv
+source .venv/bin/activate
+uv pip install beautifulsoup4 lxml html5lib requests
+
+# Run critical checks
+python3 scripts/ci/check_data_integrity.py
+python3 scripts/ci/validate_html_w3c.py --pr-mode
+python3 scripts/accessibility/check_contrast_ratio.py
+node -c quiz-data-extended.js data.js render.js index.js
+```
+
+**Common CI/CD issues:**
+- **Data integrity failed** → Add missing resources to `index.js` searchData array
+- **W3C validation failed** → Visit https://validator.w3.org/ for error details
+- **JS syntax error** → Check for missing commas, quotes in quiz-data-extended.js
+
+See `docs/CI_CD_GUIDE.md` for comprehensive CI/CD documentation.
+
 ## Accessibility Workflows
 
 This repository follows WCAG 2.1 Level AA standards. Use these scripts:
@@ -284,6 +319,13 @@ For in-depth information, consult these comprehensive guides:
 - GitHub Pages deployment process
 - Development workflows (direct commit vs feature branch)
 
+### 🔄 CI/CD Pipeline
+**[@docs/CI_CD_GUIDE.md](docs/CI_CD_GUIDE.md)**
+- Automated quality checks on Pull Requests
+- Local testing workflows
+- Data integrity and W3C validation
+- Troubleshooting CI/CD failures
+
 ### 📝 Coding Standards
 **[@docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)**
 - Data-driven development principles (6 critical rules)
@@ -303,9 +345,11 @@ For in-depth information, consult these comprehensive guides:
 
 **Testing checklist:**
 ```bash
-python3 server.py                              # Local test
-# Visit https://validator.w3.org/              # W3C validate
-python3 scripts/accessibility/check_contrast_ratio.py  # Accessibility check
+python3 server.py                                      # Local test
+python3 scripts/ci/check_data_integrity.py             # CI/CD: Data integrity
+python3 scripts/ci/validate_html_w3c.py --pr-mode      # CI/CD: W3C validation
+python3 scripts/accessibility/check_contrast_ratio.py  # CI/CD: Accessibility
+node -c quiz-data-extended.js data.js render.js        # CI/CD: JS syntax
 git add . && git commit -m "..." && git push origin gh-pages  # Deploy
 ```
 
@@ -314,4 +358,5 @@ git add . && git commit -m "..." && git push origin gh-pages  # Deploy
 - Development workflows → `docs/DEVELOPMENT_GUIDE.md`
 - Git operations → `docs/GIT_WORKFLOW.md`
 - Coding standards → `docs/CODING_STANDARDS.md`
+- CI/CD pipeline → `docs/CI_CD_GUIDE.md`
 - Claude skills → `/skill aws-sap-dev`
