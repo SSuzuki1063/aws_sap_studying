@@ -57,6 +57,9 @@ const searchData = [
     { title: 'AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-monitoring-guide.html' },
     { title: 'GuardDuty EKS Protection 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/guardduty-eks-protection-guide.html' },
     { title: 'Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館', category: 'セキュリティ・ガバナンス', file: 'security-governance/security-lake-guide.html' },
+    { title: 'AWS CodeArtifact 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/codeartifact-guide.html' },
+    { title: 'Cognito IDプールIAMロール完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cognito-identity-pool-roles-guide.html' },
+    { title: 'IAM Roles Anywhere 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-roles-anywhere-guide.html' },
 
     // コンピュート・アプリケーション
     { title: 'EC2 キャパシティ インフォグラフィック', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws-ec2-capacity-infographic.html' },
@@ -91,6 +94,9 @@ const searchData = [
     { title: 'ALB ターゲットグループ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb-target-group-guide.html' },
     { title: 'CodeシリーズでECS Fargateローリングデプロイ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ecs-fargate-rolling-deploy-complete-guide.html' },
     { title: 'VPC DHCP オプションとカスタム DNS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/vpc-dhcp-options-guide.html' },
+    { title: 'IAM PassRole vs AssumeRole 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/iam-passrole-vs-assumerole-guide.html' },
+    { title: 'AWS ECR イメージスキャン完全ガイド', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/ecr-image-scanning-guide.html' },
+    { title: 'CloudWatch INSIGHT_RULE_METRIC 完全ガイド', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/cloudwatch-insight-rule-metric-guide.html' },
 
     // コンテンツ配信・DNS
     { title: 'DNSレコード完全ガイド - 住所録で理解するAWS Route 53', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/dns-records-guide.html' },
