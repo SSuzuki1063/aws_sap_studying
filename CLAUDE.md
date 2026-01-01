@@ -9,119 +9,68 @@ This is an AWS SAP (Solutions Architect Professional) exam study resource reposi
 **Live Site**: https://ssuzuki1063.github.io/aws_sap_studying/
 **Current Stats**: 120+ HTML learning resources, 194 quiz questions across 13 categories
 
-## Quick Start Workflows
+## Architecture Overview
 
-### Adding New HTML Learning Resources (Most Common Task)
+This repository uses a **data-driven architecture** that separates data, rendering, and UI logic:
+
+```
+data.js          ← Pure data definitions (categories, resources, metadata)
+    ↓
+render.js        ← Template functions (data → HTML)
+    ↓
+index.js         ← UI event handlers (search, navigation, interactions)
+```
+
+**Critical: TWO-place update requirement** when adding new resources:
+- ⚠️ **`data.js`** - Add to `section.resources` array and update counts
+- ⚠️ **`index.js`** - Add to `searchData` array (required for search)
+
+**Static Site Constraints**:
+- ❌ NO backend server, database, build process, Node.js/npm, or external CDNs
+- ✅ Pure HTML/CSS/JavaScript only - all resources work offline
+
+## Most Common Workflows
+
+### 1. Add New HTML Learning Resource (Automated - Recommended)
 
 ```bash
-# 1. Place HTML files in new_html/ directory
+# Place HTML files in new_html/ directory
+# Then run:
+python3 scripts/html_management/integrate_new_html.py --dry-run  # Preview
+python3 scripts/html_management/integrate_new_html.py            # Execute
 
-# 2. Preview integration
-python3 scripts/html_management/integrate_new_html.py --dry-run
+# ⚠️ CRITICAL: Script does NOT auto-update data.js and index.js
+# You MUST manually update both files (see step-by-step below)
 
-# 3. Execute integration (moves files, updates index.html automatically)
-python3 scripts/html_management/integrate_new_html.py
+# Test locally
+python3 server.py  # Visit http://localhost:8080/
 
-# 4. Test locally
-python3 server.py
-# Visit http://localhost:8080/
-
-# 5. W3C Validation (REQUIRED)
-# Validate all modified HTML files
-# Visit https://validator.w3.org/
-# Upload or paste HTML content to check for errors and warnings
+# W3C validate (REQUIRED): https://validator.w3.org/
 # Fix all errors before committing
 
-# 6. CRITICAL: Update data files manually
-# - Update data.js: Add to section.resources array and update counts
-# - Update index.js: Add to searchData array (required for search)
-
-# 7. Commit and deploy to GitHub Pages
+# Deploy
 git add .
 git commit -m "feat: 新規AWS学習リソースを追加"
 git push origin gh-pages
-
-# 8. Verify deployment (wait 1-2 minutes)
-# Visit https://ssuzuki1063.github.io/aws_sap_studying/
-# GitHub Pagesが自動的にgh-pagesブランチの変更を検出してウェブページを更新します
 ```
 
-### Local Development & Testing
+**Step-by-step: Manual data file updates after integration**
 
-```bash
-# Start development server
-python3 server.py
+After running `integrate_new_html.py`, you MUST update:
 
-# Access at http://localhost:8080/
-# - Test navigation and search
-# - Verify new resources load correctly
-# - Check mobile responsiveness
-```
-
-### Adding Quiz Questions
-
-Edit `quiz-data-extended.js` and add questions to appropriate category object. Question count updates automatically.
-
-### Analyzing Quiz Statistics
-
-```bash
-# View quiz statistics and category distribution
-python3 scripts/quiz_management/analyze_quiz.py
-```
-
-This displays:
-- Question count per category
-- Total questions and categories
-- Category balance analysis
-- Min/max questions by category
-
-### Using Claude Skills
-
-This repository includes custom Claude skills for specialized workflows:
-
-**Primary Development Skill (Recommended):**
-```bash
-# Activate the aws-sap-dev skill for development workflows
-/skill aws-sap-dev
-```
-
-The `aws-sap-dev` skill provides:
-- Complete guided workflows for adding HTML resources and quiz questions
-- Data-driven architecture compliance checking (TWO-place update requirement)
-- W3C HTML validation integration
-- GitHub Pages deployment workflows
-- Reference documentation and templates
-- Troubleshooting guides
-
-**Alternative Skill:**
-```bash
-# Activate the aws-knowledge-organizer skill for legacy workflows
-/skill aws-knowledge-organizer
-```
-
-See `.claude/skills/aws-sap-dev/SKILL.md` or `.claude/skills/aws-knowledge-organizer/SKILL.md` for detailed documentation.
-
-## Quick Reference: Common Tasks
-
-### Adding a New HTML Resource (Manual Method)
-
-**Step 1: Place the HTML file**
-- Put file in appropriate category directory (e.g., `networking/`, `security-governance/`)
-- Use naming convention: `aws-[service]-[topic].html`
-
-**Step 2: Update data.js**
+**1. Update `data.js`:**
 ```javascript
-// Find the appropriate category and section, then add:
+// Find appropriate category and section, then add:
 {
   title: 'Your Resource Title',
   href: 'category/your-resource.html'
 }
-// Update section.count and category.count
+// Also update section.count and category.count
 ```
 
-**Step 3: Update index.js**
+**2. Update `index.js`:**
 ```javascript
-// Add to the searchData array:
+// Add to searchData array (search won't work without this!):
 const searchData = [
   // ... existing entries ...
   {
@@ -132,194 +81,237 @@ const searchData = [
 ];
 ```
 
-**Step 4: Test**
+**3. Verify:**
 ```bash
 python3 server.py
-# Visit http://localhost:8080/ and verify:
+# Visit http://localhost:8080/ and check:
 # - Resource appears in navigation
 # - Search finds the resource
 # - Resource loads correctly
 ```
 
-### Testing Changes Locally
+### 2. Add Quiz Question
 
-```bash
-# Start development server
-python3 server.py
+Edit `quiz-data-extended.js`:
 
-# Open browser to http://localhost:8080/
-
-# Test checklist:
-# - Navigation works
-# - Search finds resources
-# - Mobile responsive (use browser dev tools)
-# - All links work
+```javascript
+{
+  id: 'unique-id',
+  question: '質問文',
+  options: ['選択肢1', '選択肢2', '選択肢3', '選択肢4'],
+  correct: 0,  // Index 0-3
+  explanation: '詳細な解説（2-4文）'
+}
 ```
 
-### Deploying to GitHub Pages
+Test: `python3 server.py` → Open quiz.html
+
+### 3. Local Development & Testing
 
 ```bash
-# 1. Test locally first!
+# Start development server (auto-detects script directory as web root)
 python3 server.py
 
-# 2. W3C validate all modified HTML files
-# Visit https://validator.w3.org/
+# Access at http://localhost:8080/
+# Test navigation, search, mobile responsiveness
+```
 
-# 3. Commit and push to gh-pages
+### 4. Deploy to GitHub Pages
+
+```bash
+# 1. Test locally first
+python3 server.py
+
+# 2. W3C validate: https://validator.w3.org/
+
+# 3. Commit and push to gh-pages branch
 git add .
 git commit -m "feat: descriptive message"
 git push origin gh-pages
 
-# 4. Verify deployment (wait 1-2 minutes)
-# Visit https://ssuzuki1063.github.io/aws_sap_studying/
+# 4. Verify (wait 1-2 minutes)
+# https://ssuzuki1063.github.io/aws_sap_studying/
 ```
+
+**Branches:**
+- `gh-pages` - Production (auto-deploys to GitHub Pages)
+- `master` - Development base (for PRs)
+
+## Automation Scripts Quick Reference
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| **HTML Management** |
+| `integrate_new_html.py` | Auto-categorize and integrate new HTML files | `python3 scripts/html_management/integrate_new_html.py [--dry-run]` |
+| `add_breadcrumbs.py` | Add breadcrumb navigation to all HTML files | `python3 scripts/html_management/add_breadcrumbs.py` |
+| `remove_breadcrumbs.py` | Remove breadcrumb navigation | `python3 scripts/html_management/remove_breadcrumbs.py` |
+| `add_toc.py` | Add page-internal table of contents | `python3 scripts/html_management/add_toc.py [--dry-run]` |
+| `add_home_button.py` | Add home button to HTML files | `python3 scripts/html_management/add_home_button.py` |
+| `add_svg_alt_text.py` | Add accessibility alt text to SVGs | `python3 scripts/html_management/add_svg_alt_text.py` |
+| **Quiz Management** |
+| `analyze_quiz.py` | Display quiz statistics and category distribution | `python3 scripts/quiz_management/analyze_quiz.py` |
+| **Accessibility** |
+| `check_contrast_ratio.py` | Verify WCAG 2.1 color contrast ratios | `python3 scripts/accessibility/check_contrast_ratio.py` |
+| `suggest_color_fixes.py` | Suggest accessible color alternatives | `python3 scripts/accessibility/suggest_color_fixes.py` |
+| `check_heading_hierarchy.py` | Verify heading structure (h1→h2→h3) | `python3 scripts/accessibility/check_heading_hierarchy.py` |
+
+## Claude Skills
+
+**Recommended:** Use the `aws-sap-dev` skill for comprehensive development workflows:
+
+```bash
+/skill aws-sap-dev
+```
+
+Provides:
+- Guided workflows for adding HTML resources and quiz questions
+- Data-driven architecture compliance checking
+- W3C HTML validation integration
+- GitHub Pages deployment workflows
+- Templates and troubleshooting guides
+
+**Alternative:** `/skill aws-knowledge-organizer` for legacy workflows
+
+See `.claude/skills/aws-sap-dev/SKILL.md` for detailed documentation.
 
 ## Directory Structure
 
-The repository is organized into topical categories aligned with AWS SAP exam domains:
+**Content Categories** (aligned with AWS SAP exam domains):
+- `networking/` - Direct Connect, Transit Gateway, VPN, PrivateLink
+- `security-governance/` - IAM, SCP, WAF, KMS, Cognito
+- `compute-applications/` - EC2, Lambda, ECS, Auto Scaling
+- `content-delivery-dns/` - CloudFront, Route53, Global Accelerator
+- `development-deployment/` - CloudFormation, CDK, SAM, EventBridge
+- `storage-database/` - S3, EBS, EFS, RDS Aurora, ElastiCache
+- `migration/` - DMS, Migration Hub, DR strategies
+- `analytics-bigdata/` - Kinesis, Redshift, Glue, QuickSight
+- `organizational-complexity/` - Organizations, Control Tower, RAM
+- `continuous-improvement/` - Systems Manager, CodeDeploy, CloudTrail
+- `cost-control/` - Savings Plans, storage classes optimization
+- `new-solutions/` - Newly added solution architectures
 
-- `networking/` - Networking services (Direct Connect, Transit Gateway, VPN, PrivateLink, EIP/NAT)
-- `security-governance/` - Security and governance services (SCP, IAM, WAF, Tag Policies, Cognito, CMK)
-- `compute-applications/` - Compute and application services (EC2, Lambda, ECS, EFA, Auto Scaling, ALB)
-- `content-delivery-dns/` - Content delivery and DNS services (CloudFront, Route53, Global Accelerator)
-- `development-deployment/` - Development and deployment services (CloudFormation, Service Catalog, CDK, SAM, EventBridge, API Gateway)
-- `storage-database/` - Storage and database services (S3, EBS, EFS, RDS Aurora, ElastiCache, MSK, S3 security)
-- `migration/` - Migration services (DMS, Migration Hub, DR strategies, Blue/Green deployments, migration planning)
-- `analytics-bigdata/` - Analytics and operational services (Kinesis, Kinesis Firehose, Redshift, cost tools, metrics, availability, data pipelines)
-- `organizational-complexity/` - Multi-account and organizational management (RAM, SCP, tag policies, Service Catalog)
-- `continuous-improvement/` - Operational excellence resources (Systems Manager, CodeDeploy, CloudTrail, WAF, CDK)
-- `cost-control/` - Cost optimization resources (S3 storage classes, Lambda concurrency)
-- `new-solutions/` - Newly added solution architectures and patterns
+**Key Files:**
 
-### Key Files
+*Application Core:*
+- `index.html` - Main navigation interface (shell structure)
+- `data.js` - **CRITICAL**: Pure data definitions for all content
+- `render.js` - Template functions (data → HTML generation)
+- `index.js` - UI event handlers (search, scroll, navigation)
+- `home.html` - Default homepage content
+- `knowledge-base.html` - Alternative table-based navigation
+- `table-of-contents.html` - Static reference page (manually maintained)
 
-**Main Application Files:**
-- `index.html` - Main navigation interface (uses data-driven architecture with data.js + render.js)
-- `data.js` - **CRITICAL**: Pure data definitions for categories, resources, and quick navigation
-- `render.js` - Template functions that generate HTML from data.js
-- `index.js` - UI event handlers (search, scroll, category navigation)
-- `knowledge-base.html` - Alternative table-based navigation with advanced filtering
-- `home.html` - Default homepage content loaded on initial page load
-- `table-of-contents.html` - Comprehensive table of contents for all resources (static reference page, manually maintained)
+*Quiz System:*
+- `quiz.html` - Interactive quiz application
+- `quiz-app.js` - Quiz logic and progress tracking
+- `quiz-data-extended.js` - 194 questions across 13 categories
 
-**Quiz Application:**
-- `quiz.html` - Interactive quiz application for exam preparation
-- `quiz-app.js` - Quiz application logic
-- `quiz-data-extended.js` - Quiz question database (194 questions across 13 categories)
+*Development Tools:*
+- `server.py` - Local development server with CORS support
 
-**Development Tools:**
-- `server.py` - Development server with CORS support
+*Git Automation:*
+- `.git/hooks/pre-commit` - Auto-updates `data.js` lastUpdated field
 
-**Automation Scripts:**
-- `scripts/html_management/add_breadcrumbs.py` - Add breadcrumb navigation to all HTML files
-- `scripts/html_management/remove_breadcrumbs.py` - Remove breadcrumb navigation from HTML files
-- `scripts/html_management/add_toc.py` - Add page-internal table of contents to all HTML files
-- `scripts/html_management/integrate_new_html.py` - **IMPORTANT**: Automated integration script for new HTML files
-- `scripts/quiz_management/analyze_quiz.py` - Quiz statistics and analysis tool
-- `scripts/git_hooks/update_last_modified.py` - Automatic last modified date updater (called by pre-commit hook)
+**Script Duplication Note:** Scripts exist in both `scripts/` (primary) and `.claude/skills/aws-knowledge-organizer/scripts/` (for skill workflow). Keep in sync when modifying.
 
-**Git Hooks:**
-- `.git/hooks/pre-commit` - **ACTIVE**: Automatically updates `data.js` lastUpdated field on every commit
+## Data-Driven Development Rules
 
-**Note on Script Duplication:** Automation scripts exist in two locations:
-- `scripts/` - Main scripts for direct CLI usage (primary location)
-- `.claude/skills/aws-knowledge-organizer/scripts/` - Copies for the Claude skill workflow
-These should be kept in sync when making script changes.
+When modifying content, **strictly follow** these principles (see `docs/CODING_STANDARDS.md` for details):
+
+1. ✅ **Data as pure objects** - All content in `data.js` as JavaScript objects/arrays (NO HTML tags)
+2. ✅ **Single template pattern** - HTML generation in centralized functions (`render.js`)
+3. ❌ **No manual HTML editing** - Don't modify structure in `index.html`
+4. ⚠️ **Two-place updates** - Always update both `data.js` AND `index.js` when adding resources
+
+## W3C Validation (REQUIRED)
+
+**ALL HTML files must pass W3C validation before committing:**
+
+1. Visit https://validator.w3.org/
+2. Upload file or paste content
+3. Fix all errors and warnings
+4. Ensures accessibility, cross-browser compatibility, and professional quality
+
+See `scripts/accessibility/w3c_validation_guide.md` for detailed guidance.
+
+## Git Hook System
+
+**Auto-updates last modified date** - no action required:
+- Pre-commit hook runs `scripts/git_hooks/update_last_modified.py`
+- Updates `data.js` lastUpdated field with current commit date
+- Troubleshooting: `chmod +x .git/hooks/pre-commit` if hook doesn't execute
+
+## Accessibility Workflows
+
+This repository follows WCAG 2.1 Level AA standards. Use these scripts:
+
+```bash
+# Verify color contrast ratios
+python3 scripts/accessibility/check_contrast_ratio.py
+
+# Get accessible color suggestions
+python3 scripts/accessibility/suggest_color_fixes.py
+
+# Check heading hierarchy (h1→h2→h3)
+python3 scripts/accessibility/check_heading_hierarchy.py
+```
+
+See `docs/WCAG21_GUIDELINES.md` and `docs/ACCESSIBILITY_AUDIT.md` for comprehensive guidelines.
 
 ## Detailed Documentation
 
-For detailed information on specific topics, see these documents:
+For in-depth information, consult these comprehensive guides:
 
 ### 📐 Architecture & Design
-**[@docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Comprehensive architecture documentation
+**[@docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 - Data-driven architecture (data.js + render.js + index.js)
 - Navigation system and search functionality
 - Quiz system and knowledge base interface
 - Design constraints and offline-first philosophy
-- Browser compatibility and performance considerations
 
 ### 🛠️ Development Workflows
-**[@docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)** - Complete development guide
+**[@docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)**
 - Adding new learning resources (automated and manual)
 - Modifying navigation and adding quiz questions
 - Automation workflows (breadcrumbs, TOC, bulk integration)
-- W3C HTML validation (REQUIRED)
+- W3C HTML validation requirements
 - Testing checklist and debugging tips
 
 ### 🔀 Git Operations
-**[@docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)** - Git workflow and deployment
+**[@docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)**
 - Branching strategy (gh-pages, master, feature branches)
 - Commit guidelines and push requirements
 - GitHub Pages deployment process
 - Development workflows (direct commit vs feature branch)
-- Troubleshooting deployment issues
 
 ### 📝 Coding Standards
-**[@docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)** - Coding standards and best practices
+**[@docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)**
 - Data-driven development principles (6 critical rules)
 - File naming conventions
 - CSS, JavaScript, and HTML standards
-- Security and performance standards
-- Code review checklist
+- WCAG 2.1 AA color palette and accessibility standards
 
-## Critical Rules to Remember
+### ♿ Accessibility
+**[@docs/WCAG21_GUIDELINES.md](docs/WCAG21_GUIDELINES.md)**
+- WCAG 2.1 Level AA compliance guidelines
+- Color contrast requirements
+- Keyboard navigation and screen reader support
 
-### Data-Driven Architecture
+## Quick Reference Card
 
-When adding new resources, **MUST** update **TWO** places:
+**Most common mistake:** Forgetting to update both `data.js` AND `index.js` when adding resources
 
-1. **`data.js`** - Add to appropriate `section.resources` array and update counts
-2. **`index.js`** - Add to `searchData` array (search won't work without this!)
+**Testing checklist:**
+```bash
+python3 server.py                              # Local test
+# Visit https://validator.w3.org/              # W3C validate
+python3 scripts/accessibility/check_contrast_ratio.py  # Accessibility check
+git add . && git commit -m "..." && git push origin gh-pages  # Deploy
+```
 
-Without these updates, the resource won't appear in navigation or search results.
-
-### Static Site Constraints
-
-This is a **fully static website** with:
-- ❌ NO backend server
-- ❌ NO database
-- ❌ NO build process
-- ❌ NO Node.js/npm
-- ❌ NO external dependencies or CDNs
-- ✅ Pure HTML/CSS/JavaScript only
-- ✅ All resources work offline
-
-### Deployment
-
-- **Production branch**: `gh-pages` (auto-deploys to GitHub Pages)
-- **Development branch**: `master` (base for pull requests)
-- **Push immediately** after committing: `git push origin gh-pages`
-- **Verify deployment**: https://ssuzuki1063.github.io/aws_sap_studying/ (1-2 minutes)
-
-### W3C Validation
-
-**REQUIRED for all HTML files** before committing:
-- Visit https://validator.w3.org/
-- Fix all errors and warnings
-- Ensures accessibility, cross-browser compatibility, and professional quality
-
-## Git Hook System
-
-This repository uses a Git pre-commit hook to **automatically update the last modified date** in `data.js`:
-
-**How it works:**
-1. When you run `git commit`, the pre-commit hook triggers automatically
-2. The hook executes `scripts/git_hooks/update_last_modified.py`
-3. The script updates the `lastUpdated` field in `data.js` with the current commit date
-4. The updated `data.js` is automatically staged and included in the commit
-
-**No manual action required** - the system works transparently during normal Git operations.
-
-**Troubleshooting:**
-- If the hook doesn't execute: `chmod +x .git/hooks/pre-commit`
-- To skip the hook temporarily (not recommended): `git commit --no-verify`
-- For details: See `scripts/git_hooks/README.md`
-
-## Getting Help
-
-- **Architecture questions**: See [@docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **Development workflows**: See [@docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)
-- **Git operations**: See [@docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)
-- **Coding standards**: See [@docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)
-- **Git hooks**: See [@scripts/git_hooks/README.md](scripts/git_hooks/README.md)
-- **Claude skills**: Use `/skill aws-sap-dev` for comprehensive development workflows
+**Getting help:**
+- Architecture questions → `docs/ARCHITECTURE.md`
+- Development workflows → `docs/DEVELOPMENT_GUIDE.md`
+- Git operations → `docs/GIT_WORKFLOW.md`
+- Coding standards → `docs/CODING_STANDARDS.md`
+- Claude skills → `/skill aws-sap-dev`
