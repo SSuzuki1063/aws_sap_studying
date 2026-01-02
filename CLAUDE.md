@@ -9,6 +9,40 @@ This is an AWS SAP (Solutions Architect Professional) exam study resource reposi
 **Live Site**: https://ssuzuki1063.github.io/aws_sap_studying/
 **Current Stats**: 120+ HTML learning resources, 194 quiz questions across 13 categories
 
+## Quick Start (New Contributors)
+
+```bash
+# 1. Clone repository
+git clone https://github.com/SSuzuki1063/aws_sap_studying.git
+cd aws_sap_studying
+
+# 2. Set up Python environment (one-time)
+uv venv
+source .venv/bin/activate  # Linux/Mac
+# OR
+.venv\Scripts\activate  # Windows
+uv pip install beautifulsoup4 lxml html5lib requests
+
+# 3. Start development server
+python3 server.py
+
+# 4. Open browser
+# Visit: http://localhost:8080/
+
+# 5. Make changes and test
+# - Add HTML files to new_html/
+# - Run integration script
+# - Update data.js and index.js (CRITICAL!)
+# - Test locally before committing
+```
+
+**First-time checklist:**
+- [ ] Python 3.11+ installed
+- [ ] `uv` package manager installed ([install guide](https://github.com/astral-sh/uv))
+- [ ] Virtual environment activated
+- [ ] Can access http://localhost:8080/
+- [ ] Read `docs/CODING_STANDARDS.md` (data-driven principles)
+
 ## Architecture Overview
 
 This repository uses a **data-driven architecture** that separates data, rendering, and UI logic:
@@ -28,6 +62,37 @@ index.js         ← UI event handlers (search, navigation, interactions)
 **Static Site Constraints**:
 - ❌ NO backend server, database, build process, Node.js/npm, or external CDNs
 - ✅ Pure HTML/CSS/JavaScript only - all resources work offline
+
+## Python Development Environment Setup
+
+This project uses `uv` for Python dependency management (10-100x faster than pip):
+
+```bash
+# Install uv (one-time, if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# OR on Windows:
+# powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Create virtual environment (one-time per clone)
+uv venv
+
+# Activate virtual environment (each terminal session)
+source .venv/bin/activate  # Linux/Mac
+# OR
+.venv\Scripts\activate  # Windows
+
+# Install dependencies
+uv pip install beautifulsoup4 lxml html5lib requests
+
+# Deactivate when done
+deactivate
+```
+
+**Why uv?**
+- 10-100x faster than pip
+- Automatic Python version management
+- Better dependency resolution
+- Single binary, no Python required to bootstrap
 
 ## Most Common Workflows
 
@@ -116,6 +181,19 @@ python3 server.py
 # Test navigation, search, mobile responsiveness
 ```
 
+**Server features:**
+- **Port**: 8080 (hardcoded)
+- **CORS**: Enabled for cross-origin iframe loading
+- **Cache**: Disabled (all responses have no-cache headers)
+- **Path handling**: Automatic URL decoding for non-ASCII filenames
+- **Auto-detection**: Serves from repository root automatically
+
+**Server capabilities detail:**
+- CORS headers enabled for development (`Access-Control-Allow-Origin: *`)
+- Cache-Control headers prevent browser caching (`no-cache, no-store, must-revalidate`)
+- URL path decoding handles Japanese filenames correctly
+- Request logging to console for debugging
+
 ### 4. Deploy to GitHub Pages
 
 ```bash
@@ -143,6 +221,7 @@ git push origin gh-pages
 |--------|---------|-------|
 | **HTML Management** |
 | `integrate_new_html.py` | Auto-categorize and integrate new HTML files | `python3 scripts/html_management/integrate_new_html.py [--dry-run]` |
+| `integrate_resource_complete.py` | Complete resource integration with validation | `python3 scripts/html_management/integrate_resource_complete.py` |
 | `add_breadcrumbs.py` | Add breadcrumb navigation to all HTML files | `python3 scripts/html_management/add_breadcrumbs.py` |
 | `remove_breadcrumbs.py` | Remove breadcrumb navigation | `python3 scripts/html_management/remove_breadcrumbs.py` |
 | `add_toc.py` | Add page-internal table of contents | `python3 scripts/html_management/add_toc.py [--dry-run]` |
@@ -154,6 +233,11 @@ git push origin gh-pages
 | `check_contrast_ratio.py` | Verify WCAG 2.1 color contrast ratios | `python3 scripts/accessibility/check_contrast_ratio.py` |
 | `suggest_color_fixes.py` | Suggest accessible color alternatives | `python3 scripts/accessibility/suggest_color_fixes.py` |
 | `check_heading_hierarchy.py` | Verify heading structure (h1→h2→h3) | `python3 scripts/accessibility/check_heading_hierarchy.py` |
+| **CI/CD** |
+| `check_data_integrity.py` | Verify data.js ⟷ index.js synchronization | `python3 scripts/ci/check_data_integrity.py` |
+| `validate_html_w3c.py` | W3C HTML validation (supports --pr-mode) | `python3 scripts/ci/validate_html_w3c.py [--pr-mode]` |
+| `check_internal_links.py` | Validate internal links (warning only) | `python3 scripts/ci/check_internal_links.py` |
+| `check_file_naming.py` | Check file naming conventions | `python3 scripts/ci/check_file_naming.py` |
 
 ## Claude Skills
 
@@ -239,7 +323,25 @@ See `scripts/accessibility/w3c_validation_guide.md` for detailed guidance.
 **Auto-updates last modified date** - no action required:
 - Pre-commit hook runs `scripts/git_hooks/update_last_modified.py`
 - Updates `data.js` lastUpdated field with current commit date
-- Troubleshooting: `chmod +x .git/hooks/pre-commit` if hook doesn't execute
+- **Pre-installed**: Hook is already in `.git/hooks/pre-commit` (ready to use)
+- Troubleshooting: If hook doesn't execute, run `chmod +x .git/hooks/pre-commit`
+
+**Manual hook installation** (only if missing):
+```bash
+# Copy hook to .git/hooks/
+cp scripts/git_hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+
+# Verify hook is executable
+ls -la .git/hooks/pre-commit
+```
+
+**How the hook works:**
+1. Triggered automatically before each `git commit`
+2. Extracts latest commit date from git history
+3. Updates `lastUpdated` field in `data.js`
+4. Auto-stages the updated `data.js` file
+5. Proceeds with commit
 
 ## CI/CD Pipeline
 
@@ -292,6 +394,18 @@ python3 scripts/accessibility/check_heading_hierarchy.py
 ```
 
 See `docs/WCAG21_GUIDELINES.md` and `docs/ACCESSIBILITY_AUDIT.md` for comprehensive guidelines.
+
+## Legacy Documentation
+
+**AGENTS.md**: Contains legacy guidelines from earlier repository structure. **Refer to CLAUDE.md (this file) for current workflows.**
+
+**Key differences from AGENTS.md:**
+- AGENTS.md predates the data-driven architecture refactor (data.js + render.js + index.js pattern)
+- Old workflow suggested direct `index.html` editing - now use `data.js` instead
+- Server command was `python -m http.server 8000` - now use `python3 server.py` for CORS support
+- Missing CI/CD pipeline documentation and automation scripts
+
+**When to reference AGENTS.md:** Historical context only. All active development should follow CLAUDE.md.
 
 ## Detailed Documentation
 
