@@ -167,7 +167,21 @@ const searchData = [
     { title: 'サーバーレスデータパイプライン', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html' },
     { title: 'AWS SAP ナレッジベース', category: '分析・運用・クイズ', file: 'knowledge-base.html' },
     { title: 'AWS SAP 理解度クイズ', category: '分析・運用・クイズ', file: 'quiz.html' },
-    { title: 'AWS SAP 用語集', category: '分析・運用・クイズ', file: 'aws_glossary.html' }
+    { title: 'AWS SAP 用語集', category: '分析・運用・クイズ', file: 'aws_glossary.html' },
+
+    // 新規追加リソース (2026/01/03)
+    { title: 'Amazon EKS セキュリティ完全図解ガイド', category: 'ネットワーキング', file: 'networking/eks-security-visual-guide.html' },
+    { title: 'AWS Nitro Enclaves 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/nitro-enclaves-guide.html' },
+    { title: 'CloudTrail 整合性検証 & ダイジェストファイル 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-integrity-validation-guide.html' },
+    { title: 'CloudTrail ログプレフィックス完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-log-prefix-guide.html' },
+    { title: 'AWS認証サービス完全比較ガイド - IAM Identity Center vs IAM vs Cognito', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-identity-center-comparison-guide.html' },
+    { title: 'EC2 Image Builder 完全ガイド', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/ec2-image-builder-guide.html' },
+    { title: 'CloudWatch Logs データ保護ポリシー完全ガイド', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/cloudwatch-logs-data-protection-guide.html' },
+    { title: 'AWS Systems Manager OpsCenter 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/opscenter-guide.html' },
+    { title: 'Amazon Inspector エージェントレス脆弱性評価 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/amazon-inspector-agentless-guide.html' },
+    { title: 'EKS コントロールプレーンログ & CloudTrail 監査ログ 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/eks-control-plane-logging-guide.html' },
+    { title: 'CloudTrail 管理イベント vs データイベント 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-events-guide.html' },
+    { title: 'Amazon Q Business アクセス制御 & ガードレール完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/amazon-q-business-access-guardrails-guide.html' }
 ];
 
 // 検索機能

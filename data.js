@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 16,
+    count: 17,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -24,7 +24,7 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 7,
+        count: 8,
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html' },
@@ -32,7 +32,8 @@ const categoriesData = [
           { title: 'RAM VPC プレフィックス', href: 'organizational-complexity/aws_ram_vpc_prefix_infographic.html' },
           { title: 'AWS Directory Service 完全ガイド', href: 'networking/aws-directory-service-guide.html' },
           { title: 'S3バケットポリシー Principal要素 完全ガイド', href: 'networking/s3-bucket-policy-principal-guide.html' },
-          { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', href: 'networking/nacl-sg-comparison-guide.html' }
+          { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', href: 'networking/nacl-sg-comparison-guide.html' },
+          { title: 'Amazon EKS セキュリティ完全図解ガイド', href: 'networking/eks-security-visual-guide.html' }
         ]
       },
       {
@@ -50,7 +51,7 @@ const categoriesData = [
     id: 'security-governance',
     title: 'セキュリティ・ガバナンス',
     icon: '🔒',
-    count: 46,
+    count: 54,
     sections: [
       {
         title: 'IAM & 認証・認可',
@@ -86,7 +87,7 @@ const categoriesData = [
       {
         title: 'Organizations & ガバナンス',
         icon: '🏢',
-        count: 19,
+        count: 27,
         resources: [
           { title: 'AWS CodeArtifact 完全ガイド', href: 'security-governance/codeartifact-guide.html' },
           { title: 'Cognito IDプールIAMロール完全ガイド', href: 'security-governance/cognito-identity-pool-roles-guide.html' },
@@ -105,7 +106,15 @@ const categoriesData = [
           { title: 'OpenSearch Dashboards によるログデータの可視化 - 完全ガイド', href: 'security-governance/opensearch-dashboards-guide.html' },
           { title: 'AWS Config コンフォーマンスパック & StackSets 完全ガイド', href: 'security-governance/aws-config-conformance-stacksets-guide.html' },
           { title: 'AWS マネージドポリシー vs カスタマーマネージドポリシー 完全ガイド', href: 'security-governance/aws-managed-vs-customer-managed-policies.html' },
-          { title: 'AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド', href: 'security-governance/aws-monitoring-guide.html' }
+          { title: 'AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド', href: 'security-governance/aws-monitoring-guide.html' },
+          { title: 'AWS Nitro Enclaves 完全ガイド', href: 'security-governance/nitro-enclaves-guide.html' },
+          { title: 'CloudTrail 整合性検証 & ダイジェストファイル 完全ガイド', href: 'security-governance/cloudtrail-integrity-validation-guide.html' },
+          { title: 'CloudTrail ログプレフィックス完全ガイド', href: 'security-governance/cloudtrail-log-prefix-guide.html' },
+          { title: 'AWS認証サービス完全比較ガイド - IAM Identity Center vs IAM vs Cognito', href: 'security-governance/iam-identity-center-comparison-guide.html' },
+          { title: 'Amazon Inspector エージェントレス脆弱性評価 完全ガイド', href: 'security-governance/amazon-inspector-agentless-guide.html' },
+          { title: 'EKS コントロールプレーンログ & CloudTrail 監査ログ 完全図解ガイド', href: 'security-governance/eks-control-plane-logging-guide.html' },
+          { title: 'CloudTrail 管理イベント vs データイベント 完全ガイド', href: 'security-governance/cloudtrail-events-guide.html' },
+          { title: 'Amazon Q Business アクセス制御 & ガードレール完全ガイド', href: 'security-governance/amazon-q-business-access-guardrails-guide.html' }
         ]
       },
       {
@@ -129,7 +138,7 @@ const categoriesData = [
     id: 'compute-applications',
     title: 'コンピュート・アプリケーション',
     icon: '💻',
-    count: 35,
+    count: 38,
     sections: [
       {
         title: 'EC2 & インスタンス管理',
@@ -193,12 +202,15 @@ const categoriesData = [
       {
         title: 'システム運用 & パッチ管理',
         icon: '🔧',
-        count: 4,
+        count: 7,
         resources: [
           { title: 'AWS ECR イメージスキャン完全ガイド', href: 'continuous-improvement/ecr-image-scanning-guide.html' },
           { title: 'CloudWatch INSIGHT_RULE_METRIC 完全ガイド', href: 'continuous-improvement/cloudwatch-insight-rule-metric-guide.html' },
           { title: 'Patch Manager 自動パッチ適用', href: 'compute-applications/aws_patch_manager_infographic.html' },
-          { title: 'Systems Manager ハイブリッド環境完全ガイド', href: 'continuous-improvement/systems-manager-hybrid-guide.html' }
+          { title: 'Systems Manager ハイブリッド環境完全ガイド', href: 'continuous-improvement/systems-manager-hybrid-guide.html' },
+          { title: 'EC2 Image Builder 完全ガイド', href: 'continuous-improvement/ec2-image-builder-guide.html' },
+          { title: 'CloudWatch Logs データ保護ポリシー完全ガイド', href: 'continuous-improvement/cloudwatch-logs-data-protection-guide.html' },
+          { title: 'AWS Systems Manager OpsCenter 完全ガイド', href: 'compute-applications/opscenter-guide.html' }
         ]
       }
     ]
@@ -406,9 +418,9 @@ const categoriesData = [
 
 // カテゴリクイックナビゲーション用データ
 const categoryQuickNav = [
-  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 16 },
-  { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 46 },
-  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 35 },
+  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 17 },
+  { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 54 },
+  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 38 },
   { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 14 },
   { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 14 },
   { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 10 },
@@ -420,8 +432,8 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '154+',
+  totalResources: '166+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
-  lastUpdated: '2026/01/01'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
+  lastUpdated: '2026/01/02'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };

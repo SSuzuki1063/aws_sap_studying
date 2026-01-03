@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudTrail 管理イベント vs データイベント 完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #e8e8e8;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* ヘッダー */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, rgba(255,153,0,0.2), rgba(255,153,0,0.05));
+            border-radius: 20px;
+            border: 2px solid #ff9900;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            color: #ff9900;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(255,153,0,0.5);
+        }
+        
+        .header-subtitle {
+            font-size: 1.3em;
+            color: #94a3b8;
+        }
+        
+        .aws-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff9900, #ff6600);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        /* 結論ファースト */
+        .conclusion-first {
+            background: linear-gradient(135deg, #065f46, #047857);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 50px;
+            border: 3px solid #10b981;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .conclusion-first::before {
+            content: '💡';
+            position: absolute;
+            top: -20px;
+            right: 30px;
+            font-size: 80px;
+            opacity: 0.2;
+        }
+        
+        .conclusion-title {
+            font-size: 1.8em;
+            color: #6ee7b7;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .conclusion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .conclusion-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #6ee7b7;
+        }
+        
+        .conclusion-item h4 {
+            color: #6ee7b7;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .conclusion-item p {
+            color: #d1fae5;
+            line-height: 1.6;
+        }
+        
+        /* レストランたとえ */
+        .analogy-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #f8fafc;
+            margin-bottom: 30px;
+        }
+        
+        .restaurant-diagram {
+            background: linear-gradient(180deg, #312e81 0%, #1e1b4b 100%);
+            border-radius: 25px;
+            padding: 40px;
+            border: 3px solid #6366f1;
+            position: relative;
+        }
+        
+        .restaurant-building {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .restaurant-roof {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            padding: 20px 60px;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: white;
+            width: 100%;
+        }
+        
+        .restaurant-body {
+            background: linear-gradient(180deg, #fef3c7, #fde68a);
+            padding: 30px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .area-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .area-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .management-area .area-title {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+        
+        .data-area .area-title {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+        }
+        
+        .area-content {
+            color: #1f2937;
+        }
+        
+        .area-subtitle {
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .example-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .example-list li {
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .management-area .example-list li {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .data-area .example-list li {
+            background: #ede9fe;
+            border-left: 4px solid #8b5cf6;
+        }
+        
+        .analogy-explanation {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+        
+        .analogy-explanation p {
+            color: #c7d2fe;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+        
+        /* メイン比較セクション */
+        .comparison-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .event-card {
+            border-radius: 25px;
+            padding: 35px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .management-card {
+            background: linear-gradient(135deg, #1e40af, #1d4ed8, #2563eb);
+            border: 3px solid #60a5fa;
+        }
+        
+        .data-card {
+            background: linear-gradient(135deg, #6b21a8, #7c3aed, #8b5cf6);
+            border: 3px solid #a78bfa;
+        }
+        
+        .card-icon {
+            font-size: 4em;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            opacity: 0.3;
+        }
+        
+        .card-header {
+            margin-bottom: 25px;
+        }
+        
+        .card-header h2 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        
+        .card-header .en-name {
+            color: rgba(255,255,255,0.7);
+            font-size: 1.1em;
+        }
+        
+        .card-header .plane-name {
+            background: rgba(255,255,255,0.2);
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-size: 0.95em;
+        }
+        
+        .card-feature {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 12px 0;
+        }
+        
+        .card-feature h4 {
+            color: #fcd34d;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-feature p {
+            color: rgba(255,255,255,0.9);
+            line-height: 1.6;
+        }
+        
+        .default-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        .default-on {
+            background: #10b981;
+            color: white;
+        }
+        
+        .default-off {
+            background: #ef4444;
+            color: white;
+        }
+        
+        /* API分類セクション */
+        .api-classification {
+            background: linear-gradient(135deg, #0c4a6e, #075985);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 3px solid #0ea5e9;
+        }
+        
+        .api-section-title {
+            text-align: center;
+            font-size: 2em;
+            color: #7dd3fc;
+            margin-bottom: 30px;
+        }
+        
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .api-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .api-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .api-name {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.4em;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .management-api .api-name {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: 2px solid #60a5fa;
+        }
+        
+        .data-api .api-name {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            border: 2px solid #a78bfa;
+        }
+        
+        .api-type-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .management-api .api-type-badge {
+            background: #3b82f6;
+        }
+        
+        .data-api .api-type-badge {
+            background: #8b5cf6;
+        }
+        
+        .api-description {
+            margin-bottom: 15px;
+        }
+        
+        .api-description h4 {
+            color: #fcd34d;
+            margin-bottom: 8px;
+        }
+        
+        .api-description p {
+            color: rgba(255,255,255,0.85);
+            line-height: 1.6;
+        }
+        
+        .api-analogy {
+            background: rgba(251,191,36,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #fbbf24;
+        }
+        
+        .api-analogy h4 {
+            color: #fcd34d;
+            margin-bottom: 8px;
+        }
+        
+        .api-analogy p {
+            color: #fef3c7;
+        }
+        
+        .target-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        
+        .target-indicator .label {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+        
+        .target-indicator .value {
+            color: #f8fafc;
+            font-weight: bold;
+        }
+        
+        /* 重要ポイント図解 */
+        .key-points {
+            background: linear-gradient(135deg, #7c2d12, #9a3412);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 3px solid #f97316;
+        }
+        
+        .key-points-title {
+            text-align: center;
+            font-size: 2em;
+            color: #fdba74;
+            margin-bottom: 30px;
+        }
+        
+        .point-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .point-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .point-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .point-title {
+            font-size: 1.2em;
+            color: #fdba74;
+            margin-bottom: 10px;
+        }
+        
+        .point-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .point-value {
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+        
+        .point-value.management {
+            background: #3b82f6;
+        }
+        
+        .point-value.data {
+            background: #8b5cf6;
+        }
+        
+        /* バケット vs オブジェクト図解 */
+        .bucket-object-diagram {
+            background: linear-gradient(135deg, #064e3b, #065f46);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 3px solid #10b981;
+        }
+        
+        .bucket-diagram-title {
+            text-align: center;
+            font-size: 2em;
+            color: #6ee7b7;
+            margin-bottom: 30px;
+        }
+        
+        .bucket-visual {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 60px;
+            flex-wrap: wrap;
+        }
+        
+        .bucket-container {
+            text-align: center;
+        }
+        
+        .bucket-shape {
+            width: 280px;
+            height: 200px;
+            background: linear-gradient(180deg, #fbbf24, #f59e0b);
+            border-radius: 20px 20px 40px 40px;
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: center;
+            padding: 30px;
+            gap: 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .bucket-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #f59e0b;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #1f2937;
+            white-space: nowrap;
+        }
+        
+        .object-item {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .bucket-controls {
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .control-item {
+            background: rgba(255,255,255,0.15);
+            padding: 12px 20px;
+            margin: 8px 0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-badge {
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .badge-management {
+            background: #3b82f6;
+        }
+        
+        .badge-data {
+            background: #8b5cf6;
+        }
+        
+        .diagram-explanation {
+            max-width: 400px;
+            margin-left: 40px;
+        }
+        
+        .explanation-box {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .explanation-box h4 {
+            color: #6ee7b7;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .explanation-box p {
+            color: #d1fae5;
+            line-height: 1.7;
+        }
+        
+        /* 設定方法 */
+        .settings-section {
+            background: linear-gradient(135deg, #4c1d95, #5b21b6);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 3px solid #a78bfa;
+        }
+        
+        .settings-title {
+            text-align: center;
+            font-size: 2em;
+            color: #c4b5fd;
+            margin-bottom: 30px;
+        }
+        
+        .settings-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .flow-step {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 200px;
+        }
+        
+        .flow-step-number {
+            width: 40px;
+            height: 40px;
+            background: #a78bfa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin: 0 auto 15px;
+        }
+        
+        .flow-step h4 {
+            color: #e9d5ff;
+            margin-bottom: 10px;
+        }
+        
+        .flow-step p {
+            color: #ddd6fe;
+            font-size: 0.95em;
+        }
+        
+        .flow-arrow {
+            font-size: 2em;
+            color: #a78bfa;
+        }
+        
+        /* コスト警告 */
+        .cost-warning {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            border: 3px solid #f87171;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .warning-icon {
+            font-size: 3em;
+        }
+        
+        .warning-content h4 {
+            color: #fca5a5;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .warning-content p {
+            color: #fecaca;
+            line-height: 1.6;
+        }
+        
+        /* 比較表 */
+        .comparison-table-section {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 3px solid #64748b;
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #e2e8f0;
+            margin-bottom: 30px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 15px;
+        }
+        
+        .comparison-table th {
+            padding: 18px 15px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        .comparison-table th:first-child {
+            background: #475569;
+            color: #f1f5f9;
+        }
+        
+        .comparison-table th:nth-child(2) {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .comparison-table th:nth-child(3) {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #475569;
+        }
+        
+        .comparison-table td:first-child {
+            background: #334155;
+            color: #e2e8f0;
+            font-weight: bold;
+        }
+        
+        .comparison-table td:nth-child(2) {
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            text-align: center;
+        }
+        
+        .comparison-table td:nth-child(3) {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c4b5fd;
+            text-align: center;
+        }
+        
+        .check {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .cross {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        /* ユースケース */
+        .use-case-section {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 3px solid #475569;
+        }
+        
+        .use-case-title {
+            text-align: center;
+            font-size: 2em;
+            color: #f8fafc;
+            margin-bottom: 30px;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .use-case-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            border-left: 5px solid;
+            transition: transform 0.3s;
+        }
+        
+        .use-case-card:hover {
+            transform: translateX(10px);
+        }
+        
+        .use-case-card.management-case {
+            border-left-color: #3b82f6;
+        }
+        
+        .use-case-card.data-case {
+            border-left-color: #8b5cf6;
+        }
+        
+        .use-case-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .use-case-card h4 {
+            color: #f8fafc;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .use-case-card p {
+            color: #94a3b8;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .event-type-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .tag-management {
+            background: #3b82f6;
+        }
+        
+        .tag-data {
+            background: #8b5cf6;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            background: linear-gradient(135deg, #14532d, #166534);
+            border-radius: 25px;
+            padding: 40px;
+            border: 3px solid #22c55e;
+        }
+        
+        .faq-title {
+            text-align: center;
+            font-size: 2em;
+            color: #86efac;
+            margin-bottom: 30px;
+        }
+        
+        .faq-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .faq-question {
+            color: #86efac;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            color: #d1fae5;
+            line-height: 1.8;
+            padding-left: 30px;
+        }
+        
+        .faq-answer code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #fbbf24;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .section-title,
+            .api-section-title,
+            .key-points-title,
+            .bucket-diagram-title,
+            .settings-title,
+            .table-title,
+            .use-case-title,
+            .faq-title {
+                font-size: 1.6em;
+            }
+            
+            .restaurant-body {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .bucket-visual {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .diagram-explanation {
+                margin-left: 0;
+                margin-top: 20px;
+            }
+            
+            .settings-flow {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .cost-warning {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <h1>☁️ CloudTrail 管理イベント vs データイベント</h1>
+            <p class="header-subtitle">S3 APIコールの違いを完全マスター</p>
+            <span class="aws-badge">AWS CloudTrail 完全ガイド</span>
+        </header>
+        
+        <!-- 結論ファースト -->
+        <section class="conclusion-first">
+            <h2 class="conclusion-title">🎯 結論ファースト：3秒でわかる違い</h2>
+            <div class="conclusion-grid">
+                <div class="conclusion-item">
+                    <h4>🔵 管理イベント = バケット全体の設定変更</h4>
+                    <p>PutBucketPolicy, DeleteBucketPolicy など<br>
+                    <strong>→ デフォルトで記録される（無料枠あり）</strong></p>
+                </div>
+                <div class="conclusion-item">
+                    <h4>🟣 データイベント = オブジェクト単位の操作</h4>
+                    <p>PutObjectAcl, GetObject, PutObject など<br>
+                    <strong>→ 明示的に有効化が必要（追加料金）</strong></p>
+                </div>
+                <div class="conclusion-item">
+                    <h4>📋 今回のAPI分類</h4>
+                    <p>• s3:PutBucketPolicy → <strong>管理イベント</strong><br>
+                    • s3:DeleteBucketPolicy → <strong>管理イベント</strong><br>
+                    • s3:PutObjectAcl → <strong>データイベント</strong></p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- レストランたとえ -->
+        <section class="analogy-section">
+            <h2 class="section-title">🍽️ レストランでたとえると...</h2>
+            
+            <div class="restaurant-diagram">
+                <div class="restaurant-building">
+                    <div class="restaurant-roof">🏪 CloudTrailレストラン（監視システム）</div>
+                    
+                    <div class="restaurant-body">
+                        <div class="area-box management-area">
+                            <div class="area-title">🔵 管理イベント = お店のルール変更</div>
+                            <div class="area-content">
+                                <p class="area-subtitle">「コントロールプレーン」= お店全体の管理</p>
+                                <ul class="example-list">
+                                    <li>📜 営業時間を変更した（PutBucketPolicy）</li>
+                                    <li>🗑️ 店舗ルールを撤廃した（DeleteBucketPolicy）</li>
+                                    <li>🏷️ 価格表を更新した（PutBucketTagging）</li>
+                                    <li>🔧 新しいサービスを追加した（CreateBucket）</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="area-box data-area">
+                            <div class="area-title">🟣 データイベント = 各テーブルでの活動</div>
+                            <div class="area-content">
+                                <p class="area-subtitle">「データプレーン」= 個々のお客様対応</p>
+                                <ul class="example-list">
+                                    <li>🍝 料理を注文した（PutObject）</li>
+                                    <li>👀 メニューを見た（GetObject）</li>
+                                    <li>🍽️ 料理を片付けた（DeleteObject）</li>
+                                    <li>🔐 席の予約権限を変更（PutObjectAcl）</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analogy-explanation">
+                    <p>
+                        💡 <strong>ポイント</strong>：お店全体のルール変更（管理イベント）は回数が少なく重要なので<strong>デフォルトで記録</strong>。<br>
+                        一方、各テーブルでの活動（データイベント）は膨大な量になるため<strong>オプションで有効化</strong>が必要！
+                    </p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- メイン比較 -->
+        <section class="comparison-section">
+            <div class="event-card management-card">
+                <span class="card-icon">🏛️</span>
+                <div class="card-header">
+                    <h2>🔵 管理イベント</h2>
+                    <p class="en-name">Management Events</p>
+                    <span class="plane-name">コントロールプレーン操作</span>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>📝 何を記録？</h4>
+                    <p>バケットの作成・削除、ポリシー変更、ライフサイクル設定など<strong>「バケット全体」</strong>に影響する操作</p>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>📊 操作の頻度</h4>
+                    <p>比較的<strong>低頻度</strong>（設定変更は頻繁に行わない）</p>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>👀 確認方法</h4>
+                    <p>CloudTrailコンソールの<strong>イベント履歴</strong>で直接確認可能</p>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>⏰ 保持期間</h4>
+                    <p><strong>90日間</strong>自動保存（無料）<br>それ以上はTrail設定でS3に保存</p>
+                </div>
+                
+                <span class="default-badge default-on">✅ デフォルトで有効</span>
+            </div>
+            
+            <div class="event-card data-card">
+                <span class="card-icon">📦</span>
+                <div class="card-header">
+                    <h2>🟣 データイベント</h2>
+                    <p class="en-name">Data Events</p>
+                    <span class="plane-name">データプレーン操作</span>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>📝 何を記録？</h4>
+                    <p>オブジェクトのアップロード・ダウンロード・削除・権限変更など<strong>「個々のファイル」</strong>に対する操作</p>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>📊 操作の頻度</h4>
+                    <p><strong>非常に高頻度</strong>（毎秒何千回ものアクセスも）</p>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>👀 確認方法</h4>
+                    <p>イベント履歴では見られない<br><strong>Athena</strong>や<strong>CloudWatch Logs</strong>でクエリが必要</p>
+                </div>
+                
+                <div class="card-feature">
+                    <h4>💰 料金</h4>
+                    <p><strong>追加料金が発生</strong><br>100,000イベントあたり$0.10～</p>
+                </div>
+                
+                <span class="default-badge default-off">❌ デフォルトで無効</span>
+            </div>
+        </section>
+        
+        <!-- API分類詳細 -->
+        <section class="api-classification">
+            <h2 class="api-section-title">🔍 S3 API コール分類詳細</h2>
+            
+            <div class="api-grid">
+                <!-- PutBucketPolicy -->
+                <div class="api-card management-api">
+                    <div class="api-name">s3:PutBucketPolicy</div>
+                    <span class="api-type-badge">🔵 管理イベント</span>
+                    
+                    <div class="api-description">
+                        <h4>📋 何をする？</h4>
+                        <p>バケット全体に適用される<strong>アクセスポリシー</strong>を設定・更新する</p>
+                    </div>
+                    
+                    <div class="api-analogy">
+                        <h4>🍽️ レストランのたとえ</h4>
+                        <p>お店の<strong>入店ルール</strong>を決める<br>「会員限定」「予約必須」など</p>
+                    </div>
+                    
+                    <div class="target-indicator">
+                        <span class="label">対象：</span>
+                        <span class="value">🪣 バケット全体</span>
+                    </div>
+                </div>
+                
+                <!-- DeleteBucketPolicy -->
+                <div class="api-card management-api">
+                    <div class="api-name">s3:DeleteBucketPolicy</div>
+                    <span class="api-type-badge">🔵 管理イベント</span>
+                    
+                    <div class="api-description">
+                        <h4>📋 何をする？</h4>
+                        <p>バケットに設定されている<strong>アクセスポリシーを削除</strong>する</p>
+                    </div>
+                    
+                    <div class="api-analogy">
+                        <h4>🍽️ レストランのたとえ</h4>
+                        <p>お店の<strong>入店制限を解除</strong>する<br>「誰でもウェルカム！」に変更</p>
+                    </div>
+                    
+                    <div class="target-indicator">
+                        <span class="label">対象：</span>
+                        <span class="value">🪣 バケット全体</span>
+                    </div>
+                </div>
+                
+                <!-- PutObjectAcl -->
+                <div class="api-card data-api">
+                    <div class="api-name">s3:PutObjectAcl</div>
+                    <span class="api-type-badge">🟣 データイベント</span>
+                    
+                    <div class="api-description">
+                        <h4>📋 何をする？</h4>
+                        <p>特定の<strong>オブジェクト（ファイル）のACL</strong>（アクセス制御リスト）を変更する</p>
+                    </div>
+                    
+                    <div class="api-analogy">
+                        <h4>🍽️ レストランのたとえ</h4>
+                        <p>特定の<strong>席の予約権限</strong>を変更<br>「この席はVIP専用に」</p>
+                    </div>
+                    
+                    <div class="target-indicator">
+                        <span class="label">対象：</span>
+                        <span class="value">📄 個別オブジェクト</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- バケット vs オブジェクト図解 -->
+        <section class="bucket-object-diagram">
+            <h2 class="bucket-diagram-title">🎯 判別ポイント：バケットレベル vs オブジェクトレベル</h2>
+            
+            <div class="bucket-visual">
+                <div class="bucket-container">
+                    <div class="bucket-shape">
+                        <div class="bucket-label">🪣 S3バケット（my-bucket）</div>
+                        <div class="object-item">📄</div>
+                        <div class="object-item">🖼️</div>
+                        <div class="object-item">📊</div>
+                        <div class="object-item">🎵</div>
+                        <div class="object-item">📹</div>
+                        <div class="object-item">📝</div>
+                    </div>
+                    
+                    <div class="bucket-controls">
+                        <div class="control-item">
+                            <span class="control-badge badge-management">管理</span>
+                            <span>バケットポリシーを変更</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-badge badge-management">管理</span>
+                            <span>バージョニングを有効化</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-badge badge-management">管理</span>
+                            <span>暗号化設定を変更</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-badge badge-data">データ</span>
+                            <span>ファイル📄のACLを変更</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-badge badge-data">データ</span>
+                            <span>ファイル📊をダウンロード</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="diagram-explanation">
+                    <div class="explanation-box">
+                        <h4>🔵 管理イベントの見分け方</h4>
+                        <p>API名に<strong>「Bucket」</strong>が含まれる<br>
+                        バケット全体の設定に影響<br>
+                        例: PutBucket○○, DeleteBucket○○</p>
+                    </div>
+                    
+                    <div class="explanation-box">
+                        <h4>🟣 データイベントの見分け方</h4>
+                        <p>API名に<strong>「Object」</strong>が含まれる<br>
+                        個別ファイルに対する操作<br>
+                        例: PutObject○○, GetObject, DeleteObject</p>
+                    </div>
+                    
+                    <div class="explanation-box">
+                        <h4>⚠️ 混同注意！</h4>
+                        <p><strong>PutBucketAcl</strong> → 管理イベント<br>
+                        <strong>PutObjectAcl</strong> → データイベント<br>
+                        同じ「Acl」でも対象が違う！</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 重要ポイント -->
+        <section class="key-points">
+            <h2 class="key-points-title">⚡ 覚えておきたい重要ポイント</h2>
+            
+            <div class="point-comparison">
+                <div class="point-box">
+                    <div class="point-icon">📊</div>
+                    <h4 class="point-title">イベントの量</h4>
+                    <div class="point-values">
+                        <div class="point-value management">🔵 少量<br>（設定変更程度）</div>
+                        <div class="point-value data">🟣 大量<br>（毎秒数千回も）</div>
+                    </div>
+                </div>
+                
+                <div class="point-box">
+                    <div class="point-icon">💰</div>
+                    <h4 class="point-title">料金</h4>
+                    <div class="point-values">
+                        <div class="point-value management">🔵 無料枠あり<br>（90日保存）</div>
+                        <div class="point-value data">🟣 追加料金<br>（有効化時）</div>
+                    </div>
+                </div>
+                
+                <div class="point-box">
+                    <div class="point-icon">🔧</div>
+                    <h4 class="point-title">設定</h4>
+                    <div class="point-values">
+                        <div class="point-value management">🔵 自動で有効<br>（設定不要）</div>
+                        <div class="point-value data">🟣 手動で有効化<br>（Trail設定必要）</div>
+                    </div>
+                </div>
+                
+                <div class="point-box">
+                    <div class="point-icon">👀</div>
+                    <h4 class="point-title">確認方法</h4>
+                    <div class="point-values">
+                        <div class="point-value management">🔵 イベント履歴<br>（コンソールで直接）</div>
+                        <div class="point-value data">🟣 クエリが必要<br>（Athena等）</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 設定方法 -->
+        <section class="settings-section">
+            <h2 class="settings-title">⚙️ データイベントの有効化方法</h2>
+            
+            <div class="settings-flow">
+                <div class="flow-step">
+                    <div class="flow-step-number">1</div>
+                    <h4>CloudTrailへ移動</h4>
+                    <p>AWSコンソールで<br>CloudTrailを開く</p>
+                </div>
+                
+                <span class="flow-arrow">→</span>
+                
+                <div class="flow-step">
+                    <div class="flow-step-number">2</div>
+                    <h4>証跡を作成/編集</h4>
+                    <p>Trailを新規作成<br>または既存を編集</p>
+                </div>
+                
+                <span class="flow-arrow">→</span>
+                
+                <div class="flow-step">
+                    <div class="flow-step-number">3</div>
+                    <h4>データイベントを追加</h4>
+                    <p>S3 → 全バケットまたは<br>特定バケットを選択</p>
+                </div>
+                
+                <span class="flow-arrow">→</span>
+                
+                <div class="flow-step">
+                    <div class="flow-step-number">4</div>
+                    <h4>読み取り/書き込み選択</h4>
+                    <p>Read/Write/両方から<br>記録対象を選択</p>
+                </div>
+            </div>
+            
+            <div class="cost-warning">
+                <span class="warning-icon">💸</span>
+                <div class="warning-content">
+                    <h4>コスト注意！</h4>
+                    <p>データイベントは高頻度のため、全バケットで有効化すると<strong>予想外の高額請求</strong>になることも。<br>
+                    まずは<strong>重要なバケットのみ</strong>で有効化し、コストを監視することをお勧めします。</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 比較表 -->
+        <section class="comparison-table-section">
+            <h2 class="table-title">📊 完全比較表</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>🔵 管理イベント</th>
+                        <th>🟣 データイベント</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>別名</td>
+                        <td>コントロールプレーン</td>
+                        <td>データプレーン</td>
+                    </tr>
+                    <tr>
+                        <td>対象</td>
+                        <td>バケット全体の設定</td>
+                        <td>個別オブジェクト</td>
+                    </tr>
+                    <tr>
+                        <td>デフォルト有効</td>
+                        <td><span class="check">✅ 有効</span></td>
+                        <td><span class="cross">❌ 無効</span></td>
+                    </tr>
+                    <tr>
+                        <td>イベント履歴で確認</td>
+                        <td><span class="check">✅ 可能</span></td>
+                        <td><span class="cross">❌ 不可</span></td>
+                    </tr>
+                    <tr>
+                        <td>無料保存期間</td>
+                        <td>90日間</td>
+                        <td>なし（Trail必須）</td>
+                    </tr>
+                    <tr>
+                        <td>追加料金</td>
+                        <td>基本無料</td>
+                        <td>$0.10/100,000イベント～</td>
+                    </tr>
+                    <tr>
+                        <td>S3 APIの例</td>
+                        <td>PutBucketPolicy<br>DeleteBucketPolicy<br>PutBucketAcl</td>
+                        <td>PutObject<br>GetObject<br>PutObjectAcl</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <!-- ユースケース -->
+        <section class="use-case-section">
+            <h2 class="use-case-title">💼 ユースケース別：何を有効にすべき？</h2>
+            
+            <div class="use-case-grid">
+                <div class="use-case-card management-case">
+                    <div class="use-case-icon">🔒</div>
+                    <h4>セキュリティ監査（基本）</h4>
+                    <p>「誰がバケットポリシーを変更したか」を追跡したい</p>
+                    <span class="event-type-tag tag-management">🔵 管理イベントで十分</span>
+                </div>
+                
+                <div class="use-case-card data-case">
+                    <div class="use-case-icon">🕵️</div>
+                    <h4>不正アクセス調査</h4>
+                    <p>「誰がどのファイルにアクセスしたか」を追跡したい</p>
+                    <span class="event-type-tag tag-data">🟣 データイベント必須</span>
+                </div>
+                
+                <div class="use-case-card management-case">
+                    <div class="use-case-icon">📋</div>
+                    <h4>コンプライアンス（設定変更）</h4>
+                    <p>バケット設定の変更履歴を保持する必要がある</p>
+                    <span class="event-type-tag tag-management">🔵 管理イベントで十分</span>
+                </div>
+                
+                <div class="use-case-card data-case">
+                    <div class="use-case-icon">📊</div>
+                    <h4>データアクセス分析</h4>
+                    <p>どのファイルが頻繁にアクセスされているか分析</p>
+                    <span class="event-type-tag tag-data">🟣 データイベント必須</span>
+                </div>
+                
+                <div class="use-case-card data-case">
+                    <div class="use-case-icon">🗑️</div>
+                    <h4>誤削除の原因調査</h4>
+                    <p>「誰がファイルを削除したか」を特定したい</p>
+                    <span class="event-type-tag tag-data">🟣 データイベント必須</span>
+                </div>
+                
+                <div class="use-case-card management-case">
+                    <div class="use-case-icon">🚨</div>
+                    <h4>公開設定変更の監視</h4>
+                    <p>バケットが意図せず公開されていないか監視</p>
+                    <span class="event-type-tag tag-management">🔵 管理イベント + EventBridge</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- FAQ -->
+        <section class="faq-section">
+            <h2 class="faq-title">❓ よくある質問（FAQ）</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    <span>PutBucketAcl と PutObjectAcl は何が違うの？</span>
+                </div>
+                <div class="faq-answer">
+                    <strong>PutBucketAcl</strong>は<strong>バケット全体</strong>のACLを設定するため<strong>管理イベント</strong>。<br>
+                    <strong>PutObjectAcl</strong>は<strong>特定のファイル</strong>のACLを設定するため<strong>データイベント</strong>です。<br>
+                    「Bucket」か「Object」かで判別できます！
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    <span>データイベントを有効にしないとセキュリティ上問題がある？</span>
+                </div>
+                <div class="faq-answer">
+                    必ずしも問題ではありませんが、<strong>機密データを扱うバケット</strong>では有効化を推奨します。<br>
+                    特にPCI-DSS、HIPAA等の<strong>コンプライアンス要件</strong>がある場合は必須になることが多いです。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    <span>データイベントのコストを抑えるには？</span>
+                </div>
+                <div class="faq-answer">
+                    ①<strong>重要なバケットのみ</strong>に限定する<br>
+                    ②<strong>読み取りまたは書き込みのみ</strong>に限定する（両方不要なら）<br>
+                    ③<strong>Advanced Event Selectors</strong>で特定のプレフィックスやユーザーに絞る
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    <span>イベントがどちらのタイプか確認する方法は？</span>
+                </div>
+                <div class="faq-answer">
+                    CloudTrailのログJSONを確認すると、<code>"managementEvent": true</code>というフィールドがあります。<br>
+                    <code>true</code>なら管理イベント、<code>false</code>ならデータイベントです。
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
