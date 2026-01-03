@@ -6,10 +6,16 @@
 リポジトリ内の全HTMLファイルに適用します。
 
 主な機能:
-1. 固定ヘッダーHTML要素の挿入
+1. 固定ヘッダーHTML要素の挿入（自己紹介、学習リソース集、ナレッジベース、クイズ）
 2. 固定ヘッダー用CSSスタイルの追加
 3. スクロール制御JavaScriptの追加
 4. 既存ページのbodyパディング調整
+
+固定ヘッダーリンク:
+- 自己紹介 (/aws_sap_studying/profile.html)
+- 学習リソース集 (/aws_sap_studying/learning-resources.html)
+- ナレッジベース (/aws_sap_studying/knowledge-base.html)
+- クイズ (/aws_sap_studying/quiz.html)
 """
 
 import os
@@ -198,13 +204,14 @@ FIXED_HEADER_CSS = '''
 FIXED_HEADER_HTML = '''    <!-- 固定ナビゲーションヘッダー -->
     <div class="fixed-nav-header">
         <div class="fixed-nav-container">
-            <a href="/index.html" class="fixed-nav-logo">
+            <a href="/aws_sap_studying/index.html" class="fixed-nav-logo">
                 📚 AWS SAP
             </a>
             <nav class="fixed-nav-links" role="navigation" aria-label="メインナビゲーション">
-                <a href="/learning-resources.html">学習リソース集</a>
-                <a href="/knowledge-base.html">ナレッジベース</a>
-                <a href="/quiz.html">クイズ</a>
+                <a href="/aws_sap_studying/profile.html">自己紹介</a>
+                <a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+                <a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+                <a href="/aws_sap_studying/quiz.html">クイズ</a>
             </nav>
         </div>
     </div>
