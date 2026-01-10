@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Scaling インスタンスリフレッシュ完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #43e97b 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff9900 0%, #232f3e 50%, #146eb4 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔄';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファースト */
+        .conclusion-first {
+            background: linear-gradient(135deg, #232f3e 0%, #146eb4 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+        }
+        
+        .conclusion-first h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #ff9900;
+            text-align: center;
+        }
+        
+        .conclusion-box {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .conclusion-box p {
+            font-size: 1.3em;
+            line-height: 1.8;
+        }
+        
+        .key-points {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .key-point {
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .key-point:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .key-point-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .key-point-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff9900;
+            margin-bottom: 10px;
+        }
+        
+        .key-point-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        
+        /* セクションタイトル */
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin: 50px 0 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        /* バス会社のたとえ話 */
+        .analogy-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .analogy-title {
+            color: #0c4a6e;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-intro {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .analogy-intro p {
+            font-size: 1.2em;
+            color: #0c4a6e;
+            line-height: 1.8;
+        }
+        
+        .bus-fleet-diagram {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 30px 0;
+        }
+        
+        .fleet-title {
+            text-align: center;
+            font-size: 1.5em;
+            color: #0c4a6e;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .fleet-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .bus-group {
+            text-align: center;
+        }
+        
+        .bus-group-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        
+        .old-buses .bus-group-title {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .new-buses .bus-group-title {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .buses {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .bus {
+            font-size: 3em;
+            transition: all 0.3s ease;
+        }
+        
+        .bus:hover {
+            transform: scale(1.2);
+        }
+        
+        .bus.old {
+            filter: sepia(100%) hue-rotate(-30deg);
+        }
+        
+        .bus.new {
+            filter: hue-rotate(100deg) saturate(1.5);
+        }
+        
+        .refresh-arrow {
+            font-size: 4em;
+            color: #0284c7;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        /* マッピング表 */
+        .mapping-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .mapping-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .mapping-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .mapping-icon {
+            font-size: 3em;
+            flex-shrink: 0;
+        }
+        
+        .mapping-content h4 {
+            color: #92400e;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+        
+        .mapping-content p {
+            color: #78350f;
+            font-size: 0.95em;
+        }
+        
+        .mapping-arrow {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+        
+        /* プロセスフロー */
+        .process-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .process-flow {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+        
+        .process-step {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 220px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-top: 5px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .process-step:hover {
+            transform: translateY(-10px);
+        }
+        
+        .process-step:nth-child(1) { border-color: #ef4444; }
+        .process-step:nth-child(3) { border-color: #f59e0b; }
+        .process-step:nth-child(5) { border-color: #10b981; }
+        .process-step:nth-child(7) { border-color: #3b82f6; }
+        .process-step:nth-child(9) { border-color: #8b5cf6; }
+        
+        .step-number {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 0 auto 15px;
+        }
+        
+        .step-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .step-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .step-desc {
+            color: #64748b;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .process-arrow {
+            font-size: 2.5em;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            padding-top: 60px;
+        }
+        
+        /* パラメータ解説 */
+        .params-section {
+            background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #10b981;
+        }
+        
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .param-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 5px solid #10b981;
+        }
+        
+        .param-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .param-icon {
+            font-size: 2.5em;
+        }
+        
+        .param-name {
+            font-family: 'Courier New', monospace;
+            background: #ecfdf5;
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: #065f46;
+            font-weight: bold;
+        }
+        
+        .param-desc {
+            color: #475569;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+        
+        .param-example {
+            background: #f0fdf4;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .param-example-title {
+            font-weight: bold;
+            color: #065f46;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .param-example-content {
+            color: #047857;
+            font-size: 0.95em;
+        }
+        
+        /* ローリング更新の図解 */
+        .rolling-update-section {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #3b82f6;
+        }
+        
+        .rolling-stages {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .rolling-stage {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stage-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stage-badge {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .stage-title {
+            font-size: 1.3em;
+            color: #1e40af;
+            font-weight: bold;
+        }
+        
+        .instance-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 15px;
+        }
+        
+        .instance-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .instance-box:hover {
+            transform: scale(1.1);
+        }
+        
+        .instance-old {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border: 3px solid #ef4444;
+            color: #991b1b;
+        }
+        
+        .instance-new {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            border: 3px solid #10b981;
+            color: #065f46;
+        }
+        
+        .instance-terminating {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 3px solid #f59e0b;
+            color: #92400e;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .instance-launching {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border: 3px solid #3b82f6;
+            color: #1e40af;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .instance-icon {
+            font-size: 1.8em;
+        }
+        
+        .instance-label {
+            font-size: 0.7em;
+            margin-top: 5px;
+        }
+        
+        .stage-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #475569;
+        }
+        
+        .legend-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+        }
+        
+        .legend-dot.old { background: #fee2e2; border: 2px solid #ef4444; }
+        .legend-dot.new { background: #d1fae5; border: 2px solid #10b981; }
+        .legend-dot.terminating { background: #fef3c7; border: 2px solid #f59e0b; }
+        .legend-dot.launching { background: #dbeafe; border: 2px solid #3b82f6; }
+        
+        /* チェックポイント */
+        .checkpoint-section {
+            background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #8b5cf6;
+        }
+        
+        .checkpoint-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+        
+        .checkpoint-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 250px;
+        }
+        
+        .checkpoint-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        
+        .checkpoint-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 10px;
+        }
+        
+        .checkpoint-desc {
+            color: #64748b;
+            font-size: 0.95em;
+        }
+        
+        .checkpoint-arrow {
+            font-size: 3em;
+            color: #8b5cf6;
+        }
+        
+        .checkpoint-decision {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .decision-paths {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+        }
+        
+        .decision-path {
+            text-align: center;
+        }
+        
+        .decision-arrow {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .decision-result {
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+        
+        .result-continue {
+            background: #d1fae5;
+            color: #065f46;
+            border: 3px solid #10b981;
+        }
+        
+        .result-rollback {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 3px solid #ef4444;
+        }
+        
+        /* 比較表 */
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #ff9900 0%, #232f3e 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.05em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .check {
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .cross {
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        /* ユースケース */
+        .usecase-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .usecase-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .usecase-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .usecase-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #92400e;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-desc {
+            color: #78350f;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-example {
+            background: #fffbeb;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #92400e;
+        }
+        
+        /* Tips */
+        .tip-box {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border-left: 6px solid #7c3aed;
+        }
+        
+        .tip-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tip-content {
+            color: #5b21b6;
+            line-height: 1.9;
+            font-size: 1.05em;
+        }
+        
+        /* コード例 */
+        .code-section {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+        
+        .code-title {
+            color: #60a5fa;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .code-block {
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            font-size: 0.9em;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        
+        .code-comment { color: #94a3b8; }
+        .code-keyword { color: #f472b6; }
+        .code-string { color: #34d399; }
+        .code-number { color: #fbbf24; }
+        
+        /* FAQ */
+        .faq-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #0c4a6e;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            padding: 25px;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        /* まとめ */
+        .summary {
+            background: linear-gradient(135deg, #ff9900 0%, #232f3e 50%, #146eb4 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        
+        .summary-box {
+            background: rgba(255,255,255,0.15);
+            padding: 35px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+        
+        .summary-box h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #ff9900;
+        }
+        
+        .summary-box p {
+            font-size: 1.15em;
+            line-height: 2;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .summary-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ff9900;
+            margin-bottom: 8px;
+        }
+        
+        .summary-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .final-message {
+            background: rgba(255,255,255,0.2);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 1024px) {
+            .key-points,
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .process-flow {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .process-arrow {
+                transform: rotate(90deg);
+                padding: 0;
+            }
+            
+            .checkpoint-flow {
+                flex-direction: column;
+            }
+            
+            .checkpoint-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .key-points,
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px 10px;
+            }
+            
+            .decision-paths {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Auto Scaling インスタンスリフレッシュ</h1>
+            <p>バス会社の車両更新で理解する！EC2の安全な一斉入れ替え完全ガイド</p>
+        </div>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <div class="conclusion-first">
+                <h2>📌 結論：インスタンスリフレッシュとは？</h2>
+                
+                <div class="conclusion-box">
+                    <p>
+                        <strong>インスタンスリフレッシュ = Auto Scaling グループ内のEC2を「安全に」「段階的に」新しいものに入れ替える機能</strong><br><br>
+                        🚌 バス会社が古いバスを新型バスに計画的に置き換えるように、<br>
+                        サービスを止めずにEC2インスタンスを最新の設定に更新できます！
+                    </p>
+                </div>
+                
+                <div class="key-points">
+                    <div class="key-point">
+                        <div class="key-point-icon">🔄</div>
+                        <div class="key-point-title">ローリング更新</div>
+                        <div class="key-point-desc">
+                            一定割合ずつ<br>
+                            段階的に置き換え<br>
+                            サービス継続可能
+                        </div>
+                    </div>
+                    <div class="key-point">
+                        <div class="key-point-icon">🛡️</div>
+                        <div class="key-point-title">安全性確保</div>
+                        <div class="key-point-desc">
+                            最小稼働率を維持<br>
+                            ヘルスチェック連携<br>
+                            自動ロールバック
+                        </div>
+                    </div>
+                    <div class="key-point">
+                        <div class="key-point-icon">⚡</div>
+                        <div class="key-point-title">柔軟な制御</div>
+                        <div class="key-point-desc">
+                            チェックポイント<br>
+                            一時停止・再開<br>
+                            カスタム設定
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- バス会社のたとえ話 -->
+            <h2 class="section-title">🚌 バス会社の車両更新で完全理解！</h2>
+            
+            <div class="analogy-section">
+                <div class="analogy-intro">
+                    <p>
+                        <strong>Auto Scalingグループ = バス会社の車両フリート（車両群）</strong><br><br>
+                        全国の路線で毎日運行するバス会社を想像してください。<br>
+                        古いバスを新型バスに入れ替えたい...でも<strong>運行を止めずに</strong>置き換えたい！<br>
+                        これがまさに「インスタンスリフレッシュ」の役割です 🎯
+                    </p>
+                </div>
+                
+                <div class="bus-fleet-diagram">
+                    <div class="fleet-title">🚌 インスタンスリフレッシュ = 計画的な車両入れ替え</div>
+                    
+                    <div class="fleet-container">
+                        <div class="bus-group old-buses">
+                            <div class="bus-group-title">🔴 旧型バス（古いAMI）</div>
+                            <div class="buses">
+                                <span class="bus old">🚌</span>
+                                <span class="bus old">🚌</span>
+                                <span class="bus old">🚌</span>
+                                <span class="bus old">🚌</span>
+                            </div>
+                        </div>
+                        
+                        <div class="refresh-arrow">➡️<br>🔄<br>➡️</div>
+                        
+                        <div class="bus-group new-buses">
+                            <div class="bus-group-title">🟢 新型バス（新しいAMI）</div>
+                            <div class="buses">
+                                <span class="bus new">🚌</span>
+                                <span class="bus new">🚌</span>
+                                <span class="bus new">🚌</span>
+                                <span class="bus new">🚌</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- マッピング表 -->
+            <div class="mapping-section">
+                <h3 class="analogy-title">📋 AWS用語とバス会社の対応表</h3>
+                
+                <div class="mapping-grid">
+                    <div class="mapping-card">
+                        <div class="mapping-icon">🏢</div>
+                        <div class="mapping-content">
+                            <h4>Auto Scaling グループ <span class="mapping-arrow">→</span> バス会社</h4>
+                            <p>複数のバス（インスタンス）を管理する組織全体</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">🚌</div>
+                        <div class="mapping-content">
+                            <h4>EC2インスタンス <span class="mapping-arrow">→</span> 各バス</h4>
+                            <p>実際に運行する個々の車両</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">📋</div>
+                        <div class="mapping-content">
+                            <h4>起動テンプレート <span class="mapping-arrow">→</span> 車両設計図</h4>
+                            <p>新しいバスをどう作るかの仕様書</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">📀</div>
+                        <div class="mapping-content">
+                            <h4>AMI（マシンイメージ） <span class="mapping-arrow">→</span> バスの型式</h4>
+                            <p>旧型から新型への変更ポイント</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">📊</div>
+                        <div class="mapping-content">
+                            <h4>MinHealthyPercentage <span class="mapping-arrow">→</span> 最低運行台数</h4>
+                            <p>「最低○台は常に運行」というルール</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">⏱️</div>
+                        <div class="mapping-content">
+                            <h4>InstanceWarmup <span class="mapping-arrow">→</span> 試運転期間</h4>
+                            <p>新車が本格稼働前に様子を見る時間</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">🚧</div>
+                        <div class="mapping-content">
+                            <h4>チェックポイント <span class="mapping-arrow">→</span> 中間点検</h4>
+                            <p>「○台置き換えたら一旦確認」</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapping-card">
+                        <div class="mapping-icon">⏪</div>
+                        <div class="mapping-content">
+                            <h4>ロールバック <span class="mapping-arrow">→</span> 旧車両に戻す</h4>
+                            <p>問題発生時に旧型バスで運行再開</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- プロセスフロー -->
+            <h2 class="section-title">📊 インスタンスリフレッシュの流れ</h2>
+            
+            <div class="process-section">
+                <div class="process-flow">
+                    <div class="process-step">
+                        <div class="step-number">1</div>
+                        <div class="step-icon">📋</div>
+                        <div class="step-title">起動テンプレート更新</div>
+                        <div class="step-desc">新しいAMIやインスタンス設定を指定</div>
+                    </div>
+                    
+                    <div class="process-arrow">→</div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">2</div>
+                        <div class="step-icon">🚀</div>
+                        <div class="step-title">リフレッシュ開始</div>
+                        <div class="step-desc">StartInstanceRefresh APIを実行</div>
+                    </div>
+                    
+                    <div class="process-arrow">→</div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">3</div>
+                        <div class="step-icon">🔄</div>
+                        <div class="step-title">ローリング更新</div>
+                        <div class="step-desc">設定割合ずつ段階的に置き換え</div>
+                    </div>
+                    
+                    <div class="process-arrow">→</div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">4</div>
+                        <div class="step-icon">✅</div>
+                        <div class="step-title">ヘルスチェック</div>
+                        <div class="step-desc">新インスタンスの正常性を確認</div>
+                    </div>
+                    
+                    <div class="process-arrow">→</div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">5</div>
+                        <div class="step-icon">🎉</div>
+                        <div class="step-title">完了</div>
+                        <div class="step-desc">全インスタンスが新バージョンに</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- パラメータ解説 -->
+            <h2 class="section-title">⚙️ 重要パラメータ徹底解説</h2>
+            
+            <div class="params-section">
+                <div class="params-grid">
+                    <div class="param-card">
+                        <div class="param-header">
+                            <div class="param-icon">📊</div>
+                            <div class="param-name">MinHealthyPercentage</div>
+                        </div>
+                        <div class="param-desc">
+                            <strong>更新中に維持すべき最小稼働率（0-100%）</strong><br>
+                            この割合のインスタンスは常にHealthyな状態を維持します。<br>
+                            値が高いほど安全だが、更新に時間がかかります。
+                        </div>
+                        <div class="param-example">
+                            <div class="param-example-title">🚌 バス会社のたとえ</div>
+                            <div class="param-example-content">
+                                「90%」= 10台中9台は常に運行中！<br>
+                                同時に停止できるのは1台だけ。<br>
+                                お客様への影響を最小限に抑える設定
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-card">
+                        <div class="param-header">
+                            <div class="param-icon">⏱️</div>
+                            <div class="param-name">InstanceWarmup</div>
+                        </div>
+                        <div class="param-desc">
+                            <strong>新インスタンスが本格稼働するまでの待機時間（秒）</strong><br>
+                            この時間が経過するまでヘルスチェックをスキップ。<br>
+                            アプリケーションの起動時間を考慮して設定。
+                        </div>
+                        <div class="param-example">
+                            <div class="param-example-title">🚌 バス会社のたとえ</div>
+                            <div class="param-example-content">
+                                「300秒」= 新車は5分間試運転！<br>
+                                エンジン確認、計器チェック、テスト走行...<br>
+                                いきなり乗客を乗せずに慣らし運転
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-card">
+                        <div class="param-header">
+                            <div class="param-icon">🎯</div>
+                            <div class="param-name">SkipMatching</div>
+                        </div>
+                        <div class="param-desc">
+                            <strong>既に最新設定のインスタンスをスキップするか</strong><br>
+                            true：既に最新のものは置き換えない（時間短縮）<br>
+                            false：全インスタンスを強制的に置き換え
+                        </div>
+                        <div class="param-example">
+                            <div class="param-example-title">🚌 バス会社のたとえ</div>
+                            <div class="param-example-content">
+                                「true」= 既に新型のバスはそのまま！<br>
+                                古い型式のバスだけを入れ替える<br>
+                                無駄な作業を省いて効率化
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-card">
+                        <div class="param-header">
+                            <div class="param-icon">🚧</div>
+                            <div class="param-name">CheckpointPercentages</div>
+                        </div>
+                        <div class="param-desc">
+                            <strong>一時停止するタイミングを指定（%の配列）</strong><br>
+                            指定割合に達すると自動的に一時停止。<br>
+                            問題がないか確認してから続行できます。
+                        </div>
+                        <div class="param-example">
+                            <div class="param-example-title">🚌 バス会社のたとえ</div>
+                            <div class="param-example-content">
+                                「[20, 50, 100]」= 3段階確認！<br>
+                                2割・5割・全部で一旦ストップ<br>
+                                各段階で問題がないか点検してから次へ
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ローリング更新の図解 -->
+            <h2 class="section-title">🔄 ローリング更新の様子を図解！</h2>
+            
+            <div class="rolling-update-section">
+                <p style="text-align: center; color: #1e40af; font-size: 1.2em; margin-bottom: 30px;">
+                    <strong>MinHealthyPercentage = 75%（4台中3台は常に稼働）の場合</strong>
+                </p>
+                
+                <div class="rolling-stages">
+                    <!-- Stage 1 -->
+                    <div class="rolling-stage">
+                        <div class="stage-header">
+                            <div class="stage-badge">STEP 1</div>
+                            <div class="stage-title">初期状態 → 1台目の更新開始</div>
+                        </div>
+                        <div class="instance-visual">
+                            <div class="instance-box instance-terminating">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">終了中</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 15px; color: #64748b;">
+                            まず1台を終了して、新しいインスタンスを起動準備
+                        </p>
+                    </div>
+                    
+                    <!-- Stage 2 -->
+                    <div class="rolling-stage">
+                        <div class="stage-header">
+                            <div class="stage-badge">STEP 2</div>
+                            <div class="stage-title">新インスタンス起動中</div>
+                        </div>
+                        <div class="instance-visual">
+                            <div class="instance-box instance-launching">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">起動中</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 15px; color: #64748b;">
+                            新型バスが試運転中（InstanceWarmup期間）
+                        </p>
+                    </div>
+                    
+                    <!-- Stage 3 -->
+                    <div class="rolling-stage">
+                        <div class="stage-header">
+                            <div class="stage-badge">STEP 3</div>
+                            <div class="stage-title">1台完了 → 次の更新へ</div>
+                        </div>
+                        <div class="instance-visual">
+                            <div class="instance-box instance-new">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">新型✨</div>
+                            </div>
+                            <div class="instance-box instance-terminating">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">終了中</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                            <div class="instance-box instance-old">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">旧型</div>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 15px; color: #64748b;">
+                            1台目完了！次の旧型バスを入れ替え開始
+                        </p>
+                    </div>
+                    
+                    <!-- Stage 4 -->
+                    <div class="rolling-stage">
+                        <div class="stage-header">
+                            <div class="stage-badge">COMPLETE</div>
+                            <div class="stage-title">全台更新完了！🎉</div>
+                        </div>
+                        <div class="instance-visual">
+                            <div class="instance-box instance-new">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">新型✨</div>
+                            </div>
+                            <div class="instance-box instance-new">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">新型✨</div>
+                            </div>
+                            <div class="instance-box instance-new">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">新型✨</div>
+                            </div>
+                            <div class="instance-box instance-new">
+                                <div class="instance-icon">🚌</div>
+                                <div class="instance-label">新型✨</div>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 15px; color: #10b981; font-weight: bold;">
+                            全車両が新型バスに！サービス中断なしで更新完了
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="stage-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot old"></div>
+                        <span>旧型（古いAMI）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot new"></div>
+                        <span>新型（新しいAMI）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot terminating"></div>
+                        <span>終了中</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot launching"></div>
+                        <span>起動中</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- チェックポイント -->
+            <h2 class="section-title">🚧 チェックポイント機能で安全確保</h2>
+            
+            <div class="checkpoint-section">
+                <p style="text-align: center; color: #5b21b6; font-size: 1.2em; margin-bottom: 30px;">
+                    <strong>更新の途中で一旦停止して確認できる！問題があればロールバック</strong>
+                </p>
+                
+                <div class="checkpoint-flow">
+                    <div class="checkpoint-box">
+                        <div class="checkpoint-icon">🚀</div>
+                        <div class="checkpoint-title">20%完了</div>
+                        <div class="checkpoint-desc">最初のチェックポイント<br>2台更新が終わった段階</div>
+                    </div>
+                    
+                    <div class="checkpoint-arrow">➡️</div>
+                    
+                    <div class="checkpoint-decision">
+                        <div class="checkpoint-icon">🔍</div>
+                        <div class="checkpoint-title">状態確認</div>
+                        <div class="checkpoint-desc">メトリクス・ログをチェック<br>問題がないか確認</div>
+                    </div>
+                    
+                    <div class="checkpoint-arrow">➡️</div>
+                    
+                    <div class="checkpoint-box">
+                        <div class="checkpoint-icon">📊</div>
+                        <div class="checkpoint-title">判断</div>
+                        <div class="checkpoint-desc">続行？ロールバック？<br>を決定</div>
+                    </div>
+                </div>
+                
+                <div class="decision-paths">
+                    <div class="decision-path">
+                        <div class="decision-arrow" style="color: #10b981;">⬇️ 問題なし</div>
+                        <div class="decision-result result-continue">
+                            ✅ 続行<br>
+                            「次のチェックポイントへ！」
+                        </div>
+                    </div>
+                    <div class="decision-path">
+                        <div class="decision-arrow" style="color: #ef4444;">⬇️ 問題あり</div>
+                        <div class="decision-result result-rollback">
+                            ⏪ ロールバック<br>
+                            「旧バージョンに戻す！」
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+                    <p style="text-align: center; color: #5b21b6; font-size: 1.1em;">
+                        <strong>🚌 バス会社のたとえ：</strong><br>
+                        「まず2台だけ新型に入れ替えて、乗客からクレームがないか確認」<br>
+                        「問題なければ残りも入れ替え、問題あれば旧型に戻す」
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 比較表 -->
+            <h2 class="section-title">📊 更新方法の比較</h2>
+            
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>比較項目</th>
+                            <th>🔄 インスタンスリフレッシュ</th>
+                            <th>✋ 手動置き換え</th>
+                            <th>📈 容量変更</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>サービス継続</strong></td>
+                            <td><span class="check">✅ 自動で維持</span></td>
+                            <td><span class="cross">⚠️ 手動管理</span></td>
+                            <td><span class="check">✅ 可能</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>作業の手間</strong></td>
+                            <td><span class="check">✅ 最小</span></td>
+                            <td><span class="cross">❌ 大きい</span></td>
+                            <td><span class="cross">⚠️ 中程度</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>ロールバック</strong></td>
+                            <td><span class="check">✅ 自動対応</span></td>
+                            <td><span class="cross">❌ 手動</span></td>
+                            <td><span class="cross">❌ 困難</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>進捗管理</strong></td>
+                            <td><span class="check">✅ 自動追跡</span></td>
+                            <td><span class="cross">❌ 手動</span></td>
+                            <td><span class="cross">⚠️ 限定的</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>チェックポイント</strong></td>
+                            <td><span class="check">✅ 設定可能</span></td>
+                            <td><span class="cross">❌ なし</span></td>
+                            <td><span class="cross">❌ なし</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>推奨ケース</strong></td>
+                            <td>AMI更新・設定変更</td>
+                            <td>特定インスタンス<br>のみ対象</td>
+                            <td>一時的な<br>キャパシティ調整</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ユースケース -->
+            <h2 class="section-title">💼 こんな時に使おう！</h2>
+            
+            <div class="usecase-section">
+                <div class="usecase-grid">
+                    <div class="usecase-card">
+                        <div class="usecase-icon">📀</div>
+                        <div class="usecase-title">AMIの更新</div>
+                        <div class="usecase-desc">
+                            新しいパッチを適用したAMIに入れ替えたい時。セキュリティアップデートやOSバージョンアップに最適。
+                        </div>
+                        <div class="usecase-example">
+                            <strong>例：</strong>月次セキュリティパッチ適用後の新AMIに全インスタンスを更新
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">⚙️</div>
+                        <div class="usecase-title">インスタンスタイプ変更</div>
+                        <div class="usecase-desc">
+                            より高性能なインスタンスタイプに移行したい時。起動テンプレートを更新してリフレッシュ。
+                        </div>
+                        <div class="usecase-example">
+                            <strong>例：</strong>t3.medium → t3.large へのスケールアップ
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🔐</div>
+                        <div class="usecase-title">セキュリティ対応</div>
+                        <div class="usecase-desc">
+                            重大な脆弱性が発見された時の緊急対応。パッチ適用済みAMIへの迅速な移行。
+                        </div>
+                        <div class="usecase-example">
+                            <strong>例：</strong>Log4j脆弱性対応で全インスタンスを緊急更新
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">📱</div>
+                        <div class="usecase-title">アプリケーション更新</div>
+                        <div class="usecase-desc">
+                            ベイクドAMI方式でのアプリデプロイ。新しいアプリバージョンを含むAMIに更新。
+                        </div>
+                        <div class="usecase-example">
+                            <strong>例：</strong>新機能リリース時にアプリ入りAMIを段階展開
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🔄</div>
+                        <div class="usecase-title">定期的なリフレッシュ</div>
+                        <div class="usecase-desc">
+                            長期稼働によるメモリリークやディスク肥大化の解消。定期的な「新鮮な」インスタンスへの入れ替え。
+                        </div>
+                        <div class="usecase-example">
+                            <strong>例：</strong>毎週日曜深夜に全インスタンスをリフレッシュ
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🌐</div>
+                        <div class="usecase-title">AZ分散の最適化</div>
+                        <div class="usecase-desc">
+                            Availability Zone間でインスタンスを再配置。障害耐性の向上。
+                        </div>
+                        <div class="usecase-example">
+                            <strong>例：</strong>AZ障害復旧後にインスタンスを均等配置に戻す
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AWS CLIコマンド例 -->
+            <h2 class="section-title">💻 実践！AWS CLIコマンド</h2>
+            
+            <div class="code-section">
+                <div class="code-title">🚀 インスタンスリフレッシュを開始</div>
+                <div class="code-block"><span class="code-comment"># 基本的なインスタンスリフレッシュ開始</span>
+aws autoscaling start-instance-refresh \
+    --auto-scaling-group-name <span class="code-string">"my-asg"</span> \
+    --preferences <span class="code-string">'{
+        "MinHealthyPercentage": 90,
+        "InstanceWarmup": 300,
+        "SkipMatching": true
+    }'</span>
+
+<span class="code-comment"># チェックポイント付きでリフレッシュ開始</span>
+aws autoscaling start-instance-refresh \
+    --auto-scaling-group-name <span class="code-string">"my-asg"</span> \
+    --preferences <span class="code-string">'{
+        "MinHealthyPercentage": 90,
+        "InstanceWarmup": 300,
+        "CheckpointPercentages": [20, 50, 100],
+        "CheckpointDelay": 3600
+    }'</span></div>
+            </div>
+            
+            <div class="code-section">
+                <div class="code-title">📊 進捗状況を確認</div>
+                <div class="code-block"><span class="code-comment"># リフレッシュの状態を確認</span>
+aws autoscaling describe-instance-refreshes \
+    --auto-scaling-group-name <span class="code-string">"my-asg"</span>
+
+<span class="code-comment"># 出力例</span>
+<span class="code-string">{
+    "InstanceRefreshes": [{
+        "InstanceRefreshId": "abc123-def456",
+        "AutoScalingGroupName": "my-asg",
+        "Status": "InProgress",
+        "PercentageComplete": 50,
+        "InstancesToUpdate": 2
+    }]
+}</span></div>
+            </div>
+            
+            <div class="code-section">
+                <div class="code-title">⏹️ リフレッシュをキャンセル</div>
+                <div class="code-block"><span class="code-comment"># 実行中のリフレッシュをキャンセル</span>
+aws autoscaling cancel-instance-refresh \
+    --auto-scaling-group-name <span class="code-string">"my-asg"</span></div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="tip-box">
+                <div class="tip-title">
+                    <span>💡</span>
+                    <span>インスタンスリフレッシュ成功のコツ</span>
+                </div>
+                <div class="tip-content">
+                    <strong>1. MinHealthyPercentageは高めに設定：</strong><br>
+                    本番環境では90%以上を推奨。サービスへの影響を最小限に。<br><br>
+                    
+                    <strong>2. InstanceWarmupは余裕を持って：</strong><br>
+                    アプリケーションの起動時間 + ヘルスチェック間隔 + バッファ時間を考慮。<br><br>
+                    
+                    <strong>3. チェックポイントを活用：</strong><br>
+                    大規模環境では20%、50%、80%など段階的に確認。問題の早期発見に有効。<br><br>
+                    
+                    <strong>4. 事前にテスト環境で検証：</strong><br>
+                    本番適用前に、同じ設定でテスト環境でリフレッシュを実行して確認。<br><br>
+                    
+                    <strong>5. CloudWatchアラームと連携：</strong><br>
+                    エラー率やレイテンシーの急増を検知してロールバックを判断。<br><br>
+                    
+                    <strong>6. メンテナンスウィンドウで実行：</strong><br>
+                    トラフィックが少ない時間帯に実行すると影響を最小化できる。
+                </div>
+            </div>
+            
+            <!-- FAQ -->
+            <h2 class="section-title">❓ よくある質問</h2>
+            
+            <div class="faq-section">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>インスタンスリフレッシュ中にスケーリングは動作する？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>はい、動作します！</strong><br>
+                        リフレッシュ中もAuto Scalingのスケーリングポリシーは有効です。負荷に応じてインスタンス数は増減しますが、新しく起動するインスタンスは最新の起動テンプレート（新しいAMI）で作成されます。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>リフレッシュ中に問題が発生したらどうなる？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>自動的に一時停止し、必要に応じてロールバックできます。</strong><br>
+                        新しいインスタンスがヘルスチェックに失敗した場合、リフレッシュは一時停止します。CheckpointPercentagesを設定していれば、各段階で確認して手動でキャンセル（ロールバック）することも可能です。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>途中で一時停止してから再開できる？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>はい、できます！</strong><br>
+                        CheckpointPercentagesを設定すると、指定した割合で自動的に一時停止します。状態を確認後、ContinueInstanceRefresh APIまたはコンソールから再開できます。手動で一時停止したい場合はチェックポイントを利用してください。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>ロードバランサーとの連携は？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>自動的に連携します！</strong><br>
+                        ELBターゲットグループに登録されているAuto Scalingグループの場合、古いインスタンスは適切にドレイン（接続排出）されてから終了し、新しいインスタンスはヘルスチェック合格後にトラフィックを受け付けます。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>費用はかかる？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>インスタンスリフレッシュ機能自体は無料です！</strong><br>
+                        ただし、リフレッシュ中は一時的に新旧両方のインスタンスが存在するため、その期間のEC2費用は発生します。MinHealthyPercentageが高いほど同時稼働インスタンスが多くなる点に注意。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div class="summary">
+                <h2>🎓 まとめ</h2>
+                
+                <div class="summary-box">
+                    <h3>🚌 バス会社の車両更新 = インスタンスリフレッシュ</h3>
+                    <p>
+                        お客様（トラフィック）を乗せたまま、<br>
+                        古いバス（旧AMI）から新型バス（新AMI）へ<br>
+                        <strong>安全に・段階的に</strong>入れ替える機能です！
+                    </p>
+                </div>
+                
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-icon">📊</div>
+                        <div class="summary-title">MinHealthyPercentage</div>
+                        <div class="summary-desc">最低稼働率<br>90%推奨</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">⏱️</div>
+                        <div class="summary-title">InstanceWarmup</div>
+                        <div class="summary-desc">試運転時間<br>余裕を持って</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">🚧</div>
+                        <div class="summary-title">チェックポイント</div>
+                        <div class="summary-desc">段階確認<br>安全性UP</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">⏪</div>
+                        <div class="summary-title">ロールバック</div>
+                        <div class="summary-desc">問題時は<br>即座に戻す</div>
+                    </div>
+                </div>
+                
+                <div class="final-message">
+                    <strong>🎯 インスタンスリフレッシュを使うべき場面：</strong><br><br>
+                    📀 AMI更新（セキュリティパッチ、OSアップデート）<br>
+                    ⚙️ インスタンスタイプ変更<br>
+                    🔐 セキュリティ緊急対応<br>
+                    📱 ベイクドAMIでのアプリデプロイ<br><br>
+                    <span style="font-size: 1.2em;">
+                        <strong>サービスを止めずにインスタンスを一新！</strong><br>
+                        これがインスタンスリフレッシュの力です 🚀
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

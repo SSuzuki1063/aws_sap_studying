@@ -181,7 +181,23 @@ const searchData = [
     { title: 'Amazon Inspector エージェントレス脆弱性評価 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/amazon-inspector-agentless-guide.html' },
     { title: 'EKS コントロールプレーンログ & CloudTrail 監査ログ 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/eks-control-plane-logging-guide.html' },
     { title: 'CloudTrail 管理イベント vs データイベント 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-events-guide.html' },
-    { title: 'Amazon Q Business アクセス制御 & ガードレール完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/amazon-q-business-access-guardrails-guide.html' }
+    { title: 'Amazon Q Business アクセス制御 & ガードレール完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/amazon-q-business-access-guardrails-guide.html' },
+
+    // 新規追加リソース (2026/01/10)
+    { title: 'CloudFront HTTPセキュリティヘッダー完全ガイド', category: 'ネットワーキング', file: 'networking/cloudfront-security-headers-guide.html' },
+    { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', category: 'ネットワーキング', file: 'networking/s3-vpc-endpoint-policy-guide.html' },
+    { title: 'SAML障害時のブレークグラスユーザー完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/breakglass-user-guide.html' },
+    { title: 'IAM 認証情報レポート完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-credential-report-guide.html' },
+    { title: 'AWS KMS キーの種類 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/kms-key-types.html' },
+    { title: 'AWS KMS スロットリング対策 & Encryption SDK キャッシュ完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/kms-throttling-encryption-sdk-guide.html' },
+    { title: 'AWS Well-Architected フレームワーク 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-well-architected-complete-guide.html' },
+    { title: 'AWS Config S3配信エラー解決ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-s3-delivery-error-guide.html' },
+    { title: 'Auto Scaling インスタンスリフレッシュ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/autoscaling-instance-refresh-guide.html' },
+    { title: 'AWS Config ec2-managedinstance-applications-required 完全ガイド', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/ec2-managedinstance-applications-required-guide.html' },
+    { title: 'ACM + ALB + EC2 TLS証明書設定 完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/acm-alb-ec2-tls-guide.html' },
+    { title: 'Lambda@Edge Origin Response X-Frame-Options完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/lambda-edge-x-frame-options-guide.html' },
+    { title: 'CloudWatch Logs ログ保持期間 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/cloudwatch-logs-retention-guide.html' },
+    { title: 'QuickSight vs OpenSearch Dashboards 完全比較ガイド', category: 'ストレージ・データベース', file: 'storage-database/quicksight-opensearch-comparison-guide.html' }
 ];
 
 // 検索機能

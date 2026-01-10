@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3バケットポリシー × VPCエンドポイント完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.8;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* ========== ヘッダー ========== */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            border-radius: 30px;
+            padding: 50px;
+            margin-bottom: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(180deg); }
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 2.8em;
+            margin-bottom: 20px;
+            position: relative;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header-subtitle {
+            color: #a8d8ff;
+            font-size: 1.3em;
+            position: relative;
+        }
+        
+        .header-icons {
+            font-size: 3em;
+            margin-top: 20px;
+            position: relative;
+        }
+        
+        /* ========== 結論ファースト ========== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #fff9c4 0%, #ffecb3 100%);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 40px;
+            border: 4px solid #ff9800;
+            box-shadow: 0 15px 40px rgba(255,152,0,0.3);
+        }
+        
+        .conclusion-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.8em;
+            color: #e65100;
+            margin-bottom: 25px;
+        }
+        
+        .conclusion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .conclusion-item {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #ff9800;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .conclusion-item-title {
+            font-size: 1.2em;
+            color: #e65100;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .conclusion-item-desc {
+            color: #5d4037;
+        }
+        
+        /* ========== たとえ話セクション ========== */
+        .analogy-section {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #4caf50;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2em;
+            color: #2e7d32;
+            margin-bottom: 40px;
+        }
+        
+        .analogy-diagram {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-title {
+            text-align: center;
+            font-size: 1.5em;
+            color: #1565c0;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 15px;
+        }
+        
+        .analogy-flow {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .analogy-item {
+            text-align: center;
+            padding: 25px;
+            border-radius: 20px;
+            min-width: 180px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .analogy-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        
+        .analogy-label {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+        
+        .analogy-aws {
+            font-size: 0.9em;
+            color: #666;
+            background: #f5f5f5;
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+        
+        .arrow-connector {
+            font-size: 2.5em;
+            color: #ff5722;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .bank-vault { background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%); }
+        .secret-tunnel { background: linear-gradient(135deg, #c5e1a5 0%, #aed581 100%); }
+        .permit-badge { background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 100%); }
+        .guard { background: linear-gradient(135deg, #ffe0b2 0%, #ffcc80 100%); }
+        
+        /* ========== 対比図 ========== */
+        .comparison-section {
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #e91e63;
+        }
+        
+        .comparison-title {
+            text-align: center;
+            font-size: 2em;
+            color: #c2185b;
+            margin-bottom: 40px;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .comparison-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-box.danger {
+            border: 4px solid #f44336;
+        }
+        
+        .comparison-box.safe {
+            border: 4px solid #4caf50;
+        }
+        
+        .comparison-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed #ddd;
+        }
+        
+        .comparison-icon {
+            font-size: 3em;
+        }
+        
+        .comparison-label {
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+        
+        .comparison-box.danger .comparison-label { color: #d32f2f; }
+        .comparison-box.safe .comparison-label { color: #388e3c; }
+        
+        .route-diagram {
+            background: #f5f5f5;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .route-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+        
+        .route-item {
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-weight: bold;
+        }
+        
+        .route-ec2 { background: #ffe0b2; color: #e65100; }
+        .route-internet { background: #ffcdd2; color: #c62828; }
+        .route-vpce { background: #c8e6c9; color: #2e7d32; }
+        .route-s3 { background: #bbdefb; color: #1565c0; }
+        .route-arrow { font-size: 1.3em; }
+        
+        .comparison-points {
+            list-style: none;
+        }
+        
+        .comparison-points li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .comparison-points li:last-child {
+            border-bottom: none;
+        }
+        
+        /* ========== エンドポイント種類 ========== */
+        .endpoint-types {
+            background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #03a9f4;
+        }
+        
+        .endpoint-title {
+            text-align: center;
+            font-size: 2em;
+            color: #0277bd;
+            margin-bottom: 40px;
+        }
+        
+        .endpoint-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .endpoint-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .endpoint-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+        
+        .endpoint-card.gateway {
+            border-top: 6px solid #ff9800;
+        }
+        
+        .endpoint-card.interface {
+            border-top: 6px solid #9c27b0;
+        }
+        
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-icon {
+            font-size: 2.5em;
+        }
+        
+        .endpoint-name {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .endpoint-card.gateway .endpoint-name { color: #f57c00; }
+        .endpoint-card.interface .endpoint-name { color: #7b1fa2; }
+        
+        .endpoint-subtitle {
+            color: #666;
+            font-size: 0.95em;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        
+        .endpoint-features {
+            list-style: none;
+        }
+        
+        .endpoint-features li {
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .endpoint-features li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-icon {
+            font-size: 1.3em;
+        }
+        
+        /* ========== 条件キー解説 ========== */
+        .condition-keys {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #ff9800;
+        }
+        
+        .condition-title {
+            text-align: center;
+            font-size: 2em;
+            color: #e65100;
+            margin-bottom: 40px;
+        }
+        
+        .condition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+        }
+        
+        .condition-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .condition-card:hover {
+            transform: scale(1.02);
+        }
+        
+        .condition-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .condition-emoji {
+            font-size: 2.5em;
+        }
+        
+        .condition-key-name {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: #1565c0;
+        }
+        
+        .condition-desc {
+            color: #555;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 10px;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .condition-analogy {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .condition-analogy-label {
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+        
+        .condition-example {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            background: #263238;
+            color: #80cbc4;
+            padding: 12px 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        
+        /* ========== ポリシー解説 ========== */
+        .policy-section {
+            background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #3f51b5;
+        }
+        
+        .policy-title {
+            text-align: center;
+            font-size: 2em;
+            color: #283593;
+            margin-bottom: 40px;
+        }
+        
+        .policy-pattern {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .policy-pattern-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #3f51b5;
+        }
+        
+        .policy-pattern-icon {
+            font-size: 2.5em;
+        }
+        
+        .policy-pattern-title {
+            font-size: 1.5em;
+            color: #283593;
+        }
+        
+        .policy-pattern-subtitle {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .policy-explanation {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        @media (max-width: 768px) {
+            .policy-explanation {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .policy-concept {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #ffc107;
+        }
+        
+        .policy-concept-title {
+            font-weight: bold;
+            color: #ff8f00;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .code-block {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 15px;
+            padding: 25px;
+            overflow-x: auto;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .code-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .code-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .code-dot.red { background: #ff5f56; }
+        .code-dot.yellow { background: #ffbd2e; }
+        .code-dot.green { background: #27ca40; }
+        
+        .code-title {
+            color: #888;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        
+        pre {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+        
+        .code-comment { color: #6a9955; }
+        .code-key { color: #9cdcfe; }
+        .code-string { color: #ce9178; }
+        .code-keyword { color: #569cd6; }
+        .code-important { color: #ffd700; background: rgba(255,215,0,0.1); padding: 2px 5px; border-radius: 3px; }
+        
+        /* ========== ステップバイステップ ========== */
+        .steps-section {
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #9c27b0;
+        }
+        
+        .steps-title {
+            text-align: center;
+            font-size: 2em;
+            color: #7b1fa2;
+            margin-bottom: 40px;
+        }
+        
+        .steps-container {
+            position: relative;
+        }
+        
+        .step-item {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0;
+            box-shadow: 0 5px 15px rgba(156,39,176,0.4);
+        }
+        
+        .step-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            flex: 1;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .step-title {
+            font-size: 1.3em;
+            color: #7b1fa2;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step-desc {
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        .step-command {
+            background: #263238;
+            color: #80cbc4;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+        }
+        
+        /* ========== 注意点 ========== */
+        .caution-section {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #f44336;
+        }
+        
+        .caution-title {
+            text-align: center;
+            font-size: 2em;
+            color: #c62828;
+            margin-bottom: 40px;
+        }
+        
+        .caution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .caution-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #f44336;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .caution-card-title {
+            font-size: 1.2em;
+            color: #c62828;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .caution-card-desc {
+            color: #555;
+        }
+        
+        .caution-solution {
+            background: #e8f5e9;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .caution-solution-label {
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+        
+        /* ========== ユースケース ========== */
+        .usecase-section {
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #00bcd4;
+        }
+        
+        .usecase-title {
+            text-align: center;
+            font-size: 2em;
+            color: #00838f;
+            margin-bottom: 40px;
+        }
+        
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .usecase-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .usecase-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .usecase-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .usecase-icon {
+            font-size: 2.5em;
+        }
+        
+        .usecase-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #00838f;
+        }
+        
+        .usecase-desc {
+            color: #555;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        
+        .usecase-policy {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            background: #263238;
+            color: #a5d6a7;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        
+        /* ========== FAQ ========== */
+        .faq-section {
+            background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 3px solid #9e9e9e;
+        }
+        
+        .faq-title {
+            text-align: center;
+            font-size: 2em;
+            color: #424242;
+            margin-bottom: 40px;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-left: 5px solid #2196f3;
+        }
+        
+        .faq-question {
+            font-size: 1.2em;
+            color: #1565c0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .faq-answer {
+            color: #555;
+            padding-left: 35px;
+            line-height: 1.8;
+        }
+        
+        /* ========== まとめ ========== */
+        .summary {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            border-radius: 25px;
+            padding: 50px;
+            color: white;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            font-size: 2em;
+            margin-bottom: 40px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .summary-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-card-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .summary-card-desc {
+            color: #a8d8ff;
+            font-size: 0.95em;
+        }
+        
+        .final-message {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <div class="header-icons">🪣 🔒 🔗</div>
+            <h1>S3バケットポリシー × VPCエンドポイント</h1>
+            <p class="header-subtitle">プライベートネットワークからS3へ安全にアクセスする方法を完全図解</p>
+        </div>
+        
+        <!-- 結論ファースト -->
+        <div class="conclusion-first">
+            <div class="conclusion-title">
+                <span>🎯</span>
+                <span>結論ファースト：3分でわかるポイント</span>
+            </div>
+            <div class="conclusion-grid">
+                <div class="conclusion-item">
+                    <div class="conclusion-item-title">
+                        <span>🔑</span>
+                        <span>条件キーを使う</span>
+                    </div>
+                    <div class="conclusion-item-desc">
+                        <code>aws:sourceVpce</code>（特定エンドポイント）または <code>aws:SourceVpc</code>（VPC全体）を使ってアクセス元を制限
+                    </div>
+                </div>
+                <div class="conclusion-item">
+                    <div class="conclusion-item-title">
+                        <span>⛔</span>
+                        <span>Deny + StringNotEqualsが定番</span>
+                    </div>
+                    <div class="conclusion-item-desc">
+                        「指定エンドポイント以外からのアクセスを拒否」するパターンが最も安全で確実
+                    </div>
+                </div>
+                <div class="conclusion-item">
+                    <div class="conclusion-item-title">
+                        <span>🚪</span>
+                        <span>Gatewayエンドポイントが無料</span>
+                    </div>
+                    <div class="conclusion-item-desc">
+                        S3用のGatewayエンドポイントは無料で使える。オンプレ接続が必要な場合はInterfaceを使用
+                    </div>
+                </div>
+                <div class="conclusion-item">
+                    <div class="conclusion-item-title">
+                        <span>⚠️</span>
+                        <span>自分を締め出さないよう注意</span>
+                    </div>
+                    <div class="conclusion-item-desc">
+                        ポリシー適用後はコンソールからもアクセス不可に。エンドポイントIDの確認を忘れずに
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- たとえ話 -->
+        <div class="analogy-section">
+            <h2 class="section-title">🏦 たとえ話で理解：「秘密のトンネルがある銀行の金庫室」</h2>
+            
+            <div class="analogy-diagram">
+                <div class="analogy-title">
+                    🎭 登場人物とAWSサービスの対応
+                </div>
+                
+                <div class="analogy-flow">
+                    <div class="analogy-item bank-vault">
+                        <div class="analogy-icon">🏦</div>
+                        <div class="analogy-label">銀行の金庫室</div>
+                        <div class="analogy-aws">= S3バケット</div>
+                    </div>
+                    
+                    <div class="analogy-item secret-tunnel">
+                        <div class="analogy-icon">🚇</div>
+                        <div class="analogy-label">秘密の専用トンネル</div>
+                        <div class="analogy-aws">= VPCエンドポイント</div>
+                    </div>
+                    
+                    <div class="analogy-item permit-badge">
+                        <div class="analogy-icon">📋</div>
+                        <div class="analogy-label">入場許可ルール</div>
+                        <div class="analogy-aws">= バケットポリシー</div>
+                    </div>
+                    
+                    <div class="analogy-item guard">
+                        <div class="analogy-icon">👮</div>
+                        <div class="analogy-label">ガードマン</div>
+                        <div class="analogy-aws">= IAM + 条件キー</div>
+                    </div>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 25px; border-radius: 15px; margin-top: 25px;">
+                    <p style="font-size: 1.1em; color: #1565c0; text-align: center;">
+                        💡 <strong>イメージ</strong>：銀行の金庫室（S3）には、正面玄関（インターネット経由）と秘密のトンネル（VPCエンドポイント）があります。<br>
+                        バケットポリシーで「秘密のトンネルからしか入れないルール」を作ると、正面玄関は閉鎖され、<br>
+                        専用トンネルを持つVIP顧客（EC2など）だけが金庫にアクセスできるようになります🔐
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- インターネット経由 vs VPCエンドポイント -->
+        <div class="comparison-section">
+            <h2 class="comparison-title">🔄 アクセス経路の比較：危険な道 vs 安全なトンネル</h2>
+            
+            <div class="comparison-grid">
+                <div class="comparison-box danger">
+                    <div class="comparison-header">
+                        <span class="comparison-icon">🌐</span>
+                        <div>
+                            <div class="comparison-label">インターネット経由（危険）</div>
+                            <div style="color: #888; font-size: 0.9em;">公共の道路を通るルート</div>
+                        </div>
+                    </div>
+                    
+                    <div class="route-diagram">
+                        <div class="route-flow">
+                            <span class="route-item route-ec2">🖥️ EC2</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-item route-internet">🌐 Internet Gateway</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-item route-internet">☁️ パブリックインターネット</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-item route-s3">🪣 S3</span>
+                        </div>
+                    </div>
+                    
+                    <ul class="comparison-points">
+                        <li><span>❌</span> データがAWSネットワークの外を通る</li>
+                        <li><span>❌</span> 通信が盗聴されるリスクあり</li>
+                        <li><span>❌</span> NATゲートウェイのコストがかかる</li>
+                        <li><span>❌</span> コンプライアンス要件を満たせない場合も</li>
+                    </ul>
+                </div>
+                
+                <div class="comparison-box safe">
+                    <div class="comparison-header">
+                        <span class="comparison-icon">🔒</span>
+                        <div>
+                            <div class="comparison-label">VPCエンドポイント経由（安全）</div>
+                            <div style="color: #888; font-size: 0.9em;">専用の秘密トンネル</div>
+                        </div>
+                    </div>
+                    
+                    <div class="route-diagram">
+                        <div class="route-flow">
+                            <span class="route-item route-ec2">🖥️ EC2</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-item route-vpce">🚇 VPCエンドポイント</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-item route-vpce">🔐 AWS内部ネットワーク</span>
+                            <span class="route-arrow">→</span>
+                            <span class="route-item route-s3">🪣 S3</span>
+                        </div>
+                    </div>
+                    
+                    <ul class="comparison-points">
+                        <li><span>✅</span> データはAWS内部ネットワークのみを通過</li>
+                        <li><span>✅</span> インターネットを経由しないため安全</li>
+                        <li><span>✅</span> Gatewayエンドポイントは無料</li>
+                        <li><span>✅</span> コンプライアンス要件を満たせる</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- VPCエンドポイントの種類 -->
+        <div class="endpoint-types">
+            <h2 class="endpoint-title">🚪 S3用VPCエンドポイントの2つの種類</h2>
+            
+            <div class="endpoint-grid">
+                <div class="endpoint-card gateway">
+                    <div class="endpoint-header">
+                        <span class="endpoint-icon">🚪</span>
+                        <span class="endpoint-name">Gateway Endpoint</span>
+                    </div>
+                    <div class="endpoint-subtitle">
+                        🎭 たとえ：銀行への専用地下トンネル（無料・VPC内限定）
+                    </div>
+                    <ul class="endpoint-features">
+                        <li>
+                            <span class="feature-icon">💰</span>
+                            <div><strong>無料で利用可能</strong> - データ転送料もかからない</div>
+                        </li>
+                        <li>
+                            <span class="feature-icon">🛣️</span>
+                            <div><strong>ルートテーブルで制御</strong> - 特定サブネットからのみアクセス</div>
+                        </li>
+                        <li>
+                            <span class="feature-icon">🏠</span>
+                            <div><strong>VPC内限定</strong> - オンプレミスからは使えない</div>
+                        </li>
+                        <li>
+                            <span class="feature-icon">🎯</span>
+                            <div><strong>ほとんどのケースでこちらを推奨</strong></div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="endpoint-card interface">
+                    <div class="endpoint-header">
+                        <span class="endpoint-icon">🔌</span>
+                        <span class="endpoint-name">Interface Endpoint</span>
+                    </div>
+                    <div class="endpoint-subtitle">
+                        🎭 たとえ：銀行への専用電話回線（有料・外部接続可）
+                    </div>
+                    <ul class="endpoint-features">
+                        <li>
+                            <span class="feature-icon">💵</span>
+                            <div><strong>時間課金 + データ転送料</strong> - コストがかかる</div>
+                        </li>
+                        <li>
+                            <span class="feature-icon">🌍</span>
+                            <div><strong>オンプレミス・他リージョンから接続可能</strong></div>
+                        </li>
+                        <li>
+                            <span class="feature-icon">🔗</span>
+                            <div><strong>PrivateLinkを使用</strong> - ENIでプライベートIP付与</div>
+                        </li>
+                        <li>
+                            <span class="feature-icon">🏢</span>
+                            <div><strong>ハイブリッド環境で必要な場合に使用</strong></div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 条件キー解説 -->
+        <div class="condition-keys">
+            <h2 class="condition-title">🔑 バケットポリシーで使う3つの条件キー</h2>
+            
+            <div class="condition-grid">
+                <div class="condition-card">
+                    <div class="condition-header">
+                        <span class="condition-emoji">🎯</span>
+                        <code class="condition-key-name">aws:sourceVpce</code>
+                    </div>
+                    <div class="condition-desc">
+                        <strong>特定のVPCエンドポイント</strong>からのアクセスのみを許可/拒否する
+                    </div>
+                    <div class="condition-analogy">
+                        <div class="condition-analogy-label">🎭 たとえ話</div>
+                        「トンネルAのIDカードを持っている人だけ入場OK」
+                    </div>
+                    <div class="condition-example">"aws:sourceVpce": "vpce-1a2b3c4d"</div>
+                </div>
+                
+                <div class="condition-card">
+                    <div class="condition-header">
+                        <span class="condition-emoji">🏢</span>
+                        <code class="condition-key-name">aws:SourceVpc</code>
+                    </div>
+                    <div class="condition-desc">
+                        <strong>特定のVPC全体</strong>からのアクセスを制御（複数エンドポイントをまとめて許可）
+                    </div>
+                    <div class="condition-analogy">
+                        <div class="condition-analogy-label">🎭 たとえ話</div>
+                        「A社ビルの社員証を持っている人は全員入場OK」
+                    </div>
+                    <div class="condition-example">"aws:SourceVpc": "vpc-111bbb22"</div>
+                </div>
+                
+                <div class="condition-card">
+                    <div class="condition-header">
+                        <span class="condition-emoji">📍</span>
+                        <code class="condition-key-name">aws:VpcSourceIp</code>
+                    </div>
+                    <div class="condition-desc">
+                        VPCエンドポイント経由でアクセスする<strong>プライベートIPアドレス</strong>を指定
+                    </div>
+                    <div class="condition-analogy">
+                        <div class="condition-analogy-label">🎭 たとえ話</div>
+                        「トンネル経由で、さらに部屋番号10.1.1.1の人だけ入場OK」
+                    </div>
+                    <div class="condition-example">"aws:VpcSourceIp": "10.1.1.0/24"</div>
+                </div>
+            </div>
+            
+            <div style="background: white; border-radius: 15px; padding: 25px; margin-top: 30px; border: 3px solid #ff5722;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                    <span style="font-size: 1.8em;">⚠️</span>
+                    <span style="font-size: 1.2em; color: #e64a19; font-weight: bold;">重要な注意点</span>
+                </div>
+                <p style="color: #5d4037;">
+                    VPCエンドポイント経由のリクエストには <code>aws:SourceIp</code> は使えません！<br>
+                    インターネット経由のアクセスを制限したい場合は <code>aws:SourceIp</code> を使いますが、<br>
+                    VPCエンドポイント経由の場合は代わりに <code>aws:VpcSourceIp</code> を使用してください。
+                </p>
+            </div>
+        </div>
+        
+        <!-- ポリシー解説 -->
+        <div class="policy-section">
+            <h2 class="policy-title">📝 バケットポリシーの書き方パターン</h2>
+            
+            <!-- パターン1: 特定エンドポイントのみ許可 -->
+            <div class="policy-pattern">
+                <div class="policy-pattern-header">
+                    <span class="policy-pattern-icon">🥇</span>
+                    <div>
+                        <div class="policy-pattern-title">パターン1：特定のVPCエンドポイントからのみアクセス許可（推奨）</div>
+                        <div class="policy-pattern-subtitle">Deny + StringNotEquals で「それ以外を拒否」する安全なパターン</div>
+                    </div>
+                </div>
+                
+                <div class="policy-explanation">
+                    <div class="policy-concept">
+                        <div class="policy-concept-title">🎭 たとえ話</div>
+                        「秘密のトンネル（vpce-1a2b3c4d）から来た人以外は、全員入場お断り！」
+                    </div>
+                    <div class="policy-concept">
+                        <div class="policy-concept-title">💡 なぜDeny + NotEqualsなのか？</div>
+                        Allowだけだと、他のポリシーで許可されていれば入れてしまう。Denyは最優先なので確実にブロックできる。
+                    </div>
+                </div>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-dot red"></span>
+                        <span class="code-dot yellow"></span>
+                        <span class="code-dot green"></span>
+                        <span class="code-title">bucket-policy.json</span>
+                    </div>
+<pre>
+{
+    <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+    <span class="code-key">"Id"</span>: <span class="code-string">"VPCEndpointOnlyAccess"</span>,
+    <span class="code-key">"Statement"</span>: [
+        {
+            <span class="code-key">"Sid"</span>: <span class="code-string">"Access-to-specific-VPCE-only"</span>,
+            <span class="code-key">"Effect"</span>: <span class="code-important">"Deny"</span>,  <span class="code-comment">// ← 拒否ルール</span>
+            <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+            <span class="code-key">"Action"</span>: <span class="code-string">"s3:*"</span>,
+            <span class="code-key">"Resource"</span>: [
+                <span class="code-string">"arn:aws:s3:::my-secure-bucket"</span>,
+                <span class="code-string">"arn:aws:s3:::my-secure-bucket/*"</span>
+            ],
+            <span class="code-key">"Condition"</span>: {
+                <span class="code-important">"StringNotEquals"</span>: {  <span class="code-comment">// ← 「〜でない場合」</span>
+                    <span class="code-key">"aws:sourceVpce"</span>: <span class="code-string">"vpce-1a2b3c4d"</span>  <span class="code-comment">// ← あなたのエンドポイントIDに置き換え</span>
+                }
+            }
+        }
+    ]
+}
+</pre>
+                </div>
+            </div>
+            
+            <!-- パターン2: VPC全体を許可 -->
+            <div class="policy-pattern">
+                <div class="policy-pattern-header">
+                    <span class="policy-pattern-icon">🥈</span>
+                    <div>
+                        <div class="policy-pattern-title">パターン2：特定のVPC全体からのアクセスを許可</div>
+                        <div class="policy-pattern-subtitle">同じVPC内に複数のエンドポイントがある場合に便利</div>
+                    </div>
+                </div>
+                
+                <div class="policy-explanation">
+                    <div class="policy-concept">
+                        <div class="policy-concept-title">🎭 たとえ話</div>
+                        「A社ビル（vpc-111bbb22）のどのトンネルから来ても入場OK。それ以外はNG」
+                    </div>
+                    <div class="policy-concept">
+                        <div class="policy-concept-title">💡 使いどころ</div>
+                        同一VPC内に複数のGateway/Interfaceエンドポイントがあり、まとめて許可したい場合
+                    </div>
+                </div>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-dot red"></span>
+                        <span class="code-dot yellow"></span>
+                        <span class="code-dot green"></span>
+                        <span class="code-title">bucket-policy-vpc.json</span>
+                    </div>
+<pre>
+{
+    <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+    <span class="code-key">"Statement"</span>: [
+        {
+            <span class="code-key">"Sid"</span>: <span class="code-string">"DenyAccessFromOutsideVPC"</span>,
+            <span class="code-key">"Effect"</span>: <span class="code-important">"Deny"</span>,
+            <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+            <span class="code-key">"Action"</span>: <span class="code-string">"s3:*"</span>,
+            <span class="code-key">"Resource"</span>: [
+                <span class="code-string">"arn:aws:s3:::my-secure-bucket"</span>,
+                <span class="code-string">"arn:aws:s3:::my-secure-bucket/*"</span>
+            ],
+            <span class="code-key">"Condition"</span>: {
+                <span class="code-important">"StringNotEquals"</span>: {
+                    <span class="code-key">"aws:SourceVpc"</span>: <span class="code-string">"vpc-111bbb22"</span>  <span class="code-comment">// ← あなたのVPC IDに置き換え</span>
+                }
+            }
+        }
+    ]
+}
+</pre>
+                </div>
+            </div>
+            
+            <!-- パターン3: 複数エンドポイント -->
+            <div class="policy-pattern">
+                <div class="policy-pattern-header">
+                    <span class="policy-pattern-icon">🥉</span>
+                    <div>
+                        <div class="policy-pattern-title">パターン3：複数のVPCエンドポイントを許可</div>
+                        <div class="policy-pattern-subtitle">開発環境・本番環境など、複数環境からのアクセスを許可</div>
+                    </div>
+                </div>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-dot red"></span>
+                        <span class="code-dot yellow"></span>
+                        <span class="code-dot green"></span>
+                        <span class="code-title">bucket-policy-multi.json</span>
+                    </div>
+<pre>
+{
+    <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+    <span class="code-key">"Statement"</span>: [
+        {
+            <span class="code-key">"Sid"</span>: <span class="code-string">"AllowMultipleVPCEndpoints"</span>,
+            <span class="code-key">"Effect"</span>: <span class="code-important">"Deny"</span>,
+            <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+            <span class="code-key">"Action"</span>: <span class="code-string">"s3:PutObject"</span>,  <span class="code-comment">// ← アップロードのみ制限する例</span>
+            <span class="code-key">"Resource"</span>: <span class="code-string">"arn:aws:s3:::my-secure-bucket/*"</span>,
+            <span class="code-key">"Condition"</span>: {
+                <span class="code-important">"StringNotEquals"</span>: {
+                    <span class="code-key">"aws:sourceVpce"</span>: [
+                        <span class="code-string">"vpce-1111111"</span>,  <span class="code-comment">// 本番環境</span>
+                        <span class="code-string">"vpce-2222222"</span>   <span class="code-comment">// 開発環境</span>
+                    ]
+                }
+            }
+        }
+    ]
+}
+</pre>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ステップバイステップ -->
+        <div class="steps-section">
+            <h2 class="steps-title">🚀 設定手順：ステップバイステップ</h2>
+            
+            <div class="steps-container">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>🔍</span>
+                            VPCエンドポイントを確認 or 作成
+                        </div>
+                        <div class="step-desc">
+                            まず、S3用のGateway VPCエンドポイントが作成されているか確認します。なければ新規作成が必要です。
+                        </div>
+                        <div class="step-command">
+# 既存のVPCエンドポイントを一覧表示
+aws ec2 describe-vpc-endpoints \
+  --filters "Name=service-name,Values=com.amazonaws.ap-northeast-1.s3" \
+  --query "VpcEndpoints[*].[VpcEndpointId,VpcId,State]" \
+  --output table
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>📝</span>
+                            エンドポイントIDをメモ
+                        </div>
+                        <div class="step-desc">
+                            表示された <code>vpce-xxxxxxxxx</code> 形式のIDをコピーしておきます。
+                        </div>
+                        <div style="background: #fff3e0; padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 4px solid #ff9800;">
+                            <strong>💡 ヒント：</strong>VPCエンドポイントがない場合は、VPCコンソール → エンドポイント → エンドポイントを作成 から作成してください。
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>📋</span>
+                            バケットポリシーを作成
+                        </div>
+                        <div class="step-desc">
+                            上記のポリシーテンプレートを使って、JSONファイルを作成します。エンドポイントIDとバケット名を置き換えてください。
+                        </div>
+                        <div class="step-command">
+# ポリシーファイルを作成
+cat > bucket-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Access-to-specific-VPCE-only",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::YOUR-BUCKET-NAME",
+                "arn:aws:s3:::YOUR-BUCKET-NAME/*"
+            ],
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:sourceVpce": "vpce-YOUR-ENDPOINT-ID"
+                }
+            }
+        }
+    ]
+}
+EOF
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>🚀</span>
+                            バケットポリシーを適用
+                        </div>
+                        <div class="step-desc">
+                            AWS CLIを使ってS3バケットにポリシーを適用します。
+                        </div>
+                        <div class="step-command">
+# バケットポリシーを適用
+aws s3api put-bucket-policy \
+  --bucket YOUR-BUCKET-NAME \
+  --policy file://bucket-policy.json
+
+# 適用されたポリシーを確認
+aws s3api get-bucket-policy \
+  --bucket YOUR-BUCKET-NAME \
+  --output text | jq .
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step-item">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>✅</span>
+                            動作確認
+                        </div>
+                        <div class="step-desc">
+                            VPCエンドポイントを経由するEC2からアクセスできることと、それ以外からアクセスできないことを確認します。
+                        </div>
+                        <div class="step-command">
+# VPCエンドポイント経由のEC2から（成功するはず）
+aws s3 ls s3://YOUR-BUCKET-NAME/
+
+# ローカルPC等から（Access Deniedになるはず）
+aws s3 ls s3://YOUR-BUCKET-NAME/
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 注意点 -->
+        <div class="caution-section">
+            <h2 class="caution-title">⚠️ 陥りやすい罠と対策</h2>
+            
+            <div class="caution-grid">
+                <div class="caution-card">
+                    <div class="caution-card-title">
+                        <span>🔒</span>
+                        自分を締め出してしまう
+                    </div>
+                    <div class="caution-card-desc">
+                        ポリシーを適用すると、AWSコンソールからもアクセスできなくなります。IAMユーザーがインターネット経由でアクセスするため、拒否されます。
+                    </div>
+                    <div class="caution-solution">
+                        <div class="caution-solution-label">✅ 対策</div>
+                        ルートユーザーでログインするか、アカウントレベルのS3設定から復旧できます。適用前にエンドポイントIDを二重確認！
+                    </div>
+                </div>
+                
+                <div class="caution-card">
+                    <div class="caution-card-title">
+                        <span>🌍</span>
+                        リージョン不一致
+                    </div>
+                    <div class="caution-card-desc">
+                        VPCエンドポイントとS3バケットは同じリージョンにある必要があります。異なるリージョンでは機能しません。
+                    </div>
+                    <div class="caution-solution">
+                        <div class="caution-solution-label">✅ 対策</div>
+                        バケットとエンドポイントのリージョンが一致していることを事前に確認してください。
+                    </div>
+                </div>
+                
+                <div class="caution-card">
+                    <div class="caution-card-title">
+                        <span>🛣️</span>
+                        ルートテーブル設定漏れ
+                    </div>
+                    <div class="caution-card-desc">
+                        Gatewayエンドポイントを作成しても、EC2があるサブネットのルートテーブルに紐づけないと機能しません。
+                    </div>
+                    <div class="caution-solution">
+                        <div class="caution-solution-label">✅ 対策</div>
+                        エンドポイント作成時に適切なルートテーブルを選択。または後から「ルートテーブルの管理」で追加。
+                    </div>
+                </div>
+                
+                <div class="caution-card">
+                    <div class="caution-card-title">
+                        <span>📛</span>
+                        Allowだけではダメ
+                    </div>
+                    <div class="caution-card-desc">
+                        EffectをAllowにしただけでは、他のポリシーで許可されている場合にインターネット経由でもアクセスできてしまいます。
+                    </div>
+                    <div class="caution-solution">
+                        <div class="caution-solution-label">✅ 対策</div>
+                        確実にブロックするには「Deny + StringNotEquals」パターンを使用。Denyは最優先で評価されます。
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ユースケース -->
+        <div class="usecase-section">
+            <h2 class="usecase-title">📊 実践ユースケース</h2>
+            
+            <div class="usecase-grid">
+                <div class="usecase-card">
+                    <div class="usecase-header">
+                        <span class="usecase-icon">🏥</span>
+                        <span class="usecase-name">医療データの保護</span>
+                    </div>
+                    <div class="usecase-desc">
+                        HIPAA等のコンプライアンス要件で、患者データがインターネットを通らないことを保証する必要がある場合
+                    </div>
+                    <div class="usecase-policy">
+# 医療データバケットへのアクセスを
+# 院内VPCエンドポイントのみに制限
+"aws:sourceVpce": "vpce-hospital-vpc"
+                    </div>
+                </div>
+                
+                <div class="usecase-card">
+                    <div class="usecase-header">
+                        <span class="usecase-icon">💳</span>
+                        <span class="usecase-name">金融データの保護</span>
+                    </div>
+                    <div class="usecase-desc">
+                        PCI-DSS準拠のため、クレジットカード情報を含むデータはプライベートネットワーク経由のみでアクセス
+                    </div>
+                    <div class="usecase-policy">
+# 決済システムVPCからのみ許可
+"aws:SourceVpc": "vpc-payment-system"
+                    </div>
+                </div>
+                
+                <div class="usecase-card">
+                    <div class="usecase-header">
+                        <span class="usecase-icon">🔬</span>
+                        <span class="usecase-name">研究データの分離</span>
+                    </div>
+                    <div class="usecase-desc">
+                        機密性の高い研究データを、特定の研究チームのみがアクセスできるよう制限
+                    </div>
+                    <div class="usecase-policy">
+# 複数の研究チームVPCから許可
+"aws:sourceVpce": [
+  "vpce-research-team-a",
+  "vpce-research-team-b"
+]
+                    </div>
+                </div>
+                
+                <div class="usecase-card">
+                    <div class="usecase-header">
+                        <span class="usecase-icon">🏭</span>
+                        <span class="usecase-name">本番/開発環境の分離</span>
+                    </div>
+                    <div class="usecase-desc">
+                        本番環境のS3バケットには本番VPCからのみ、開発バケットには開発VPCからのみアクセス可能に
+                    </div>
+                    <div class="usecase-policy">
+# 環境ごとにバケットとVPCを紐づけ
+Production: "aws:SourceVpc": "vpc-prod"
+Development: "aws:SourceVpc": "vpc-dev"
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FAQ -->
+        <div class="faq-section">
+            <h2 class="faq-title">❓ よくある質問（FAQ）</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    VPCエンドポイント経由とインターネット経由を両方許可したい場合は？
+                </div>
+                <div class="faq-answer">
+                    Denyステートメントを使わず、必要な許可のみをAllowで追加します。ただし、インターネット経由を許可する場合は、セキュリティ上の理由がないか再検討することをお勧めします。VPCエンドポイント経由に統一する方が安全です。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    Gateway EndpointとInterface Endpoint、どちらを使うべき？
+                </div>
+                <div class="faq-answer">
+                    <strong>Gateway Endpoint推奨の場合：</strong>VPC内のEC2からS3にアクセスする一般的なケース。無料で使えます。<br>
+                    <strong>Interface Endpoint必須の場合：</strong>VPN/Direct Connect経由でオンプレミスからS3にプライベートアクセスしたい場合、または異なるリージョンのVPCからアクセスしたい場合。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    ポリシー適用後にコンソールからアクセスできなくなりました。どうすれば？
+                </div>
+                <div class="faq-answer">
+                    AWSアカウントのルートユーザーでログインし、S3コンソールからバケットポリシーを削除または修正してください。ルートユーザーはバケットポリシーに関係なくアクセスできます。また、別のIAMユーザーでCloudShellからエンドポイント経由でアクセスすることも可能です。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Q.</span>
+                    Lambda関数からS3にアクセスする場合も同じ設定が必要？
+                </div>
+                <div class="faq-answer">
+                    LambdaをVPC内に配置している場合は、同じVPCエンドポイント経由でアクセスできます。VPC外のLambdaの場合はVPCエンドポイントを使用できないため、別の条件（aws:SourceAccount等）での制限を検討してください。
+                </div>
+            </div>
+        </div>
+        
+        <!-- まとめ -->
+        <div class="summary">
+            <h2>🎓 まとめ</h2>
+            
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-icon">🔑</div>
+                    <div class="summary-card-title">条件キーを使う</div>
+                    <div class="summary-card-desc">
+                        aws:sourceVpce で特定エンドポイント<br>
+                        aws:SourceVpc でVPC全体を指定
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">⛔</div>
+                    <div class="summary-card-title">Deny + NotEqualsパターン</div>
+                    <div class="summary-card-desc">
+                        「指定以外は拒否」で<br>
+                        確実にブロック
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">🚪</div>
+                    <div class="summary-card-title">Gatewayが基本</div>
+                    <div class="summary-card-desc">
+                        VPC内からなら無料の<br>
+                        Gatewayエンドポイントを選択
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">⚠️</div>
+                    <div class="summary-card-title">締め出し注意</div>
+                    <div class="summary-card-desc">
+                        コンソールアクセス不可に注意<br>
+                        エンドポイントIDを要確認
+                    </div>
+                </div>
+            </div>
+            
+            <div class="final-message">
+                🏦 <strong>銀行の金庫室（S3）を守る最強のセキュリティ：</strong><br><br>
+                📋 入場ルール（バケットポリシー）で「秘密のトンネル（VPCエンドポイント）から来た人だけ入場OK」と設定！<br>
+                🚇 これで正面玄関（インターネット）は完全閉鎖され、VIP専用トンネルを持つ人だけがアクセスできます。<br><br>
+                <span style="font-size: 1.3em;">コンプライアンス要件もバッチリ満たせる、鉄壁のS3セキュリティを実現しよう！🛡️</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

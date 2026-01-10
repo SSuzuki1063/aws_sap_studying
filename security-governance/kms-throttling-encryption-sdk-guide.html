@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS KMS スロットリング対策 & Encryption SDK キャッシュ完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #e94560 75%, #ff6b6b 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin: 50px 0 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        /* ========== 結論ファースト ========== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #232f3e 0%, #0f3460 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 40px 0;
+        }
+        
+        .conclusion-first h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #ff9900;
+            text-align: center;
+        }
+        
+        .key-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .key-point {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .key-point:hover {
+            transform: translateY(-10px);
+            background: rgba(255,255,255,0.2);
+            border-color: #ff9900;
+        }
+        
+        .key-point-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+        
+        .key-point-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #ff9900;
+            margin-bottom: 15px;
+        }
+        
+        .key-point-desc {
+            font-size: 1em;
+            opacity: 0.9;
+            line-height: 1.8;
+        }
+        
+        /* ========== 問題説明セクション ========== */
+        .problem-section {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #ef4444;
+        }
+        
+        .problem-title {
+            text-align: center;
+            font-size: 2em;
+            color: #991b1b;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        /* 銀行の例え図解 */
+        .bank-analogy {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .bank-scene {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .bank-vault {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+            position: relative;
+        }
+        
+        .vault-icon {
+            font-size: 5em;
+            margin-bottom: 15px;
+        }
+        
+        .vault-label {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #78350f;
+        }
+        
+        .vault-limit {
+            background: #991b1b;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 15px;
+            display: inline-block;
+        }
+        
+        .customers-queue {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .customer-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .customer {
+            background: white;
+            border: 3px solid #3b82f6;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .customer.waiting {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .customer.rejected {
+            border-color: #ef4444;
+            background: #fef2f2;
+            opacity: 0.7;
+        }
+        
+        .customer-icon {
+            font-size: 2em;
+        }
+        
+        .customer-status {
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .arrow-right {
+            font-size: 2em;
+            color: #64748b;
+        }
+        
+        /* スロットリング警告 */
+        .throttle-warning {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .throttle-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        
+        .throttle-message {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .throttle-detail {
+            font-size: 1em;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+        
+        /* ========== 解決策セクション ========== */
+        .solution-section {
+            background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #10b981;
+        }
+        
+        .solution-title {
+            text-align: center;
+            font-size: 2em;
+            color: #065f46;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        /* キャッシュの図解 */
+        .cache-diagram {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .cache-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .cache-node {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 4px solid #3b82f6;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+        }
+        
+        .cache-node.kms {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #f59e0b;
+        }
+        
+        .cache-node.sdk {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-color: #10b981;
+        }
+        
+        .cache-node-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .cache-node-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .cache-node-desc {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        .cache-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .cache-arrow-line {
+            font-size: 2em;
+            color: #10b981;
+        }
+        
+        .cache-arrow-label {
+            font-size: 0.85em;
+            color: #065f46;
+            font-weight: bold;
+            background: #d1fae5;
+            padding: 5px 10px;
+            border-radius: 10px;
+        }
+        
+        /* ========== データキーキャッシュ仕組み ========== */
+        .datakey-caching {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #3b82f6;
+        }
+        
+        .datakey-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e40af;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .datakey-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .comparison-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .comparison-card.before {
+            border-top: 6px solid #ef4444;
+        }
+        
+        .comparison-card.after {
+            border-top: 6px solid #10b981;
+        }
+        
+        .comparison-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .comparison-card.before .comparison-badge {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .comparison-card.after .comparison-badge {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .comparison-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .comparison-card.before .comparison-title {
+            color: #991b1b;
+        }
+        
+        .comparison-card.after .comparison-title {
+            color: #065f46;
+        }
+        
+        .comparison-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .flow-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        
+        .flow-item-icon {
+            font-size: 1.5em;
+        }
+        
+        .flow-item-text {
+            flex: 1;
+            color: #475569;
+        }
+        
+        .flow-item-count {
+            background: #64748b;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .flow-item-count.high {
+            background: #ef4444;
+        }
+        
+        .flow-item-count.low {
+            background: #10b981;
+        }
+        
+        /* ========== SDK設定詳細 ========== */
+        .sdk-config {
+            background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #eab308;
+        }
+        
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .config-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            border-left: 5px solid #eab308;
+            transition: all 0.3s ease;
+        }
+        
+        .config-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .config-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .config-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #854d0e;
+            margin-bottom: 10px;
+        }
+        
+        .config-desc {
+            color: #64748b;
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+        
+        .config-example {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+        
+        .config-example .keyword {
+            color: #f472b6;
+        }
+        
+        .config-example .number {
+            color: #fbbf24;
+        }
+        
+        .config-example .string {
+            color: #34d399;
+        }
+        
+        .config-example .comment {
+            color: #94a3b8;
+        }
+        
+        /* ========== ベストプラクティス ========== */
+        .best-practices {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #7c3aed;
+        }
+        
+        .practices-title {
+            text-align: center;
+            font-size: 2em;
+            color: #5b21b6;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .practice-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .practice-item {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .practice-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
+        }
+        
+        .practice-number {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .practice-content {
+            flex: 1;
+        }
+        
+        .practice-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 10px;
+        }
+        
+        .practice-desc {
+            color: #64748b;
+            line-height: 1.7;
+        }
+        
+        /* ========== スロットリング対策まとめ ========== */
+        .strategies-section {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .strategy-card {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            border-radius: 15px;
+            padding: 30px;
+            border-top: 5px solid;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .strategy-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .strategy-card:nth-child(1) { border-color: #3b82f6; }
+        .strategy-card:nth-child(2) { border-color: #10b981; }
+        .strategy-card:nth-child(3) { border-color: #f59e0b; }
+        .strategy-card:nth-child(4) { border-color: #8b5cf6; }
+        
+        .strategy-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .strategy-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        
+        .strategy-desc {
+            color: #64748b;
+            line-height: 1.7;
+        }
+        
+        .strategy-effect {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.95em;
+        }
+        
+        .strategy-effect strong {
+            color: #10b981;
+        }
+        
+        /* ========== 比較表 ========== */
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #232f3e 0%, #0f3460 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.05em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+            text-align: left;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 18px;
+            border-bottom: 2px solid #f1f5f9;
+            text-align: center;
+        }
+        
+        td:first-child {
+            text-align: left;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .table-good {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .table-bad {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        /* ========== コード例 ========== */
+        .code-section {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .code-title {
+            color: #60a5fa;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .code-block {
+            background: #0f172a;
+            border-radius: 15px;
+            padding: 25px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.8;
+            color: #f1f5f9;
+            border: 1px solid #334155;
+        }
+        
+        .code-block .comment { color: #94a3b8; }
+        .code-block .keyword { color: #f472b6; }
+        .code-block .string { color: #34d399; }
+        .code-block .number { color: #fbbf24; }
+        .code-block .function { color: #60a5fa; }
+        .code-block .class { color: #c084fc; }
+        
+        /* ========== FAQ ========== */
+        .faq-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #0c4a6e;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            padding: 25px;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        /* ========== まとめ ========== */
+        .summary {
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff9900;
+            margin-bottom: 10px;
+        }
+        
+        .summary-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+        
+        .final-message {
+            background: rgba(255,255,255,0.2);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+        
+        /* ========== レスポンシブ ========== */
+        @media (max-width: 1024px) {
+            .datakey-comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            .bank-scene {
+                flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .key-points {
+                grid-template-columns: 1fr;
+            }
+            
+            .cache-flow {
+                flex-direction: column;
+            }
+            
+            .cache-arrow {
+                transform: rotate(90deg);
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 AWS KMS スロットリング対策</h1>
+            <p>銀行で例える！Encryption SDK キャッシュで高速化 & コスト削減</p>
+        </div>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <div class="conclusion-first">
+                <h2>📌 結論：KMSスロットリングを防ぐ3つのポイント</h2>
+                
+                <div class="key-points">
+                    <div class="key-point">
+                        <div class="key-point-icon">😱</div>
+                        <div class="key-point-title">問題：スロットリング</div>
+                        <div class="key-point-desc">
+                            KMSには<strong>リクエスト制限</strong>がある<br>
+                            超えると「拒否」されてエラーに！<br><br>
+                            🏦 銀行窓口の行列と同じ
+                        </div>
+                    </div>
+                    
+                    <div class="key-point">
+                        <div class="key-point-icon">💡</div>
+                        <div class="key-point-title">解決：データキーキャッシュ</div>
+                        <div class="key-point-desc">
+                            Encryption SDKで<br>
+                            <strong>データキーを再利用</strong><br><br>
+                            🏦 合鍵を作って使い回す
+                        </div>
+                    </div>
+                    
+                    <div class="key-point">
+                        <div class="key-point-icon">🚀</div>
+                        <div class="key-point-title">効果：劇的な改善</div>
+                        <div class="key-point-desc">
+                            KMSリクエストを<br>
+                            <strong>最大99%削減</strong>可能！<br><br>
+                            🏦 窓口に行く回数が激減
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 問題説明：スロットリングとは -->
+            <h2 class="section-title">😱 そもそもスロットリングって何？</h2>
+            
+            <div class="problem-section">
+                <div class="problem-title">🏦 銀行の金庫室で例えると超わかりやすい！</div>
+                
+                <div class="bank-analogy">
+                    <p style="text-align: center; color: #64748b; font-size: 1.1em; margin-bottom: 30px;">
+                        <strong>KMS = 銀行の金庫室</strong>｜<strong>暗号化キー = 金庫の鍵</strong>｜<strong>リクエスト = 窓口での手続き</strong>
+                    </p>
+                    
+                    <div class="bank-scene">
+                        <div class="customers-queue">
+                            <p style="text-align: center; font-weight: bold; color: #1e40af; margin-bottom: 15px;">👥 お客さん（リクエスト）</p>
+                            <div class="customer-row">
+                                <div class="customer">
+                                    <div class="customer-icon">👤</div>
+                                    <div class="customer-status" style="color: #10b981;">✅ 処理中</div>
+                                </div>
+                                <div class="customer">
+                                    <div class="customer-icon">👤</div>
+                                    <div class="customer-status" style="color: #10b981;">✅ 処理中</div>
+                                </div>
+                                <div class="customer">
+                                    <div class="customer-icon">👤</div>
+                                    <div class="customer-status" style="color: #10b981;">✅ 処理中</div>
+                                </div>
+                            </div>
+                            <div class="customer-row">
+                                <div class="customer waiting">
+                                    <div class="customer-icon">😰</div>
+                                    <div class="customer-status" style="color: #f59e0b;">⏳ 待機中</div>
+                                </div>
+                                <div class="customer rejected">
+                                    <div class="customer-icon">😫</div>
+                                    <div class="customer-status" style="color: #ef4444;">❌ 拒否！</div>
+                                </div>
+                                <div class="customer rejected">
+                                    <div class="customer-icon">😫</div>
+                                    <div class="customer-status" style="color: #ef4444;">❌ 拒否！</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="arrow-right">➡️</div>
+                        
+                        <div class="bank-vault">
+                            <div class="vault-icon">🏦</div>
+                            <div class="vault-label">KMS（金庫室）</div>
+                            <div class="vault-limit">⚠️ 窓口は3つだけ！</div>
+                        </div>
+                    </div>
+                    
+                    <div class="throttle-warning">
+                        <div class="throttle-icon">🚫</div>
+                        <div class="throttle-message">スロットリング発生！</div>
+                        <div class="throttle-detail">
+                            「窓口が満員なので対応できません」= ThrottlingException<br>
+                            リージョンごとに <strong>5,500〜30,000リクエスト/秒</strong> の上限あり
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 15px; margin-top: 20px;">
+                    <h4 style="color: #991b1b; margin-bottom: 15px; font-size: 1.2em;">😵 スロットリングが起きると...</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div style="text-align: center; padding: 20px; background: #fef2f2; border-radius: 10px;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">⚠️</div>
+                            <div style="color: #991b1b; font-weight: bold;">エラー発生</div>
+                            <div style="color: #64748b; font-size: 0.9em;">アプリが動かない！</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background: #fef2f2; border-radius: 10px;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">🐌</div>
+                            <div style="color: #991b1b; font-weight: bold;">レイテンシ増加</div>
+                            <div style="color: #64748b; font-size: 0.9em;">リトライで遅延</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background: #fef2f2; border-radius: 10px;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💸</div>
+                            <div style="color: #991b1b; font-weight: bold;">コスト増加</div>
+                            <div style="color: #64748b; font-size: 0.9em;">リトライ分も課金</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 解決策：Encryption SDKキャッシュ -->
+            <h2 class="section-title">💡 解決策：Encryption SDK のキャッシュ機能</h2>
+            
+            <div class="solution-section">
+                <div class="solution-title">🔑 「合鍵」を作って使い回す戦略！</div>
+                
+                <div class="cache-diagram">
+                    <p style="text-align: center; color: #065f46; font-size: 1.1em; margin-bottom: 30px;">
+                        <strong>ポイント：</strong>毎回KMSに行くのではなく、<strong>データキーをキャッシュ</strong>して再利用する
+                    </p>
+                    
+                    <div class="cache-flow">
+                        <div class="cache-node">
+                            <div class="cache-node-icon">📱</div>
+                            <div class="cache-node-title">アプリケーション</div>
+                            <div class="cache-node-desc">暗号化したいデータ</div>
+                        </div>
+                        
+                        <div class="cache-arrow">
+                            <div class="cache-arrow-label">① 初回のみ</div>
+                            <div class="cache-arrow-line">➡️</div>
+                        </div>
+                        
+                        <div class="cache-node sdk">
+                            <div class="cache-node-icon">💾</div>
+                            <div class="cache-node-title">Encryption SDK<br>キャッシュ</div>
+                            <div class="cache-node-desc">データキーを保存</div>
+                        </div>
+                        
+                        <div class="cache-arrow">
+                            <div class="cache-arrow-label">① 初回のみ</div>
+                            <div class="cache-arrow-line">➡️</div>
+                        </div>
+                        
+                        <div class="cache-node kms">
+                            <div class="cache-node-icon">🏦</div>
+                            <div class="cache-node-title">AWS KMS</div>
+                            <div class="cache-node-desc">マスターキー管理</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #d1fae5; padding: 25px; border-radius: 15px; margin-top: 30px; text-align: center;">
+                        <p style="color: #065f46; font-size: 1.2em;">
+                            <strong>🎯 2回目以降は？</strong><br><br>
+                            キャッシュからデータキーを取得 → <strong>KMSへのアクセス不要！</strong><br>
+                            🏦 銀行に行かずに「合鍵」で金庫を開ける感覚
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- データキーキャッシュの仕組み -->
+            <h2 class="section-title">🔄 Before / After で見る効果</h2>
+            
+            <div class="datakey-caching">
+                <div class="datakey-title">📊 1,000件のデータを暗号化する場合</div>
+                
+                <div class="datakey-comparison">
+                    <div class="comparison-card before">
+                        <div class="comparison-badge">❌ キャッシュなし</div>
+                        <div class="comparison-title">
+                            <span>😱</span>
+                            <span>従来の方法</span>
+                        </div>
+                        
+                        <div class="comparison-flow">
+                            <div class="flow-item">
+                                <div class="flow-item-icon">📝</div>
+                                <div class="flow-item-text">データ1件目を暗号化</div>
+                                <div class="flow-item-count high">KMS呼出 1回</div>
+                            </div>
+                            <div class="flow-item">
+                                <div class="flow-item-icon">📝</div>
+                                <div class="flow-item-text">データ2件目を暗号化</div>
+                                <div class="flow-item-count high">KMS呼出 1回</div>
+                            </div>
+                            <div class="flow-item">
+                                <div class="flow-item-icon">📝</div>
+                                <div class="flow-item-text">データ3件目を暗号化</div>
+                                <div class="flow-item-count high">KMS呼出 1回</div>
+                            </div>
+                            <div class="flow-item" style="background: #fee2e2;">
+                                <div class="flow-item-icon">⋯</div>
+                                <div class="flow-item-text">...1,000件目まで続く</div>
+                                <div class="flow-item-count high">合計 1,000回！</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 20px; background: #fef2f2; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💸</div>
+                            <div style="color: #991b1b; font-weight: bold;">コスト：$0.03</div>
+                            <div style="color: #991b1b;">1,000回 × $0.00003</div>
+                        </div>
+                    </div>
+                    
+                    <div class="comparison-card after">
+                        <div class="comparison-badge">✅ キャッシュあり</div>
+                        <div class="comparison-title">
+                            <span>🚀</span>
+                            <span>Encryption SDK使用</span>
+                        </div>
+                        
+                        <div class="comparison-flow">
+                            <div class="flow-item">
+                                <div class="flow-item-icon">📝</div>
+                                <div class="flow-item-text">データ1件目を暗号化</div>
+                                <div class="flow-item-count low">KMS呼出 1回</div>
+                            </div>
+                            <div class="flow-item" style="background: #d1fae5;">
+                                <div class="flow-item-icon">💾</div>
+                                <div class="flow-item-text">データキーをキャッシュに保存</div>
+                                <div class="flow-item-count low">保存完了</div>
+                            </div>
+                            <div class="flow-item" style="background: #d1fae5;">
+                                <div class="flow-item-icon">⚡</div>
+                                <div class="flow-item-text">2〜1,000件目はキャッシュ利用</div>
+                                <div class="flow-item-count low">KMS呼出 0回！</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 20px; background: #d1fae5; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">🎉</div>
+                            <div style="color: #065f46; font-weight: bold;">コスト：$0.00003</div>
+                            <div style="color: #065f46;">1回 × $0.00003 = <strong>99.9%削減！</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SDK設定詳細 -->
+            <h2 class="section-title">⚙️ キャッシュの設定パラメータ</h2>
+            
+            <div class="sdk-config">
+                <p style="text-align: center; color: #854d0e; font-size: 1.1em; margin-bottom: 30px;">
+                    <strong>🔧 セキュリティとパフォーマンスのバランスを取る3つの設定</strong>
+                </p>
+                
+                <div class="config-grid">
+                    <div class="config-card">
+                        <div class="config-icon">⏱️</div>
+                        <div class="config-name">Max Age（最大有効期限）</div>
+                        <div class="config-desc">
+                            キャッシュしたデータキーの<strong>有効期限</strong>を設定。<br>
+                            期限切れ後は新しいキーを取得。
+                        </div>
+                        <div class="config-example">
+                            <span class="comment"># 推奨: 300秒（5分）以下</span><br>
+                            max_age = <span class="number">300</span>
+                        </div>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #64748b;">
+                            🏦 たとえ：合鍵の有効期限
+                        </p>
+                    </div>
+                    
+                    <div class="config-card">
+                        <div class="config-icon">🔢</div>
+                        <div class="config-name">Max Messages Encrypted</div>
+                        <div class="config-desc">
+                            1つのデータキーで<strong>暗号化できる最大件数</strong>。<br>
+                            上限に達したら新しいキーを取得。
+                        </div>
+                        <div class="config-example">
+                            <span class="comment"># 推奨: 用途に応じて設定</span><br>
+                            max_messages = <span class="number">1000</span>
+                        </div>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #64748b;">
+                            🏦 たとえ：合鍵の使用回数上限
+                        </p>
+                    </div>
+                    
+                    <div class="config-card">
+                        <div class="config-icon">📊</div>
+                        <div class="config-name">Max Bytes Encrypted</div>
+                        <div class="config-desc">
+                            1つのデータキーで<strong>暗号化できる最大バイト数</strong>。<br>
+                            大容量データ処理時に重要。
+                        </div>
+                        <div class="config-example">
+                            <span class="comment"># 推奨: 用途に応じて設定</span><br>
+                            max_bytes = <span class="number">10737418240</span> <span class="comment"># 10GB</span>
+                        </div>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #64748b;">
+                            🏦 たとえ：合鍵で開けられる金庫の総額上限
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+                    <h4 style="color: #854d0e; margin-bottom: 15px;">⚠️ セキュリティ上の注意</h4>
+                    <p style="color: #64748b; line-height: 1.8;">
+                        キャッシュを長く設定しすぎると、同じデータキーが長期間使われ<strong>セキュリティリスク</strong>が増加します。<br>
+                        <strong>推奨：Max Ageは300秒以下</strong>に設定し、定期的にキーをローテーションしましょう。
+                    </p>
+                </div>
+            </div>
+            
+            <!-- コード例 -->
+            <div class="code-section">
+                <div class="code-title">📝 Python での実装例（AWS Encryption SDK）</div>
+                
+                <div class="code-block">
+<span class="keyword">import</span> aws_encryption_sdk
+<span class="keyword">from</span> aws_encryption_sdk.caches.local <span class="keyword">import</span> <span class="class">LocalCryptoMaterialsCache</span>
+<span class="keyword">from</span> aws_encryption_sdk.key_providers.kms <span class="keyword">import</span> <span class="class">KMSMasterKeyProvider</span>
+
+<span class="comment"># 1. キャッシュを作成（メモリ内に100エントリまで保持）</span>
+cache = <span class="class">LocalCryptoMaterialsCache</span>(capacity=<span class="number">100</span>)
+
+<span class="comment"># 2. キャッシュ付きマスターキープロバイダーを作成</span>
+key_provider = <span class="class">KMSMasterKeyProvider</span>(
+    key_ids=[<span class="string">'arn:aws:kms:ap-northeast-1:123456789012:key/xxxxx'</span>]
+)
+
+<span class="comment"># 3. キャッシング暗号化マテリアルマネージャーを作成</span>
+caching_cmm = aws_encryption_sdk.caching.<span class="class">CachingCryptoMaterialsManager</span>(
+    master_key_provider=key_provider,
+    cache=cache,
+    max_age=<span class="number">300.0</span>,           <span class="comment"># 最大300秒（5分）キャッシュ</span>
+    max_messages_encrypted=<span class="number">1000</span> <span class="comment"># 最大1000メッセージまで同じキー使用</span>
+)
+
+<span class="comment"># 4. 暗号化（2回目以降はキャッシュからキーを取得！）</span>
+<span class="keyword">for</span> data <span class="keyword">in</span> data_list:
+    ciphertext, header = aws_encryption_sdk.<span class="function">encrypt</span>(
+        source=data,
+        materials_manager=caching_cmm
+    )
+</div>
+            </div>
+            
+            <!-- その他のスロットリング対策 -->
+            <h2 class="section-title">🛡️ その他のスロットリング対策</h2>
+            
+            <div class="strategies-section">
+                <p style="text-align: center; color: #64748b; font-size: 1.1em; margin-bottom: 30px;">
+                    キャッシュ以外にも効果的な対策があります！
+                </p>
+                
+                <div class="strategy-grid">
+                    <div class="strategy-card">
+                        <div class="strategy-icon">🔄</div>
+                        <div class="strategy-name">指数バックオフリトライ</div>
+                        <div class="strategy-desc">
+                            エラー時に<strong>待ち時間を徐々に増やして</strong>リトライ。<br>
+                            AWS SDKにはデフォルトで組み込み済み。
+                        </div>
+                        <div class="strategy-effect">
+                            <strong>効果：</strong>一時的なスロットリングから自動回復
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-card">
+                        <div class="strategy-icon">📈</div>
+                        <div class="strategy-name">クォータ引き上げ申請</div>
+                        <div class="strategy-desc">
+                            Service Quotasから<strong>上限緩和を申請</strong>。<br>
+                            ビジネス要件に応じて増加可能。
+                        </div>
+                        <div class="strategy-effect">
+                            <strong>効果：</strong>根本的な上限を引き上げ
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-card">
+                        <div class="strategy-icon">🌍</div>
+                        <div class="strategy-name">マルチリージョン戦略</div>
+                        <div class="strategy-desc">
+                            複数リージョンのKMSを使って<strong>負荷を分散</strong>。<br>
+                            マルチリージョンキーが便利。
+                        </div>
+                        <div class="strategy-effect">
+                            <strong>効果：</strong>リージョン単位のスロットリング回避
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-card">
+                        <div class="strategy-icon">📊</div>
+                        <div class="strategy-name">CloudWatchモニタリング</div>
+                        <div class="strategy-desc">
+                            <strong>ThrottleCount</strong>メトリクスを監視。<br>
+                            アラームで早期検知。
+                        </div>
+                        <div class="strategy-effect">
+                            <strong>効果：</strong>問題発生前に対処可能
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ベストプラクティス -->
+            <h2 class="section-title">✅ ベストプラクティス5選</h2>
+            
+            <div class="best-practices">
+                <div class="practices-title">🏆 本番環境で守るべきルール</div>
+                
+                <div class="practice-list">
+                    <div class="practice-item">
+                        <div class="practice-number">1</div>
+                        <div class="practice-content">
+                            <div class="practice-title">Encryption SDKを必ず使う</div>
+                            <div class="practice-desc">
+                                生のKMS APIを直接呼ぶのではなく、<strong>Encryption SDK経由</strong>でキャッシュ機能を活用。<br>
+                                Java、Python、C、JavaScript版が公式提供されています。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-number">2</div>
+                        <div class="practice-content">
+                            <div class="practice-title">Max Ageは短めに設定（300秒以下）</div>
+                            <div class="practice-desc">
+                                セキュリティとパフォーマンスのバランス。長すぎると同じキーが使われ続けてリスク増加。<br>
+                                <strong>推奨値：60〜300秒</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-number">3</div>
+                        <div class="practice-content">
+                            <div class="practice-title">CloudWatchでスロットリングを監視</div>
+                            <div class="practice-desc">
+                                <strong>ThrottleCount</strong>と<strong>RequestCount</strong>メトリクスにアラーム設定。<br>
+                                スロットリング発生率が1%を超えたら通知を出す。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-number">4</div>
+                        <div class="practice-content">
+                            <div class="practice-title">バッチ処理は分散させる</div>
+                            <div class="practice-desc">
+                                大量データの一括処理は<strong>時間を分散</strong>してスパイクを避ける。<br>
+                                SQSやStep Functionsで処理を平準化。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="practice-item">
+                        <div class="practice-number">5</div>
+                        <div class="practice-content">
+                            <div class="practice-title">事前にクォータを確認・申請</div>
+                            <div class="practice-desc">
+                                本番リリース前に<strong>Service Quotas</strong>で現在の上限を確認。<br>
+                                予想リクエスト数が上限の70%を超えるなら事前に引き上げ申請。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較表 -->
+            <h2 class="section-title">📊 対策方法の比較</h2>
+            
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>対策方法</th>
+                            <th>効果</th>
+                            <th>実装難易度</th>
+                            <th>コスト削減</th>
+                            <th>おすすめ度</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>💾 Encryption SDKキャッシュ</td>
+                            <td class="table-good">◎ 最大99%削減</td>
+                            <td class="table-good">◎ 簡単</td>
+                            <td class="table-good">◎ 大幅削減</td>
+                            <td>⭐⭐⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td>🔄 指数バックオフリトライ</td>
+                            <td>○ 自動回復</td>
+                            <td class="table-good">◎ SDK標準</td>
+                            <td>△ 変わらず</td>
+                            <td>⭐⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td>📈 クォータ引き上げ</td>
+                            <td class="table-good">◎ 根本解決</td>
+                            <td class="table-good">◎ 申請のみ</td>
+                            <td class="table-bad">× 増加</td>
+                            <td>⭐⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td>🌍 マルチリージョン</td>
+                            <td>○ 分散効果</td>
+                            <td class="table-bad">△ 複雑</td>
+                            <td class="table-bad">× 増加</td>
+                            <td>⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td>📊 CloudWatch監視</td>
+                            <td>○ 早期検知</td>
+                            <td class="table-good">◎ 簡単</td>
+                            <td>△ 変わらず</td>
+                            <td>⭐⭐⭐⭐⭐</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- FAQ -->
+            <h2 class="section-title">❓ よくある質問</h2>
+            
+            <div class="faq-section">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>キャッシュするとセキュリティは大丈夫？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>適切な設定なら問題ありません。</strong><br><br>
+                        • Max Ageを短く設定（300秒以下）することでキーの露出リスクを最小化<br>
+                        • キャッシュはメモリ内に暗号化された状態で保持<br>
+                        • アプリケーション終了時にキャッシュは自動的に消去<br>
+                        • AWS公式が推奨するベストプラクティスに沿った設計です
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>どのくらいのリクエスト数からキャッシュを使うべき？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>秒間100リクエスト以上ならキャッシュ導入を検討しましょう。</strong><br><br>
+                        • 少量でもコスト削減効果はある<br>
+                        • バッチ処理で大量データを扱う場合は必須<br>
+                        • リアルタイム処理でレイテンシが重要な場合も有効<br>
+                        • 導入コストが低いので、迷ったら導入をおすすめ
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>Lambda関数でもキャッシュは使える？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>はい、使えます！ただし注意点があります。</strong><br><br>
+                        • Lambda関数の実行コンテナが再利用される間はキャッシュ有効<br>
+                        • コールドスタート時は新しいキャッシュを作成<br>
+                        • Provisioned Concurrencyを使うとキャッシュの効果が安定<br>
+                        • 関数のグローバルスコープでキャッシュを初期化するのがベスト
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>KMSのクォータ上限はどこで確認できる？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>Service Quotasコンソールで確認できます。</strong><br><br>
+                        1. AWS コンソール → Service Quotas<br>
+                        2. 「AWS Key Management Service (KMS)」を選択<br>
+                        3. 「Cryptographic operations (symmetric) request rate」を確認<br><br>
+                        リージョンによって5,500〜30,000リクエスト/秒が上限です。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div class="summary">
+                <h2>🎓 まとめ</h2>
+                
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-icon">😱</div>
+                        <div class="summary-title">問題</div>
+                        <div class="summary-desc">
+                            KMSには<br>リクエスト制限があり<br>超えるとスロットリング
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">💡</div>
+                        <div class="summary-title">解決策</div>
+                        <div class="summary-desc">
+                            Encryption SDKの<br>キャッシュ機能で<br>データキーを再利用
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">🚀</div>
+                        <div class="summary-title">効果</div>
+                        <div class="summary-desc">
+                            KMSリクエストを<br><strong>最大99%削減</strong><br>コストも大幅カット
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="final-message">
+                    <strong>🏦 銀行の金庫室（KMS）の例えで覚えよう！</strong><br><br>
+                    
+                    😱 毎回窓口（KMS）に行くと行列（スロットリング）に...<br>
+                    💡 合鍵（データキー）を作ってキャッシュすれば<br>
+                    🚀 窓口に行く回数が激減！ = 高速 & 低コスト！<br><br>
+                    
+                    <span style="font-size: 1.3em;">
+                        Encryption SDKのキャッシュ機能で<br>
+                        スロットリング知らずの快適なKMSライフを！🎉
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

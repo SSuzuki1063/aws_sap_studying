@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACM + ALB + EC2 TLS証明書設定 完全ガイド</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.1;
+            top: -40px;
+            right: -40px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファースト */
+        .conclusion-first {
+            background: linear-gradient(135deg, #232f3e 0%, #0f3460 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+        }
+        
+        .conclusion-first h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #ff9900;
+            text-align: center;
+        }
+        
+        .conclusion-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .summary-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .summary-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #ff9900;
+            margin-bottom: 10px;
+        }
+        
+        .summary-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .analogy-title {
+            color: #0c4a6e;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .building-diagram {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .building-exterior {
+            background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        
+        .building-title {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px 10px 0 0;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .visitor-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .flow-item {
+            text-align: center;
+            max-width: 200px;
+        }
+        
+        .flow-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .flow-box:hover {
+            transform: scale(1.05);
+        }
+        
+        .flow-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .flow-label {
+            font-weight: bold;
+            color: #1e293b;
+            font-size: 1.1em;
+        }
+        
+        .flow-sublabel {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .flow-arrow {
+            font-size: 2.5em;
+            color: #3b82f6;
+        }
+        
+        .certificate-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .badge-acm {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .badge-self {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        /* アーキテクチャ図 */
+        .architecture-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .architecture-flow {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+        
+        .arch-component {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            min-width: 180px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-top: 5px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .arch-component:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        
+        .arch-client { border-color: #64748b; }
+        .arch-alb { border-color: #3b82f6; }
+        .arch-ec2 { border-color: #f59e0b; }
+        .arch-acm { border-color: #10b981; }
+        
+        .arch-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .arch-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .arch-desc {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        .arch-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .arrow-line {
+            font-size: 2em;
+            color: #3b82f6;
+        }
+        
+        .arrow-label {
+            font-size: 0.8em;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 10px;
+        }
+        
+        .label-https-acm {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .label-https-self {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        /* 暗号化フロー詳細 */
+        .encryption-detail {
+            background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+            padding: 40px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border: 3px solid #10b981;
+        }
+        
+        .encryption-title {
+            text-align: center;
+            color: #065f46;
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+        
+        .encryption-layers {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .layer-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            min-width: 280px;
+        }
+        
+        .layer-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .layer-icon {
+            font-size: 2em;
+        }
+        
+        .layer-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .layer-content {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .layer-content p {
+            color: #475569;
+            margin: 8px 0;
+        }
+        
+        .layer-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .badge-green {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .badge-orange {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        /* 比較表 */
+        .comparison-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #232f3e 0%, #0f3460 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+            text-align: left;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+            text-align: center;
+        }
+        
+        td:first-child {
+            text-align: left;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .check { color: #10b981; font-size: 1.3em; }
+        .cross { color: #ef4444; font-size: 1.3em; }
+        
+        /* 設定手順 */
+        .setup-section {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .setup-title {
+            color: #92400e;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .setup-column {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .column-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid;
+        }
+        
+        .column-header.acm { border-color: #10b981; }
+        .column-header.ec2 { border-color: #f59e0b; }
+        
+        .column-icon {
+            font-size: 2.5em;
+        }
+        
+        .column-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .setup-step {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .setup-step:hover {
+            background: #f1f5f9;
+            transform: translateX(5px);
+        }
+        
+        .step-number {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .step-desc {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        /* コード例 */
+        .code-section {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .code-title {
+            color: #60a5fa;
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .code-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .code-tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 10px 10px 0 0;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .code-tab.active {
+            background: #334155;
+        }
+        
+        .code-block {
+            background: #334155;
+            padding: 25px;
+            border-radius: 0 10px 10px 10px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+        
+        .code-comment { color: #94a3b8; }
+        .code-keyword { color: #f472b6; }
+        .code-string { color: #34d399; }
+        .code-command { color: #60a5fa; }
+        
+        /* なぜこの構成？ */
+        .why-section {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #7c3aed;
+        }
+        
+        .why-title {
+            color: #5b21b6;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+        
+        .why-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .why-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .why-icon {
+            font-size: 2.5em;
+        }
+        
+        .why-card-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #5b21b6;
+        }
+        
+        .why-content {
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        .why-content li {
+            margin: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .why-content li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        /* ベストプラクティス */
+        .best-practices {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 40px;
+            border-radius: 15px;
+            margin: 50px 0;
+            border: 3px solid #10b981;
+        }
+        
+        .bp-title {
+            color: #065f46;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .bp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .bp-item {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .bp-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .bp-item-title {
+            font-weight: bold;
+            color: #065f46;
+            margin-bottom: 10px;
+        }
+        
+        .bp-item-desc {
+            font-size: 0.9em;
+            color: #475569;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .faq-item {
+            background: #f8fafc;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #0c4a6e;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            padding: 25px;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        /* まとめ */
+        .summary-section {
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .summary-section h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        
+        .summary-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .summary-box {
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            min-width: 150px;
+        }
+        
+        .summary-box-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .summary-box-label {
+            font-weight: bold;
+        }
+        
+        .summary-arrow {
+            font-size: 2em;
+        }
+        
+        .final-message {
+            background: rgba(255,255,255,0.2);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+        
+        @media (max-width: 1024px) {
+            .conclusion-summary,
+            .setup-grid,
+            .why-grid,
+            .bp-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .architecture-flow,
+            .encryption-layers {
+                flex-direction: column;
+            }
+            
+            .arch-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .visitor-flow {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 ACM + ALB + EC2<br>TLS証明書設定 完全ガイド</h1>
+            <p>会社のビル受付で理解する！エンドツーエンド暗号化の仕組み</p>
+        </div>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <div class="conclusion-first">
+                <h2>📌 結論：2段階のHTTPS暗号化で安全な通信を実現</h2>
+                
+                <div class="conclusion-summary">
+                    <div class="summary-card">
+                        <div class="summary-icon">🌐</div>
+                        <div class="summary-title">インターネット → ALB</div>
+                        <div class="summary-desc">
+                            <strong>ACM証明書</strong>を使用<br>
+                            無料・自動更新<br>
+                            ブラウザに信頼される<br>
+                            🔒 公的な身分証明
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card">
+                        <div class="summary-icon">⚖️</div>
+                        <div class="summary-title">ALB</div>
+                        <div class="summary-desc">
+                            TLS終端ポイント<br>
+                            証明書を管理<br>
+                            負荷分散を実行<br>
+                            🏢 ビルの受付係
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card">
+                        <div class="summary-icon">🖥️</div>
+                        <div class="summary-title">ALB → EC2</div>
+                        <div class="summary-desc">
+                            <strong>自己署名証明書</strong>を使用<br>
+                            内部通信も暗号化<br>
+                            VPC内で完結<br>
+                            🪪 社員証での認証
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- たとえ話セクション -->
+            <div class="analogy-section">
+                <h2 class="analogy-title">🏢 会社のビルで例えると超わかりやすい！</h2>
+                
+                <div class="building-diagram">
+                    <div class="building-exterior">
+                        <div class="building-title">🏢 あなたの会社（AWSインフラ）</div>
+                        
+                        <div class="visitor-flow">
+                            <div class="flow-item">
+                                <div class="flow-box">
+                                    <div class="flow-icon">👤</div>
+                                    <div class="flow-label">来客</div>
+                                    <div class="flow-sublabel">（ユーザー）</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flow-arrow">➡️</div>
+                            
+                            <div class="flow-item">
+                                <div class="flow-box" style="border: 3px solid #10b981;">
+                                    <div class="flow-icon">🛂</div>
+                                    <div class="flow-label">ビル受付</div>
+                                    <div class="flow-sublabel">（ALB）</div>
+                                    <div class="certificate-badge badge-acm">🏛️ 公的身分証で確認</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flow-arrow">➡️</div>
+                            
+                            <div class="flow-item">
+                                <div class="flow-box" style="border: 3px solid #f59e0b;">
+                                    <div class="flow-icon">👨‍💼</div>
+                                    <div class="flow-label">オフィス</div>
+                                    <div class="flow-sublabel">（EC2）</div>
+                                    <div class="certificate-badge badge-self">🪪 社員証で確認</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; padding: 25px; border-radius: 15px; margin-top: 20px;">
+                            <p style="text-align: center; color: #0c4a6e; font-size: 1.1em; line-height: 1.8;">
+                                <strong>🎯 ポイント：</strong><br><br>
+                                <strong>ビル受付（ALB）</strong>では<strong>公的な身分証明書（ACM証明書）</strong>で来客を確認<br>
+                                → 誰でも信頼できる第三者機関が発行した証明書<br><br>
+                                <strong>オフィス内（EC2）</strong>では<strong>社員証（自己署名証明書）</strong>で通信<br>
+                                → 社内だけで通用する証明書で十分！
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- アーキテクチャ図 -->
+            <div class="architecture-section">
+                <h2 class="section-title">🏗️ システム構成図</h2>
+                
+                <div class="architecture-flow">
+                    <div class="arch-component arch-client">
+                        <div class="arch-icon">👤🌐</div>
+                        <div class="arch-name">ユーザー</div>
+                        <div class="arch-desc">ブラウザ</div>
+                    </div>
+                    
+                    <div class="arch-arrow">
+                        <div class="arrow-label label-https-acm">🔒 HTTPS</div>
+                        <div class="arrow-line">➡️</div>
+                        <div class="arrow-label label-https-acm">ACM証明書</div>
+                    </div>
+                    
+                    <div class="arch-component arch-alb">
+                        <div class="arch-icon">⚖️</div>
+                        <div class="arch-name">ALB</div>
+                        <div class="arch-desc">Application<br>Load Balancer</div>
+                    </div>
+                    
+                    <div class="arch-arrow">
+                        <div class="arrow-label label-https-self">🔐 HTTPS</div>
+                        <div class="arrow-line">➡️</div>
+                        <div class="arrow-label label-https-self">自己署名証明書</div>
+                    </div>
+                    
+                    <div class="arch-component arch-ec2">
+                        <div class="arch-icon">🖥️</div>
+                        <div class="arch-name">EC2</div>
+                        <div class="arch-desc">Webサーバー<br>(nginx等)</div>
+                    </div>
+                </div>
+                
+                <div class="arch-component arch-acm" style="max-width: 300px; margin: 30px auto 0;">
+                    <div class="arch-icon">📜</div>
+                    <div class="arch-name">ACM</div>
+                    <div class="arch-desc">AWS Certificate Manager<br>証明書を無料発行・自動更新</div>
+                </div>
+            </div>
+            
+            <!-- 暗号化の詳細 -->
+            <div class="encryption-detail">
+                <div class="encryption-title">🔐 2段階暗号化の仕組み</div>
+                
+                <div class="encryption-layers">
+                    <div class="layer-box">
+                        <div class="layer-header">
+                            <div class="layer-icon">🌐</div>
+                            <div class="layer-name">第1段階：外部通信</div>
+                        </div>
+                        <div class="layer-content">
+                            <p>📍 <strong>区間：</strong>インターネット → ALB</p>
+                            <p>🔑 <strong>証明書：</strong>ACM発行のTLS証明書</p>
+                            <p>✅ <strong>特徴：</strong>ブラウザが信頼する公的証明書</p>
+                            <p>💰 <strong>費用：</strong>無料！</p>
+                        </div>
+                        <div class="layer-badge badge-green">🏛️ 公的認証機関が保証</div>
+                    </div>
+                    
+                    <div style="font-size: 3em; color: #10b981;">➡️</div>
+                    
+                    <div class="layer-box">
+                        <div class="layer-header">
+                            <div class="layer-icon">🏠</div>
+                            <div class="layer-name">第2段階：内部通信</div>
+                        </div>
+                        <div class="layer-content">
+                            <p>📍 <strong>区間：</strong>ALB → EC2（VPC内）</p>
+                            <p>🔑 <strong>証明書：</strong>自己署名証明書</p>
+                            <p>✅ <strong>特徴：</strong>内部でも暗号化を維持</p>
+                            <p>💰 <strong>費用：</strong>無料（自分で作成）</p>
+                        </div>
+                        <div class="layer-badge badge-orange">🪪 社内専用の認証</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較表 -->
+            <div class="comparison-section">
+                <h2 class="section-title">📊 ACM証明書 vs 自己署名証明書 比較</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>比較項目</th>
+                            <th>🏛️ ACM証明書</th>
+                            <th>🪪 自己署名証明書</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🎯 使用場所</td>
+                            <td>ALB（外部公開）</td>
+                            <td>EC2（内部通信）</td>
+                        </tr>
+                        <tr>
+                            <td>🔐 ブラウザの信頼</td>
+                            <td><span class="check">✅ 信頼される</span></td>
+                            <td><span class="cross">⚠️ 警告が出る</span></td>
+                        </tr>
+                        <tr>
+                            <td>💰 費用</td>
+                            <td>無料（AWS提供）</td>
+                            <td>無料（自作）</td>
+                        </tr>
+                        <tr>
+                            <td>🔄 自動更新</td>
+                            <td><span class="check">✅ 自動</span></td>
+                            <td><span class="cross">❌ 手動で管理</span></td>
+                        </tr>
+                        <tr>
+                            <td>⚙️ 設定の手間</td>
+                            <td>簡単（数クリック）</td>
+                            <td>やや複雑（コマンド実行）</td>
+                        </tr>
+                        <tr>
+                            <td>🏢 たとえ話</td>
+                            <td>パスポート・運転免許証</td>
+                            <td>社員証・名札</td>
+                        </tr>
+                        <tr>
+                            <td>✨ 適した用途</td>
+                            <td>外部からのアクセス</td>
+                            <td>VPC内部の通信</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 設定手順 -->
+            <div class="setup-section">
+                <h2 class="setup-title">🔧 設定手順ガイド</h2>
+                
+                <div class="setup-grid">
+                    <div class="setup-column">
+                        <div class="column-header acm">
+                            <div class="column-icon">📜</div>
+                            <div class="column-title">ACM証明書 + ALB設定</div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <div class="step-title">ACMで証明書をリクエスト</div>
+                                <div class="step-desc">ACMコンソール → 証明書をリクエスト → ドメイン名を入力</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <div class="step-title">ドメイン検証</div>
+                                <div class="step-desc">DNS検証（推奨）またはEメール検証でドメイン所有を証明</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <div class="step-title">ALBリスナー設定</div>
+                                <div class="step-desc">HTTPSリスナー(443)を追加 → ACM証明書を選択</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <div class="step-title">ターゲットグループ設定</div>
+                                <div class="step-desc">プロトコル: HTTPS / ポート: 443 を指定</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <div class="step-title">ヘルスチェック設定</div>
+                                <div class="step-desc">HTTPS プロトコルでEC2の正常性を確認</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="setup-column">
+                        <div class="column-header ec2">
+                            <div class="column-icon">🖥️</div>
+                            <div class="column-title">EC2自己署名証明書設定</div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <div class="step-title">OpenSSLで秘密鍵を生成</div>
+                                <div class="step-desc">RSA 2048ビット以上の秘密鍵を作成</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <div class="step-title">自己署名証明書を生成</div>
+                                <div class="step-desc">秘密鍵を使ってX.509証明書を作成</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <div class="step-title">証明書を配置</div>
+                                <div class="step-desc">/etc/ssl/certs/ 配下に証明書と秘密鍵を配置</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <div class="step-title">nginx/Apache設定</div>
+                                <div class="step-desc">SSL設定で証明書のパスを指定</div>
+                            </div>
+                        </div>
+                        
+                        <div class="setup-step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <div class="step-title">Webサーバー再起動</div>
+                                <div class="step-desc">設定を反映してHTTPSを有効化</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- コード例 -->
+            <div class="code-section">
+                <div class="code-title">💻 設定コード例</div>
+                
+                <div class="code-tabs">
+                    <div class="code-tab active">🔑 自己署名証明書の作成</div>
+                </div>
+                
+                <div class="code-block">
+<span class="code-comment"># 1. 秘密鍵の生成（RSA 2048ビット）</span>
+<span class="code-command">openssl</span> genrsa -out /etc/ssl/private/server.key <span class="code-string">2048</span>
+
+<span class="code-comment"># 2. 自己署名証明書の生成（有効期限365日）</span>
+<span class="code-command">openssl</span> req -new -x509 \
+  -key /etc/ssl/private/server.key \
+  -out /etc/ssl/certs/server.crt \
+  -days <span class="code-string">365</span> \
+  -subj <span class="code-string">"/C=JP/ST=Tokyo/L=Tokyo/O=MyCompany/CN=internal.example.com"</span>
+
+<span class="code-comment"># 3. 権限の設定</span>
+<span class="code-command">chmod</span> <span class="code-string">600</span> /etc/ssl/private/server.key
+<span class="code-command">chmod</span> <span class="code-string">644</span> /etc/ssl/certs/server.crt
+                </div>
+                
+                <div class="code-tabs" style="margin-top: 30px;">
+                    <div class="code-tab active">🌐 nginx SSL設定</div>
+                </div>
+                
+                <div class="code-block">
+<span class="code-comment"># /etc/nginx/sites-available/default</span>
+<span class="code-keyword">server</span> {
+    <span class="code-keyword">listen</span> <span class="code-string">443</span> ssl;
+    <span class="code-keyword">server_name</span> _;
+
+    <span class="code-comment"># SSL証明書の設定</span>
+    <span class="code-keyword">ssl_certificate</span>     /etc/ssl/certs/server.crt;
+    <span class="code-keyword">ssl_certificate_key</span> /etc/ssl/private/server.key;
+
+    <span class="code-comment"># SSL設定（推奨）</span>
+    <span class="code-keyword">ssl_protocols</span>       TLSv1.2 TLSv1.3;
+    <span class="code-keyword">ssl_ciphers</span>         HIGH:!aNULL:!MD5;
+    <span class="code-keyword">ssl_prefer_server_ciphers</span> on;
+
+    <span class="code-keyword">location</span> / {
+        <span class="code-keyword">root</span>   /var/www/html;
+        <span class="code-keyword">index</span>  index.html;
+    }
+
+    <span class="code-comment"># ヘルスチェック用エンドポイント</span>
+    <span class="code-keyword">location</span> /health {
+        <span class="code-keyword">return</span> <span class="code-string">200</span> <span class="code-string">'OK'</span>;
+        <span class="code-keyword">add_header</span> Content-Type text/plain;
+    }
+}
+                </div>
+                
+                <div class="code-tabs" style="margin-top: 30px;">
+                    <div class="code-tab active">☁️ AWS CLI（ALB設定）</div>
+                </div>
+                
+                <div class="code-block">
+<span class="code-comment"># HTTPSリスナーの作成（ACM証明書を使用）</span>
+<span class="code-command">aws</span> elbv2 create-listener \
+  --load-balancer-arn <span class="code-string">"arn:aws:elasticloadbalancing:..."</span> \
+  --protocol HTTPS \
+  --port <span class="code-string">443</span> \
+  --certificates CertificateArn=<span class="code-string">"arn:aws:acm:ap-northeast-1:123456789012:certificate/xxx"</span> \
+  --default-actions Type=forward,TargetGroupArn=<span class="code-string">"arn:aws:elasticloadbalancing:..."</span>
+
+<span class="code-comment"># ターゲットグループ（HTTPS/443でEC2に転送）</span>
+<span class="code-command">aws</span> elbv2 create-target-group \
+  --name <span class="code-string">"my-https-targets"</span> \
+  --protocol HTTPS \
+  --port <span class="code-string">443</span> \
+  --vpc-id <span class="code-string">"vpc-xxx"</span> \
+  --health-check-protocol HTTPS \
+  --health-check-path <span class="code-string">"/health"</span>
+                </div>
+            </div>
+            
+            <!-- なぜこの構成？ -->
+            <div class="why-section">
+                <h2 class="why-title">🤔 なぜこの構成が必要なの？</h2>
+                
+                <div class="why-grid">
+                    <div class="why-card">
+                        <div class="why-header">
+                            <div class="why-icon">🔒</div>
+                            <div class="why-card-title">エンドツーエンド暗号化</div>
+                        </div>
+                        <ul class="why-content">
+                            <li>ユーザー→ALB→EC2の全区間で暗号化</li>
+                            <li>VPC内でもデータが保護される</li>
+                            <li>コンプライアンス要件を満たせる</li>
+                            <li>万が一の内部漏洩にも対応</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="why-card">
+                        <div class="why-header">
+                            <div class="why-icon">💰</div>
+                            <div class="why-card-title">コスト最適化</div>
+                        </div>
+                        <ul class="why-content">
+                            <li>ACM証明書は無料で使える</li>
+                            <li>自己署名証明書も無料で作成</li>
+                            <li>内部通信に高価な証明書は不要</li>
+                            <li>自動更新で運用コスト削減</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="why-card">
+                        <div class="why-header">
+                            <div class="why-icon">⚡</div>
+                            <div class="why-card-title">運用の効率化</div>
+                        </div>
+                        <ul class="why-content">
+                            <li>ACMは自動更新で手間いらず</li>
+                            <li>ALBでTLS終端を集中管理</li>
+                            <li>EC2の証明書管理が簡素化</li>
+                            <li>スケーリングにも対応しやすい</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="why-card">
+                        <div class="why-header">
+                            <div class="why-icon">🛡️</div>
+                            <div class="why-card-title">セキュリティ強化</div>
+                        </div>
+                        <ul class="why-content">
+                            <li>外部にはACMの信頼性を提供</li>
+                            <li>内部通信も暗号化で二重防御</li>
+                            <li>中間者攻撃を防止</li>
+                            <li>監査要件への対応</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ベストプラクティス -->
+            <div class="best-practices">
+                <div class="bp-title">✨ ベストプラクティス</div>
+                
+                <div class="bp-grid">
+                    <div class="bp-item">
+                        <div class="bp-icon">🔄</div>
+                        <div class="bp-item-title">証明書の自動更新</div>
+                        <div class="bp-item-desc">ACMは自動更新。EC2の自己署名証明書はcronで定期更新を設定しましょう</div>
+                    </div>
+                    
+                    <div class="bp-item">
+                        <div class="bp-icon">📊</div>
+                        <div class="bp-item-title">監視の設定</div>
+                        <div class="bp-item-desc">CloudWatchで証明書の有効期限をモニタリング、アラートを設定</div>
+                    </div>
+                    
+                    <div class="bp-item">
+                        <div class="bp-icon">🔐</div>
+                        <div class="bp-item-title">TLS 1.2以上を使用</div>
+                        <div class="bp-item-desc">古いTLS 1.0/1.1は無効化。TLS 1.2以上のみを許可</div>
+                    </div>
+                    
+                    <div class="bp-item">
+                        <div class="bp-icon">🔑</div>
+                        <div class="bp-item-title">秘密鍵の保護</div>
+                        <div class="bp-item-desc">chmod 600で権限を制限。IAMロールでアクセス制御</div>
+                    </div>
+                    
+                    <div class="bp-item">
+                        <div class="bp-icon">🏥</div>
+                        <div class="bp-item-title">ヘルスチェック設定</div>
+                        <div class="bp-item-desc">ALBのヘルスチェックはHTTPSプロトコルで実施</div>
+                    </div>
+                    
+                    <div class="bp-item">
+                        <div class="bp-icon">📝</div>
+                        <div class="bp-item-title">ログの有効化</div>
+                        <div class="bp-item-desc">ALBアクセスログを有効化して、通信を記録・分析</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 自己署名証明書 詳細セクション -->
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 50px; border-radius: 20px; margin: 50px 0; border-left: 8px solid #f59e0b;">
+                <h2 style="color: #92400e; font-size: 2.2em; margin-bottom: 30px; text-align: center; font-weight: bold;">🪪 自己署名証明書 徹底解説</h2>
+                
+                <!-- 自己署名証明書とは -->
+                <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <h3 style="color: #92400e; font-size: 1.5em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5em;">📜</span> 自己署名証明書とは？
+                    </h3>
+                    <p style="color: #475569; line-height: 1.8; font-size: 1.1em;">
+                        <strong>自分で発行・自分で署名したTLS/SSL証明書</strong>のことです。<br>
+                        認証局（CA）を介さずに、自分自身で「この証明書は正しい」と署名します。
+                    </p>
+                    
+                    <div style="display: flex; gap: 30px; margin-top: 25px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 25px; border-radius: 12px; border: 3px solid #10b981;">
+                            <div style="font-size: 2.5em; text-align: center; margin-bottom: 10px;">🏛️</div>
+                            <h4 style="color: #065f46; text-align: center; margin-bottom: 15px;">CA発行の証明書</h4>
+                            <div style="text-align: center;">
+                                <p style="color: #065f46; font-weight: bold; font-size: 1.1em;">パスポート・運転免許証</p>
+                                <p style="color: #047857; margin-top: 10px;">政府・公的機関が発行</p>
+                                <p style="color: #047857;">→ 誰もが信頼できる</p>
+                            </div>
+                        </div>
+                        
+                        <div style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 25px; border-radius: 12px; border: 3px solid #f59e0b;">
+                            <div style="font-size: 2.5em; text-align: center; margin-bottom: 10px;">🪪</div>
+                            <h4 style="color: #92400e; text-align: center; margin-bottom: 15px;">自己署名証明書</h4>
+                            <div style="text-align: center;">
+                                <p style="color: #92400e; font-weight: bold; font-size: 1.1em;">手書きの名刺・社員証</p>
+                                <p style="color: #b45309; margin-top: 10px;">自分・自社で作成</p>
+                                <p style="color: #b45309;">→ 内部でのみ有効</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 仕組み図解 -->
+                <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <h3 style="color: #92400e; font-size: 1.5em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5em;">🔄</span> CA証明書との違い（仕組み）
+                    </h3>
+                    
+                    <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 300px; background: #f0fdf4; padding: 25px; border-radius: 12px; border-left: 5px solid #10b981;">
+                            <h4 style="color: #065f46; margin-bottom: 15px;">✅ CA証明書の場合</h4>
+                            <div style="font-family: monospace; background: #dcfce7; padding: 15px; border-radius: 8px; color: #166534; line-height: 2;">
+                                👤 ユーザー<br>
+                                &nbsp;&nbsp;↓ 「この証明書は本物？」<br>
+                                🏛️ 認証局（CA）に確認<br>
+                                &nbsp;&nbsp;↓<br>
+                                ✅ 「はい、私が保証します」
+                            </div>
+                        </div>
+                        
+                        <div style="flex: 1; min-width: 300px; background: #fffbeb; padding: 25px; border-radius: 12px; border-left: 5px solid #f59e0b;">
+                            <h4 style="color: #92400e; margin-bottom: 15px;">⚠️ 自己署名証明書の場合</h4>
+                            <div style="font-family: monospace; background: #fef3c7; padding: 15px; border-radius: 8px; color: #92400e; line-height: 2;">
+                                👤 ユーザー<br>
+                                &nbsp;&nbsp;↓ 「この証明書は本物？」<br>
+                                🤷 誰にも確認できない<br>
+                                &nbsp;&nbsp;↓<br>
+                                ⚠️ 「自分で自分を保証してます」
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- メリット・デメリット -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; margin-bottom: 30px;">
+                    <div style="background: linear-gradient(to bottom, #d1fae5 0%, white 100%); padding: 30px; border-radius: 15px; border-top: 5px solid #10b981; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                        <h3 style="color: #065f46; font-size: 1.4em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <span>✅</span> メリット
+                        </h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #d1fae5;">
+                                <span style="position: absolute; left: 0; color: #10b981; font-size: 1.2em;">💰</span>
+                                <strong>完全無料</strong> - コストゼロで作成可能
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #d1fae5;">
+                                <span style="position: absolute; left: 0; color: #10b981; font-size: 1.2em;">⚡</span>
+                                <strong>即座に発行</strong> - コマンド1つで数秒で作成
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #d1fae5;">
+                                <span style="position: absolute; left: 0; color: #10b981; font-size: 1.2em;">🔒</span>
+                                <strong>暗号化は同等</strong> - 通信の暗号化強度はCA証明書と同じ
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #d1fae5;">
+                                <span style="position: absolute; left: 0; color: #10b981; font-size: 1.2em;">🏠</span>
+                                <strong>内部利用に最適</strong> - VPC内、開発環境、テスト環境向け
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569;">
+                                <span style="position: absolute; left: 0; color: #10b981; font-size: 1.2em;">🔧</span>
+                                <strong>柔軟な設定</strong> - 有効期限や属性を自由に設定
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(to bottom, #fee2e2 0%, white 100%); padding: 30px; border-radius: 15px; border-top: 5px solid #ef4444; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                        <h3 style="color: #991b1b; font-size: 1.4em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <span>⚠️</span> デメリット
+                        </h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #fee2e2;">
+                                <span style="position: absolute; left: 0; color: #ef4444; font-size: 1.2em;">🚫</span>
+                                <strong>ブラウザで警告</strong> - 「この接続は安全ではありません」と表示
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #fee2e2;">
+                                <span style="position: absolute; left: 0; color: #ef4444; font-size: 1.2em;">❌</span>
+                                <strong>外部公開に不向き</strong> - ユーザーに不信感を与える
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #fee2e2;">
+                                <span style="position: absolute; left: 0; color: #ef4444; font-size: 1.2em;">🔄</span>
+                                <strong>手動更新が必要</strong> - 有効期限管理を自分で行う
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569; border-bottom: 1px solid #fee2e2;">
+                                <span style="position: absolute; left: 0; color: #ef4444; font-size: 1.2em;">🤝</span>
+                                <strong>第三者の保証なし</strong> - 「本当にこのサーバー？」の証明不可
+                            </li>
+                            <li style="padding: 12px 0 12px 35px; position: relative; color: #475569;">
+                                <span style="position: absolute; left: 0; color: #ef4444; font-size: 1.2em;">📋</span>
+                                <strong>管理の手間</strong> - 証明書の期限切れに注意が必要
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 使用場面 -->
+                <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <h3 style="color: #92400e; font-size: 1.5em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5em;">🎯</span> 使用場面ガイド
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px;">
+                        <div style="background: #f0fdf4; padding: 25px; border-radius: 12px; border: 2px solid #10b981;">
+                            <h4 style="color: #065f46; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.3em;">✅</span> 適している場面
+                            </h4>
+                            <ul style="list-style: none; padding: 0; color: #065f46;">
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🧪</span> 開発・テスト環境
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🔗</span> VPC内部の通信（ALB → EC2）
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🏢</span> 社内システム・イントラネット
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🔀</span> マイクロサービス間通信
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🔄</span> CI/CDパイプライン
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>📊</span> 監視・管理ツールへのアクセス
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: #fef2f2; padding: 25px; border-radius: 12px; border: 2px solid #ef4444;">
+                            <h4 style="color: #991b1b; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.3em;">❌</span> 適さない場面
+                            </h4>
+                            <ul style="list-style: none; padding: 0; color: #991b1b;">
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🌐</span> 本番の外部公開サイト
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🛒</span> ECサイト・オンラインストア
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>💳</span> 決済ページ・金融サービス
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>👥</span> ユーザーが直接アクセスするサービス
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>📱</span> モバイルアプリのAPI（公開）
+                                </li>
+                                <li style="padding: 8px 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🏥</span> 医療・法的に規制されるサービス
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 作成コマンド詳細 -->
+                <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; border-radius: 15px; margin-bottom: 30px;">
+                    <h3 style="color: #60a5fa; font-size: 1.5em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.3em;">💻</span> 自己署名証明書の作成コマンド詳解
+                    </h3>
+                    
+                    <div style="background: #334155; padding: 25px; border-radius: 10px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 2; margin-bottom: 20px;">
+                        <span style="color: #94a3b8;"># 基本的な作成コマンド（1行で完結）</span><br>
+                        <span style="color: #60a5fa;">openssl</span> req -x509 -nodes -days <span style="color: #fbbf24;">365</span> -newkey rsa:<span style="color: #fbbf24;">2048</span> \<br>
+                        &nbsp;&nbsp;-keyout <span style="color: #34d399;">server.key</span> \<br>
+                        &nbsp;&nbsp;-out <span style="color: #34d399;">server.crt</span> \<br>
+                        &nbsp;&nbsp;-subj <span style="color: #34d399;">"/C=JP/ST=Tokyo/L=Tokyo/O=MyCompany/CN=internal.example.com"</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">-x509</div>
+                            <div style="color: #94a3b8; font-size: 0.9em;">自己署名証明書を作成（CSRではなく）</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">-nodes</div>
+                            <div style="color: #94a3b8; font-size: 0.9em;">パスフレーズなし（自動起動に便利）</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">-days 365</div>
+                            <div style="color: #94a3b8; font-size: 0.9em;">有効期限を365日（1年）に設定</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">-newkey rsa:2048</div>
+                            <div style="color: #94a3b8; font-size: 0.9em;">2048ビットのRSA鍵を新規作成</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">-keyout</div>
+                            <div style="color: #94a3b8; font-size: 0.9em;">秘密鍵の出力先ファイル名</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">-out</div>
+                            <div style="color: #94a3b8; font-size: 0.9em;">証明書の出力先ファイル名</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #334155; padding: 25px; border-radius: 10px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 2; margin-top: 20px;">
+                        <span style="color: #94a3b8;"># subj（サブジェクト）の各フィールド</span><br>
+                        <span style="color: #f472b6;">/C=JP</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;"># Country（国コード）</span><br>
+                        <span style="color: #f472b6;">/ST=Tokyo</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;"># State（都道府県）</span><br>
+                        <span style="color: #f472b6;">/L=Tokyo</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;"># Locality（市区町村）</span><br>
+                        <span style="color: #f472b6;">/O=MyCompany</span>&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;"># Organization（組織名）</span><br>
+                        <span style="color: #f472b6;">/CN=internal</span>&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;"># Common Name（ドメイン名）← 最重要！</span>
+                    </div>
+                </div>
+                
+                <!-- 自動更新スクリプト -->
+                <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <h3 style="color: #92400e; font-size: 1.5em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5em;">🔄</span> 証明書の自動更新（cron設定）
+                    </h3>
+                    
+                    <div style="background: #1e293b; padding: 25px; border-radius: 10px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.8; color: #e2e8f0;">
+                        <span style="color: #94a3b8;">#!/bin/bash</span><br>
+                        <span style="color: #94a3b8;"># /usr/local/bin/renew-cert.sh</span><br><br>
+                        
+                        <span style="color: #94a3b8;"># 証明書を再生成</span><br>
+                        <span style="color: #60a5fa;">openssl</span> req -x509 -nodes -days <span style="color: #fbbf24;">365</span> -newkey rsa:<span style="color: #fbbf24;">2048</span> \<br>
+                        &nbsp;&nbsp;-keyout /etc/ssl/private/server.key \<br>
+                        &nbsp;&nbsp;-out /etc/ssl/certs/server.crt \<br>
+                        &nbsp;&nbsp;-subj <span style="color: #34d399;">"/CN=internal.example.com"</span><br><br>
+                        
+                        <span style="color: #94a3b8;"># 権限設定</span><br>
+                        <span style="color: #60a5fa;">chmod</span> <span style="color: #fbbf24;">600</span> /etc/ssl/private/server.key<br><br>
+                        
+                        <span style="color: #94a3b8;"># nginx再起動</span><br>
+                        <span style="color: #60a5fa;">systemctl</span> reload nginx<br><br>
+                        
+                        <span style="color: #94a3b8;"># ログ出力</span><br>
+                        <span style="color: #60a5fa;">echo</span> <span style="color: #34d399;">"$(date): Certificate renewed"</span> >> /var/log/cert-renewal.log
+                    </div>
+                    
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                        <p style="color: #475569; margin-bottom: 10px;"><strong>📅 cron設定例（毎月1日に更新）：</strong></p>
+                        <code style="background: #e2e8f0; padding: 10px 15px; border-radius: 5px; display: block; font-family: monospace;">
+                            0 3 1 * * /usr/local/bin/renew-cert.sh
+                        </code>
+                    </div>
+                </div>
+                
+                <!-- 証明書の確認方法 -->
+                <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <h3 style="color: #92400e; font-size: 1.5em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5em;">🔍</span> 証明書の確認コマンド
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 10px;">
+                            <p style="color: #1e293b; font-weight: bold; margin-bottom: 10px;">📋 証明書の内容を確認</p>
+                            <code style="background: #1e293b; color: #34d399; padding: 15px; border-radius: 8px; display: block; font-family: monospace; font-size: 0.85em;">
+                                openssl x509 -in server.crt -text -noout
+                            </code>
+                        </div>
+                        
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 10px;">
+                            <p style="color: #1e293b; font-weight: bold; margin-bottom: 10px;">📅 有効期限のみ確認</p>
+                            <code style="background: #1e293b; color: #34d399; padding: 15px; border-radius: 8px; display: block; font-family: monospace; font-size: 0.85em;">
+                                openssl x509 -in server.crt -noout -dates
+                            </code>
+                        </div>
+                        
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 10px;">
+                            <p style="color: #1e293b; font-weight: bold; margin-bottom: 10px;">🔑 秘密鍵の確認</p>
+                            <code style="background: #1e293b; color: #34d399; padding: 15px; border-radius: 8px; display: block; font-family: monospace; font-size: 0.85em;">
+                                openssl rsa -in server.key -check
+                            </code>
+                        </div>
+                        
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 10px;">
+                            <p style="color: #1e293b; font-weight: bold; margin-bottom: 10px;">🔗 証明書と鍵の一致確認</p>
+                            <code style="background: #1e293b; color: #34d399; padding: 15px; border-radius: 8px; display: block; font-family: monospace; font-size: 0.85em; line-height: 1.6;">
+                                openssl x509 -noout -modulus -in server.crt | md5sum<br>
+                                openssl rsa -noout -modulus -in server.key | md5sum
+                            </code>
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 4px solid #3b82f6;">
+                        <p style="color: #1e40af; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.5em;">💡</span>
+                            <strong>Tip:</strong> 証明書と秘密鍵のmd5sumが一致していれば、ペアが正しいことを確認できます！
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FAQ -->
+            <div class="faq-section">
+                <h2 class="section-title">❓ よくある質問</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>なぜEC2でもACM証明書を使わないの？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>ACM証明書はALB/CloudFront等のAWSサービスでのみ使用可能です。</strong><br>
+                        EC2インスタンスに直接インストールすることはできません。そのため、EC2では自己署名証明書か、サードパーティの証明書を使用します。VPC内部の通信であれば、自己署名証明書で十分なセキュリティを確保できます。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>ALB → EC2 間はHTTPじゃダメなの？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>セキュリティ要件によります。</strong><br>
+                        VPC内でも暗号化が必要な場合（PCI-DSS、HIPAA等のコンプライアンス要件）は、ALB→EC2間もHTTPSにする必要があります。機密性の高いデータを扱う場合は、エンドツーエンド暗号化を推奨します。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>自己署名証明書の有効期限はどれくらいが適切？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>1年（365日）程度が一般的です。</strong><br>
+                        あまり長すぎると、セキュリティ上のリスクが高まります。cronジョブで自動更新する仕組みを作っておくと、運用が楽になります。自動化スクリプトを用意しておくことをお勧めします。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>ALBのヘルスチェックで自己署名証明書は問題ない？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>問題ありません！</strong><br>
+                        ALBは自己署名証明書を使ったHTTPSエンドポイントにもヘルスチェックできます。「証明書の検証をスキップ」する設定がデフォルトで有効なので、特別な設定は不要です。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div class="summary-section">
+                <h2>🎓 まとめ</h2>
+                
+                <div class="summary-flow">
+                    <div class="summary-box">
+                        <div class="summary-box-icon">👤</div>
+                        <div class="summary-box-label">ユーザー</div>
+                    </div>
+                    
+                    <div class="summary-arrow">🔒➡️</div>
+                    
+                    <div class="summary-box" style="border: 2px solid #10b981;">
+                        <div class="summary-box-icon">⚖️</div>
+                        <div class="summary-box-label">ALB</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">ACM証明書</div>
+                    </div>
+                    
+                    <div class="summary-arrow">🔐➡️</div>
+                    
+                    <div class="summary-box" style="border: 2px solid #f59e0b;">
+                        <div class="summary-box-icon">🖥️</div>
+                        <div class="summary-box-label">EC2</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">自己署名証明書</div>
+                    </div>
+                </div>
+                
+                <div class="final-message">
+                    <strong>🏢 会社のビルで例えると：</strong><br><br>
+                    🛂 <strong>ビル受付（ALB）</strong>では<strong>公的身分証（ACM証明書）</strong>で来客確認<br>
+                    → 誰でも信頼できる公的機関が発行した証明書<br><br>
+                    👨‍💼 <strong>オフィス内（EC2）</strong>では<strong>社員証（自己署名証明書）</strong>で通信<br>
+                    → 社内だけで通用する証明書で十分！<br><br>
+                    <span style="font-size: 1.2em; color: #ff9900;">
+                        <strong>💡 ポイント：</strong>適材適所で証明書を使い分けて、<br>
+                        セキュアかつコスト効率の良いアーキテクチャを構築しよう！🚀
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
