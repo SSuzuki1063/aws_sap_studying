@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 AWS SAP (Solutions Architect Professional) exam study resource repository with HTML-based learning materials.
 
 **Live Site**: https://ssuzuki1063.github.io/aws_sap_studying/
-**Stats**: 120+ HTML resources, 194 quiz questions, 13 categories
+**Stats**: 179 HTML resources, 194 quiz questions, 13 categories
 **Architecture**: Data-driven (data.js → render.js → index.js) static site with NO build process
 
 ## Quick Start
@@ -44,6 +44,93 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 - [ ] Read `.claude/claude_rules.json` (critical rules)
 - [ ] Read `docs/CODING_STANDARDS.md` (data-driven principles)
 
+## Critical Architecture Concepts
+
+### 1. Shared CSS Architecture (2025-01 Refactor)
+
+**Background**: To eliminate 21,645 lines of CSS duplication across 179 HTML files, shared CSS files were introduced.
+
+**CSS Files** (in `css/` directory):
+- `variables.css` - CSS custom properties (colors, spacing, typography)
+- `common.css` - Shared UI components (fixed header, breadcrumbs, scroll-to-top)
+- `layout.css` - Layout utilities and responsive grid
+- `responsive.css` - Media queries and mobile styles
+
+**CRITICAL: GitHub Pages Path Requirement**
+
+All CSS/asset paths MUST include the repository name prefix `/aws_sap_studying/`:
+
+```html
+<!-- ✅ CORRECT - GitHub Pages compatible -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+
+<!-- ❌ WRONG - Will fail on GitHub Pages -->
+<link href="/css/variables.css" rel="stylesheet"/>
+```
+
+**Why**: GitHub Pages serves this site at `https://ssuzuki1063.github.io/aws_sap_studying/`, not at the root domain. Absolute paths like `/css/` resolve to `https://ssuzuki1063.github.io/css/` (404), not the repository subdirectory.
+
+**Verification**: After adding/modifying HTML files, check that CSS loads correctly:
+```bash
+# Search for incorrect paths (should return 0)
+grep -r 'href="/css/' --include="*.html" | wc -l
+
+# Search for correct paths (should match all HTML files with shared CSS)
+grep -r 'href="/aws_sap_studying/css/' --include="*.html" | wc -l
+```
+
+### 2. Data-Driven Navigation System
+
+**Architecture**: `index.html` is split into three files:
+
+```
+index.html          ← Shell page (HTML structure only)
+├── data.js         ← Pure data (NO HTML tags)
+├── render.js       ← Template functions (data → HTML)
+└── index.js        ← UI handlers (search, scroll, navigation)
+```
+
+**TWO-PLACE UPDATE RULE** (Most Common Mistake):
+
+When adding new HTML resources, you MUST update:
+
+1. **`data.js`** - Add to `categoriesData` array:
+   ```javascript
+   {
+     title: 'Your Resource Title',
+     href: 'category/your-resource.html'
+   }
+   // Also increment section.count and category.count
+   ```
+
+2. **`index.js`** - Add to `searchData` array:
+   ```javascript
+   {
+     title: 'Your Resource Title',
+     category: 'カテゴリ名',
+     file: 'category/your-resource.html'
+   }
+   ```
+
+**Without BOTH updates**: Resource won't appear in navigation sidebar OR search results.
+
+**Verification**:
+```bash
+python3 scripts/ci/check_data_integrity.py
+```
+
+### 3. Static Site Constraints
+
+**NO build process, NO dependencies**:
+- NO npm, webpack, vite, or any build tools
+- NO React, Vue, Angular, or frameworks
+- NO external CDNs or libraries
+- Pure HTML/CSS/JavaScript only
+- Must work completely offline
+
 ## Most Common Workflows
 
 ### 1. Add New HTML Learning Resource
@@ -77,6 +164,15 @@ const searchData = [
     file: 'category/your-resource.html'
   }
 ];
+```
+
+**Ensure correct CSS paths in new HTML files**:
+```html
+<!-- Include these at the top of <head> -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
 ```
 
 ```bash
@@ -197,17 +293,19 @@ See `.claude/skills/aws-sap-dev/SKILL.md` for details.
 - `quiz-data-extended.js` - 194 quiz questions
 - `server.py` - Local dev server with CORS
 - `.git/hooks/pre-commit` - Auto-updates lastUpdated field
+- `css/` - Shared CSS files (variables, common, layout, responsive)
 
 ## Critical Rules (Summary)
 
 **See `.claude/claude_rules.json` for complete rules.** Key reminders:
 
 1. **Two-place update**: Always update `data.js` AND `index.js` when adding resources
-2. **W3C validation**: REQUIRED for all HTML before committing
-3. **Static site**: NO backend, NO build process, NO external dependencies
-4. **Data-driven**: Pure data in data.js, HTML generation in render.js only
-5. **WCAG 2.1 AA**: Color contrast 4.5:1 (text), 3:1 (UI components)
-6. **Git workflow**: `git commit` → `git push origin gh-pages` immediately
+2. **GitHub Pages paths**: Use `/aws_sap_studying/css/` not `/css/` for all asset paths
+3. **W3C validation**: REQUIRED for all HTML before committing
+4. **Static site**: NO backend, NO build process, NO external dependencies
+5. **Data-driven**: Pure data in data.js, HTML generation in render.js only
+6. **WCAG 2.1 AA**: Color contrast 4.5:1 (text), 3:1 (UI components)
+7. **Git workflow**: `git commit` → `git push origin gh-pages` immediately
 
 ## Detailed Documentation
 
@@ -222,7 +320,10 @@ See `.claude/skills/aws-sap-dev/SKILL.md` for details.
 
 ## Quick Reference Card
 
-**Most common mistake:** Forgetting to update both `data.js` AND `index.js` when adding resources
+**Most common mistakes:**
+1. Forgetting to update both `data.js` AND `index.js` when adding resources
+2. Using `/css/` instead of `/aws_sap_studying/css/` for asset paths
+3. Skipping W3C validation before committing
 
 **Pre-commit checklist:**
 ```bash
@@ -232,6 +333,15 @@ python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C validation
 python3 scripts/accessibility/check_contrast_ratio.py  # Color contrast
 node -c quiz-data-extended.js data.js render.js        # JS syntax
 git add . && git commit -m "..." && git push origin gh-pages  # Deploy
+```
+
+**Path verification:**
+```bash
+# Check for incorrect CSS paths (should be 0)
+grep -r 'href="/css/' --include="*.html" | wc -l
+
+# Check for correct CSS paths
+grep -r 'href="/aws_sap_studying/css/' --include="*.html" | wc -l
 ```
 
 **Getting help:**
