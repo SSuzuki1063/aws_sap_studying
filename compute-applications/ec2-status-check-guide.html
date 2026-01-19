@@ -1,983 +1,134 @@
 <!DOCTYPE html>
+
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
    EC2ステータスチェック図解ガイド
   </title>
-  <!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
-  <link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
-  <style>
-   * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
-            padding: 20px;
-            padding-top: 80px; /* 固定ヘッダー分のスペース確保 */
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
-            color: white;
-            padding: 50px 40px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .header::before {
-            content: '✓';
-            position: absolute;
-            font-size: 20em;
-            opacity: 0.05;
-            top: -50px;
-            right: -50px;
-            font-weight: bold;
-        }
-        
-        .header h1 {
-            font-size: 3em;
-            margin-bottom: 15px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .header p {
-            font-size: 1.3em;
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .content {
-            padding: 50px;
-        }
-        
-        .intro {
-            text-align: center;
-            margin-bottom: 50px;
-            padding: 35px;
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border-radius: 15px;
-            border-left: 6px solid #1e40af;
-        }
-        
-        .intro h2 {
-            color: #1e3a8a;
-            font-size: 2em;
-            margin-bottom: 15px;
-        }
-        
-        .intro-text {
-            font-size: 1.2em;
-            color: #1e3a8a;
-            margin-top: 15px;
-        }
-        
-        .building-section {
-            margin: 50px 0;
-            background: linear-gradient(to bottom, #f0f9ff 0%, white 100%);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .building-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-top: 30px;
-        }
-        
-        .building-card {
-            background: white;
-            border-radius: 20px;
-            padding: 35px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border: 4px solid;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .building-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 8px;
-        }
-        
-        .building-card.system {
-            border-color: #3b82f6;
-        }
-        
-        .building-card.system::before {
-            background: linear-gradient(90deg, #3b82f6, #2563EB);
-        }
-        
-        .building-card.instance {
-            border-color: #EA580C;
-        }
-        
-        .building-card.instance::before {
-            background: linear-gradient(90deg, #EA580C, #fb923c);
-        }
-        
-        .building-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        
-        .card-icon {
-            font-size: 4em;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .card-title {
-            font-size: 2em;
-            text-align: center;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        
-        .system .card-title {
-            color: #1e40af;
-        }
-        
-        .instance .card-title {
-            color: #c2410c;
-        }
-        
-        .card-subtitle {
-            text-align: center;
-            font-size: 1.2em;
-            color: #6b7280;
-            margin-bottom: 25px;
-            font-weight: 600;
-        }
-        
-        .example-box {
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 12px;
-            margin: 20px 0;
-            border-left: 4px solid;
-        }
-        
-        .system .example-box {
-            border-color: #3b82f6;
-            background: #eff6ff;
-        }
-        
-        .instance .example-box {
-            border-color: #EA580C;
-            background: #fff7ed;
-        }
-        
-        .example-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-        
-        .check-list {
-            margin: 20px 0;
-        }
-        
-        .check-item {
-            padding: 15px;
-            margin: 10px 0;
-            background: white;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-        
-        .check-item:hover {
-            transform: translateX(10px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .check-icon {
-            font-size: 1.8em;
-            min-width: 40px;
-            text-align: center;
-        }
-        
-        .visual-diagram {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            margin: 50px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .building-visual {
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 30px;
-            background: linear-gradient(to bottom, #0ea5e9 0%, #0284c7 30%, #d1d5db 30%, #d1d5db 100%);
-            border-radius: 20px;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .building-label {
-            position: absolute;
-            background: #3b82f6;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        
-        .label-system {
-            top: 20px;
-            left: 20px;
-        }
-        
-        .label-instance {
-            bottom: 120px;
-            right: 20px;
-            background: #EA580C;
-        }
-        
-        .rooms-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 80px;
-        }
-        
-        .room {
-            background: white;
-            border: 3px solid #EA580C;
-            border-radius: 12px;
-            padding: 25px;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
-        }
-        
-        .room:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
-        }
-        
-        .room-icon {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .room-label {
-            font-weight: bold;
-            color: #c2410c;
-        }
-        
-        .infrastructure {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 40px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .infra-item {
-            background: rgba(255,255,255,0.9);
-            padding: 15px 25px;
-            border-radius: 10px;
-            font-weight: bold;
-            color: #1e40af;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        
-        .comparison-table {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin: 50px 0;
-        }
-        
-        .table-header {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-            color: white;
-            padding: 25px;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        
-        .table-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            padding: 25px;
-            border-bottom: 1px solid #909296;
-            transition: background 0.3s ease;
-        }
-        
-        .table-row:hover {
-            background: #f9fafb;
-        }
-        
-        .table-cell {
-            padding: 0 15px;
-        }
-        
-        .table-cell:first-child {
-            font-weight: bold;
-            color: #1f2937;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-        
-        .badge-ok {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .badge-fail {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .action-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-            border: 3px solid;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .action-card.system {
-            border-color: #3b82f6;
-        }
-        
-        .action-card.instance {
-            border-color: #EA580C;
-        }
-        
-        .action-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .system .action-title {
-            color: #1e40af;
-        }
-        
-        .instance .action-title {
-            color: #c2410c;
-        }
-        
-        .step-list {
-            counter-reset: step-counter;
-            list-style: none;
-        }
-        
-        .step-item {
-            counter-increment: step-counter;
-            padding: 15px 20px 15px 60px;
-            margin: 10px 0;
-            background: #f9fafb;
-            border-radius: 10px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .step-item:hover {
-            background: #f3f4f6;
-            transform: translateX(5px);
-        }
-        
-        .step-item::before {
-            content: counter(step-counter);
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 35px;
-            height: 35px;
-            background: linear-gradient(135deg, #3b82f6, #2563EB);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        
-        .instance .step-item::before {
-            background: linear-gradient(135deg, #EA580C, #fb923c);
-        }
-        
-        .scenario-section {
-            margin: 50px 0;
-        }
-        
-        .scenario-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
-            margin-top: 30px;
-        }
-        
-        .scenario-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            border-top: 6px solid;
-            transition: all 0.3s ease;
-        }
-        
-        .scenario-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .scenario-card.system {
-            border-color: #3b82f6;
-        }
-        
-        .scenario-card.instance {
-            border-color: #EA580C;
-        }
-        
-        .scenario-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .console-mockup {
-            background: #1f2937;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 30px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            color: #f9fafb;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .console-header {
-            background: #374151;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: bold;
-            color: #2563EB;
-        }
-        
-        .console-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 15px;
-            margin: 8px 0;
-            background: #374151;
-            border-radius: 8px;
-        }
-        
-        .console-label {
-            color: #6f7682;
-        }
-        
-        .console-value {
-            font-weight: bold;
-        }
-        
-        .tips-section {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 40px;
-            border-radius: 20px;
-            margin: 50px 0;
-            border-left: 8px solid #CA8A04;
-        }
-        
-        .tips-section h3 {
-            color: #92400e;
-            font-size: 2em;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-        
-        .tips-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 25px;
-        }
-        
-        .tip-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 20px;
-            align-items: start;
-        }
-        
-        .tip-icon {
-            font-size: 2.5em;
-            min-width: 50px;
-        }
-        
-        @media (max-width: 1024px) {
-            .building-container,
-            .scenario-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .rooms-container {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .table-header,
-            .table-row {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-            
-            .building-visual {
-                padding: 20px;
-            }
-        }
-    
-        
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  &lt;!-- ページ固有CSSファイル --&gt;
+  <link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/ec2-status-check-guide.css" rel="stylesheet"/>
+  
+  
 
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        @media (max-width: 768px) {
-            
-        }
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        /* 読書進捗インジケーター */
-        
-
-        
-
-        
-
-        /* トップに戻るボタン */
-        
-
-        
-
-        
-
-        
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            
-
-            
-
-            
-
-            
-
-            
-        }
-  </style>
- </head>
- <body>
-  <!-- 左サイドバー目次 -->
-  <div class="sidebar-toc" id="sidebar-toc">
-   <div class="sidebar-toc-header">
-    <h2>
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2 id="目次">
      📑 目次
     </h2>
-   </div>
-   <nav class="sidebar-toc-content">
-    <ul>
-     <li class="toc-h2">
-      <a href="#目次">
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2">
+<a href="#目次">
        📑 目次
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#マンションで例えると超わかりやすい！">
+</li>
+<li class="toc-h2">
+<a href="#マンションで例えると超わかりやすい！">
        🏢 マンションで例えると超わかりやすい！
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#マンションの構造とステータスチェック">
+</li>
+<li class="toc-h2">
+<a href="#マンションの構造とステータスチェック">
        🏢 マンションの構造とステータスチェック
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#2つのステータスチェックを理解しよう">
+</li>
+<li class="toc-h2">
+<a href="#2つのステータスチェックを理解しよう">
        🔍 2つのステータスチェックを理解しよう
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#System-Status-Check">
+</li>
+<li class="toc-h3">
+<a href="#System-Status-Check">
        System Status Check
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Instance-Status-Check">
+</li>
+<li class="toc-h3">
+<a href="#Instance-Status-Check">
        Instance Status Check
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#詳細比較表">
+</li>
+<li class="toc-h2">
+<a href="#詳細比較表">
        📊 詳細比較表
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#問題が起きたときの対処方法">
+</li>
+<li class="toc-h2">
+<a href="#問題が起きたときの対処方法">
        🔧 問題が起きたときの対処方法
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#よくあるシナリオ">
+</li>
+<li class="toc-h2">
+<a href="#よくあるシナリオ">
        🎬 よくあるシナリオ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#シナリオ1-物理ホスト障害">
+</li>
+<li class="toc-h3">
+<a href="#シナリオ1-物理ホスト障害">
        シナリオ1: 物理ホスト障害
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#シナリオ2-カーネルパニック">
+</li>
+<li class="toc-h3">
+<a href="#シナリオ2-カーネルパニック">
        シナリオ2: カーネルパニック
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#シナリオ3-ネットワーク障害">
+</li>
+<li class="toc-h3">
+<a href="#シナリオ3-ネットワーク障害">
        シナリオ3: ネットワーク障害
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#シナリオ4-ディスク容量不足">
+</li>
+<li class="toc-h3">
+<a href="#シナリオ4-ディスク容量不足">
        シナリオ4: ディスク容量不足
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#️-AWSコンソールでの表示例">
+</li>
+<li class="toc-h2">
+<a href="#️-AWSコンソールでの表示例">
        🖥️ AWSコンソールでの表示例
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#知っておくべき重要なTips">
+</li>
+<li class="toc-h3">
+<a href="#知っておくべき重要なTips">
        💡 知っておくべき重要なTips
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#まとめ">
+</li>
+<li class="toc-h2">
+<a href="#まとめ">
        🎓 まとめ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#System-Status-Check-1">
+</li>
+<li class="toc-h3">
+<a href="#System-Status-Check-1">
        System Status Check
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Instance-Status-Check-1">
+</li>
+<li class="toc-h3">
+<a href="#Instance-Status-Check-1">
        Instance Status Check
       </a>
-     </li>
-    </ul>
-   </nav>
-  </div>
-  <!-- サイドバー折りたたみボタン -->
-  <button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
-   <span id="sidebar-toc-toggle-icon">
+</li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">
     ◀
    </span>
-  </button>
-  <style>
-   /* ページ全体のレイアウト調整 */
-    body {
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }
+</button>
 
-    body.sidebar-collapsed {
-        padding-left: 0;
-    }
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 100vh;
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }
-
-    .sidebar-toc.collapsed {
-        transform: translateX(-100%);
-    }
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }
-
-    .sidebar-toc-header h2 {
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .sidebar-toc-content a {
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .sidebar-toc-content a:hover {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }
-
-    .sidebar-toc-content .toc-h2 a {
-        font-weight: 600;
-    }
-
-    .sidebar-toc-content .toc-h3 {
-        font-size: 0.9em;
-        padding-left: 20px;
-    }
-
-    .sidebar-toc-content .toc-h3 a {
-        color: #4b5563;
-        padding: 8px 12px;
-    }
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {
-        position: fixed;
-        left: 340px;
-        top: 20px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-toc-toggle:hover {
-        background: #2563eb;
-        transform: scale(1.05);
-    }
-
-    body.sidebar-collapsed .sidebar-toc-toggle {
-        left: 0;
-    }
-
-    /* スムーズスクロール */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        body {
-            padding-left: 0 !important;
-        }
-
-        .sidebar-toc {
-            width: 280px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar-toc.open {
-            transform: translateX(0);
-        }
-
-        .sidebar-toc-toggle {
-            left: 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {
-            font-size: 1.2em;
-        }
-
-        .sidebar-toc-content a {
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }
-    }
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        body {
-            padding-left: 310px;
-        }
-
-        .sidebar-toc {
-            width: 290px;
-        }
-
-        .sidebar-toc-toggle {
-            left: 290px;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-    }
-  </style>
-  <script>
+<script>
    function toggleSidebarTOC() {
         const sidebar = document.getElementById('sidebar-toc');
         const body = document.body;
@@ -1049,77 +200,195 @@
         });
     });
   </script>
-  <!-- 固定ナビゲーションヘッダー -->
-  <div class="fixed-nav-header">
-   <div class="fixed-nav-container">
-    <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-    <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-     <a href="/aws_sap_studying/profile.html">
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
       自己紹介
      </a>
-     <a href="/aws_sap_studying/learning-resources.html">
+<a href="/aws_sap_studying/learning-resources.html">
       学習リソース集
      </a>
-     <a href="/aws_sap_studying/knowledge-base.html">
+<a href="/aws_sap_studying/knowledge-base.html">
       ナレッジベース
      </a>
-     <a href="/aws_sap_studying/quiz.html">
+<a href="/aws_sap_studying/quiz.html">
       クイズ
      </a>
-    </nav>
-   </div>
-  </div>
-  <!-- 読書進捗インジケーター -->
-  <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
-   <div class="reading-progress-bar" id="readingProgressBar">
-   </div>
-  </div>
-  <!-- トップに戻るボタン -->
-  <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
    ↑
   </button>
-  <div class="container">
-   <!-- ブレッドクラムナビゲーション -->
-   <nav class="breadcrumb-nav">
-    <a class="breadcrumb-home" href="../index.html">
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
      🏠 ホーム
     </a>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      コンピュート・アプリケーション
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      EC2 &amp; インスタンス管理
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-current">
+<span class="breadcrumb-current">
      Ec2 Status Check Guide
     </span>
-   </nav>
-   <div class="header">
-    <h1>
+</nav>
+<div class="header">
+<h1>
      ✅ EC2ステータスチェック
     </h1>
-    <p>
+
+<!-- ページ内目次 -->
+<div id="toc-container" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 20px 25px; margin: 30px 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleTOC()">
+        <h2 style="color: #1e40af; margin: 0; font-size: 1.3em; display: flex; align-items: center;">
+            <span style="margin-right: 10px;">📑</span>
+            <span>目次</span>
+        </h2>
+        <button id="toc-toggle-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s;">
+            <span id="toc-toggle-icon">▶</span> <span id="toc-toggle-text">展開する</span>
+        </button>
+    </div>
+    <nav id="toc-content" class="collapsed" style="transition: all 0.3s ease;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li class="toc-h2"><a href="#目次">📑 目次</a></li>
+            <li class="toc-h2"><a href="#マンションで例えると超わかりやすい！">🏢 マンションで例えると超わかりやすい！</a></li>
+            <li class="toc-h2"><a href="#マンションの構造とステータスチェック">🏢 マンションの構造とステータスチェック</a></li>
+            <li class="toc-h2"><a href="#2つのステータスチェックを理解しよう">🔍 2つのステータスチェックを理解しよう</a></li>
+            <li class="toc-h3"><a href="#System-Status-Check">System Status Check</a></li>
+            <li class="toc-h3"><a href="#Instance-Status-Check">Instance Status Check</a></li>
+            <li class="toc-h2"><a href="#詳細比較表">📊 詳細比較表</a></li>
+            <li class="toc-h2"><a href="#問題が起きたときの対処方法">🔧 問題が起きたときの対処方法</a></li>
+            <li class="toc-h2"><a href="#よくあるシナリオ">🎬 よくあるシナリオ</a></li>
+            <li class="toc-h3"><a href="#シナリオ1-物理ホスト障害">シナリオ1: 物理ホスト障害</a></li>
+            <li class="toc-h3"><a href="#シナリオ2-カーネルパニック">シナリオ2: カーネルパニック</a></li>
+            <li class="toc-h3"><a href="#シナリオ3-ネットワーク障害">シナリオ3: ネットワーク障害</a></li>
+            <li class="toc-h3"><a href="#シナリオ4-ディスク容量不足">シナリオ4: ディスク容量不足</a></li>
+            <li class="toc-h2"><a href="#️-AWSコンソールでの表示例">🖥️ AWSコンソールでの表示例</a></li>
+            <li class="toc-h3"><a href="#知っておくべき重要なTips">💡 知っておくべき重要なTips</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+            <li class="toc-h3"><a href="#System-Status-Check-1">System Status Check</a></li>
+            <li class="toc-h3"><a href="#Instance-Status-Check-1">Instance Status Check</a></li>
+        </ul>
+    </nav>
+</div>
+
+<style>
+    #toc-container a {
+        color: #1e40af;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+
+    #toc-container a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    #toc-container .toc-h2 {
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-top: 10px;
+    }
+
+    #toc-container .toc-h3 {
+        font-size: 0.95em;
+        padding-left: 30px;
+        color: #4b5563;
+    }
+
+    #toc-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 768px) {
+        #toc-container {
+            padding: 15px;
+        }
+
+        #toc-container h2 {
+            font-size: 1.1em;
+        }
+    }
+</style>
+
+<script>
+    function toggleTOC() {
+        const content = document.getElementById('toc-content');
+        const icon = document.getElementById('toc-toggle-icon');
+        const text = document.getElementById('toc-toggle-text');
+
+        if (content.classList.contains('collapsed')) {
+            // 展開
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.classList.remove('collapsed');
+            icon.textContent = '▼';
+            text.textContent = '折りたたむ';
+        } else {
+            // 折りたたみ
+            content.style.maxHeight = '';  // インラインスタイルをクリア
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+            text.textContent = '展開する';
+        }
+    }
+
+    // ページロード時の処理（デフォルトは折りたたみ状態）
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContent = document.getElementById('toc-content');
+        if (tocContent) {
+            // 展開時のアニメーション用にmax-heightを保存
+            tocContent.dataset.maxHeight = tocContent.scrollHeight + 'px';
+        }
+    });
+</script>
+
+
+<p>
      マンション管理で理解する！System vs Instance
     </p>
-   </div>
-   <div class="content">
-    <!-- イントロ -->
-    <div class="intro">
-     <h2 id="マンションで例えると超わかりやすい！">
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="マンションで例えると超わかりやすい！">
       🏢 マンションで例えると超わかりやすい！
      </h2>
-     <p class="intro-text">
+<p class="intro-text">
       あなたはマンションに住んでいます。何か問題が起きたとき、
       <br/>
       それは
@@ -1132,465 +401,465 @@
       </strong>
       ですか？
      </p>
-    </div>
-    <!-- 視覚的な図解 -->
-    <div class="visual-diagram">
-     <h2 id="マンションの構造とステータスチェック" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+</div>
+<!-- 視覚的な図解 -->
+<div class="visual-diagram">
+<h2 id="マンションの構造とステータスチェック" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
       🏢 マンションの構造とステータスチェック
      </h2>
-     <div class="building-visual">
-      <div class="building-label label-system">
+<div class="building-visual">
+<div class="building-label label-system">
        🏗️ System Status Check
        <br/>
        （建物全体）
       </div>
-      <div class="building-label label-instance">
+<div class="building-label label-instance">
        🚪 Instance Status Check
        <br/>
        （各部屋）
       </div>
-      <div class="infrastructure">
-       <div class="infra-item">
+<div class="infrastructure">
+<div class="infra-item">
         ⚡ 電気
        </div>
-       <div class="infra-item">
+<div class="infra-item">
         💧 水道
        </div>
-       <div class="infra-item">
+<div class="infra-item">
         🌐 ネットワーク
        </div>
-       <div class="infra-item">
+<div class="infra-item">
         🔥 ガス
        </div>
-      </div>
-      <div class="rooms-container">
-       <div class="room">
-        <div class="room-icon">
+</div>
+<div class="rooms-container">
+<div class="room">
+<div class="room-icon">
          🚪
         </div>
-        <div class="room-label">
+<div class="room-label">
          301号室
          <br/>
          (Instance 1)
         </div>
-       </div>
-       <div class="room">
-        <div class="room-icon">
+</div>
+<div class="room">
+<div class="room-icon">
          🚪
         </div>
-        <div class="room-label">
+<div class="room-label">
          302号室
          <br/>
          (Instance 2)
         </div>
-       </div>
-       <div class="room">
-        <div class="room-icon">
+</div>
+<div class="room">
+<div class="room-icon">
          🚪
         </div>
-        <div class="room-label">
+<div class="room-label">
          303号室
          <br/>
          (Instance 3)
         </div>
-       </div>
-      </div>
-     </div>
-     <p style="text-align: center; color: #1f2937; font-size: 1.1em; margin-top: 20px;">
+</div>
+</div>
+</div>
+<p style="text-align: center; color: #1f2937; font-size: 1.1em; margin-top: 20px;">
       💡
       <strong>
        ポイント：
       </strong>
       建物（System）が壊れたら全部屋に影響！部屋（Instance）の問題はその部屋だけ！
      </p>
-    </div>
-    <!-- 2つのチェックの詳細 -->
-    <div class="building-section">
-     <h2 id="2つのステータスチェックを理解しよう" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+</div>
+<!-- 2つのチェックの詳細 -->
+<div class="building-section">
+<h2 id="2つのステータスチェックを理解しよう" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
       🔍 2つのステータスチェックを理解しよう
      </h2>
-     <div class="building-container">
-      <!-- System Status Check -->
-      <div class="building-card system">
-       <div class="card-icon">
+<div class="building-container">
+<!-- System Status Check -->
+<div class="building-card system">
+<div class="card-icon">
         🏗️
        </div>
-       <h3 class="card-title" id="System-Status-Check">
+<h3 class="card-title" id="System-Status-Check">
         System Status Check
        </h3>
-       <p class="card-subtitle">
+<p class="card-subtitle">
         建物全体の問題（AWSの責任範囲）
        </p>
-       <div class="example-box">
-        <div class="example-title">
+<div class="example-box">
+<div class="example-title">
          🏢 マンションの例
         </div>
-        <ul style="padding-left: 20px; line-height: 2;">
-         <li>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
           建物全体の停電
          </li>
-         <li>
+<li>
           共用エレベーターの故障
          </li>
-         <li>
+<li>
           本管の水漏れ
          </li>
-         <li>
+<li>
           インターネット回線の障害
          </li>
-        </ul>
-       </div>
-       <div class="example-box">
-        <div class="example-title">
+</ul>
+</div>
+<div class="example-box">
+<div class="example-title">
          ☁️ AWSの実際の問題
         </div>
-        <ul style="padding-left: 20px; line-height: 2;">
-         <li>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
           物理ホストの障害
          </li>
-         <li>
+<li>
           ネットワーク接続の問題
          </li>
-         <li>
+<li>
           電源供給の問題
          </li>
-         <li>
+<li>
           ハードウェアの故障
          </li>
-        </ul>
-       </div>
-       <h4 style="color: #1e40af; margin: 25px 0 15px; font-size: 1.3em;">
+</ul>
+</div>
+<h4 style="color: #1e40af; margin: 25px 0 15px; font-size: 1.3em;">
         チェック項目
        </h4>
-       <div class="check-list">
-        <div class="check-item">
-         <div class="check-icon">
+<div class="check-list">
+<div class="check-item">
+<div class="check-icon">
           🔌
          </div>
-         <div>
+<div>
           物理ホストへの電力供給
          </div>
-        </div>
-        <div class="check-item">
-         <div class="check-icon">
+</div>
+<div class="check-item">
+<div class="check-icon">
           🌐
          </div>
-         <div>
+<div>
           ネットワーク接続の可用性
          </div>
-        </div>
-        <div class="check-item">
-         <div class="check-icon">
+</div>
+<div class="check-item">
+<div class="check-icon">
           🖥️
          </div>
-         <div>
+<div>
           物理ホストのハードウェア
          </div>
-        </div>
-        <div class="check-item">
-         <div class="check-icon">
+</div>
+<div class="check-item">
+<div class="check-icon">
           🔧
          </div>
-         <div>
+<div>
           システムソフトウェアの動作
          </div>
-        </div>
-       </div>
-      </div>
-      <!-- Instance Status Check -->
-      <div class="building-card instance">
-       <div class="card-icon">
+</div>
+</div>
+</div>
+<!-- Instance Status Check -->
+<div class="building-card instance">
+<div class="card-icon">
         🚪
        </div>
-       <h3 class="card-title" id="Instance-Status-Check">
+<h3 class="card-title" id="Instance-Status-Check">
         Instance Status Check
        </h3>
-       <p class="card-subtitle">
+<p class="card-subtitle">
         あなたの部屋の問題（ユーザーの責任範囲）
        </p>
-       <div class="example-box">
-        <div class="example-title">
+<div class="example-box">
+<div class="example-title">
          🏠 部屋の例
         </div>
-        <ul style="padding-left: 20px; line-height: 2;">
-         <li>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
           部屋のブレーカーが落ちた
          </li>
-         <li>
+<li>
           エアコンが壊れた
          </li>
-         <li>
+<li>
           ルーターの設定ミス
          </li>
-         <li>
+<li>
           家具の配置で動線が悪い
          </li>
-        </ul>
-       </div>
-       <div class="example-box">
-        <div class="example-title">
+</ul>
+</div>
+<div class="example-box">
+<div class="example-title">
          ☁️ AWSの実際の問題
         </div>
-        <ul style="padding-left: 20px; line-height: 2;">
-         <li>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
           OSのカーネルパニック
          </li>
-         <li>
+<li>
           メモリ不足
          </li>
-         <li>
+<li>
           ネットワーク設定の誤り
          </li>
-         <li>
+<li>
           ファイルシステムの破損
          </li>
-        </ul>
-       </div>
-       <h4 style="color: #c2410c; margin: 25px 0 15px; font-size: 1.3em;">
+</ul>
+</div>
+<h4 style="color: #c2410c; margin: 25px 0 15px; font-size: 1.3em;">
         チェック項目
        </h4>
-       <div class="check-list">
-        <div class="check-item">
-         <div class="check-icon">
+<div class="check-list">
+<div class="check-item">
+<div class="check-icon">
           🖥️
          </div>
-         <div>
+<div>
           OSの動作状態
          </div>
-        </div>
-        <div class="check-item">
-         <div class="check-icon">
+</div>
+<div class="check-item">
+<div class="check-icon">
           🌐
          </div>
-         <div>
+<div>
           ネットワーク設定の正常性
          </div>
-        </div>
-        <div class="check-item">
-         <div class="check-icon">
+</div>
+<div class="check-item">
+<div class="check-icon">
           💾
          </div>
-         <div>
+<div>
           ファイルシステムの状態
          </div>
-        </div>
-        <div class="check-item">
-         <div class="check-icon">
+</div>
+<div class="check-item">
+<div class="check-icon">
           🧠
          </div>
-         <div>
+<div>
           メモリとCPUの使用状況
          </div>
-        </div>
-       </div>
-      </div>
-     </div>
-    </div>
-    <!-- 比較表 -->
-    <h2 id="詳細比較表" style="color: #1e3a8a; font-size: 2em; margin: 50px 0 20px; text-align: center;">
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<h2 id="詳細比較表" style="color: #1e3a8a; font-size: 2em; margin: 50px 0 20px; text-align: center;">
      📊 詳細比較表
     </h2>
-    <div class="comparison-table">
-     <div class="table-header">
-      <div>
+<div class="comparison-table">
+<div class="table-header">
+<div>
        項目
       </div>
-      <div>
+<div>
        🏗️ System Status Check
       </div>
-      <div>
+<div>
        🚪 Instance Status Check
       </div>
-     </div>
-     <div class="table-row">
-      <div class="table-cell">
+</div>
+<div class="table-row">
+<div class="table-cell">
        責任者
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        AWS（管理会社）
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        ユーザー（住人）
       </div>
-     </div>
-     <div class="table-row">
-      <div class="table-cell">
+</div>
+<div class="table-row">
+<div class="table-cell">
        問題の範囲
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        物理インフラ全体
        <br/>
        （建物レベル）
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        個別インスタンス
        <br/>
        （部屋レベル）
       </div>
-     </div>
-     <div class="table-row">
-      <div class="table-cell">
+</div>
+<div class="table-row">
+<div class="table-cell">
        修復方法
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        インスタンスの停止→起動
        <br/>
        （別の物理ホストに移動）
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        インスタンスの再起動
        <br/>
        （OS・設定の修正）
       </div>
-     </div>
-     <div class="table-row">
-      <div class="table-cell">
+</div>
+<div class="table-row">
+<div class="table-cell">
        自動復旧
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        設定可能（Auto Recovery）
        <br/>
        別ホストに自動移動
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        設定可能（Auto Recovery）
        <br/>
        自動再起動
       </div>
-     </div>
-     <div class="table-row">
-      <div class="table-cell">
+</div>
+<div class="table-row">
+<div class="table-cell">
        影響範囲
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        同じ物理ホストの全インスタンス
        <br/>
        （同じ建物の全部屋）
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        該当インスタンスのみ
        <br/>
        （その部屋だけ）
       </div>
-     </div>
-     <div class="table-row">
-      <div class="table-cell">
+</div>
+<div class="table-row">
+<div class="table-cell">
        発生頻度
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        低い（AWSのインフラは堅牢）
       </div>
-      <div class="table-cell">
+<div class="table-cell">
        比較的高い（設定ミスなど）
       </div>
-     </div>
-    </div>
-    <!-- 対処方法 -->
-    <div style="margin: 50px 0;">
-     <h2 id="問題が起きたときの対処方法" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+</div>
+</div>
+<!-- 対処方法 -->
+<div style="margin: 50px 0;">
+<h2 id="問題が起きたときの対処方法" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
       🔧 問題が起きたときの対処方法
      </h2>
-     <div class="action-card system">
-      <div class="action-title">
-       <span style="font-size: 1.5em;">
+<div class="action-card system">
+<div class="action-title">
+<span style="font-size: 1.5em;">
         🏗️
        </span>
        System Status Checkが失敗したら
       </div>
-      <p style="margin-bottom: 20px; color: #4b5563;">
+<p style="margin-bottom: 20px; color: #4b5563;">
        建物全体の問題 = あなたには修理できません！AWSに任せて引っ越しましょう
       </p>
-      <ol class="step-list">
-       <li class="step-item">
-        <strong>
+<ol class="step-list">
+<li class="step-item">
+<strong>
          インスタンスを停止
         </strong>
-        <br/>
+<br/>
         AWS CLIまたはコンソールでStop
        </li>
-       <li class="step-item">
-        <strong>
+<li class="step-item">
+<strong>
          少し待つ（5-10分）
         </strong>
-        <br/>
+<br/>
         AWSが状態を確認する時間
        </li>
-       <li class="step-item">
-        <strong>
+<li class="step-item">
+<strong>
          インスタンスを起動
         </strong>
-        <br/>
+<br/>
         自動的に健全な物理ホストに配置される
        </li>
-       <li class="step-item">
-        <strong>
+<li class="step-item">
+<strong>
          ステータスチェックを確認
         </strong>
-        <br/>
+<br/>
         緑色の✓になれば完了！
        </li>
-      </ol>
-      <div style="background: #dbeafe; padding: 20px; border-radius: 10px; margin-top: 20px;">
-       <strong>
+</ol>
+<div style="background: #dbeafe; padding: 20px; border-radius: 10px; margin-top: 20px;">
+<strong>
         💡 重要：
        </strong>
        Stop→Startで物理ホストが変わります（新しい建物に引っ越し）
        <br/>
-       <strong>
+<strong>
         ⚠️ 注意：
        </strong>
        Reboot（再起動）では物理ホストは変わりません！
       </div>
-     </div>
-     <div class="action-card instance">
-      <div class="action-title">
-       <span style="font-size: 1.5em;">
+</div>
+<div class="action-card instance">
+<div class="action-title">
+<span style="font-size: 1.5em;">
         🚪
        </span>
        Instance Status Checkが失敗したら
       </div>
-      <p style="margin-bottom: 20px; color: #4b5563;">
+<p style="margin-bottom: 20px; color: #4b5563;">
        部屋の問題 = あなたが修理する必要があります！
       </p>
-      <ol class="step-list">
-       <li class="step-item">
-        <strong>
+<ol class="step-list">
+<li class="step-item">
+<strong>
          原因を調査
         </strong>
-        <br/>
+<br/>
         CloudWatch Logs、システムログを確認
        </li>
-       <li class="step-item">
-        <strong>
+<li class="step-item">
+<strong>
          インスタンスを再起動（Reboot）
         </strong>
-        <br/>
+<br/>
         一時的な問題なら再起動で解決
        </li>
-       <li class="step-item">
-        <strong>
+<li class="step-item">
+<strong>
          それでもダメなら詳細調査
         </strong>
-        <br/>
+<br/>
         - メモリ不足？
         <br/>
         - ディスク容量不足？
         <br/>
         - 設定ミス？
        </li>
-       <li class="step-item">
-        <strong>
+<li class="step-item">
+<strong>
          問題を修正
         </strong>
-        <br/>
+<br/>
         設定変更、不要ファイル削除など
        </li>
-      </ol>
-      <div style="background: #ffedd5; padding: 20px; border-radius: 10px; margin-top: 20px;">
-       <strong>
+</ol>
+<div style="background: #ffedd5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+<strong>
         💡 よくある原因：
        </strong>
-       <br/>
+<br/>
        • カーネルパニック（OSクラッシュ）
        <br/>
        • メモリ不足でOOMキラーが発動
@@ -1599,450 +868,450 @@
        <br/>
        • ネットワーク設定の誤り
       </div>
-     </div>
-    </div>
-    <!-- 実際のシナリオ -->
-    <div class="scenario-section">
-     <h2 id="よくあるシナリオ" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+</div>
+</div>
+<!-- 実際のシナリオ -->
+<div class="scenario-section">
+<h2 id="よくあるシナリオ" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
       🎬 よくあるシナリオ
      </h2>
-     <div class="scenario-grid">
-      <div class="scenario-card system">
-       <div class="scenario-icon">
+<div class="scenario-grid">
+<div class="scenario-card system">
+<div class="scenario-icon">
         ⚡
        </div>
-       <h3 id="シナリオ1-物理ホスト障害" style="color: #1e40af; font-size: 1.5em; margin-bottom: 15px;">
+<h3 id="シナリオ1-物理ホスト障害" style="color: #1e40af; font-size: 1.5em; margin-bottom: 15px;">
         シナリオ1: 物理ホスト障害
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          状況：
         </strong>
         突然インスタンスに接続できなくなった
        </p>
-       <p style="margin-top: 15px;">
-        <strong>
+<p style="margin-top: 15px;">
+<strong>
          診断：
         </strong>
-       </p>
-       <ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
-        <li>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
          System Status Check:
          <span class="status-badge badge-fail">
           ✗ Failed
          </span>
-        </li>
-        <li>
+</li>
+<li>
          Instance Status Check:
          <span class="status-badge badge-ok">
           ✓ OK
          </span>
-        </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          原因：
         </strong>
         物理サーバーのハードウェア故障
        </p>
-       <p style="margin-top: 10px;">
-        <strong>
+<p style="margin-top: 10px;">
+<strong>
          対処：
         </strong>
         Stop → Start で別ホストに移動
        </p>
-       <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+<div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          🏢 マンションの例：
         </strong>
         建物全体が停電 → 別の建物に引っ越し
        </div>
-      </div>
-      <div class="scenario-card instance">
-       <div class="scenario-icon">
+</div>
+<div class="scenario-card instance">
+<div class="scenario-icon">
         💥
        </div>
-       <h3 id="シナリオ2-カーネルパニック" style="color: #c2410c; font-size: 1.5em; margin-bottom: 15px;">
+<h3 id="シナリオ2-カーネルパニック" style="color: #c2410c; font-size: 1.5em; margin-bottom: 15px;">
         シナリオ2: カーネルパニック
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          状況：
         </strong>
         アプリケーションが応答しない
        </p>
-       <p style="margin-top: 15px;">
-        <strong>
+<p style="margin-top: 15px;">
+<strong>
          診断：
         </strong>
-       </p>
-       <ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
-        <li>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
          System Status Check:
          <span class="status-badge badge-ok">
           ✓ OK
          </span>
-        </li>
-        <li>
+</li>
+<li>
          Instance Status Check:
          <span class="status-badge badge-fail">
           ✗ Failed
          </span>
-        </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          原因：
         </strong>
         OSのクラッシュ
        </p>
-       <p style="margin-top: 10px;">
-        <strong>
+<p style="margin-top: 10px;">
+<strong>
          対処：
         </strong>
         Rebootで再起動
        </p>
-       <div style="background: #ffedd5; padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+<div style="background: #ffedd5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          🏠 部屋の例：
         </strong>
         部屋のブレーカーが落ちた → ブレーカーを上げる
        </div>
-      </div>
-      <div class="scenario-card system">
-       <div class="scenario-icon">
+</div>
+<div class="scenario-card system">
+<div class="scenario-icon">
         🌐
        </div>
-       <h3 id="シナリオ3-ネットワーク障害" style="color: #1e40af; font-size: 1.5em; margin-bottom: 15px;">
+<h3 id="シナリオ3-ネットワーク障害" style="color: #1e40af; font-size: 1.5em; margin-bottom: 15px;">
         シナリオ3: ネットワーク障害
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          状況：
         </strong>
         pingが通らない
        </p>
-       <p style="margin-top: 15px;">
-        <strong>
+<p style="margin-top: 15px;">
+<strong>
          診断：
         </strong>
-       </p>
-       <ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
-        <li>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
          System Status Check:
          <span class="status-badge badge-fail">
           ✗ Failed
          </span>
-        </li>
-        <li>
+</li>
+<li>
          Instance Status Check:
          <span class="status-badge badge-warning">
           ? Insufficient Data
          </span>
-        </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          原因：
         </strong>
         物理ネットワーク機器の障害
        </p>
-       <p style="margin-top: 10px;">
-        <strong>
+<p style="margin-top: 10px;">
+<strong>
          対処：
         </strong>
         AWSサポートに連絡 or Stop → Start
        </p>
-       <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+<div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          🏢 マンションの例：
         </strong>
         建物全体のネット回線が切断 → プロバイダに連絡
        </div>
-      </div>
-      <div class="scenario-card instance">
-       <div class="scenario-icon">
+</div>
+<div class="scenario-card instance">
+<div class="scenario-icon">
         💾
        </div>
-       <h3 id="シナリオ4-ディスク容量不足" style="color: #c2410c; font-size: 1.5em; margin-bottom: 15px;">
+<h3 id="シナリオ4-ディスク容量不足" style="color: #c2410c; font-size: 1.5em; margin-bottom: 15px;">
         シナリオ4: ディスク容量不足
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          状況：
         </strong>
         アプリケーションがエラーを吐く
        </p>
-       <p style="margin-top: 15px;">
-        <strong>
+<p style="margin-top: 15px;">
+<strong>
          診断：
         </strong>
-       </p>
-       <ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
-        <li>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
          System Status Check:
          <span class="status-badge badge-ok">
           ✓ OK
          </span>
-        </li>
-        <li>
+</li>
+<li>
          Instance Status Check:
          <span class="status-badge badge-fail">
           ✗ Failed
          </span>
-        </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          原因：
         </strong>
         ディスク使用率100%
        </p>
-       <p style="margin-top: 10px;">
-        <strong>
+<p style="margin-top: 10px;">
+<strong>
          対処：
         </strong>
         不要ファイル削除 or ボリューム拡張
        </p>
-       <div style="background: #ffedd5; padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+<div style="background: #ffedd5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          🏠 部屋の例：
         </strong>
         部屋が荷物でいっぱい → 断捨離か引っ越し
        </div>
-      </div>
-     </div>
-    </div>
-    <!-- コンソール表示例 -->
-    <h2 id="️-AWSコンソールでの表示例" style="color: #1e3a8a; font-size: 2em; margin: 50px 0 20px; text-align: center;">
+</div>
+</div>
+</div>
+<!-- コンソール表示例 -->
+<h2 id="️-AWSコンソールでの表示例" style="color: #1e3a8a; font-size: 2em; margin: 50px 0 20px; text-align: center;">
      🖥️ AWSコンソールでの表示例
     </h2>
-    <div class="console-mockup">
-     <div class="console-header">
+<div class="console-mockup">
+<div class="console-header">
       EC2 Instance Status Checks
      </div>
-     <div style="margin-bottom: 30px;">
-      <div style="color: #047857; font-weight: bold; margin-bottom: 15px;">
+<div style="margin-bottom: 30px;">
+<div style="color: #047857; font-weight: bold; margin-bottom: 15px;">
        ✓ 正常な状態（両方OK）
       </div>
-      <div class="console-row">
-       <span class="console-label">
+<div class="console-row">
+<span class="console-label">
         System Status Check:
        </span>
-       <span class="console-value" style="color: #047857;">
+<span class="console-value" style="color: #047857;">
         ✓ Passed
        </span>
-      </div>
-      <div class="console-row">
-       <span class="console-label">
+</div>
+<div class="console-row">
+<span class="console-label">
         Instance Status Check:
        </span>
-       <span class="console-value" style="color: #047857;">
+<span class="console-value" style="color: #047857;">
         ✓ Passed
        </span>
-      </div>
-     </div>
-     <div style="margin-bottom: 30px;">
-      <div style="color: #ef4444; font-weight: bold; margin-bottom: 15px;">
+</div>
+</div>
+<div style="margin-bottom: 30px;">
+<div style="color: #ef4444; font-weight: bold; margin-bottom: 15px;">
        ✗ 物理ホスト障害（System失敗）
       </div>
-      <div class="console-row">
-       <span class="console-label">
+<div class="console-row">
+<span class="console-label">
         System Status Check:
        </span>
-       <span class="console-value" style="color: #ef4444;">
+<span class="console-value" style="color: #ef4444;">
         ✗ Failed
        </span>
-      </div>
-      <div class="console-row">
-       <span class="console-label">
+</div>
+<div class="console-row">
+<span class="console-label">
         Instance Status Check:
        </span>
-       <span class="console-value" style="color: #047857;">
+<span class="console-value" style="color: #047857;">
         ✓ Passed
        </span>
-      </div>
-      <div style="color: #CA8A04; margin-top: 10px; padding: 10px; background: #374151; border-radius: 5px;">
+</div>
+<div style="color: #CA8A04; margin-top: 10px; padding: 10px; background: #374151; border-radius: 5px;">
        ⚠️ Action Required: Stop and Start the instance to migrate to a new host
       </div>
-     </div>
-     <div>
-      <div style="color: #ef4444; font-weight: bold; margin-bottom: 15px;">
+</div>
+<div>
+<div style="color: #ef4444; font-weight: bold; margin-bottom: 15px;">
        ✗ OS障害（Instance失敗）
       </div>
-      <div class="console-row">
-       <span class="console-label">
+<div class="console-row">
+<span class="console-label">
         System Status Check:
        </span>
-       <span class="console-value" style="color: #047857;">
+<span class="console-value" style="color: #047857;">
         ✓ Passed
        </span>
-      </div>
-      <div class="console-row">
-       <span class="console-label">
+</div>
+<div class="console-row">
+<span class="console-label">
         Instance Status Check:
        </span>
-       <span class="console-value" style="color: #ef4444;">
+<span class="console-value" style="color: #ef4444;">
         ✗ Failed
        </span>
-      </div>
-      <div style="color: #CA8A04; margin-top: 10px; padding: 10px; background: #374151; border-radius: 5px;">
+</div>
+<div style="color: #CA8A04; margin-top: 10px; padding: 10px; background: #374151; border-radius: 5px;">
        ⚠️ Action Required: Reboot the instance or check OS configuration
       </div>
-     </div>
-    </div>
-    <!-- Tips -->
-    <div class="tips-section">
-     <h3 id="知っておくべき重要なTips">
+</div>
+</div>
+<!-- Tips -->
+<div class="tips-section">
+<h3 id="知っておくべき重要なTips">
       💡 知っておくべき重要なTips
      </h3>
-     <div class="tips-grid">
-      <div class="tip-card">
-       <div class="tip-icon">
+<div class="tips-grid">
+<div class="tip-card">
+<div class="tip-icon">
         🤖
        </div>
-       <div>
-        <strong>
+<div>
+<strong>
          自動復旧を設定しよう
         </strong>
-        <br/>
+<br/>
         CloudWatch Alarmで自動復旧を設定すると、ステータスチェック失敗時に自動的にインスタンスを復旧
        </div>
-      </div>
-      <div class="tip-card">
-       <div class="tip-icon">
+</div>
+<div class="tip-card">
+<div class="tip-icon">
         📊
        </div>
-       <div>
-        <strong>
+<div>
+<strong>
          CloudWatchで監視
         </strong>
-        <br/>
+<br/>
         StatusCheckFailedアラームを設定して、問題をすぐに検知できるようにしましょう
        </div>
-      </div>
-      <div class="tip-card">
-       <div class="tip-icon">
+</div>
+<div class="tip-card">
+<div class="tip-icon">
         🔄
        </div>
-       <div>
-        <strong>
+<div>
+<strong>
          Stop vs Reboot
         </strong>
-        <br/>
+<br/>
         System問題は「Stop→Start」、Instance問題は「Reboot」を使い分けましょう
        </div>
-      </div>
-      <div class="tip-card">
-       <div class="tip-icon">
+</div>
+<div class="tip-card">
+<div class="tip-icon">
         ⏱️
        </div>
-       <div>
-        <strong>
+<div>
+<strong>
          チェック間隔
         </strong>
-        <br/>
+<br/>
         ステータスチェックは1分ごとに実行されます。問題検知は迅速！
        </div>
-      </div>
-      <div class="tip-card">
-       <div class="tip-icon">
+</div>
+<div class="tip-card">
+<div class="tip-icon">
         💾
        </div>
-       <div>
-        <strong>
+<div>
+<strong>
          データは大丈夫？
         </strong>
-        <br/>
+<br/>
         EBSボリュームはインスタンスの移動（Stop→Start）でも保持されます。安心！
        </div>
-      </div>
-      <div class="tip-card">
-       <div class="tip-icon">
+</div>
+<div class="tip-card">
+<div class="tip-icon">
         🎯
        </div>
-       <div>
-        <strong>
+<div>
+<strong>
          テスト環境で試そう
         </strong>
-        <br/>
+<br/>
         本番前にテスト環境でStop→Startやアラームの動作を確認しましょう
        </div>
-      </div>
-     </div>
-    </div>
-    <!-- まとめ -->
-    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color: white; padding: 50px; border-radius: 20px; text-align: center; margin-top: 50px;">
-     <h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+</div>
+</div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color: white; padding: 50px; border-radius: 20px; text-align: center; margin-top: 50px;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
       🎓 まとめ
      </h2>
-     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1000px; margin: 30px auto;">
-      <div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
-       <div style="font-size: 3em; margin-bottom: 15px;">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1000px; margin: 30px auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
+<div style="font-size: 3em; margin-bottom: 15px;">
         🏗️
        </div>
-       <h3 id="System-Status-Check-1" style="font-size: 1.8em; margin-bottom: 15px;">
+<h3 id="System-Status-Check-1" style="font-size: 1.8em; margin-bottom: 15px;">
         System Status Check
        </h3>
-       <p style="font-size: 1.1em; line-height: 1.8;">
+<p style="font-size: 1.1em; line-height: 1.8;">
         建物全体の問題
         <br/>
-        <strong>
+<strong>
          AWSの責任
         </strong>
-        <br/>
+<br/>
         対処：Stop → Start
        </p>
-      </div>
-      <div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
-       <div style="font-size: 3em; margin-bottom: 15px;">
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
+<div style="font-size: 3em; margin-bottom: 15px;">
         🚪
        </div>
-       <h3 id="Instance-Status-Check-1" style="font-size: 1.8em; margin-bottom: 15px;">
+<h3 id="Instance-Status-Check-1" style="font-size: 1.8em; margin-bottom: 15px;">
         Instance Status Check
        </h3>
-       <p style="font-size: 1.1em; line-height: 1.8;">
+<p style="font-size: 1.1em; line-height: 1.8;">
         あなたの部屋の問題
         <br/>
-        <strong>
+<strong>
          ユーザーの責任
         </strong>
-        <br/>
+<br/>
         対処：Reboot or 設定修正
        </p>
-      </div>
-     </div>
-     <div style="margin-top: 40px; padding: 30px; background: rgba(255,255,255,0.2); border-radius: 15px; backdrop-filter: blur(10px);">
-      <p style="font-size: 1.3em; line-height: 2;">
+</div>
+</div>
+<div style="margin-top: 40px; padding: 30px; background: rgba(255,255,255,0.2); border-radius: 15px; backdrop-filter: blur(10px);">
+<p style="font-size: 1.3em; line-height: 2;">
        🎯
        <strong>
         覚えておくべきこと：
        </strong>
-       <br/>
+<br/>
        マンションのトラブルと同じ！
        <br/>
        建物の問題か、部屋の問題かを見極めることが大切です✨
       </p>
-     </div>
-    </div>
-   </div>
-  </div>
-  <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
-   <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+</div>
+</div>
+</div>
+</div>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
     Created by
     <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
      SSuzuki1063
     </a>
-   </p>
-   <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
     AWS SAP Learning Resources
    </p>
-  </div>
-  <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
    🏠 リソース集に戻る
   </button>
-  <!-- 固定ヘッダー機能のJavaScript -->
-  <script>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
    // トップに戻るボタンの表示/非表示
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const readingProgress = document.getElementById('readingProgress');
@@ -2078,5 +1347,5 @@
             });
         });
   </script>
- </body>
+</body>
 </html>

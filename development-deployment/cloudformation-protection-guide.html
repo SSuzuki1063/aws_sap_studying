@@ -1,658 +1,114 @@
 <!DOCTYPE html>
+
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
    CloudFormation リソース保持メカニズム
   </title>
-  <!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
-  <link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
-  <style>
-   * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  &lt;!-- ページ固有CSSファイル --&gt;
+  <link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/cloudformation-protection-guide.css" rel="stylesheet"/>
+  
+  
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            padding-top: 80px; /* 固定ヘッダー分のスペース確保 */
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #DC2626, #ffa726);
-            color: white;
-            padding: 40px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            animation: fadeInDown 1s ease-out;
-        }
-
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            animation: fadeInUp 1s ease-out 0.3s both;
-        }
-
-        .content {
-            padding: 40px;
-        }
-
-        .section {
-            margin-bottom: 60px;
-            opacity: 0;
-            transform: translateY(30px);
-            animation: slideInUp 0.8s ease-out forwards;
-        }
-
-        .section:nth-child(2) { animation-delay: 0.2s; }
-        .section:nth-child(3) { animation-delay: 0.4s; }
-        .section:nth-child(4) { animation-delay: 0.6s; }
-        .section:nth-child(5) { animation-delay: 0.8s; }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            margin-bottom: 30px;
-            font-size: 1.8rem;
-            color: #333;
-        }
-
-        .icon {
-            width: 60px;
-            height: 60px;
-            margin-right: 20px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-        }
-
-        .icon.stack { background: linear-gradient(135deg, #0369A1, #00f2fe); }
-        .icon.deletion { background: linear-gradient(135deg, #fa709a, #fee140); }
-        .icon.update { background: linear-gradient(135deg, #a8edea, #fed6e3); }
-        .icon.protection { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
-
-        .house-diagram {
-            background: linear-gradient(135deg, #9333EA 0%, #f5576c 100%);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-            color: white;
-            text-align: center;
-        }
-
-        .house {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            animation: bounce 2s infinite;
-        }
-
-        .policy-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .policy-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .policy-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-        }
-
-        .policy-card h3 {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #fff;
-        }
-
-        .policy-emoji {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .protection-demo {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .shield {
-            font-size: 4rem;
-            color: #DC2626;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-
-        .flow-diagram {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            flex-wrap: wrap;
-            margin: 30px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-        }
-
-        .flow-step {
-            flex: 1;
-            min-width: 150px;
-            text-align: center;
-            margin: 10px;
-        }
-
-        .flow-step-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 15px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-        }
-
-        .arrow {
-            font-size: 2rem;
-            color: #667eea;
-            margin: 0 10px;
-        }
-
-        .highlight-box {
-            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            border-left: 5px solid #008662;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #9e6c0f 0%, #c35237 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            border-left: 5px solid #d63031;
-        }
-
-        .summary {
-            background: linear-gradient(135deg, #7E22CE 0%, #6c5ce7 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translate3d(0, -100%, 0);
-            }
-            to {
-                opacity: 1;
-                transform: translate3d(0, 0, 0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translate3d(0, 100%, 0);
-            }
-            to {
-                opacity: 1;
-                transform: translate3d(0, 0, 0);
-            }
-        }
-
-        @keyframes slideInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes bounce {
-            0%, 20%, 53%, 80%, 100% {
-                transform: translate3d(0, 0, 0);
-            }
-            40%, 43% {
-                transform: translate3d(0, -10px, 0);
-            }
-            70% {
-                transform: translate3d(0, -5px, 0);
-            }
-            90% {
-                transform: translate3d(0, -2px, 0);
-            }
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.1);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .content {
-                padding: 20px;
-            }
-            
-            .flow-diagram {
-                flex-direction: column;
-            }
-            
-            .arrow {
-                transform: rotate(90deg);
-            }
-        }
-    
-        
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        @media (max-width: 768px) {
-            
-        }
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        /* 読書進捗インジケーター */
-        
-
-        
-
-        
-
-        /* トップに戻るボタン */
-        
-
-        
-
-        
-
-        
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            
-
-            
-
-            
-
-            
-
-            
-        }
-  </style>
- </head>
- <body>
-  <!-- 左サイドバー目次 -->
-  <div class="sidebar-toc" id="sidebar-toc">
-   <div class="sidebar-toc-header">
-    <h2>
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2 id="目次">
      📑 目次
     </h2>
-   </div>
-   <nav class="sidebar-toc-content">
-    <ul>
-     <li class="toc-h2">
-      <a href="#目次">
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2">
+<a href="#目次">
        📑 目次
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#CloudFormationスタックとは？">
+</li>
+<li class="toc-h2">
+<a href="#CloudFormationスタックとは？">
        CloudFormationスタックとは？
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#スタック-=-家の設計図-+-建築プロジェクト">
+</li>
+<li class="toc-h3">
+<a href="#スタック-=-家の設計図-+-建築プロジェクト">
        スタック = 家の設計図 + 建築プロジェクト
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#DeletionPolicy---解体時のルール">
+</li>
+<li class="toc-h2">
+<a href="#DeletionPolicy---解体時のルール">
        DeletionPolicy - 解体時のルール
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Delete削除">
+</li>
+<li class="toc-h3">
+<a href="#Delete削除">
        Delete（削除）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Retain保持">
+</li>
+<li class="toc-h3">
+<a href="#Retain保持">
        Retain（保持）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Snapshotスナップショット">
+</li>
+<li class="toc-h3">
+<a href="#Snapshotスナップショット">
        Snapshot（スナップショット）
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#UpdateReplacePolicy---リノベーション時のルール">
+</li>
+<li class="toc-h2">
+<a href="#UpdateReplacePolicy---リノベーション時のルール">
        UpdateReplacePolicy - リノベーション時のルール
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Delete削除-1">
+</li>
+<li class="toc-h3">
+<a href="#Delete削除-1">
        Delete（削除）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Retain保持-1">
+</li>
+<li class="toc-h3">
+<a href="#Retain保持-1">
        Retain（保持）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Snapshotスナップショット-1">
+</li>
+<li class="toc-h3">
+<a href="#Snapshotスナップショット-1">
        Snapshot（スナップショット）
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#Termination-Protection---家全体の解体防止">
+</li>
+<li class="toc-h2">
+<a href="#Termination-Protection---家全体の解体防止">
        Termination Protection - 家全体の解体防止
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#スタック全体を誤って削除することを防ぐ安全装置">
+</li>
+<li class="toc-h3">
+<a href="#スタック全体を誤って削除することを防ぐ安全装置">
        スタック全体を誤って削除することを防ぐ安全装置
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#まとめ-3つの安全対策で大切なものを守ろう">
+</li>
+<li class="toc-h2">
+<a href="#まとめ-3つの安全対策で大切なものを守ろう">
        🎉 まとめ：3つの安全対策で大切なものを守ろう
       </a>
-     </li>
-    </ul>
-   </nav>
-  </div>
-  <!-- サイドバー折りたたみボタン -->
-  <button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
-   <span id="sidebar-toc-toggle-icon">
+</li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">
     ◀
    </span>
-  </button>
-  <style>
-   /* ページ全体のレイアウト調整 */
-    body {
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }
+</button>
 
-    body.sidebar-collapsed {
-        padding-left: 0;
-    }
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 100vh;
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }
-
-    .sidebar-toc.collapsed {
-        transform: translateX(-100%);
-    }
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }
-
-    .sidebar-toc-header h2 {
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .sidebar-toc-content a {
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .sidebar-toc-content a:hover {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }
-
-    .sidebar-toc-content .toc-h2 a {
-        font-weight: 600;
-    }
-
-    .sidebar-toc-content .toc-h3 {
-        font-size: 0.9em;
-        padding-left: 20px;
-    }
-
-    .sidebar-toc-content .toc-h3 a {
-        color: #4b5563;
-        padding: 8px 12px;
-    }
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {
-        position: fixed;
-        left: 340px;
-        top: 20px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-toc-toggle:hover {
-        background: #2563eb;
-        transform: scale(1.05);
-    }
-
-    body.sidebar-collapsed .sidebar-toc-toggle {
-        left: 0;
-    }
-
-    /* スムーズスクロール */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        body {
-            padding-left: 0 !important;
-        }
-
-        .sidebar-toc {
-            width: 280px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar-toc.open {
-            transform: translateX(0);
-        }
-
-        .sidebar-toc-toggle {
-            left: 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {
-            font-size: 1.2em;
-        }
-
-        .sidebar-toc-content a {
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }
-    }
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        body {
-            padding-left: 310px;
-        }
-
-        .sidebar-toc {
-            width: 290px;
-        }
-
-        .sidebar-toc-toggle {
-            left: 290px;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-    }
-  </style>
-  <script>
+<script>
    function toggleSidebarTOC() {
         const sidebar = document.getElementById('sidebar-toc');
         const body = document.body;
@@ -724,386 +180,500 @@
         });
     });
   </script>
-  <!-- 固定ナビゲーションヘッダー -->
-  <div class="fixed-nav-header">
-   <div class="fixed-nav-container">
-    <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-    <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-     <a href="/aws_sap_studying/profile.html">
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
       自己紹介
      </a>
-     <a href="/aws_sap_studying/learning-resources.html">
+<a href="/aws_sap_studying/learning-resources.html">
       学習リソース集
      </a>
-     <a href="/aws_sap_studying/knowledge-base.html">
+<a href="/aws_sap_studying/knowledge-base.html">
       ナレッジベース
      </a>
-     <a href="/aws_sap_studying/quiz.html">
+<a href="/aws_sap_studying/quiz.html">
       クイズ
      </a>
-    </nav>
-   </div>
-  </div>
-  <!-- 読書進捗インジケーター -->
-  <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
-   <div class="reading-progress-bar" id="readingProgressBar">
-   </div>
-  </div>
-  <!-- トップに戻るボタン -->
-  <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
    ↑
   </button>
-  <div class="container">
-   <!-- ブレッドクラムナビゲーション -->
-   <nav class="breadcrumb-nav">
-    <a class="breadcrumb-home" href="../index.html">
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
      🏠 ホーム
     </a>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      開発・デプロイメント
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      IaC &amp; CloudFormation
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-current">
+<span class="breadcrumb-current">
      Cloudformation Protection Guide
     </span>
-   </nav>
-   <div class="header">
-    <h1>
+</nav>
+<div class="header">
+<h1>
      🏗️ CloudFormation 保護メカニズム
     </h1>
-    <p>
+
+<!-- ページ内目次 -->
+<div id="toc-container" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 20px 25px; margin: 30px 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleTOC()">
+        <h2 style="color: #1e40af; margin: 0; font-size: 1.3em; display: flex; align-items: center;">
+            <span style="margin-right: 10px;">📑</span>
+            <span>目次</span>
+        </h2>
+        <button id="toc-toggle-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s;">
+            <span id="toc-toggle-icon">▶</span> <span id="toc-toggle-text">展開する</span>
+        </button>
+    </div>
+    <nav id="toc-content" class="collapsed" style="transition: all 0.3s ease;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li class="toc-h2"><a href="#目次">📑 目次</a></li>
+            <li class="toc-h2"><a href="#CloudFormationスタックとは？">CloudFormationスタックとは？</a></li>
+            <li class="toc-h3"><a href="#スタック-=-家の設計図-+-建築プロジェクト">スタック = 家の設計図 + 建築プロジェクト</a></li>
+            <li class="toc-h2"><a href="#DeletionPolicy---解体時のルール">DeletionPolicy - 解体時のルール</a></li>
+            <li class="toc-h3"><a href="#Delete削除">Delete（削除）</a></li>
+            <li class="toc-h3"><a href="#Retain保持">Retain（保持）</a></li>
+            <li class="toc-h3"><a href="#Snapshotスナップショット">Snapshot（スナップショット）</a></li>
+            <li class="toc-h2"><a href="#UpdateReplacePolicy---リノベーション時のルール">UpdateReplacePolicy - リノベーション時のルール</a></li>
+            <li class="toc-h3"><a href="#Delete削除-1">Delete（削除）</a></li>
+            <li class="toc-h3"><a href="#Retain保持-1">Retain（保持）</a></li>
+            <li class="toc-h3"><a href="#Snapshotスナップショット-1">Snapshot（スナップショット）</a></li>
+            <li class="toc-h2"><a href="#Termination-Protection---家全体の解体防止">Termination Protection - 家全体の解体防止</a></li>
+            <li class="toc-h3"><a href="#スタック全体を誤って削除することを防ぐ安全装置">スタック全体を誤って削除することを防ぐ安全装置</a></li>
+            <li class="toc-h2"><a href="#まとめ-3つの安全対策で大切なものを守ろう">🎉 まとめ：3つの安全対策で大切なものを守ろう</a></li>
+        </ul>
+    </nav>
+</div>
+
+<style>
+    #toc-container a {
+        color: #1e40af;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+
+    #toc-container a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    #toc-container .toc-h2 {
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-top: 10px;
+    }
+
+    #toc-container .toc-h3 {
+        font-size: 0.95em;
+        padding-left: 30px;
+        color: #4b5563;
+    }
+
+    #toc-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 768px) {
+        #toc-container {
+            padding: 15px;
+        }
+
+        #toc-container h2 {
+            font-size: 1.1em;
+        }
+    }
+</style>
+
+<script>
+    function toggleTOC() {
+        const content = document.getElementById('toc-content');
+        const icon = document.getElementById('toc-toggle-icon');
+        const text = document.getElementById('toc-toggle-text');
+
+        if (content.classList.contains('collapsed')) {
+            // 展開
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.classList.remove('collapsed');
+            icon.textContent = '▼';
+            text.textContent = '折りたたむ';
+        } else {
+            // 折りたたみ
+            content.style.maxHeight = '';  // インラインスタイルをクリア
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+            text.textContent = '展開する';
+        }
+    }
+
+    // ページロード時の処理（デフォルトは折りたたみ状態）
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContent = document.getElementById('toc-content');
+        if (tocContent) {
+            // 展開時のアニメーション用にmax-heightを保存
+            tocContent.dataset.maxHeight = tocContent.scrollHeight + 'px';
+        }
+    });
+</script>
+
+
+<p>
      家の建築管理で学ぶAWS CloudFormationの安全対策
     </p>
-   </div>
-   <div class="content">
-    <div class="section">
-     <div class="section-title">
-      <div class="icon stack">
+</div>
+<div class="content">
+<div class="section">
+<div class="section-title">
+<div class="icon stack">
        🏠
       </div>
-      <h2 id="CloudFormationスタックとは？">
+<h2 id="CloudFormationスタックとは？">
        CloudFormationスタックとは？
       </h2>
-     </div>
-     <div class="house-diagram">
-      <div class="house">
+</div>
+<div class="house-diagram">
+<div class="house">
        🏘️
       </div>
-      <h3 id="スタック-=-家の設計図-+-建築プロジェクト">
+<h3 id="スタック-=-家の設計図-+-建築プロジェクト">
        スタック = 家の設計図 + 建築プロジェクト
       </h3>
-      <p>
+<p>
        CloudFormationスタックは、AWSリソース（EC2、S3、RDSなど）を一括管理する「家の設計図」のようなものです。
       </p>
-     </div>
-     <div class="flow-diagram">
-      <div class="flow-step">
-       <div class="flow-step-icon">
+</div>
+<div class="flow-diagram">
+<div class="flow-step">
+<div class="flow-step-icon">
         📋
        </div>
-       <h4>
+<h4>
         テンプレート
        </h4>
-       <p>
+<p>
         設計図
        </p>
-      </div>
-      <div class="arrow">
+</div>
+<div class="arrow">
        →
       </div>
-      <div class="flow-step">
-       <div class="flow-step-icon">
+<div class="flow-step">
+<div class="flow-step-icon">
         🏗️
        </div>
-       <h4>
+<h4>
         スタック
        </h4>
-       <p>
+<p>
         建築プロジェクト
        </p>
-      </div>
-      <div class="arrow">
+</div>
+<div class="arrow">
        →
       </div>
-      <div class="flow-step">
-       <div class="flow-step-icon">
+<div class="flow-step">
+<div class="flow-step-icon">
         🏠
        </div>
-       <h4>
+<h4>
         リソース
        </h4>
-       <p>
+<p>
         実際の部屋・設備
        </p>
-      </div>
-     </div>
-    </div>
-    <div class="section">
-     <div class="section-title">
-      <div class="icon deletion">
+</div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">
+<div class="icon deletion">
        🗑️
       </div>
-      <h2 id="DeletionPolicy---解体時のルール">
+<h2 id="DeletionPolicy---解体時のルール">
        DeletionPolicy - 解体時のルール
       </h2>
-     </div>
-     <p>
-      <strong>
+</div>
+<p>
+<strong>
        DeletionPolicy
       </strong>
       は、家（スタック）を解体する時に、各部屋や設備をどう扱うかを決めるルールです。
      </p>
-     <div class="policy-grid">
-      <div class="policy-card">
-       <span class="policy-emoji">
+<div class="policy-grid">
+<div class="policy-card">
+<span class="policy-emoji">
         💥
        </span>
-       <h3 id="Delete削除">
+<h3 id="Delete削除">
         Delete（削除）
        </h3>
-       <p>
+<p>
         家と一緒にすべて解体。デフォルトの動作で、一般的な設備に使用。
        </p>
-      </div>
-      <div class="policy-card">
-       <span class="policy-emoji">
+</div>
+<div class="policy-card">
+<span class="policy-emoji">
         📦
        </span>
-       <h3 id="Retain保持">
+<h3 id="Retain保持">
         Retain（保持）
        </h3>
-       <p>
+<p>
         貴重品は残しておく。重要なデータベースやファイルに使用。
        </p>
-      </div>
-      <div class="policy-card">
-       <span class="policy-emoji">
+</div>
+<div class="policy-card">
+<span class="policy-emoji">
         📸
        </span>
-       <h3 id="Snapshotスナップショット">
+<h3 id="Snapshotスナップショット">
         Snapshot（スナップショット）
        </h3>
-       <p>
+<p>
         写真に残してから解体。データベースのバックアップに使用。
        </p>
-      </div>
-     </div>
-     <div class="highlight-box">
-      <h4>
+</div>
+</div>
+<div class="highlight-box">
+<h4>
        💡 例：家族の思い出の部屋
       </h4>
-      <p>
+<p>
        大切な家族写真やアルバムが保管された部屋は「Retain」に設定。家を解体しても、この部屋だけは残しておきます。AWS では重要なS3バケットやRDSデータベースに相当します。
       </p>
-     </div>
-    </div>
-    <div class="section">
-     <div class="section-title">
-      <div class="icon update">
+</div>
+</div>
+<div class="section">
+<div class="section-title">
+<div class="icon update">
        🔄
       </div>
-      <h2 id="UpdateReplacePolicy---リノベーション時のルール">
+<h2 id="UpdateReplacePolicy---リノベーション時のルール">
        UpdateReplacePolicy - リノベーション時のルール
       </h2>
-     </div>
-     <p>
-      <strong>
+</div>
+<p>
+<strong>
        UpdateReplacePolicy
       </strong>
       は、家をリノベーション（更新）する時に、古い設備を新しいものに交換する際のルールです。
      </p>
-     <div class="policy-grid">
-      <div class="policy-card">
-       <span class="policy-emoji">
+<div class="policy-grid">
+<div class="policy-card">
+<span class="policy-emoji">
         🔨
        </span>
-       <h3 id="Delete削除-1">
+<h3 id="Delete削除-1">
         Delete（削除）
        </h3>
-       <p>
+<p>
         古い設備は処分して新しいものに交換。
        </p>
-      </div>
-      <div class="policy-card">
-       <span class="policy-emoji">
+</div>
+<div class="policy-card">
+<span class="policy-emoji">
         🏪
        </span>
-       <h3 id="Retain保持-1">
+<h3 id="Retain保持-1">
         Retain（保持）
        </h3>
-       <p>
+<p>
         古い設備も倉庫に保管しておく。
        </p>
-      </div>
-      <div class="policy-card">
-       <span class="policy-emoji">
+</div>
+<div class="policy-card">
+<span class="policy-emoji">
         📷
        </span>
-       <h3 id="Snapshotスナップショット-1">
+<h3 id="Snapshotスナップショット-1">
         Snapshot（スナップショット）
        </h3>
-       <p>
+<p>
         古い設備の状態を記録してから交換。
        </p>
-      </div>
-     </div>
-     <div class="warning-box">
-      <h4>
+</div>
+</div>
+<div class="warning-box">
+<h4>
        ⚠️ 注意：DeletionPolicy vs UpdateReplacePolicy
       </h4>
-      <p>
+<p>
        DeletionPolicyは「家全体の解体時」、UpdateReplacePolicyは「部分的なリノベーション時」に適用されます。両方設定することで、どんな場面でも大切なデータを守れます。
       </p>
-     </div>
-    </div>
-    <div class="section">
-     <div class="section-title">
-      <div class="icon protection">
+</div>
+</div>
+<div class="section">
+<div class="section-title">
+<div class="icon protection">
        🛡️
       </div>
-      <h2 id="Termination-Protection---家全体の解体防止">
+<h2 id="Termination-Protection---家全体の解体防止">
        Termination Protection - 家全体の解体防止
       </h2>
-     </div>
-     <div class="protection-demo">
-      <div class="shield">
+</div>
+<div class="protection-demo">
+<div class="shield">
        🛡️
       </div>
-      <h3 id="スタック全体を誤って削除することを防ぐ安全装置">
+<h3 id="スタック全体を誤って削除することを防ぐ安全装置">
        スタック全体を誤って削除することを防ぐ安全装置
       </h3>
-      <p>
+<p>
        重要な本番環境などで、うっかり家全体を解体してしまわないようにする「解体禁止ロック」です。
       </p>
-     </div>
-     <div class="flow-diagram">
-      <div class="flow-step">
-       <div class="flow-step-icon">
+</div>
+<div class="flow-diagram">
+<div class="flow-step">
+<div class="flow-step-icon">
         🔒
        </div>
-       <h4>
+<h4>
         保護ON
        </h4>
-       <p>
+<p>
         解体不可
        </p>
-      </div>
-      <div class="arrow">
+</div>
+<div class="arrow">
        →
       </div>
-      <div class="flow-step">
-       <div class="flow-step-icon">
+<div class="flow-step">
+<div class="flow-step-icon">
         🔓
        </div>
-       <h4>
+<h4>
         保護解除
        </h4>
-       <p>
+<p>
         解体許可
        </p>
-      </div>
-      <div class="arrow">
+</div>
+<div class="arrow">
        →
       </div>
-      <div class="flow-step">
-       <div class="flow-step-icon">
+<div class="flow-step">
+<div class="flow-step-icon">
         🗑️
        </div>
-       <h4>
+<h4>
         削除実行
        </h4>
-       <p>
+<p>
         安全に解体
        </p>
-      </div>
-     </div>
-     <div class="highlight-box">
-      <h4>
+</div>
+</div>
+<div class="highlight-box">
+<h4>
        🎯 使用場面
       </h4>
-      <p>
-       <strong>
+<p>
+<strong>
         本番環境
        </strong>
        ：顧客が使用している重要なシステム
        <br/>
-       <strong>
+<strong>
         共有リソース
        </strong>
        ：チーム全体で使用するデータベースやネットワーク
        <br/>
-       <strong>
+<strong>
         高価なリソース
        </strong>
        ：作成に時間とコストがかかるリソース
       </p>
-     </div>
-    </div>
-    <div class="summary">
-     <h2 id="まとめ-3つの安全対策で大切なものを守ろう">
+</div>
+</div>
+<div class="summary">
+<h2 id="まとめ-3つの安全対策で大切なものを守ろう">
       🎉 まとめ：3つの安全対策で大切なものを守ろう
      </h2>
-     <div class="policy-grid">
-      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
-       <h4>
+<div class="policy-grid">
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<h4>
         🗑️ DeletionPolicy
        </h4>
-       <p>
+<p>
         スタック削除時の各リソースの扱い方
        </p>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
-       <h4>
+</div>
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<h4>
         🔄 UpdateReplacePolicy
        </h4>
-       <p>
+<p>
         リソース交換時の旧リソースの扱い方
        </p>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
-       <h4>
+</div>
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<h4>
         🛡️ Termination Protection
        </h4>
-       <p>
+<p>
         スタック全体の誤削除防止
        </p>
-      </div>
-     </div>
-     <p style="margin-top: 20px; font-size: 1.1rem;">
+</div>
+</div>
+<p style="margin-top: 20px; font-size: 1.1rem;">
       これらの機能を適切に設定することで、AWSの重要なリソースを安全に管理できます！
      </p>
-    </div>
-   </div>
-  </div>
-  <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
-   <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+</div>
+</div>
+</div>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
     Created by
     <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
      SSuzuki1063
     </a>
-   </p>
-   <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
     AWS SAP Learning Resources
    </p>
-  </div>
-  <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
    🏠 リソース集に戻る
   </button>
-  <!-- 固定ヘッダー機能のJavaScript -->
-  <script>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
    // トップに戻るボタンの表示/非表示
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const readingProgress = document.getElementById('readingProgress');
@@ -1139,5 +709,5 @@
             });
         });
   </script>
- </body>
+</body>
 </html>

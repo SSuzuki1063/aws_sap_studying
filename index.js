@@ -15,6 +15,7 @@ const searchData = [
     { title: 'AWS Directory Service 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-directory-service-guide.html' },
     { title: 'S3バケットポリシー Principal要素 完全ガイド', category: 'ネットワーキング', file: 'networking/s3-bucket-policy-principal-guide.html' },
     { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', category: 'ネットワーキング', file: 'networking/nacl-sg-comparison-guide.html' },
+    { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', category: 'ネットワーキング', file: 'networking/guardduty-credential-exfiltration-guide-v2.html' },
 
     // セキュリティ・ガバナンス
     { title: 'AWS Cognito インフォグラフィック', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-cognito-infographic.html' },
@@ -60,6 +61,14 @@ const searchData = [
     { title: 'AWS CodeArtifact 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/codeartifact-guide.html' },
     { title: 'Cognito IDプールIAMロール完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cognito-identity-pool-roles-guide.html' },
     { title: 'IAM Roles Anywhere 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-roles-anywhere-guide.html' },
+    { title: 'IAM認証情報レポート - セキュリティインシデント初動調査ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-credential-report-incident-guide.html' },
+    { title: 'sts:ExternalId 完全マスターガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/sts-externalid-complete-guide.html' },
+    { title: 'IAM Identity Center 完全ガイド - Organizations一括管理', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-identity-center-guide.html' },
+    { title: 'AWS Config access-keys-rotated 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-access-keys-rotated-guide.html' },
+    { title: 'AWS Config 管理ルール＆CloudTrail修復アクション完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-cloudtrail-remediation-guide.html' },
+    { title: 'AWS SCP構文 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/scp-syntax-visual-guide.html' },
+    { title: 'GuardDuty EKS/RDS Protection 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/guardduty-eks-rds-protection-guide.html' },
+    { title: 'ECS Exec 完全ガイド - コンテナモニタリングの決定版', category: 'セキュリティ・ガバナンス', file: 'security-governance/ecs-exec-monitoring-guide.html' },
 
     // コンピュート・アプリケーション
     { title: 'EC2 キャパシティ インフォグラフィック', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws-ec2-capacity-infographic.html' },

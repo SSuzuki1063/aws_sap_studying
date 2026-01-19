@@ -1,860 +1,224 @@
 <!DOCTYPE html>
+
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
    AWS Lambda ベストプラクティス - レストランキッチンで理解しよう
   </title>
-  <!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
-  <link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
-  <style>
-   * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #ff9a56 0%, #ffad56 50%, #ff6b95 100%);
-            color: #333;
-            line-height: 1.8;
-            font-size: 16px;
-        
-            padding-top: 80px; /* 固定ヘッダー分のスペース確保 */
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-            animation: fadeInDown 1s ease-out;
-        }
-
-        .header h1 {
-            font-size: 3.5em;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .header p {
-            font-size: 1.4em;
-            opacity: 0.9;
-            margin-bottom: 20px;
-        }
-
-        .section {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            animation: fadeInUp 1s ease-out;
-        }
-
-        .intro-analogy {
-            background: linear-gradient(135deg, #fff4e6 0%, #ffe4e1 100%);
-            text-align: center;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-        }
-
-        .intro-analogy h2 {
-            color: #d63384;
-            font-size: 2em;
-            margin-bottom: 15px;
-        }
-
-        .comparison-table {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 30px 0;
-        }
-
-        .comparison-side {
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .bad-practice {
-            background: linear-gradient(135deg, #ffcccb 0%, #ffb3ba 100%);
-            border: 3px solid #dc3545;
-        }
-
-        .good-practice {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border: 3px solid #28a745;
-        }
-
-        .kitchen-diagram {
-            background: #f8f9fa;
-            border-radius: 20px;
-            padding: 40px;
-            margin: 30px 0;
-            position: relative;
-        }
-
-        .kitchen-setup {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin: 30px 0;
-        }
-
-        .kitchen-item {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 3px solid transparent;
-        }
-
-        .kitchen-item:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-            border-color: #ff9a56;
-        }
-
-        .cold-start {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border-color: #2196f3;
-        }
-
-        .warm-start {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
-            border-color: #D97706;
-        }
-
-        .handler-zone {
-            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-            border-color: #9c27b0;
-        }
-
-        .outside-handler {
-            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
-            border-color: #2E7D32;
-        }
-
-        .icon {
-            font-size: 4em;
-            margin-bottom: 20px;
-            display: block;
-        }
-
-        .step-by-step {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            margin: 30px 0;
-        }
-
-        .step-item {
-            background: white;
-            padding: 25px;
-            margin: 20px 0;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .step-item:hover {
-            transform: translateX(10px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-
-        .step-number {
-            background: #ff9a56;
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.5em;
-            flex-shrink: 0;
-        }
-
-        .step-content h3 {
-            color: #ff9a56;
-            margin-bottom: 10px;
-        }
-
-        .performance-comparison {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 30px 0;
-        }
-
-        .performance-card {
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            position: relative;
-        }
-
-        .slow-performance {
-            background: linear-gradient(135deg, #ffcccb 0%, #ffb3ba 100%);
-            border: 3px solid #dc3545;
-        }
-
-        .fast-performance {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border: 3px solid #28a745;
-        }
-
-        .time-indicator {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin: 15px 0;
-        }
-
-        .slow-time {
-            color: #dc3545;
-        }
-
-        .fast-time {
-            color: #28a745;
-        }
-
-        .code-example {
-            background: #2d3748;
-            color: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            margin: 20px 0;
-            overflow-x: auto;
-            font-family: 'Courier New', monospace;
-        }
-
-        .code-example pre {
-            margin: 0;
-            white-space: pre-wrap;
-        }
-
-        .highlight-box {
-            background: linear-gradient(135deg, #ff9a56 0%, #ff6b95 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .benefit-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .benefit-card {
-            background: linear-gradient(135deg, #fff4e6 0%, #ffe4e1 100%);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-            border: 2px solid #ff9a56;
-        }
-
-        .benefit-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-            border-color: #ff6b95;
-        }
-
-        .faq-section {
-            background: linear-gradient(135deg, #fff4e6 0%, #ffe4e1 100%);
-            padding: 30px;
-            border-radius: 15px;
-        }
-
-        .faq-item {
-            background: white;
-            margin: 15px 0;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .faq-question {
-            background: #ff9a56;
-            color: white;
-            padding: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s ease;
-        }
-
-        .faq-question:hover {
-            background: #ff8c42;
-        }
-
-        .faq-answer {
-            padding: 20px;
-            background: white;
-            border-top: 2px solid #f0f0f0;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-
-        .progress-fill {
-            height: 100%;
-            transition: width 2s ease;
-        }
-
-        .slow-progress {
-            background: linear-gradient(90deg, #dc3545, #DC2626);
-            width: 30%;
-        }
-
-        .fast-progress {
-            background: linear-gradient(90deg, #28a745, #71dd8a);
-            width: 90%;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .pulse-animation {
-            animation: pulse 2s infinite;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2.5em;
-            }
-            
-            .comparison-table,
-            .performance-comparison {
-                grid-template-columns: 1fr;
-            }
-            
-            .step-item {
-                flex-direction: column;
-                text-align: center;
-            }
-        }
-    
-        
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        @media (max-width: 768px) {
-            
-        }
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        /* 読書進捗インジケーター */
-        
-
-        
-
-        
-
-        /* トップに戻るボタン */
-        
-
-        
-
-        
-
-        
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            
-
-            
-
-            
-
-            
-
-            
-        }
-  </style>
- </head>
- <body>
-  <!-- 左サイドバー目次 -->
-  <div class="sidebar-toc" id="sidebar-toc">
-   <div class="sidebar-toc-header">
-    <h2>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  &lt;!-- ページ固有CSSファイル --&gt;
+  <link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/lambda_best_practices_guide.css" rel="stylesheet"/>
+  
+  
+
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2 id="目次">
      📑 目次
     </h2>
-   </div>
-   <nav class="sidebar-toc-content">
-    <ul>
-     <li class="toc-h2">
-      <a href="#目次">
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2">
+<a href="#目次">
        📑 目次
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#準備-↔️-調理-↔️-コスト削減">
+</li>
+<li class="toc-h2">
+<a href="#準備-↔️-調理-↔️-コスト削減">
        🏠 準備 ↔️ 🍳 調理 ↔️ 💰 コスト削減
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#Lambda関数の基本って何？">
+</li>
+<li class="toc-h2">
+<a href="#Lambda関数の基本って何？">
        🤔 Lambda関数の基本って何？
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#簡単に言うと...">
+</li>
+<li class="toc-h3">
+<a href="#簡単に言うと...">
        📝 簡単に言うと...
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#❌-毎回準備する非効率なキッチン">
+</li>
+<li class="toc-h3">
+<a href="#❌-毎回準備する非効率なキッチン">
        ❌ 毎回準備する非効率なキッチン
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#✅-準備済みの効率的なキッチン">
+</li>
+<li class="toc-h3">
+<a href="#✅-準備済みの効率的なキッチン">
        ✅ 準備済みの効率的なキッチン
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#キッチンの準備エリアを理解しよう">
+</li>
+<li class="toc-h2">
+<a href="#キッチンの準備エリアを理解しよう">
        🍳 キッチンの準備エリアを理解しよう
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Lambda関数-=-レストランキッチン">
+</li>
+<li class="toc-h3">
+<a href="#Lambda関数-=-レストランキッチン">
        Lambda関数 = レストランキッチン
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#ハンドラー外エリアグローバルスコープ">
+</li>
+<li class="toc-h3">
+<a href="#ハンドラー外エリアグローバルスコープ">
        ハンドラー外エリア（グローバルスコープ）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#ハンドラー内エリア関数スコープ">
+</li>
+<li class="toc-h3">
+<a href="#ハンドラー内エリア関数スコープ">
        ハンドラー内エリア（関数スコープ）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#tmp-ディレクトリ食材保管庫">
+</li>
+<li class="toc-h3">
+<a href="#tmp-ディレクトリ食材保管庫">
        /tmp ディレクトリ（食材保管庫）
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#⚡-コールドスタート-vs-ウォームスタート">
+</li>
+<li class="toc-h2">
+<a href="#⚡-コールドスタート-vs-ウォームスタート">
        ⚡ コールドスタート vs ウォームスタート
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#コールドスタート初回">
+</li>
+<li class="toc-h3">
+<a href="#コールドスタート初回">
        コールドスタート（初回）
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#ウォームスタート2回目以降">
+</li>
+<li class="toc-h3">
+<a href="#ウォームスタート2回目以降">
        ウォームスタート（2回目以降）
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#実践的なベストプラクティス">
+</li>
+<li class="toc-h2">
+<a href="#実践的なベストプラクティス">
        📋 実践的なベストプラクティス
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#効率的なキッチン設定法">
+</li>
+<li class="toc-h3">
+<a href="#効率的なキッチン設定法">
        🔧 効率的なキッチン設定法
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#SDK-クライアントをハンドラー外で初期化">
+</li>
+<li class="toc-h3">
+<a href="#SDK-クライアントをハンドラー外で初期化">
        SDK クライアントをハンドラー外で初期化
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#データベース接続を使い回す">
+</li>
+<li class="toc-h3">
+<a href="#データベース接続を使い回す">
        データベース接続を使い回す
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#tmp-ディレクトリで静的アセットをキャッシュ">
+</li>
+<li class="toc-h3">
+<a href="#tmp-ディレクトリで静的アセットをキャッシュ">
        /tmp ディレクトリで静的アセットをキャッシュ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#環境変数と設定を外出しする">
+</li>
+<li class="toc-h3">
+<a href="#環境変数と設定を外出しする">
        環境変数と設定を外出しする
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#コスト削減効果を数字で見る">
+</li>
+<li class="toc-h2">
+<a href="#コスト削減効果を数字で見る">
        💰 コスト削減効果を数字で見る
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#実際の効果測定">
+</li>
+<li class="toc-h3">
+<a href="#実際の効果測定">
        📊 実際の効果測定
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#❌-非効率なパターン">
+</li>
+<li class="toc-h3">
+<a href="#❌-非効率なパターン">
        ❌ 非効率なパターン
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#✅-最適化後のパターン">
+</li>
+<li class="toc-h3">
+<a href="#✅-最適化後のパターン">
        ✅ 最適化後のパターン
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#節約効果">
+</li>
+<li class="toc-h3">
+<a href="#節約効果">
        🎯 節約効果
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#具体的な実装例">
+</li>
+<li class="toc-h2">
+<a href="#具体的な実装例">
        🎯 具体的な実装例
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#悪い例-vs-良い例">
+</li>
+<li class="toc-h2">
+<a href="#悪い例-vs-良い例">
        📝 悪い例 vs 良い例
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#❌-悪い例-毎回準備するパターン">
+</li>
+<li class="toc-h3">
+<a href="#❌-悪い例-毎回準備するパターン">
        ❌ 悪い例：毎回準備するパターン
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#✅-良い例-準備済みキッチンパターン">
+</li>
+<li class="toc-h3">
+<a href="#✅-良い例-準備済みキッチンパターン">
        ✅ 良い例：準備済みキッチンパターン
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#✨-その他の重要なベストプラクティス">
+</li>
+<li class="toc-h2">
+<a href="#✨-その他の重要なベストプラクティス">
        ✨ その他の重要なベストプラクティス
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#機密情報の管理">
+</li>
+<li class="toc-h3">
+<a href="#機密情報の管理">
        機密情報の管理
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#適切なメモリ設定">
+</li>
+<li class="toc-h3">
+<a href="#適切なメモリ設定">
        適切なメモリ設定
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#監視とログ">
+</li>
+<li class="toc-h3">
+<a href="#監視とログ">
        監視とログ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#並行実行数の制御">
+</li>
+<li class="toc-h3">
+<a href="#並行実行数の制御">
        並行実行数の制御
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#❓-よくある質問">
+</li>
+<li class="toc-h2">
+<a href="#❓-よくある質問">
        ❓ よくある質問
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#まとめ">
+</li>
+<li class="toc-h2">
+<a href="#まとめ">
        🎯 まとめ
       </a>
-     </li>
-    </ul>
-   </nav>
-  </div>
-  <!-- サイドバー折りたたみボタン -->
-  <button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
-   <span id="sidebar-toc-toggle-icon">
+</li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">
     ◀
    </span>
-  </button>
-  <style>
-   /* ページ全体のレイアウト調整 */
-    body {
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }
+</button>
 
-    body.sidebar-collapsed {
-        padding-left: 0;
-    }
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 100vh;
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }
-
-    .sidebar-toc.collapsed {
-        transform: translateX(-100%);
-    }
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }
-
-    .sidebar-toc-header h2 {
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .sidebar-toc-content a {
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .sidebar-toc-content a:hover {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }
-
-    .sidebar-toc-content .toc-h2 a {
-        font-weight: 600;
-    }
-
-    .sidebar-toc-content .toc-h3 {
-        font-size: 0.9em;
-        padding-left: 20px;
-    }
-
-    .sidebar-toc-content .toc-h3 a {
-        color: #4b5563;
-        padding: 8px 12px;
-    }
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {
-        position: fixed;
-        left: 340px;
-        top: 20px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-toc-toggle:hover {
-        background: #2563eb;
-        transform: scale(1.05);
-    }
-
-    body.sidebar-collapsed .sidebar-toc-toggle {
-        left: 0;
-    }
-
-    /* スムーズスクロール */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        body {
-            padding-left: 0 !important;
-        }
-
-        .sidebar-toc {
-            width: 280px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar-toc.open {
-            transform: translateX(0);
-        }
-
-        .sidebar-toc-toggle {
-            left: 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {
-            font-size: 1.2em;
-        }
-
-        .sidebar-toc-content a {
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }
-    }
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        body {
-            padding-left: 310px;
-        }
-
-        .sidebar-toc {
-            width: 290px;
-        }
-
-        .sidebar-toc-toggle {
-            left: 290px;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-    }
-  </style>
-  <script>
+<script>
    function toggleSidebarTOC() {
         const sidebar = document.getElementById('sidebar-toc');
         const body = document.body;
@@ -926,88 +290,230 @@
         });
     });
   </script>
-  <!-- 固定ナビゲーションヘッダー -->
-  <div class="fixed-nav-header">
-   <div class="fixed-nav-container">
-    <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-    <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-     <a href="/aws_sap_studying/profile.html">
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
       自己紹介
      </a>
-     <a href="/aws_sap_studying/learning-resources.html">
+<a href="/aws_sap_studying/learning-resources.html">
       学習リソース集
      </a>
-     <a href="/aws_sap_studying/knowledge-base.html">
+<a href="/aws_sap_studying/knowledge-base.html">
       ナレッジベース
      </a>
-     <a href="/aws_sap_studying/quiz.html">
+<a href="/aws_sap_studying/quiz.html">
       クイズ
      </a>
-    </nav>
-   </div>
-  </div>
-  <!-- 読書進捗インジケーター -->
-  <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
-   <div class="reading-progress-bar" id="readingProgressBar">
-   </div>
-  </div>
-  <!-- トップに戻るボタン -->
-  <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
    ↑
   </button>
-  <div class="container">
-   <!-- ブレッドクラムナビゲーション -->
-   <nav class="breadcrumb-nav">
-    <a class="breadcrumb-home" href="../index.html">
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
      🏠 ホーム
     </a>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      セキュリティ・ガバナンス
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      その他
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-current">
+<span class="breadcrumb-current">
      Lambda Best Practices Guide
     </span>
-   </nav>
-   <header class="header">
-    <h1>
+</nav>
+<header class="header">
+<h1>
      🍳 AWS Lambda ベストプラクティス
     </h1>
-    <p>
+
+<!-- ページ内目次 -->
+<div id="toc-container" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 20px 25px; margin: 30px 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleTOC()">
+        <h2 style="color: #1e40af; margin: 0; font-size: 1.3em; display: flex; align-items: center;">
+            <span style="margin-right: 10px;">📑</span>
+            <span>目次</span>
+        </h2>
+        <button id="toc-toggle-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s;">
+            <span id="toc-toggle-icon">▶</span> <span id="toc-toggle-text">展開する</span>
+        </button>
+    </div>
+    <nav id="toc-content" class="collapsed" style="transition: all 0.3s ease;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li class="toc-h2"><a href="#目次">📑 目次</a></li>
+            <li class="toc-h2"><a href="#準備-↔️-調理-↔️-コスト削減">🏠 準備 ↔️ 🍳 調理 ↔️ 💰 コスト削減</a></li>
+            <li class="toc-h2"><a href="#Lambda関数の基本って何？">🤔 Lambda関数の基本って何？</a></li>
+            <li class="toc-h3"><a href="#簡単に言うと...">📝 簡単に言うと...</a></li>
+            <li class="toc-h3"><a href="#❌-毎回準備する非効率なキッチン">❌ 毎回準備する非効率なキッチン</a></li>
+            <li class="toc-h3"><a href="#✅-準備済みの効率的なキッチン">✅ 準備済みの効率的なキッチン</a></li>
+            <li class="toc-h2"><a href="#キッチンの準備エリアを理解しよう">🍳 キッチンの準備エリアを理解しよう</a></li>
+            <li class="toc-h3"><a href="#Lambda関数-=-レストランキッチン">Lambda関数 = レストランキッチン</a></li>
+            <li class="toc-h3"><a href="#ハンドラー外エリアグローバルスコープ">ハンドラー外エリア
+        
+        （グローバルスコープ）</a></li>
+            <li class="toc-h3"><a href="#ハンドラー内エリア関数スコープ">ハンドラー内エリア
+        
+        （関数スコープ）</a></li>
+            <li class="toc-h3"><a href="#tmp-ディレクトリ食材保管庫">/tmp ディレクトリ
+        
+        （食材保管庫）</a></li>
+            <li class="toc-h2"><a href="#⚡-コールドスタート-vs-ウォームスタート">⚡ コールドスタート vs ウォームスタート</a></li>
+            <li class="toc-h3"><a href="#コールドスタート初回">コールドスタート（初回）</a></li>
+            <li class="toc-h3"><a href="#ウォームスタート2回目以降">ウォームスタート（2回目以降）</a></li>
+            <li class="toc-h2"><a href="#実践的なベストプラクティス">📋 実践的なベストプラクティス</a></li>
+            <li class="toc-h3"><a href="#効率的なキッチン設定法">🔧 効率的なキッチン設定法</a></li>
+            <li class="toc-h3"><a href="#SDK-クライアントをハンドラー外で初期化">SDK クライアントをハンドラー外で初期化</a></li>
+            <li class="toc-h3"><a href="#データベース接続を使い回す">データベース接続を使い回す</a></li>
+            <li class="toc-h3"><a href="#tmp-ディレクトリで静的アセットをキャッシュ">/tmp ディレクトリで静的アセットをキャッシュ</a></li>
+            <li class="toc-h3"><a href="#環境変数と設定を外出しする">環境変数と設定を外出しする</a></li>
+            <li class="toc-h2"><a href="#コスト削減効果を数字で見る">💰 コスト削減効果を数字で見る</a></li>
+            <li class="toc-h3"><a href="#実際の効果測定">📊 実際の効果測定</a></li>
+            <li class="toc-h3"><a href="#❌-非効率なパターン">❌ 非効率なパターン</a></li>
+            <li class="toc-h3"><a href="#✅-最適化後のパターン">✅ 最適化後のパターン</a></li>
+            <li class="toc-h3"><a href="#節約効果">🎯 節約効果</a></li>
+            <li class="toc-h2"><a href="#具体的な実装例">🎯 具体的な実装例</a></li>
+            <li class="toc-h2"><a href="#悪い例-vs-良い例">📝 悪い例 vs 良い例</a></li>
+            <li class="toc-h3"><a href="#❌-悪い例-毎回準備するパターン">❌ 悪い例：毎回準備するパターン</a></li>
+            <li class="toc-h3"><a href="#✅-良い例-準備済みキッチンパターン">✅ 良い例：準備済みキッチンパターン</a></li>
+            <li class="toc-h2"><a href="#✨-その他の重要なベストプラクティス">✨ その他の重要なベストプラクティス</a></li>
+            <li class="toc-h3"><a href="#機密情報の管理">機密情報の管理</a></li>
+            <li class="toc-h3"><a href="#適切なメモリ設定">適切なメモリ設定</a></li>
+            <li class="toc-h3"><a href="#監視とログ">監視とログ</a></li>
+            <li class="toc-h3"><a href="#並行実行数の制御">並行実行数の制御</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎯 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<style>
+    #toc-container a {
+        color: #1e40af;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+
+    #toc-container a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    #toc-container .toc-h2 {
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-top: 10px;
+    }
+
+    #toc-container .toc-h3 {
+        font-size: 0.95em;
+        padding-left: 30px;
+        color: #4b5563;
+    }
+
+    #toc-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 768px) {
+        #toc-container {
+            padding: 15px;
+        }
+
+        #toc-container h2 {
+            font-size: 1.1em;
+        }
+    }
+</style>
+
+<script>
+    function toggleTOC() {
+        const content = document.getElementById('toc-content');
+        const icon = document.getElementById('toc-toggle-icon');
+        const text = document.getElementById('toc-toggle-text');
+
+        if (content.classList.contains('collapsed')) {
+            // 展開
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.classList.remove('collapsed');
+            icon.textContent = '▼';
+            text.textContent = '折りたたむ';
+        } else {
+            // 折りたたみ
+            content.style.maxHeight = '';  // インラインスタイルをクリア
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+            text.textContent = '展開する';
+        }
+    }
+
+    // ページロード時の処理（デフォルトは折りたたみ状態）
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContent = document.getElementById('toc-content');
+        if (tocContent) {
+            // 展開時のアニメーション用にmax-heightを保存
+            tocContent.dataset.maxHeight = tocContent.scrollHeight + 'px';
+        }
+    });
+</script>
+
+
+<p>
      レストランキッチンで理解する効率的な関数実行
     </p>
-    <div class="intro-analogy">
-     <h2 id="準備-↔️-調理-↔️-コスト削減">
+<div class="intro-analogy">
+<h2 id="準備-↔️-調理-↔️-コスト削減">
       🏠 準備 ↔️ 🍳 調理 ↔️ 💰 コスト削減
      </h2>
-     <p>
+<p>
       Lambda関数を、プロのシェフのキッチン運営で分かりやすく説明します！
      </p>
-    </div>
-   </header>
-   <div class="section">
-    <h2 id="Lambda関数の基本って何？">
+</div>
+</header>
+<div class="section">
+<h2 id="Lambda関数の基本って何？">
      🤔 Lambda関数の基本って何？
     </h2>
-    <div class="highlight-box">
-     <h3 id="簡単に言うと...">
+<div class="highlight-box">
+<h3 id="簡単に言うと...">
       📝 簡単に言うと...
      </h3>
-     <p style="font-size: 1.2em; margin-top: 15px;">
-      <strong>
+<p style="font-size: 1.2em; margin-top: 15px;">
+<strong>
        AWS Lambda
       </strong>
       は、
@@ -1022,101 +528,101 @@
       </strong>
       を作って提供します。
      </p>
-    </div>
-    <div class="comparison-table">
-     <div class="comparison-side bad-practice">
-      <h3 id="❌-毎回準備する非効率なキッチン">
+</div>
+<div class="comparison-table">
+<div class="comparison-side bad-practice">
+<h3 id="❌-毎回準備する非効率なキッチン">
        ❌ 毎回準備する非効率なキッチン
       </h3>
-      <div style="font-size: 1.1em; margin-top: 15px;">
-       <p>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
         お客さんが来るたびに...
        </p>
-       <ul style="text-align: left; margin: 15px 0;">
-        <li>
+<ul style="text-align: left; margin: 15px 0;">
+<li>
          🔪 包丁を研ぐ
         </li>
-        <li>
+<li>
          🧂 調味料を取りに行く
         </li>
-        <li>
+<li>
          🔥 コンロを温める
         </li>
-        <li>
+<li>
          📦 食材を冷蔵庫から出す
         </li>
-       </ul>
-       <p>
+</ul>
+<p>
         👆
         <strong>
          時間がかかって
         </strong>
-        <br/>
-        <strong>
+<br/>
+<strong>
          お客さんを待たせる
         </strong>
-       </p>
-      </div>
-     </div>
-     <div class="comparison-side good-practice">
-      <h3 id="✅-準備済みの効率的なキッチン">
+</p>
+</div>
+</div>
+<div class="comparison-side good-practice">
+<h3 id="✅-準備済みの効率的なキッチン">
        ✅ 準備済みの効率的なキッチン
       </h3>
-      <div style="font-size: 1.1em; margin-top: 15px;">
-       <p>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
         事前に準備しておいて...
        </p>
-       <ul style="text-align: left; margin: 15px 0;">
-        <li>
+<ul style="text-align: left; margin: 15px 0;">
+<li>
          🔪 包丁は常に手元に
         </li>
-        <li>
+<li>
          🧂 調味料は作業台に配置
         </li>
-        <li>
+<li>
          🔥 コンロは温めておく
         </li>
-        <li>
+<li>
          📦 よく使う食材は手の届く場所に
         </li>
-       </ul>
-       <p>
+</ul>
+<p>
         👆
         <strong>
          すぐに調理開始
         </strong>
-        <br/>
-        <strong>
+<br/>
+<strong>
          お客さんも満足
         </strong>
-       </p>
-      </div>
-     </div>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="キッチンの準備エリアを理解しよう">
+</p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="キッチンの準備エリアを理解しよう">
      🍳 キッチンの準備エリアを理解しよう
     </h2>
-    <div class="kitchen-diagram">
-     <h3 id="Lambda関数-=-レストランキッチン" style="text-align: center; margin-bottom: 30px; color: #ff9a56;">
+<div class="kitchen-diagram">
+<h3 id="Lambda関数-=-レストランキッチン" style="text-align: center; margin-bottom: 30px; color: #ff9a56;">
       Lambda関数 = レストランキッチン
      </h3>
-     <div class="kitchen-setup">
-      <div class="kitchen-item outside-handler">
-       <div class="icon">
+<div class="kitchen-setup">
+<div class="kitchen-item outside-handler">
+<div class="icon">
         🏪
        </div>
-       <h3 id="ハンドラー外エリアグローバルスコープ">
+<h3 id="ハンドラー外エリアグローバルスコープ">
         ハンドラー外エリア
         <br/>
         （グローバルスコープ）
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          キッチンの準備エリア
         </strong>
-        <br/>
+<br/>
         ここで道具や材料を準備しておくと、
         <br/>
         次の注文でも
@@ -1125,32 +631,32 @@
         </strong>
         できます
        </p>
-       <div style="background: rgba(76,175,80,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+<div style="background: rgba(76,175,80,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          配置するもの:
         </strong>
-        <br/>
+<br/>
         • SDK クライアント（包丁・フライパン）
         <br/>
         • DB接続（調味料セット）
         <br/>
         • 設定情報（レシピ本）
        </div>
-      </div>
-      <div class="kitchen-item handler-zone">
-       <div class="icon">
+</div>
+<div class="kitchen-item handler-zone">
+<div class="icon">
         👨‍🍳
        </div>
-       <h3 id="ハンドラー内エリア関数スコープ">
+<h3 id="ハンドラー内エリア関数スコープ">
         ハンドラー内エリア
         <br/>
         （関数スコープ）
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          実際の調理エリア
         </strong>
-        <br/>
+<br/>
         お客さんの注文を受けて、
         <br/>
         準備済みの道具で
@@ -1159,176 +665,176 @@
         </strong>
         場所
        </p>
-       <div style="background: rgba(156,39,176,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+<div style="background: rgba(156,39,176,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          やること:
         </strong>
-        <br/>
+<br/>
         • リクエスト処理（注文を受ける）
         <br/>
         • ビジネスロジック（料理を作る）
         <br/>
         • レスポンス返却（料理を提供）
        </div>
-      </div>
-      <div class="kitchen-item warm-start">
-       <div class="icon">
+</div>
+<div class="kitchen-item warm-start">
+<div class="icon">
         📁
        </div>
-       <h3 id="tmp-ディレクトリ食材保管庫">
+<h3 id="tmp-ディレクトリ食材保管庫">
         /tmp ディレクトリ
         <br/>
         （食材保管庫）
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          よく使う材料の保管場所
         </strong>
-        <br/>
+<br/>
         一度ダウンロードした画像や
         <br/>
         ファイルを
         <strong>
          一時保存
         </strong>
-       </p>
-       <div style="background: rgba(255,152,0,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <strong>
+</p>
+<div style="background: rgba(255,152,0,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
          保存するもの:
         </strong>
-        <br/>
+<br/>
         • 画像・動画ファイル
         <br/>
         • CSVデータ
         <br/>
         • 機械学習モデル
        </div>
-      </div>
-     </div>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="⚡-コールドスタート-vs-ウォームスタート">
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="⚡-コールドスタート-vs-ウォームスタート">
      ⚡ コールドスタート vs ウォームスタート
     </h2>
-    <div class="performance-comparison">
-     <div class="performance-card slow-performance">
-      <div class="icon">
+<div class="performance-comparison">
+<div class="performance-card slow-performance">
+<div class="icon">
        🥶
       </div>
-      <h3 id="コールドスタート初回">
+<h3 id="コールドスタート初回">
        コールドスタート（初回）
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         新しいキッチンを一から準備
        </strong>
-      </p>
-      <div class="time-indicator slow-time">
+</p>
+<div class="time-indicator slow-time">
        3-5秒
       </div>
-      <div class="progress-bar">
-       <div class="progress-fill slow-progress">
-       </div>
-      </div>
-      <div style="margin-top: 15px; text-align: left;">
-       <p>
-        <strong>
+<div class="progress-bar">
+<div class="progress-fill slow-progress">
+</div>
+</div>
+<div style="margin-top: 15px; text-align: left;">
+<p>
+<strong>
          やることリスト:
         </strong>
-       </p>
-       <ul style="margin-left: 20px;">
-        <li>
+</p>
+<ul style="margin-left: 20px;">
+<li>
          キッチンの電源を入れる
         </li>
-        <li>
+<li>
          コードを読み込む
         </li>
-        <li>
+<li>
          SDK クライアントを初期化
         </li>
-        <li>
+<li>
          データベース接続を確立
         </li>
-        <li>
+<li>
          やっと料理開始...
         </li>
-       </ul>
-      </div>
-     </div>
-     <div class="performance-card fast-performance">
-      <div class="icon">
+</ul>
+</div>
+</div>
+<div class="performance-card fast-performance">
+<div class="icon">
        🔥
       </div>
-      <h3 id="ウォームスタート2回目以降">
+<h3 id="ウォームスタート2回目以降">
        ウォームスタート（2回目以降）
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         準備済みキッチンですぐ調理
        </strong>
-      </p>
-      <div class="time-indicator fast-time">
+</p>
+<div class="time-indicator fast-time">
        100-300ms
       </div>
-      <div class="progress-bar">
-       <div class="progress-fill fast-progress">
-       </div>
-      </div>
-      <div style="margin-top: 15px; text-align: left;">
-       <p>
-        <strong>
+<div class="progress-bar">
+<div class="progress-fill fast-progress">
+</div>
+</div>
+<div style="margin-top: 15px; text-align: left;">
+<p>
+<strong>
          やることリスト:
         </strong>
-       </p>
-       <ul style="margin-left: 20px;">
-        <li>
+</p>
+<ul style="margin-left: 20px;">
+<li>
          ✅ キッチン準備済み
         </li>
-        <li>
+<li>
          ✅ 道具は手元にある
         </li>
-        <li>
+<li>
          ✅ 材料も揃っている
         </li>
-        <li>
+<li>
          ✅ 接続も確立済み
         </li>
-        <li>
+<li>
          🍳 すぐに料理開始！
         </li>
-       </ul>
-      </div>
-     </div>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="実践的なベストプラクティス">
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実践的なベストプラクティス">
      📋 実践的なベストプラクティス
     </h2>
-    <div class="step-by-step">
-     <h3 id="効率的なキッチン設定法" style="text-align: center; margin-bottom: 20px; color: #ff9a56;">
+<div class="step-by-step">
+<h3 id="効率的なキッチン設定法" style="text-align: center; margin-bottom: 20px; color: #ff9a56;">
       🔧 効率的なキッチン設定法
      </h3>
-     <div class="step-item">
-      <div class="step-number">
+<div class="step-item">
+<div class="step-number">
        1
       </div>
-      <div class="step-content">
-       <h3 id="SDK-クライアントをハンドラー外で初期化">
+<div class="step-content">
+<h3 id="SDK-クライアントをハンドラー外で初期化">
         SDK クライアントをハンドラー外で初期化
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          キッチンの基本道具を常設
         </strong>
-        <br/>
+<br/>
         AWS SDK（包丁・フライパン）は、ハンドラー外で準備しておく
         <br/>
         次の注文でも同じ道具を再利用できる
        </p>
-       <div class="code-example">
-        <pre>// ✅ 良い例：ハンドラー外で初期化
+<div class="code-example">
+<pre>// ✅ 良い例：ハンドラー外で初期化
 import AWS from 'aws-sdk';
 const s3 = new AWS.S3(); // ←包丁を常に手元に
 const dynamodb = new AWS.DynamoDB(); // ←調味料セットを準備
@@ -1337,28 +843,28 @@ export const handler = async (event) =&gt; {
     // ここですぐに s3 や dynamodb を使える
     const result = await s3.getObject({...}).promise();
 };</pre>
-       </div>
-      </div>
-     </div>
-     <div class="step-item">
-      <div class="step-number">
+</div>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
        2
       </div>
-      <div class="step-content">
-       <h3 id="データベース接続を使い回す">
+<div class="step-content">
+<h3 id="データベース接続を使い回す">
         データベース接続を使い回す
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          調味料棚を固定設置
         </strong>
-        <br/>
+<br/>
         データベース接続は時間がかかるので、一度接続したら使い回す
         <br/>
         毎回新しい接続を作るのは非効率
        </p>
-       <div class="code-example">
-        <pre>// ✅ 良い例：接続を使い回し
+<div class="code-example">
+<pre>// ✅ 良い例：接続を使い回し
 let dbConnection = null;
 
 export const handler = async (event) =&gt; {
@@ -1370,28 +876,28 @@ export const handler = async (event) =&gt; {
     // 既存の接続を使用（調味料棚から取る）
     const result = await dbConnection.query('SELECT ...');
 };</pre>
-       </div>
-      </div>
-     </div>
-     <div class="step-item">
-      <div class="step-number">
+</div>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
        3
       </div>
-      <div class="step-content">
-       <h3 id="tmp-ディレクトリで静的アセットをキャッシュ">
+<div class="step-content">
+<h3 id="tmp-ディレクトリで静的アセットをキャッシュ">
         /tmp ディレクトリで静的アセットをキャッシュ
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          よく使う食材を手の届く場所に保管
         </strong>
-        <br/>
+<br/>
         画像やCSVファイルなど、重いファイルは /tmp に保存
         <br/>
         次回の処理で再ダウンロードを回避
        </p>
-       <div class="code-example">
-        <pre>// ✅ 良い例：ファイルキャッシュ
+<div class="code-example">
+<pre>// ✅ 良い例：ファイルキャッシュ
 import fs from 'fs';
 
 const CACHE_FILE = '/tmp/heavy_data.json';
@@ -1406,28 +912,28 @@ export const handler = async (event) =&gt; {
     // キャッシュから読み込み（保管庫から取り出し）
     const cachedData = JSON.parse(fs.readFileSync(CACHE_FILE));
 };</pre>
-       </div>
-      </div>
-     </div>
-     <div class="step-item">
-      <div class="step-number">
+</div>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
        4
       </div>
-      <div class="step-content">
-       <h3 id="環境変数と設定を外出しする">
+<div class="step-content">
+<h3 id="環境変数と設定を外出しする">
         環境変数と設定を外出しする
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          レシピ本を見やすい場所に配置
         </strong>
-        <br/>
+<br/>
         API キーやDB接続文字列は環境変数に設定
         <br/>
         ハンドラー外で読み込んで、毎回参照しない
        </p>
-       <div class="code-example">
-        <pre>// ✅ 良い例：設定を事前読み込み
+<div class="code-example">
+<pre>// ✅ 良い例：設定を事前読み込み
 const DB_HOST = process.env.DB_HOST; // ←レシピ本を準備
 const API_KEY = process.env.API_KEY;
 
@@ -1435,20 +941,20 @@ export const handler = async (event) =&gt; {
     // 設定はすでに読み込み済み
     const connection = connect(DB_HOST);
 };</pre>
-       </div>
-      </div>
-     </div>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="コスト削減効果を数字で見る">
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="コスト削減効果を数字で見る">
      💰 コスト削減効果を数字で見る
     </h2>
-    <div class="highlight-box">
-     <h3 id="実際の効果測定">
+<div class="highlight-box">
+<h3 id="実際の効果測定">
       📊 実際の効果測定
      </h3>
-     <p style="font-size: 1.1em; margin-top: 15px;">
+<p style="font-size: 1.1em; margin-top: 15px;">
       ベストプラクティスを適用すると、
       <strong>
        実行時間が大幅短縮
@@ -1461,82 +967,82 @@ export const handler = async (event) =&gt; {
       </strong>
       されます！
      </p>
-    </div>
-    <div class="performance-comparison">
-     <div class="performance-card slow-performance">
-      <h3 id="❌-非効率なパターン">
+</div>
+<div class="performance-comparison">
+<div class="performance-card slow-performance">
+<h3 id="❌-非効率なパターン">
        ❌ 非効率なパターン
       </h3>
-      <div style="margin: 20px 0;">
-       <p>
-        <strong>
+<div style="margin: 20px 0;">
+<p>
+<strong>
          毎回の実行時間:
         </strong>
-        <span class="slow-time">
+<span class="slow-time">
          3.2秒
         </span>
-       </p>
-       <p>
-        <strong>
+</p>
+<p>
+<strong>
          月間100万回実行時:
         </strong>
-       </p>
-       <ul style="text-align: left; margin: 10px 20px;">
-        <li>
+</p>
+<ul style="text-align: left; margin: 10px 20px;">
+<li>
          実行時間: 3,200,000秒
         </li>
-        <li>
+<li>
          概算費用:
          <strong style="color: #dc3545;">
           $60/月
          </strong>
-        </li>
-       </ul>
-      </div>
-      <div style="font-size: 2em; color: #dc3545;">
+</li>
+</ul>
+</div>
+<div style="font-size: 2em; color: #dc3545;">
        😰
       </div>
-     </div>
-     <div class="performance-card fast-performance">
-      <h3 id="✅-最適化後のパターン">
+</div>
+<div class="performance-card fast-performance">
+<h3 id="✅-最適化後のパターン">
        ✅ 最適化後のパターン
       </h3>
-      <div style="margin: 20px 0;">
-       <p>
-        <strong>
+<div style="margin: 20px 0;">
+<p>
+<strong>
          平均実行時間:
         </strong>
-        <span class="fast-time">
+<span class="fast-time">
          0.8秒
         </span>
-       </p>
-       <p>
-        <strong>
+</p>
+<p>
+<strong>
          月間100万回実行時:
         </strong>
-       </p>
-       <ul style="text-align: left; margin: 10px 20px;">
-        <li>
+</p>
+<ul style="text-align: left; margin: 10px 20px;">
+<li>
          実行時間: 800,000秒
         </li>
-        <li>
+<li>
          概算費用:
          <strong style="color: #28a745;">
           $15/月
          </strong>
-        </li>
-       </ul>
-      </div>
-      <div style="font-size: 2em; color: #28a745;">
+</li>
+</ul>
+</div>
+<div style="font-size: 2em; color: #28a745;">
        😍
       </div>
-     </div>
-    </div>
-    <div class="highlight-box pulse-animation">
-     <h3 id="節約効果">
+</div>
+</div>
+<div class="highlight-box pulse-animation">
+<h3 id="節約効果">
       🎯 節約効果
      </h3>
-     <p style="font-size: 1.3em; margin-top: 15px;">
+<p style="font-size: 1.3em; margin-top: 15px;">
       月額
       <strong>
        $45の節約
@@ -1549,26 +1055,26 @@ export const handler = async (event) =&gt; {
       </strong>
       ！
      </p>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="具体的な実装例">
+</div>
+</div>
+<div class="section">
+<h2 id="具体的な実装例">
      🎯 具体的な実装例
     </h2>
-    <div class="intro-analogy">
-     <h2 id="悪い例-vs-良い例">
+<div class="intro-analogy">
+<h2 id="悪い例-vs-良い例">
       📝 悪い例 vs 良い例
      </h2>
-     <p>
+<p>
       同じ機能でも、書き方でこんなに変わります
      </p>
-    </div>
-    <div style="background: #ffcccb; padding: 25px; border-radius: 15px; margin: 20px 0; border: 3px solid #dc3545;">
-     <h3 id="❌-悪い例-毎回準備するパターン" style="color: #dc3545;">
+</div>
+<div style="background: #ffcccb; padding: 25px; border-radius: 15px; margin: 20px 0; border: 3px solid #dc3545;">
+<h3 id="❌-悪い例-毎回準備するパターン" style="color: #dc3545;">
       ❌ 悪い例：毎回準備するパターン
      </h3>
-     <div class="code-example">
-      <pre>// 毎回新しいキッチンを準備（非効率）
+<div class="code-example">
+<pre>// 毎回新しいキッチンを準備（非効率）
 export const handler = async (event) =&gt; {
     // ハンドラー内で毎回初期化（道具を毎回準備）
     const s3 = new AWS.S3();
@@ -1585,20 +1091,20 @@ export const handler = async (event) =&gt; {
     
     return result;
 };</pre>
-     </div>
-     <p>
-      <strong>
+</div>
+<p>
+<strong>
        問題点:
       </strong>
       毎回3-5秒の準備時間がかかる 😰
      </p>
-    </div>
-    <div style="background: #d4edda; padding: 25px; border-radius: 15px; margin: 20px 0; border: 3px solid #28a745;">
-     <h3 id="✅-良い例-準備済みキッチンパターン" style="color: #28a745;">
+</div>
+<div style="background: #d4edda; padding: 25px; border-radius: 15px; margin: 20px 0; border: 3px solid #28a745;">
+<h3 id="✅-良い例-準備済みキッチンパターン" style="color: #28a745;">
       ✅ 良い例：準備済みキッチンパターン
      </h3>
-     <div class="code-example">
-      <pre>// キッチンの常設準備（効率的）
+<div class="code-example">
+<pre>// キッチンの常設準備（効率的）
 import AWS from 'aws-sdk';
 
 // グローバルスコープ：基本道具を常設
@@ -1631,29 +1137,29 @@ export const handler = async (event) =&gt; {
     
     return result;
 };</pre>
-     </div>
-     <p>
-      <strong>
+</div>
+<p>
+<strong>
        メリット:
       </strong>
       2回目以降は0.1-0.3秒で開始！ 😍
      </p>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="✨-その他の重要なベストプラクティス">
+</div>
+</div>
+<div class="section">
+<h2 id="✨-その他の重要なベストプラクティス">
      ✨ その他の重要なベストプラクティス
     </h2>
-    <div class="benefit-grid">
-     <div class="benefit-card">
-      <div style="font-size: 3em; margin-bottom: 15px;">
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
        🔒
       </div>
-      <h3 id="機密情報の管理">
+<h3 id="機密情報の管理">
        機密情報の管理
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         AWS Systems Manager
        </strong>
        や
@@ -1662,31 +1168,31 @@ export const handler = async (event) =&gt; {
        </strong>
        を使って機密情報を安全に管理。ハードコーディングは絶対NG！
       </p>
-     </div>
-     <div class="benefit-card">
-      <div style="font-size: 3em; margin-bottom: 15px;">
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
        ⚡
       </div>
-      <h3 id="適切なメモリ設定">
+<h3 id="適切なメモリ設定">
        適切なメモリ設定
       </h3>
-      <p>
+<p>
        処理内容に応じて
        <strong>
         メモリサイズを最適化
        </strong>
        。多すぎると無駄、少なすぎると遅い。128MB〜3008MBで調整。
       </p>
-     </div>
-     <div class="benefit-card">
-      <div style="font-size: 3em; margin-bottom: 15px;">
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
        📊
       </div>
-      <h3 id="監視とログ">
+<h3 id="監視とログ">
        監視とログ
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         CloudWatch Logs
        </strong>
        でエラー監視。
@@ -1695,246 +1201,246 @@ export const handler = async (event) =&gt; {
        </strong>
        でパフォーマンス分析。問題の早期発見が重要。
       </p>
-     </div>
-     <div class="benefit-card">
-      <div style="font-size: 3em; margin-bottom: 15px;">
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
        🎯
       </div>
-      <h3 id="並行実行数の制御">
+<h3 id="並行実行数の制御">
        並行実行数の制御
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         Reserved Concurrency
        </strong>
        で同時実行数を制御。他のサービスに影響を与えないよう適切な制限を設定。
       </p>
-     </div>
-    </div>
-   </div>
-   <div class="section">
-    <h2 id="❓-よくある質問">
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="❓-よくある質問">
      ❓ よくある質問
     </h2>
-    <div class="faq-section">
-     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
        🤔 /tmp ディレクトリの容量制限は？
       </div>
-      <div class="faq-answer" style="display: none;">
-       <p>
-        <strong>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
          /tmp ディレクトリは最大512MB
         </strong>
         まで使用できます。
        </p>
-       <br/>
-       <p>
-        <strong>
+<br/>
+<p>
+<strong>
          使用例:
         </strong>
-       </p>
-       <ul style="margin-left: 20px; margin-top: 10px;">
-        <li>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
          機械学習モデルファイル（100-200MB）
         </li>
-        <li>
+<li>
          画像・動画の一時保存（数十MB）
         </li>
-        <li>
+<li>
          CSVファイルのキャッシュ（数MB）
         </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          注意:
         </strong>
         Lambda関数が終了すると/tmpの内容は削除されます。永続化が必要な場合はS3を使いましょう。
        </p>
-      </div>
-     </div>
-     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
        ⏰ ウォームスタートはいつまで続くの？
       </div>
-      <div class="faq-answer" style="display: none;">
-       <p>
+<div class="faq-answer" style="display: none;">
+<p>
         Lambda関数インスタンスは
         <strong>
          約15分間
         </strong>
         保持されます。
        </p>
-       <br/>
-       <p>
-        <strong>
+<br/>
+<p>
+<strong>
          つまり:
         </strong>
-       </p>
-       <ul style="margin-left: 20px; margin-top: 10px;">
-        <li>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
          15分以内の次のリクエスト → ウォームスタート（高速）
         </li>
-        <li>
+<li>
          15分以上経過 → コールドスタート（初期化が必要）
         </li>
-        <li>
+<li>
          同時実行が増えると新しいインスタンスが作られる
         </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          コツ:
         </strong>
         定期的にダミーリクエストを送ってウォーム状態を維持する方法もあります（ただし費用との兼ね合いを考慮）。
        </p>
-      </div>
-     </div>
-     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
        💾 データベース接続数の制限は？
       </div>
-      <div class="faq-answer" style="display: none;">
-       <p>
+<div class="faq-answer" style="display: none;">
+<p>
         RDS など多くのデータベースには
         <strong>
          最大接続数の制限
         </strong>
         があります。
        </p>
-       <br/>
-       <p>
-        <strong>
+<br/>
+<p>
+<strong>
          対策:
         </strong>
-       </p>
-       <ul style="margin-left: 20px; margin-top: 10px;">
-        <li>
-         <strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
           RDS Proxy
          </strong>
          を使用して接続をプールする
         </li>
-        <li>
+<li>
          Lambda の
          <strong>
           並行実行数を制限
          </strong>
          する
         </li>
-        <li>
+<li>
          接続が不要になったら適切に
          <strong>
           close()
          </strong>
          する
         </li>
-       </ul>
-       <p style="margin-top: 15px;">
-        <strong>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
          例:
         </strong>
         RDS の db.t3.micro は最大約20接続。Lambda の並行実行を15に制限して安全マージンを確保。
        </p>
-      </div>
-     </div>
-     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
        🚀 他に性能向上のコツは？
       </div>
-      <div class="faq-answer" style="display: none;">
-       <p>
+<div class="faq-answer" style="display: none;">
+<p>
         さらなる高速化のテクニック：
        </p>
-       <br/>
-       <p>
-        <strong>
+<br/>
+<p>
+<strong>
          🔧 技術的な最適化:
         </strong>
-       </p>
-       <ul style="margin-left: 20px; margin-top: 10px;">
-        <li>
-         <strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
           Provisioned Concurrency
          </strong>
          : 常にウォーム状態を維持
         </li>
-        <li>
-         <strong>
+<li>
+<strong>
           適切なランタイム選択
          </strong>
          : Node.js/Python が一般的に高速
         </li>
-        <li>
-         <strong>
+<li>
+<strong>
           レイヤー活用
          </strong>
          : 共通ライブラリを分離して高速化
         </li>
-       </ul>
-       <br/>
-       <p>
-        <strong>
+</ul>
+<br/>
+<p>
+<strong>
          📊 監視・分析:
         </strong>
-       </p>
-       <ul style="margin-left: 20px; margin-top: 10px;">
-        <li>
-         <strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
           AWS X-Ray
          </strong>
          でボトルネックを特定
         </li>
-        <li>
-         <strong>
+<li>
+<strong>
           CloudWatch Insights
          </strong>
          でパフォーマンス分析
         </li>
-        <li>
+<li>
          定期的な性能テストの実施
         </li>
-       </ul>
-      </div>
-     </div>
-    </div>
-   </div>
-   <div class="section">
-    <div class="highlight-box">
-     <h2 id="まとめ">
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="highlight-box">
+<h2 id="まとめ">
       🎯 まとめ
      </h2>
-     <div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
-      <p>
+<div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+<p>
        🏪
        <strong>
         ハンドラー外で準備
        </strong>
        = キッチンの常設道具（SDK、DB接続、設定）
       </p>
-      <p>
+<p>
        👨‍🍳
        <strong>
         ハンドラー内で処理
        </strong>
        = 実際の調理作業（ビジネスロジック）
       </p>
-      <p>
+<p>
        📁
        <strong>
         /tmp でキャッシュ
        </strong>
        = よく使う食材の保管庫（ファイル一時保存）
       </p>
-      <p>
+<p>
        ♻️
        <strong>
         リソース再利用
        </strong>
        = 準備済みキッチンの活用（ウォームスタート）
       </p>
-      <br/>
-      <p>
+<br/>
+<p>
        この4つのポイントを実践することで、
        <strong>
         Lambda関数を3-10倍高速化
@@ -1945,28 +1451,28 @@ export const handler = async (event) =&gt; {
        </strong>
        を実現できます！
       </p>
-      <br/>
-      <p>
-       <strong>
+<br/>
+<p>
+<strong>
         🎯 今すぐできること：
        </strong>
-      </p>
-      <ul style="margin-left: 20px; margin-top: 10px;">
-       <li>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
         既存のLambda関数を見直して、ハンドラー外に移動できるものを探す
        </li>
-       <li>
+<li>
         CloudWatch Logs で実行時間をチェックして改善効果を測定
        </li>
-       <li>
+<li>
         頻繁にダウンロードするファイルがあれば /tmp キャッシュを検討
        </li>
-      </ul>
-     </div>
-    </div>
-   </div>
-  </div>
-  <script>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<script>
    function toggleFaq(element) {
             const answer = element.nextElementSibling;
             const isVisible = answer.style.display !== 'none';
@@ -2039,22 +1545,22 @@ export const handler = async (event) =&gt; {
             setInterval(rotateKitchenItems, 8000);
         });
   </script>
-  <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
-   <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
     Created by
     <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
      SSuzuki1063
     </a>
-   </p>
-   <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
     AWS SAP Learning Resources
    </p>
-  </div>
-  <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
    🏠 リソース集に戻る
   </button>
-  <!-- 固定ヘッダー機能のJavaScript -->
-  <script>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
    // トップに戻るボタンの表示/非表示
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const readingProgress = document.getElementById('readingProgress');
@@ -2090,5 +1596,5 @@ export const handler = async (event) =&gt; {
             });
         });
   </script>
- </body>
+</body>
 </html>

@@ -1,913 +1,99 @@
 <!DOCTYPE html>
+
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
    EC2終了前ログ退避設計ガイド
   </title>
-  <!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
-  <link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
-  <style>
-   * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #9333EA 50%, #0369A1 75%, #00f2fe 100%);
-            padding: 20px;
-            padding-top: 80px; /* 固定ヘッダー分のスペース確保 */
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%);
-            color: white;
-            padding: 50px 40px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .header::before {
-            content: '💾';
-            position: absolute;
-            font-size: 20em;
-            opacity: 0.1;
-            top: -50px;
-            right: -50px;
-        }
-        
-        .header h1 {
-            font-size: 3em;
-            margin-bottom: 15px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .header p {
-            font-size: 1.3em;
-            opacity: 0.95;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .content {
-            padding: 50px;
-        }
-        
-        .intro {
-            text-align: center;
-            margin-bottom: 50px;
-            padding: 40px;
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
-            border-radius: 15px;
-            border-left: 6px solid #f5576c;
-        }
-        
-        .intro h2 {
-            color: #be123c;
-            font-size: 2.2em;
-            margin-bottom: 20px;
-        }
-        
-        .intro-text {
-            font-size: 1.2em;
-            color: #881337;
-            line-height: 1.8;
-        }
-        
-        .analogy-section {
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-            padding: 50px;
-            border-radius: 20px;
-            margin: 50px 0;
-            border-left: 8px solid #0284c7;
-        }
-        
-        .analogy-title {
-            color: #0c4a6e;
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .analogy-box {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin: 20px 0;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .analogy-box-title {
-            font-size: 1.6em;
-            font-weight: bold;
-            color: #0c4a6e;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .analogy-box-content {
-            color: #475569;
-            line-height: 1.8;
-            font-size: 1.1em;
-        }
-        
-        .methods-section {
-            margin: 50px 0;
-        }
-        
-        .methods-title {
-            text-align: center;
-            font-size: 2.5em;
-            color: #1e293b;
-            margin-bottom: 40px;
-            font-weight: bold;
-        }
-        
-        .method-card {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            margin: 30px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-top: 8px solid;
-            transition: all 0.3s ease;
-        }
-        
-        .method-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-        }
-        
-        .method-card:nth-child(1) { border-color: #047857; }
-        .method-card:nth-child(2) { border-color: #3b82f6; }
-        .method-card:nth-child(3) { border-color: #CA8A04; }
-        .method-card:nth-child(4) { border-color: #8b5cf6; }
-        .method-card:nth-child(5) { border-color: #ec4899; }
-        
-        .method-header {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        
-        .method-icon {
-            font-size: 3.5em;
-        }
-        
-        .method-title-wrapper {
-            flex: 1;
-        }
-        
-        .method-title {
-            font-size: 2em;
-            font-weight: bold;
-            color: #1e293b;
-            margin-bottom: 5px;
-        }
-        
-        .method-subtitle {
-            font-size: 1.1em;
-            color: #64748b;
-            font-weight: 600;
-        }
-        
-        .method-rating {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .rating-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-        
-        .rating-reliability {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .rating-complexity {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .rating-cost {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .method-section {
-            margin: 25px 0;
-        }
-        
-        .method-section-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #334155;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .method-section-content {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 10px;
-            color: #475569;
-            line-height: 1.8;
-        }
-        
-        .pros-cons-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .pros-box {
-            background: linear-gradient(to bottom, #d1fae5 0%, #f0fdf4 100%);
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 4px solid #047857;
-        }
-        
-        .cons-box {
-            background: linear-gradient(to bottom, #fee2e2 0%, #fef2f2 100%);
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 4px solid #ef4444;
-        }
-        
-        .pros-title, .cons-title {
-            font-weight: bold;
-            font-size: 1.15em;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .pros-title {
-            color: #065f46;
-        }
-        
-        .cons-title {
-            color: #991b1b;
-        }
-        
-        .pros-list, .cons-list {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .pros-list li, .cons-list li {
-            padding: 8px 0;
-            color: #475569;
-            position: relative;
-            padding-left: 25px;
-        }
-        
-        .pros-list li::before {
-            content: '✅';
-            position: absolute;
-            left: 0;
-        }
-        
-        .cons-list li::before {
-            content: '⚠️';
-            position: absolute;
-            left: 0;
-        }
-        
-        .code-example {
-            background: #1e293b;
-            color: #f1f5f9;
-            padding: 25px;
-            border-radius: 12px;
-            overflow-x: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            line-height: 1.8;
-            margin: 20px 0;
-        }
-        
-        .code-title {
-            color: #2563EB;
-            font-weight: bold;
-            margin-bottom: 15px;
-            font-size: 1.1em;
-        }
-        
-        .code-comment { color: #64748B; }
-        .code-keyword { color: #f472b6; }
-        .code-string { color: #34d399; }
-        
-        .comparison-table {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            margin: 50px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow-x: auto;
-        }
-        
-        .table-title {
-            text-align: center;
-            font-size: 2em;
-            color: #1e293b;
-            margin-bottom: 35px;
-            font-weight: bold;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-        
-        th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: left;
-            font-size: 1.05em;
-        }
-        
-        th:first-child {
-            border-radius: 10px 0 0 0;
-        }
-        
-        th:last-child {
-            border-radius: 0 10px 0 0;
-        }
-        
-        td {
-            padding: 18px;
-            border-bottom: 2px solid #f1f5f9;
-        }
-        
-        tr:hover {
-            background: #f8fafc;
-        }
-        
-        .star-rating {
-            color: #CA8A04;
-            font-size: 1.2em;
-        }
-        
-        .architecture-section {
-            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
-            padding: 50px;
-            border-radius: 20px;
-            margin: 50px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .architecture-title {
-            text-align: center;
-            font-size: 2.5em;
-            color: #1e293b;
-            margin-bottom: 40px;
-            font-weight: bold;
-        }
-        
-        .architecture-diagram {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            margin: 30px 0;
-        }
-        
-        .flow-step {
-            background: #f8fafc;
-            padding: 25px;
-            border-radius: 12px;
-            margin: 20px 0;
-            border-left: 5px solid;
-            position: relative;
-        }
-        
-        .flow-step:nth-child(1) { border-color: #047857; }
-        .flow-step:nth-child(2) { border-color: #3b82f6; }
-        .flow-step:nth-child(3) { border-color: #CA8A04; }
-        .flow-step:nth-child(4) { border-color: #8b5cf6; }
-        .flow-step:nth-child(5) { border-color: #ec4899; }
-        
-        .flow-step-number {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 40px;
-            font-weight: bold;
-            font-size: 1.2em;
-            margin-right: 15px;
-        }
-        
-        .flow-step-title {
-            font-weight: bold;
-            font-size: 1.3em;
-            color: #1e293b;
-            margin-bottom: 10px;
-        }
-        
-        .flow-step-desc {
-            color: #475569;
-            line-height: 1.7;
-            margin-left: 55px;
-        }
-        
-        .flow-arrow {
-            text-align: center;
-            font-size: 2.5em;
-            color: #64748B;
-            margin: 15px 0;
-        }
-        
-        .best-practices-section {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 50px;
-            border-radius: 20px;
-            margin: 50px 0;
-            border-left: 8px solid #CA8A04;
-        }
-        
-        .best-practices-title {
-            color: #92400e;
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .practice-card {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin: 20px 0;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .practice-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .practice-icon {
-            font-size: 2.5em;
-        }
-        
-        .practice-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #92400e;
-        }
-        
-        .practice-content {
-            color: #475569;
-            line-height: 1.8;
-        }
-        
-        .tip-box {
-            background: linear-gradient(135deg, #A0A0A06fe 0%, #c4b5fd 100%);
-            padding: 35px;
-            border-radius: 15px;
-            margin: 40px 0;
-            border-left: 6px solid #7c3aed;
-        }
-        
-        .tip-title {
-            font-size: 1.6em;
-            font-weight: bold;
-            color: #5b21b6;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .tip-content {
-            color: #5b21b6;
-            line-height: 1.9;
-            font-size: 1.05em;
-        }
-        
-        .warning-box {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            padding: 30px;
-            border-radius: 15px;
-            margin: 30px 0;
-            border-left: 6px solid #ef4444;
-        }
-        
-        .warning-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #991b1b;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .warning-content {
-            color: #7f1d1d;
-            line-height: 1.8;
-            font-size: 1.05em;
-        }
-        
-        @media (max-width: 1024px) {
-            .pros-cons-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .method-header {
-                flex-direction: column;
-                text-align: center;
-            }
-        }
-    
-        
-        
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  &lt;!-- ページ固有CSSファイル --&gt;
+  <link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/ec2-log-backup-before-termination-guide.css" rel="stylesheet"/>
+  
+  
 
-        
-
-        
-
-        
-
-        
-
-        
-
-        @media (max-width: 768px) {
-            
-        }
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        /* 読書進捗インジケーター */
-        
-
-        
-
-        
-
-        /* トップに戻るボタン */
-        
-
-        
-
-        
-
-        
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            
-
-            
-
-            
-
-            
-
-            
-        }
-  </style>
- </head>
- <body>
-  <!-- 左サイドバー目次 -->
-  <div class="sidebar-toc" id="sidebar-toc">
-   <div class="sidebar-toc-header">
-    <h2>
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2 id="目次">
      📑 目次
     </h2>
-   </div>
-   <nav class="sidebar-toc-content">
-    <ul>
-     <li class="toc-h2">
-      <a href="#目次">
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2">
+<a href="#目次">
        📑 目次
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#オフィス退去時の書類整理でたとえると超わかりやすい!">
+</li>
+<li class="toc-h2">
+<a href="#オフィス退去時の書類整理でたとえると超わかりやすい!">
        🏢 オフィス退去時の書類整理でたとえると超わかりやすい!
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#オフィス退去の書類整理戦略">
+</li>
+<li class="toc-h2">
+<a href="#オフィス退去の書類整理戦略">
        🏢 オフィス退去の書類整理戦略
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#5つの退避方法---完全解説">
+</li>
+<li class="toc-h2">
+<a href="#5つの退避方法---完全解説">
        🎯 5つの退避方法 - 完全解説
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#5つの方法---徹底比較表">
+</li>
+<li class="toc-h2">
+<a href="#5つの方法---徹底比較表">
        📊 5つの方法 - 徹底比較表
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#️-推奨アーキテクチャ-多層防御戦略">
+</li>
+<li class="toc-h2">
+<a href="#️-推奨アーキテクチャ-多層防御戦略">
        🏗️ 推奨アーキテクチャ: 多層防御戦略
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#最も確実な構成-複数手法の組み合わせ">
+</li>
+<li class="toc-h3">
+<a href="#最も確実な構成-複数手法の組み合わせ">
        最も確実な構成: 複数手法の組み合わせ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#この多層防御でデータ損失率-0.1%-以下を実現">
+</li>
+<li class="toc-h3">
+<a href="#この多層防御でデータ損失率-0.1%-以下を実現">
        🎯 この多層防御でデータ損失率 0.1% 以下を実現
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#ベストプラクティス">
+</li>
+<li class="toc-h2">
+<a href="#ベストプラクティス">
        💡 ベストプラクティス
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#まとめ">
+</li>
+<li class="toc-h2">
+<a href="#まとめ">
        🎓 まとめ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#オフィス退去-=-EC2終了">
+</li>
+<li class="toc-h3">
+<a href="#オフィス退去-=-EC2終了">
        🏢 オフィス退去 = EC2終了
       </a>
-     </li>
-    </ul>
-   </nav>
-  </div>
-  <!-- サイドバー折りたたみボタン -->
-  <button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
-   <span id="sidebar-toc-toggle-icon">
+</li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">
     ◀
    </span>
-  </button>
-  <style>
-   /* ページ全体のレイアウト調整 */
-    body {
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }
+</button>
 
-    body.sidebar-collapsed {
-        padding-left: 0;
-    }
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 100vh;
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }
-
-    .sidebar-toc.collapsed {
-        transform: translateX(-100%);
-    }
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }
-
-    .sidebar-toc-header h2 {
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .sidebar-toc-content a {
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .sidebar-toc-content a:hover {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }
-
-    .sidebar-toc-content .toc-h2 a {
-        font-weight: 600;
-    }
-
-    .sidebar-toc-content .toc-h3 {
-        font-size: 0.9em;
-        padding-left: 20px;
-    }
-
-    .sidebar-toc-content .toc-h3 a {
-        color: #4b5563;
-        padding: 8px 12px;
-    }
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {
-        position: fixed;
-        left: 340px;
-        top: 20px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-toc-toggle:hover {
-        background: #2563eb;
-        transform: scale(1.05);
-    }
-
-    body.sidebar-collapsed .sidebar-toc-toggle {
-        left: 0;
-    }
-
-    /* スムーズスクロール */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        body {
-            padding-left: 0 !important;
-        }
-
-        .sidebar-toc {
-            width: 280px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar-toc.open {
-            transform: translateX(0);
-        }
-
-        .sidebar-toc-toggle {
-            left: 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {
-            font-size: 1.2em;
-        }
-
-        .sidebar-toc-content a {
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }
-    }
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        body {
-            padding-left: 310px;
-        }
-
-        .sidebar-toc {
-            width: 290px;
-        }
-
-        .sidebar-toc-toggle {
-            left: 290px;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-    }
-  </style>
-  <script>
+<script>
    function toggleSidebarTOC() {
         const sidebar = document.getElementById('sidebar-toc');
         const body = document.body;
@@ -979,104 +165,215 @@
         });
     });
   </script>
-  <!-- 固定ナビゲーションヘッダー -->
-  <div class="fixed-nav-header">
-   <div class="fixed-nav-container">
-    <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-    <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-     <a href="/aws_sap_studying/profile.html">
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
       自己紹介
      </a>
-     <a href="/aws_sap_studying/learning-resources.html">
+<a href="/aws_sap_studying/learning-resources.html">
       学習リソース集
      </a>
-     <a href="/aws_sap_studying/knowledge-base.html">
+<a href="/aws_sap_studying/knowledge-base.html">
       ナレッジベース
      </a>
-     <a href="/aws_sap_studying/quiz.html">
+<a href="/aws_sap_studying/quiz.html">
       クイズ
      </a>
-    </nav>
-   </div>
-  </div>
-  <!-- 読書進捗インジケーター -->
-  <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
-   <div class="reading-progress-bar" id="readingProgressBar">
-   </div>
-  </div>
-  <!-- トップに戻るボタン -->
-  <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
    ↑
   </button>
-  <div class="container">
-   <!-- ブレッドクラムナビゲーション -->
-   <nav class="breadcrumb-nav">
-    <a class="breadcrumb-home" href="../index.html">
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
      🏠 ホーム
     </a>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      コンピュート・アプリケーション
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      EC2 &amp; インスタンス管理
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-current">
+<span class="breadcrumb-current">
      Ec2 Log Backup Before Termination Guide
     </span>
-   </nav>
-   <div class="header">
-    <h1>
+</nav>
+<div class="header">
+<h1>
      💾 EC2終了前ログ退避設計
     </h1>
-    <p>
+
+<!-- ページ内目次 -->
+<div id="toc-container" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 20px 25px; margin: 30px 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleTOC()">
+        <h2 style="color: #1e40af; margin: 0; font-size: 1.3em; display: flex; align-items: center;">
+            <span style="margin-right: 10px;">📑</span>
+            <span>目次</span>
+        </h2>
+        <button id="toc-toggle-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s;">
+            <span id="toc-toggle-icon">▶</span> <span id="toc-toggle-text">展開する</span>
+        </button>
+    </div>
+    <nav id="toc-content" class="collapsed" style="transition: all 0.3s ease;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li class="toc-h2"><a href="#目次">📑 目次</a></li>
+            <li class="toc-h2"><a href="#オフィス退去時の書類整理でたとえると超わかりやすい!">🏢 オフィス退去時の書類整理でたとえると超わかりやすい!</a></li>
+            <li class="toc-h2"><a href="#オフィス退去の書類整理戦略">🏢 オフィス退去の書類整理戦略</a></li>
+            <li class="toc-h2"><a href="#5つの退避方法---完全解説">🎯 5つの退避方法 - 完全解説</a></li>
+            <li class="toc-h2"><a href="#5つの方法---徹底比較表">📊 5つの方法 - 徹底比較表</a></li>
+            <li class="toc-h2"><a href="#️-推奨アーキテクチャ-多層防御戦略">🏗️ 推奨アーキテクチャ: 多層防御戦略</a></li>
+            <li class="toc-h3"><a href="#最も確実な構成-複数手法の組み合わせ">最も確実な構成: 複数手法の組み合わせ</a></li>
+            <li class="toc-h3"><a href="#この多層防御でデータ損失率-0.1%-以下を実現">🎯 この多層防御でデータ損失率 0.1% 以下を実現</a></li>
+            <li class="toc-h2"><a href="#ベストプラクティス">💡 ベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+            <li class="toc-h3"><a href="#オフィス退去-=-EC2終了">🏢 オフィス退去 = EC2終了</a></li>
+        </ul>
+    </nav>
+</div>
+
+<style>
+    #toc-container a {
+        color: #1e40af;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+
+    #toc-container a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    #toc-container .toc-h2 {
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-top: 10px;
+    }
+
+    #toc-container .toc-h3 {
+        font-size: 0.95em;
+        padding-left: 30px;
+        color: #4b5563;
+    }
+
+    #toc-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 768px) {
+        #toc-container {
+            padding: 15px;
+        }
+
+        #toc-container h2 {
+            font-size: 1.1em;
+        }
+    }
+</style>
+
+<script>
+    function toggleTOC() {
+        const content = document.getElementById('toc-content');
+        const icon = document.getElementById('toc-toggle-icon');
+        const text = document.getElementById('toc-toggle-text');
+
+        if (content.classList.contains('collapsed')) {
+            // 展開
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.classList.remove('collapsed');
+            icon.textContent = '▼';
+            text.textContent = '折りたたむ';
+        } else {
+            // 折りたたみ
+            content.style.maxHeight = '';  // インラインスタイルをクリア
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+            text.textContent = '展開する';
+        }
+    }
+
+    // ページロード時の処理（デフォルトは折りたたみ状態）
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContent = document.getElementById('toc-content');
+        if (tocContent) {
+            // 展開時のアニメーション用にmax-heightを保存
+            tocContent.dataset.maxHeight = tocContent.scrollHeight + 'px';
+        }
+    });
+</script>
+
+
+<p>
      確実にログをS3へ保存する5つの方法とベストプラクティス
     </p>
-   </div>
-   <div class="content">
-    <!-- イントロ -->
-    <div class="intro">
-     <h2 id="オフィス退去時の書類整理でたとえると超わかりやすい!">
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="オフィス退去時の書類整理でたとえると超わかりやすい!">
       🏢 オフィス退去時の書類整理でたとえると超わかりやすい!
      </h2>
-     <p class="intro-text">
-      <strong>
+<p class="intro-text">
+<strong>
        EC2終了 = オフィスを閉鎖して退去すること
       </strong>
-      <br/>
-      <br/>
+<br/>
+<br/>
       オフィスを閉める前に、重要な書類（ログ）を必ず倉庫（S3）に移さないと永久に失われます。
       <br/>
-      <br/>
+<br/>
       でも、
       <strong>
        「明日閉鎖します」と言われても
       </strong>
       書類整理が間に合わないかも...
       <br/>
-      <strong>
+<strong>
        「今すぐ出て行け！」と言われたら
       </strong>
       何も持ち出せません。
       <br/>
-      <br/>
+<br/>
       この問題を解決する
       <strong>
        5つの戦略
       </strong>
       を完全解説します✨
       <br/>
-      <br/>
+<br/>
       どの方法が
       <strong>
        確実
@@ -1087,42 +384,42 @@
       </strong>
       か、シナリオ別に徹底比較！
      </p>
-    </div>
-    <!-- たとえ話 -->
-    <div class="analogy-section">
-     <h2 class="analogy-title" id="オフィス退去の書類整理戦略">
+</div>
+<!-- たとえ話 -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="オフィス退去の書類整理戦略">
       🏢 オフィス退去の書類整理戦略
      </h2>
-     <div class="analogy-box">
-      <div class="analogy-box-title">
-       <span>
+<div class="analogy-box">
+<div class="analogy-box-title">
+<span>
         📦
        </span>
-       <span>
+<span>
         問題: EC2終了でログが消える
        </span>
-      </div>
-      <div class="analogy-box-content">
-       <strong>
+</div>
+<div class="analogy-box-content">
+<strong>
         シナリオ:
        </strong>
-       <br/>
+<br/>
        あなたの会社は、プロジェクト終了後にオフィスを閉鎖することになりました。
        <br/>
        オフィス内には過去1年分の重要な業務記録（ログファイル）が保管されています。
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         問題:
        </strong>
-       <br/>
+<br/>
        オフィス閉鎖（EC2終了）と同時に、そこにある全ての書類は処分されます。
        <br/>
-       <strong>
+<strong>
         倉庫（S3）に移動しておかないと、永久に失われます。
        </strong>
-       <br/>
-       <br/>
+<br/>
+<br/>
        でも、退去のタイミングは予測できないことも...
        <br/>
        • 計画的な閉鎖: 「来週の金曜日に退去します」
@@ -1131,94 +428,94 @@
        <br/>
        • 緊急の閉鎖: 「今すぐ退去！」（火災、強制退去など）
       </div>
-     </div>
-     <div class="analogy-box">
-      <div class="analogy-box-title">
-       <span>
+</div>
+<div class="analogy-box">
+<div class="analogy-box-title">
+<span>
         💡
        </span>
-       <span>
+<span>
         解決策: 5つの書類移動戦略
        </span>
-      </div>
-      <div class="analogy-box-content">
-       <strong>
+</div>
+<div class="analogy-box-content">
+<strong>
         戦略1: 毎日倉庫に送る（CloudWatch Logs）
        </strong>
-       <br/>
+<br/>
        → 書類が作成されるたびに、即座に倉庫へコピー。最も確実！
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         戦略2: 退去通知を受けて移動（ライフサイクルフック）
        </strong>
-       <br/>
+<br/>
        → 「明日退去です」という通知を受けて、猶予時間内に移動作業
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         戦略3: 閉鎖イベントを検知して緊急移動（EventBridge + Lambda）
        </strong>
-       <br/>
+<br/>
        → 退去が始まった瞬間に検知して、外部から救出作業を実施
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         戦略4: 退去時に自動実行（シャットダウンスクリプト）
        </strong>
-       <br/>
+<br/>
        → ドアを閉める直前に自動で書類を送信する仕組み
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         戦略5: 定期的に移動（スケジュールバックアップ）
        </strong>
-       <br/>
+<br/>
        → 毎日自動で倉庫へコピー。退去時は最新分だけ残る
       </div>
-     </div>
-    </div>
-    <!-- 5つの方法 -->
-    <div class="methods-section">
-     <h2 class="methods-title" id="5つの退避方法---完全解説">
+</div>
+</div>
+<!-- 5つの方法 -->
+<div class="methods-section">
+<h2 class="methods-title" id="5つの退避方法---完全解説">
       🎯 5つの退避方法 - 完全解説
      </h2>
-     <!-- 方法1: CloudWatch Logs -->
-     <div class="method-card">
-      <div class="method-header">
-       <div class="method-icon">
+<!-- 方法1: CloudWatch Logs -->
+<div class="method-card">
+<div class="method-header">
+<div class="method-icon">
         🏆
        </div>
-       <div class="method-title-wrapper">
-        <div class="method-title">
+<div class="method-title-wrapper">
+<div class="method-title">
          方法1: CloudWatch Logs + S3エクスポート
         </div>
-        <div class="method-subtitle">
+<div class="method-subtitle">
          リアルタイム転送方式（最も確実・推奨）
         </div>
-       </div>
-      </div>
-      <div class="method-rating">
-       <span class="rating-badge rating-reliability">
+</div>
+</div>
+<div class="method-rating">
+<span class="rating-badge rating-reliability">
         信頼性: ⭐⭐⭐⭐⭐ (最高)
        </span>
-       <span class="rating-badge rating-complexity">
+<span class="rating-badge rating-complexity">
         複雑さ: ⭐⭐☆☆☆ (簡単)
        </span>
-       <span class="rating-badge rating-cost">
+<span class="rating-badge rating-cost">
         コスト: ⭐⭐⭐☆☆ (中)
        </span>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🏢
         </span>
-        <span>
+<span>
          オフィスのたとえ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         書類が作成されるたびに、
         <strong>
          即座にコピーを倉庫へ送信
@@ -1227,23 +524,23 @@
         <br/>
         オフィスが突然閉鎖されても、全ての書類は既に倉庫に保管済み。
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          例:
         </strong>
         社員が報告書を書くたびに、同時に本社の倉庫にもコピーが自動送信される。
        </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          ⚙️
         </span>
-        <span>
+<span>
          仕組み
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         1.
         <strong>
          CloudWatch Logs Agent
@@ -1256,95 +553,95 @@
         <br/>
         4. EC2が終了しても、ログは既にS3に保存済み
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          または:
         </strong>
-        <br/>
+<br/>
         • CloudWatch Logs Insightsで定期エクスポート設定
         <br/>
         • S3へのサブスクリプションフィルター設定
        </div>
-      </div>
-      <div class="pros-cons-grid">
-       <div class="pros-box">
-        <div class="pros-title">
-         <span>
+</div>
+<div class="pros-cons-grid">
+<div class="pros-box">
+<div class="pros-title">
+<span>
           ✅
          </span>
-         <span>
+<span>
           メリット
          </span>
-        </div>
-        <ul class="pros-list">
-         <li>
-          <strong>
+</div>
+<ul class="pros-list">
+<li>
+<strong>
            最高の信頼性:
           </strong>
           リアルタイム転送でデータ損失なし
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            突然の終了にも対応:
           </strong>
           既にS3にあるので安心
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            監視機能:
           </strong>
           CloudWatch Alarmで異常検知
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            検索可能:
           </strong>
           CloudWatch Logs Insightsで分析
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            一元管理:
           </strong>
           複数EC2のログを集約
          </li>
-        </ul>
-       </div>
-       <div class="cons-box">
-        <div class="cons-title">
-         <span>
+</ul>
+</div>
+<div class="cons-box">
+<div class="cons-title">
+<span>
           ⚠️
          </span>
-         <span>
+<span>
           デメリット
          </span>
-        </div>
-        <ul class="cons-list">
-         <li>
-          <strong>
+</div>
+<ul class="cons-list">
+<li>
+<strong>
            コスト:
           </strong>
           CloudWatch Logsの料金が発生（データ転送量に応じて）
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            セットアップ:
           </strong>
           エージェントのインストールと設定が必要
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            遅延:
           </strong>
           リアルタイムだが数秒〜数分の遅延あり
          </li>
-        </ul>
-       </div>
-      </div>
-      <div class="code-example">
-       <div class="code-title">
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
         CloudWatch Logs Agent 設定例 (Amazon Linux 2)
        </div>
-       <pre><span class="code-comment"># CloudWatch Logs Agentのインストール</span>
+<pre><span class="code-comment"># CloudWatch Logs Agentのインストール</span>
 sudo yum install -y amazon-cloudwatch-agent
 
 <span class="code-comment"># 設定ファイル作成 (/opt/aws/amazon-cloudwatch-agent/etc/config.json)</span>
@@ -1370,17 +667,17 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
   -m ec2 \
   -s \
   -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json</pre>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🎯
         </span>
-        <span>
+<span>
          推奨シナリオ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         •
         <strong>
          本番環境
@@ -1411,49 +708,49 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
         </strong>
         のログを集約したい
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          → 最も推奨される方法です！
         </strong>
-       </div>
-      </div>
-     </div>
-     <!-- 方法2: Auto Scaling ライフサイクルフック -->
-     <div class="method-card">
-      <div class="method-header">
-       <div class="method-icon">
+</div>
+</div>
+</div>
+<!-- 方法2: Auto Scaling ライフサイクルフック -->
+<div class="method-card">
+<div class="method-header">
+<div class="method-icon">
         🔔
        </div>
-       <div class="method-title-wrapper">
-        <div class="method-title">
+<div class="method-title-wrapper">
+<div class="method-title">
          方法2: Auto Scaling ライフサイクルフック
         </div>
-        <div class="method-subtitle">
+<div class="method-subtitle">
          猶予時間付き退避方式（Auto Scaling環境向け）
         </div>
-       </div>
-      </div>
-      <div class="method-rating">
-       <span class="rating-badge rating-reliability">
+</div>
+</div>
+<div class="method-rating">
+<span class="rating-badge rating-reliability">
         信頼性: ⭐⭐⭐⭐☆ (高)
        </span>
-       <span class="rating-badge rating-complexity">
+<span class="rating-badge rating-complexity">
         複雑さ: ⭐⭐⭐☆☆ (中)
        </span>
-       <span class="rating-badge rating-cost">
+<span class="rating-badge rating-cost">
         コスト: ⭐⭐☆☆☆ (低)
        </span>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🏢
         </span>
-        <span>
+<span>
          オフィスのたとえ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         オフィス閉鎖の
         <strong>
          1時間前に通知
@@ -1462,23 +759,23 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
         <br/>
         「あと1時間で退去です。それまでに書類を整理してください」という猶予期間。
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          例:
         </strong>
         ビル管理会社から「19:00に施錠します」と18:00に連絡が入り、1時間で片付ける。
        </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          ⚙️
         </span>
-        <span>
+<span>
          仕組み
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         1.
         <strong>
          Auto Scaling Group
@@ -1497,98 +794,98 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
         <br/>
         5. 完了後、ライフサイクルフックを完了させてインスタンス終了
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          重要:
         </strong>
         Auto Scalingでスケールインする場合に有効
        </div>
-      </div>
-      <div class="pros-cons-grid">
-       <div class="pros-box">
-        <div class="pros-title">
-         <span>
+</div>
+<div class="pros-cons-grid">
+<div class="pros-box">
+<div class="pros-title">
+<span>
           ✅
          </span>
-         <span>
+<span>
           メリット
          </span>
-        </div>
-        <ul class="pros-list">
-         <li>
-          <strong>
+</div>
+<ul class="pros-list">
+<li>
+<strong>
            猶予時間:
           </strong>
           最大2時間の処理時間を確保
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            確実な実行:
           </strong>
           終了前に必ず実行される
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            大容量対応:
           </strong>
           大量のログも余裕を持って転送
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            自動化:
           </strong>
           手動操作不要
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            低コスト:
           </strong>
           CloudWatch Logs不要
          </li>
-        </ul>
-       </div>
-       <div class="cons-box">
-        <div class="cons-title">
-         <span>
+</ul>
+</div>
+<div class="cons-box">
+<div class="cons-title">
+<span>
           ⚠️
          </span>
-         <span>
+<span>
           デメリット
          </span>
-        </div>
-        <ul class="cons-list">
-         <li>
-          <strong>
+</div>
+<ul class="cons-list">
+<li>
+<strong>
            Auto Scaling限定:
           </strong>
           スタンドアロンEC2では使えない
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            手動終了は不可:
           </strong>
           コンソールからの終了には対応しない
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            複雑な設定:
           </strong>
           Lambda、EventBridge、IAM設定が必要
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            タイムアウト:
           </strong>
           2時間を超える処理は不可
          </li>
-        </ul>
-       </div>
-      </div>
-      <div class="code-example">
-       <div class="code-title">
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
         ライフサイクルフック設定例（AWS CLI）
        </div>
-       <pre><span class="code-comment"># ライフサイクルフックの作成</span>
+<pre><span class="code-comment"># ライフサイクルフックの作成</span>
 aws autoscaling put-lifecycle-hook \
   --lifecycle-hook-name log-backup-hook \
   --auto-scaling-group-name my-asg \
@@ -1626,17 +923,17 @@ aws autoscaling put-lifecycle-hook \
         LifecycleActionResult=<span class="code-string">'CONTINUE'</span>,
         InstanceId=instance_id
     )</pre>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🎯
         </span>
-        <span>
+<span>
          推奨シナリオ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         •
         <strong>
          Auto Scaling
@@ -1667,49 +964,49 @@ aws autoscaling put-lifecycle-hook \
         </strong>
         が多い環境
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          → Auto Scaling環境では非常に有効！
         </strong>
-       </div>
-      </div>
-     </div>
-     <!-- 方法3: EventBridge + Lambda -->
-     <div class="method-card">
-      <div class="method-header">
-       <div class="method-icon">
+</div>
+</div>
+</div>
+<!-- 方法3: EventBridge + Lambda -->
+<div class="method-card">
+<div class="method-header">
+<div class="method-icon">
         ⚡
        </div>
-       <div class="method-title-wrapper">
-        <div class="method-title">
+<div class="method-title-wrapper">
+<div class="method-title">
          方法3: EventBridge + Lambda (EC2終了イベント検知)
         </div>
-        <div class="method-subtitle">
+<div class="method-subtitle">
          イベント駆動救出方式（外部からの介入）
         </div>
-       </div>
-      </div>
-      <div class="method-rating">
-       <span class="rating-badge rating-reliability">
+</div>
+</div>
+<div class="method-rating">
+<span class="rating-badge rating-reliability">
         信頼性: ⭐⭐⭐☆☆ (中)
        </span>
-       <span class="rating-badge rating-complexity">
+<span class="rating-badge rating-complexity">
         複雑さ: ⭐⭐⭐☆☆ (中)
        </span>
-       <span class="rating-badge rating-cost">
+<span class="rating-badge rating-cost">
         コスト: ⭐⭐☆☆☆ (低)
        </span>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🏢
         </span>
-        <span>
+<span>
          オフィスのたとえ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         オフィスが閉鎖され始めた瞬間に、
         <strong>
          外部の救出隊
@@ -1718,23 +1015,23 @@ aws autoscaling put-lifecycle-hook \
         <br/>
         社員が退去した後でも、外部から遠隔で書類を取り出せる仕組み。
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          例:
         </strong>
         ビル管理会社が「このオフィス閉鎖開始」と察知し、即座に重要書類回収チームを派遣。
        </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          ⚙️
         </span>
-        <span>
+<span>
          仕組み
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         1. EventBridgeでEC2状態変化イベント（
         <code>
          shutting-down
@@ -1755,11 +1052,11 @@ aws autoscaling put-lifecycle-hook \
         <br/>
         4. または、EBSスナップショットを即座に作成
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          注意:
         </strong>
-        <code>
+<code>
          terminated
         </code>
         状態では遅すぎる。
@@ -1772,89 +1069,89 @@ aws autoscaling put-lifecycle-hook \
         </code>
         を検知する必要がある。
        </div>
-      </div>
-      <div class="pros-cons-grid">
-       <div class="pros-box">
-        <div class="pros-title">
-         <span>
+</div>
+<div class="pros-cons-grid">
+<div class="pros-box">
+<div class="pros-title">
+<span>
           ✅
          </span>
-         <span>
+<span>
           メリット
          </span>
-        </div>
-        <ul class="pros-list">
-         <li>
-          <strong>
+</div>
+<ul class="pros-list">
+<li>
+<strong>
            汎用性:
           </strong>
           あらゆる終了パターンに対応
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            手動終了も検知:
           </strong>
           コンソールからの終了も対応
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            自動化:
           </strong>
           人手不要で実行
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            柔軟性:
           </strong>
           スナップショット作成など他の処理も可能
          </li>
-        </ul>
-       </div>
-       <div class="cons-box">
-        <div class="cons-title">
-         <span>
+</ul>
+</div>
+<div class="cons-box">
+<div class="cons-title">
+<span>
           ⚠️
          </span>
-         <span>
+<span>
           デメリット
          </span>
-        </div>
-        <ul class="cons-list">
-         <li>
-          <strong>
+</div>
+<ul class="cons-list">
+<li>
+<strong>
            タイミング問題:
           </strong>
           状態変化検知からLambda起動まで数秒のラグ
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            処理時間制限:
           </strong>
           Lambdaは最大15分。大量ログには不向き
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            確実性:
           </strong>
           インスタンスが即座に停止すると間に合わない可能性
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            強制終了:
           </strong>
-          <code>
+<code>
            terminated
           </code>
           状態では手遅れ
          </li>
-        </ul>
-       </div>
-      </div>
-      <div class="code-example">
-       <div class="code-title">
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
         EventBridge ルール設定例
        </div>
-       <pre><span class="code-comment"># EventBridge ルール（イベントパターン）</span>
+<pre><span class="code-comment"># EventBridge ルール（イベントパターン）</span>
 {
   <span class="code-keyword">"source"</span>: [<span class="code-string">"aws.ec2"</span>],
   <span class="code-keyword">"detail-type"</span>: [<span class="code-string">"EC2 Instance State-change Notification"</span>],
@@ -1881,22 +1178,22 @@ aws autoscaling put-lifecycle-hook \
                 VolumeId=volume[<span class="code-string">'VolumeId'</span>],
                 Description=<span class="code-string">f'Emergency backup before termination'</span>
             )</pre>
-      </div>
-      <div class="warning-box">
-       <div class="warning-title">
-        <span>
+</div>
+<div class="warning-box">
+<div class="warning-title">
+<span>
          ⚠️
         </span>
-        <span>
+<span>
          重要な注意点
         </span>
-       </div>
-       <div class="warning-content">
-        <strong>
+</div>
+<div class="warning-content">
+<strong>
          この方法の最大の弱点:
         </strong>
-        <br/>
-        <br/>
+<br/>
+<br/>
         •
         <strong>
          terminated状態では手遅れ:
@@ -1915,22 +1212,22 @@ aws autoscaling put-lifecycle-hook \
         </strong>
         即座の終了では間に合わない
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          → 他の方法との併用が推奨されます
         </strong>
-       </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🎯
         </span>
-        <span>
+<span>
          推奨シナリオ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         •
         <strong>
          補助的な手段
@@ -1955,49 +1252,49 @@ aws autoscaling put-lifecycle-hook \
         </strong>
         （数MB程度）の即座転送
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          → メインの方法ではなく、保険として使用
         </strong>
-       </div>
-      </div>
-     </div>
-     <!-- 方法4: シャットダウンスクリプト -->
-     <div class="method-card">
-      <div class="method-header">
-       <div class="method-icon">
+</div>
+</div>
+</div>
+<!-- 方法4: シャットダウンスクリプト -->
+<div class="method-card">
+<div class="method-header">
+<div class="method-icon">
         🔧
        </div>
-       <div class="method-title-wrapper">
-        <div class="method-title">
+<div class="method-title-wrapper">
+<div class="method-title">
          方法4: シャットダウンスクリプト (systemd / rc.local)
         </div>
-        <div class="method-subtitle">
+<div class="method-subtitle">
          OS標準機能による退避（シンプル）
         </div>
-       </div>
-      </div>
-      <div class="method-rating">
-       <span class="rating-badge rating-reliability">
+</div>
+</div>
+<div class="method-rating">
+<span class="rating-badge rating-reliability">
         信頼性: ⭐⭐☆☆☆ (低)
        </span>
-       <span class="rating-badge rating-complexity">
+<span class="rating-badge rating-complexity">
         複雑さ: ⭐☆☆☆☆ (簡単)
        </span>
-       <span class="rating-badge rating-cost">
+<span class="rating-badge rating-cost">
         コスト: ⭐☆☆☆☆ (無料)
        </span>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🏢
         </span>
-        <span>
+<span>
          オフィスのたとえ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         ドアを閉める直前に、
         <strong>
          自動で書類を送信する装置
@@ -2006,23 +1303,23 @@ aws autoscaling put-lifecycle-hook \
         <br/>
         最後の人が退出すると、センサーが反応して自動で倉庫へ書類を送る。
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          例:
         </strong>
         退出時に自動でシュレッダーが動くように、ログ送信スクリプトが動く仕組み。
        </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          ⚙️
         </span>
-        <span>
+<span>
          仕組み
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         1. systemdサービスで
         <strong>
          シャットダウン時実行
@@ -2035,108 +1332,108 @@ aws autoscaling put-lifecycle-hook \
         <br/>
         4. 完了後、OSがシャットダウンを継続
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          設定場所:
         </strong>
-        <br/>
+<br/>
         • systemd:
         <code>
          /etc/systemd/system/log-backup.service
         </code>
-        <br/>
+<br/>
         • 古いシステム:
         <code>
          /etc/rc0.d/
         </code>
         (シャットダウン時実行)
        </div>
-      </div>
-      <div class="pros-cons-grid">
-       <div class="pros-box">
-        <div class="pros-title">
-         <span>
+</div>
+<div class="pros-cons-grid">
+<div class="pros-box">
+<div class="pros-title">
+<span>
           ✅
          </span>
-         <span>
+<span>
           メリット
          </span>
-        </div>
-        <ul class="pros-list">
-         <li>
-          <strong>
+</div>
+<ul class="pros-list">
+<li>
+<strong>
            シンプル:
           </strong>
           追加のAWSサービス不要
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            無料:
           </strong>
           AWS料金なし（S3ストレージ除く）
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            確実な起動:
           </strong>
           OS標準機能で実行保証
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            あらゆる終了に対応:
           </strong>
           再起動・シャットダウン両方
          </li>
-        </ul>
-       </div>
-       <div class="cons-box">
-        <div class="cons-title">
-         <span>
+</ul>
+</div>
+<div class="cons-box">
+<div class="cons-title">
+<span>
           ⚠️
          </span>
-         <span>
+<span>
           デメリット
          </span>
-        </div>
-        <ul class="cons-list">
-         <li>
-          <strong>
+</div>
+<ul class="cons-list">
+<li>
+<strong>
            時間制限:
           </strong>
           OSのシャットダウンタイムアウト（通常90秒）
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            強制終了は不可:
           </strong>
           電源断、クラッシュには無力
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            大容量は困難:
           </strong>
           タイムアウトで中断される可能性
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            エラー処理困難:
           </strong>
           失敗時のリトライなし
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            監視不可:
           </strong>
           実行状況の可視化が難しい
          </li>
-        </ul>
-       </div>
-      </div>
-      <div class="code-example">
-       <div class="code-title">
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
         systemd シャットダウンサービス設定例
        </div>
-       <pre><span class="code-comment"># /etc/systemd/system/log-backup.service</span>
+<pre><span class="code-comment"># /etc/systemd/system/log-backup.service</span>
 [Unit]
 Description=Backup logs to S3 before shutdown
 DefaultDependencies=no
@@ -2168,50 +1465,50 @@ rm -f ${LOG_FILE}
 
 <span class="code-comment"># サービス有効化</span>
 sudo systemctl enable log-backup.service</pre>
-      </div>
-      <div class="warning-box">
-       <div class="warning-title">
-        <span>
+</div>
+<div class="warning-box">
+<div class="warning-title">
+<span>
          ⚠️
         </span>
-        <span>
+<span>
          致命的な制約
         </span>
-       </div>
-       <div class="warning-content">
-        <strong>
+</div>
+<div class="warning-content">
+<strong>
          90秒のタイムアウト:
         </strong>
-        <br/>
+<br/>
         Linuxのシャットダウンプロセスは、各サービスに通常90秒の猶予を与えます。
         <br/>
         これを超えると強制終了（SIGKILL）されます。
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          大容量ログは不可:
         </strong>
-        <br/>
+<br/>
         • 1GBのログを90秒でアップロードするには約90Mbpsの速度が必要
         <br/>
         • ネットワーク遅延や圧縮時間も考慮すると、実質的には数百MB程度が限界
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          → 小〜中容量のログ専用
         </strong>
-       </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🎯
         </span>
-        <span>
+<span>
          推奨シナリオ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         •
         <strong>
          小規模環境
@@ -2240,74 +1537,74 @@ sudo systemctl enable log-backup.service</pre>
         <strong>
          開発・テスト環境
         </strong>
-        <br/>
-        <br/>
-        <strong>
+<br/>
+<br/>
+<strong>
          → シンプルだが制約が多い。本番環境では非推奨
         </strong>
-       </div>
-      </div>
-     </div>
-     <!-- 方法5: 定期バックアップ + 差分取得 -->
-     <div class="method-card">
-      <div class="method-header">
-       <div class="method-icon">
+</div>
+</div>
+</div>
+<!-- 方法5: 定期バックアップ + 差分取得 -->
+<div class="method-card">
+<div class="method-header">
+<div class="method-icon">
         📅
        </div>
-       <div class="method-title-wrapper">
-        <div class="method-title">
+<div class="method-title-wrapper">
+<div class="method-title">
          方法5: 定期バックアップ + 差分取得
         </div>
-        <div class="method-subtitle">
+<div class="method-subtitle">
          スケジュール方式（最小限の損失）
         </div>
-       </div>
-      </div>
-      <div class="method-rating">
-       <span class="rating-badge rating-reliability">
+</div>
+</div>
+<div class="method-rating">
+<span class="rating-badge rating-reliability">
         信頼性: ⭐⭐⭐☆☆ (中)
        </span>
-       <span class="rating-badge rating-complexity">
+<span class="rating-badge rating-complexity">
         複雑さ: ⭐⭐☆☆☆ (簡単)
        </span>
-       <span class="rating-badge rating-cost">
+<span class="rating-badge rating-cost">
         コスト: ⭐☆☆☆☆ (無料)
        </span>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🏢
         </span>
-        <span>
+<span>
          オフィスのたとえ
         </span>
-       </div>
-       <div class="method-section-content">
-        <strong>
+</div>
+<div class="method-section-content">
+<strong>
          毎日定時
         </strong>
         に、その日の書類を倉庫へ自動送信。
         <br/>
         突然の閉鎖が起きても、最悪でも1日分の書類を失うだけで済む。
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          例:
         </strong>
         毎晩23:00に自動で今日の報告書を本社へ送信。明日急に閉鎖されても昨日までの分は安全。
        </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          ⚙️
         </span>
-        <span>
+<span>
          仕組み
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         1.
         <strong>
          cron
@@ -2330,98 +1627,98 @@ sudo systemctl enable log-backup.service</pre>
         <br/>
         5. EC2終了時は、最後のバックアップ〜終了までの分だけ失われる
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          データ損失:
         </strong>
         バックアップ間隔分のログが失われる可能性（1時間毎なら最大1時間分）
        </div>
-      </div>
-      <div class="pros-cons-grid">
-       <div class="pros-box">
-        <div class="pros-title">
-         <span>
+</div>
+<div class="pros-cons-grid">
+<div class="pros-box">
+<div class="pros-title">
+<span>
           ✅
          </span>
-         <span>
+<span>
           メリット
          </span>
-        </div>
-        <ul class="pros-list">
-         <li>
-          <strong>
+</div>
+<ul class="pros-list">
+<li>
+<strong>
            シンプル:
           </strong>
           cronやEventBridgeで簡単に実装
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            低コスト:
           </strong>
           追加のAWSサービスほぼ不要
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            柔軟性:
           </strong>
           バックアップ頻度を自由に調整
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            大容量対応:
           </strong>
           時間制限なく大量ログも可能
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            軽量:
           </strong>
           リアルタイム転送より負荷が低い
          </li>
-        </ul>
-       </div>
-       <div class="cons-box">
-        <div class="cons-title">
-         <span>
+</ul>
+</div>
+<div class="cons-box">
+<div class="cons-title">
+<span>
           ⚠️
          </span>
-         <span>
+<span>
           デメリット
          </span>
-        </div>
-        <ul class="cons-list">
-         <li>
-          <strong>
+</div>
+<ul class="cons-list">
+<li>
+<strong>
            データ損失:
           </strong>
           最後のバックアップ以降のログは失われる
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            完全性なし:
           </strong>
           100%の保証はない
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            頻度とコスト:
           </strong>
           頻繁にすると転送コスト増加
          </li>
-         <li>
-          <strong>
+<li>
+<strong>
            遅延:
           </strong>
           リアルタイムではない
          </li>
-        </ul>
-       </div>
-      </div>
-      <div class="code-example">
-       <div class="code-title">
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
         cron設定による定期バックアップ例
        </div>
-       <pre><span class="code-comment"># /etc/cron.d/log-backup</span>
+<pre><span class="code-comment"># /etc/cron.d/log-backup</span>
 <span class="code-comment"># 1時間ごとにログをS3へバックアップ</span>
 0 * * * * root /usr/local/bin/hourly-log-backup.sh
 
@@ -2446,22 +1743,22 @@ aws s3 cp /tmp/logs-${TIMESTAMP}.tar.gz \
   --region ap-northeast-1
 
 rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          💡
         </span>
-        <span>
+<span>
          改善アイデア
         </span>
-       </div>
-       <div class="method-section-content">
-        <strong>
+</div>
+<div class="method-section-content">
+<strong>
          方法4と組み合わせて完全性向上:
         </strong>
-        <br/>
-        <br/>
+<br/>
+<br/>
         1.
         <strong>
          定期バックアップ
@@ -2474,25 +1771,25 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
         </strong>
         （方法4）で最後の差分を保存
         <br/>
-        <br/>
+<br/>
         この組み合わせで、データ損失を最小限にできます！
         <br/>
-        <br/>
+<br/>
         例: 1時間毎に定期バックアップ + シャットダウン時に最後の1時間分を保存
         <br/>
         → ほぼ完全なログ保存が低コストで実現
        </div>
-      </div>
-      <div class="method-section">
-       <div class="method-section-title">
-        <span>
+</div>
+<div class="method-section">
+<div class="method-section-title">
+<span>
          🎯
         </span>
-        <span>
+<span>
          推奨シナリオ
         </span>
-       </div>
-       <div class="method-section-content">
+</div>
+<div class="method-section-content">
         •
         <strong>
          コスト重視
@@ -2515,557 +1812,557 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
         <strong>
          開発・ステージング環境
         </strong>
-        <br/>
+<br/>
         •
         <strong>
          方法4との併用
         </strong>
         で完全性向上
         <br/>
-        <br/>
-        <strong>
+<br/>
+<strong>
          → シンプルで実用的。方法1の代替として有効
         </strong>
-       </div>
-      </div>
-     </div>
-    </div>
-    <!-- 比較表 -->
-    <div class="comparison-table">
-     <h2 class="table-title" id="5つの方法---徹底比較表">
+</div>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<div class="comparison-table">
+<h2 class="table-title" id="5つの方法---徹底比較表">
       📊 5つの方法 - 徹底比較表
      </h2>
-     <table>
-      <thead>
-       <tr>
-        <th>
+<table>
+<thead>
+<tr>
+<th>
          項目
         </th>
-        <th>
+<th>
          方法1
          <br/>
          CloudWatch Logs
         </th>
-        <th>
+<th>
          方法2
          <br/>
          ライフサイクルフック
         </th>
-        <th>
+<th>
          方法3
          <br/>
          EventBridge + Lambda
         </th>
-        <th>
+<th>
          方法4
          <br/>
          シャットダウンスクリプト
         </th>
-        <th>
+<th>
          方法5
          <br/>
          定期バックアップ
         </th>
-       </tr>
-      </thead>
-      <tbody>
-       <tr>
-        <td>
-         <strong>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
           信頼性
          </strong>
-        </td>
-        <td>
-         <span class="star-rating">
+</td>
+<td>
+<span class="star-rating">
           ⭐⭐⭐⭐⭐
          </span>
-        </td>
-        <td>
-         <span class="star-rating">
+</td>
+<td>
+<span class="star-rating">
           ⭐⭐⭐⭐☆
          </span>
-        </td>
-        <td>
-         <span class="star-rating">
+</td>
+<td>
+<span class="star-rating">
           ⭐⭐⭐☆☆
          </span>
-        </td>
-        <td>
-         <span class="star-rating">
+</td>
+<td>
+<span class="star-rating">
           ⭐⭐☆☆☆
          </span>
-        </td>
-        <td>
-         <span class="star-rating">
+</td>
+<td>
+<span class="star-rating">
           ⭐⭐⭐☆☆
          </span>
-        </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
           実装の複雑さ
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          中（エージェント設定）
         </td>
-        <td>
+<td>
          高（複数サービス連携）
         </td>
-        <td>
+<td>
          中（Lambda + EventBridge）
         </td>
-        <td>
+<td>
          低（シェルスクリプトのみ）
         </td>
-        <td>
+<td>
          低（cron設定のみ）
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           コスト
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          中〜高
          <br/>
          （データ転送量）
         </td>
-        <td>
+<td>
          低
          <br/>
          （Lambda実行のみ）
         </td>
-        <td>
+<td>
          低
          <br/>
          （Lambda実行のみ）
         </td>
-        <td>
+<td>
          無料
          <br/>
          （S3ストレージ除く）
         </td>
-        <td>
+<td>
          無料
          <br/>
          （S3ストレージ除く）
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           データ完全性
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          100%
          <br/>
          （リアルタイム）
         </td>
-        <td>
+<td>
          100%
          <br/>
          （猶予時間あり）
         </td>
-        <td>
+<td>
          80-90%
          <br/>
          （タイミング依存）
         </td>
-        <td>
+<td>
          70-80%
          <br/>
          （タイムアウトあり）
         </td>
-        <td>
+<td>
          80-90%
          <br/>
          （間隔分は損失）
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           突然の終了
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ⚠️ Auto Scalingのみ
         </td>
-        <td>
+<td>
          ⚠️ タイミング次第
         </td>
-        <td>
+<td>
          ❌ 困難
         </td>
-        <td>
+<td>
          ❌ 未対応
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           大容量ログ
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ✅ 対応（2時間）
         </td>
-        <td>
+<td>
          ❌ 不可（15分制限）
         </td>
-        <td>
+<td>
          ❌ 不可（90秒制限）
         </td>
-        <td>
+<td>
          ✅ 対応
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           Auto Scaling
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ✅ 最適
         </td>
-        <td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ✅ 対応
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           手動終了
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ❌ 不可
         </td>
-        <td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ✅ 対応
         </td>
-        <td>
+<td>
          ⚠️ 差分損失
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           リアルタイム性
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          ✅ 数秒〜数分
         </td>
-        <td>
+<td>
          ✅ 終了前確実
         </td>
-        <td>
+<td>
          ⚠️ タイミング次第
         </td>
-        <td>
+<td>
          ⚠️ シャットダウン時
         </td>
-        <td>
+<td>
          ❌ 定期実行のみ
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           監視・可視化
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          ✅ CloudWatch標準
         </td>
-        <td>
+<td>
          ✅ Lambda Logs
         </td>
-        <td>
+<td>
          ✅ Lambda Logs
         </td>
-        <td>
+<td>
          ❌ 困難
         </td>
-        <td>
+<td>
          ⚠️ カスタム必要
         </td>
-       </tr>
-       <tr>
-        <td>
-         <strong>
+</tr>
+<tr>
+<td>
+<strong>
           推奨環境
          </strong>
-        </td>
-        <td>
+</td>
+<td>
          本番環境
         </td>
-        <td>
+<td>
          本番（Auto Scaling）
         </td>
-        <td>
+<td>
          補助手段
         </td>
-        <td>
+<td>
          開発・テスト
         </td>
-        <td>
+<td>
          開発・ステージング
         </td>
-       </tr>
-      </tbody>
-     </table>
-    </div>
-    <!-- アーキテクチャ例 -->
-    <div class="architecture-section">
-     <h2 class="architecture-title" id="️-推奨アーキテクチャ-多層防御戦略">
+</tr>
+</tbody>
+</table>
+</div>
+<!-- アーキテクチャ例 -->
+<div class="architecture-section">
+<h2 class="architecture-title" id="️-推奨アーキテクチャ-多層防御戦略">
       🏗️ 推奨アーキテクチャ: 多層防御戦略
      </h2>
-     <div class="architecture-diagram">
-      <div style="text-align: center; margin-bottom: 30px;">
-       <h3 id="最も確実な構成-複数手法の組み合わせ" style="font-size: 1.8em; color: #1e293b; margin-bottom: 15px;">
+<div class="architecture-diagram">
+<div style="text-align: center; margin-bottom: 30px;">
+<h3 id="最も確実な構成-複数手法の組み合わせ" style="font-size: 1.8em; color: #1e293b; margin-bottom: 15px;">
         最も確実な構成: 複数手法の組み合わせ
        </h3>
-       <p style="color: #64748b; font-size: 1.1em;">
+<p style="color: #64748b; font-size: 1.1em;">
         単一の方法に頼らず、複数の退避手段を用意することで
         <strong>
          99.9%以上の信頼性
         </strong>
         を実現
        </p>
-      </div>
-      <div class="flow-step">
-       <div class="flow-step-title">
-        <span class="flow-step-number">
+</div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
          1
         </span>
         第一防衛線: CloudWatch Logs（リアルタイム転送）
        </div>
-       <div class="flow-step-desc">
-        <strong>
+<div class="flow-step-desc">
+<strong>
          役割:
         </strong>
         通常運用時のログを全てリアルタイムでS3へ
         <br/>
-        <strong>
+<strong>
          対象:
         </strong>
         全てのアプリケーションログ、システムログ
         <br/>
-        <strong>
+<strong>
          メリット:
         </strong>
         どんな終了パターンでも99%のログは既に保存済み
         <br/>
-        <strong>
+<strong>
          コスト:
         </strong>
         中程度（でも最も確実）
        </div>
-      </div>
-      <div class="flow-arrow">
+</div>
+<div class="flow-arrow">
        ⬇️
       </div>
-      <div class="flow-step">
-       <div class="flow-step-title">
-        <span class="flow-step-number">
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
          2
         </span>
         第二防衛線: ライフサイクルフック（Auto Scaling環境）
        </div>
-       <div class="flow-step-desc">
-        <strong>
+<div class="flow-step-desc">
+<strong>
          役割:
         </strong>
         スケールイン時の確実な退避
         <br/>
-        <strong>
+<strong>
          対象:
         </strong>
         CloudWatch Logsでカバーしきれない一時ファイル、大容量データ
         <br/>
-        <strong>
+<strong>
          メリット:
         </strong>
         猶予時間内に確実に転送完了
         <br/>
-        <strong>
+<strong>
          適用条件:
         </strong>
         Auto Scalingを使用している場合のみ
        </div>
-      </div>
-      <div class="flow-arrow">
+</div>
+<div class="flow-arrow">
        ⬇️
       </div>
-      <div class="flow-step">
-       <div class="flow-step-title">
-        <span class="flow-step-number">
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
          3
         </span>
         第三防衛線: 定期バックアップ（コスト最適化）
        </div>
-       <div class="flow-step-desc">
-        <strong>
+<div class="flow-step-desc">
+<strong>
          役割:
         </strong>
         CloudWatch Logsの補完（コスト削減のため一部ログは定期保存）
         <br/>
-        <strong>
+<strong>
          対象:
         </strong>
         アクセスログなど容量の大きいログ
         <br/>
-        <strong>
+<strong>
          頻度:
         </strong>
         1時間毎または1日毎
         <br/>
-        <strong>
+<strong>
          メリット:
         </strong>
         コストを抑えつつ、ほぼ全てのログを保存
        </div>
-      </div>
-      <div class="flow-arrow">
+</div>
+<div class="flow-arrow">
        ⬇️
       </div>
-      <div class="flow-step">
-       <div class="flow-step-title">
-        <span class="flow-step-number">
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
          4
         </span>
         最終防衛線: シャットダウンスクリプト（保険）
        </div>
-       <div class="flow-step-desc">
-        <strong>
+<div class="flow-step-desc">
+<strong>
          役割:
         </strong>
         万が一の取りこぼし防止
         <br/>
-        <strong>
+<strong>
          対象:
         </strong>
         定期バックアップの最後の差分
         <br/>
-        <strong>
+<strong>
          メリット:
         </strong>
         ほぼ0コストで最後のチャンス
         <br/>
-        <strong>
+<strong>
          制約:
         </strong>
         90秒タイムアウトがあるため小容量のみ
        </div>
-      </div>
-      <div class="flow-arrow">
+</div>
+<div class="flow-arrow">
        ⬇️
       </div>
-      <div class="flow-step">
-       <div class="flow-step-title">
-        <span class="flow-step-number">
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
          5
         </span>
         緊急手段: EventBridge + EBS Snapshot（最終手段）
        </div>
-       <div class="flow-step-desc">
-        <strong>
+<div class="flow-step-desc">
+<strong>
          役割:
         </strong>
         全ての防衛線が突破された場合の最終手段
         <br/>
-        <strong>
+<strong>
          対象:
         </strong>
         ディスク全体のスナップショット
         <br/>
-        <strong>
+<strong>
          用途:
         </strong>
         災害復旧、フォレンジック調査
         <br/>
-        <strong>
+<strong>
          トリガー:
         </strong>
         shutting-down状態検知時
        </div>
-      </div>
-     </div>
-     <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 30px; border-radius: 15px; margin-top: 40px; border-left: 6px solid #047857;">
-      <h3 id="この多層防御でデータ損失率-0.1%-以下を実現" style="font-size: 1.6em; color: #065f46; margin-bottom: 20px; text-align: center;">
+</div>
+</div>
+<div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 30px; border-radius: 15px; margin-top: 40px; border-left: 6px solid #047857;">
+<h3 id="この多層防御でデータ損失率-0.1%-以下を実現" style="font-size: 1.6em; color: #065f46; margin-bottom: 20px; text-align: center;">
        🎯 この多層防御でデータ損失率 0.1% 以下を実現
       </h3>
-      <p style="color: #065f46; line-height: 1.8; text-align: center; font-size: 1.1em;">
-       <strong>
+<p style="color: #065f46; line-height: 1.8; text-align: center; font-size: 1.1em;">
+<strong>
         通常時:
        </strong>
        第1防衛線（CloudWatch Logs）で99%カバー
        <br/>
-       <strong>
+<strong>
         計画的終了:
        </strong>
        第2防衛線（ライフサイクルフック）で100%カバー
        <br/>
-       <strong>
+<strong>
         突然の終了:
        </strong>
        第3+4防衛線（定期+シャットダウン）でカバー
        <br/>
-       <strong>
+<strong>
         最悪のケース:
        </strong>
        第5防衛線（EBS Snapshot）で復旧可能
       </p>
-     </div>
-    </div>
-    <!-- ベストプラクティス -->
-    <div class="best-practices-section">
-     <h2 class="best-practices-title" id="ベストプラクティス">
+</div>
+</div>
+<!-- ベストプラクティス -->
+<div class="best-practices-section">
+<h2 class="best-practices-title" id="ベストプラクティス">
       💡 ベストプラクティス
      </h2>
-     <div class="practice-card">
-      <div class="practice-header">
-       <div class="practice-icon">
+<div class="practice-card">
+<div class="practice-header">
+<div class="practice-icon">
         🎯
        </div>
-       <div class="practice-title">
+<div class="practice-title">
         1. 環境別に適切な方法を選択
        </div>
-      </div>
-      <div class="practice-content">
-       <strong>
+</div>
+<div class="practice-content">
+<strong>
         本番環境:
        </strong>
-       <br/>
+<br/>
        • 必ず
        <strong>
         方法1（CloudWatch Logs）
@@ -3080,11 +2377,11 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        <br/>
        • 多層防御戦略で99.9%以上の信頼性を確保
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         ステージング環境:
        </strong>
-       <br/>
+<br/>
        •
        <strong>
         方法5（定期バックアップ）
@@ -3097,11 +2394,11 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        <br/>
        • コストを抑えつつ、実用的な信頼性を維持
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         開発環境:
        </strong>
-       <br/>
+<br/>
        •
        <strong>
         方法5（定期バックアップ）
@@ -3110,56 +2407,56 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        <br/>
        • または手動バックアップも選択肢
       </div>
-     </div>
-     <div class="practice-card">
-      <div class="practice-header">
-       <div class="practice-icon">
+</div>
+<div class="practice-card">
+<div class="practice-header">
+<div class="practice-icon">
         📏
        </div>
-       <div class="practice-title">
+<div class="practice-title">
         2. ログサイズに応じた戦略
        </div>
-      </div>
-      <div class="practice-content">
-       <strong>
+</div>
+<div class="practice-content">
+<strong>
         小容量（〜100MB/日）:
        </strong>
-       <br/>
+<br/>
        • CloudWatch Logsが最適。コストも気にならない
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         中容量（100MB〜1GB/日）:
        </strong>
-       <br/>
+<br/>
        • CloudWatch Logs + 定期バックアップ併用
        <br/>
        • 重要ログはCloudWatch、アクセスログは定期保存
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         大容量（1GB〜/日）:
        </strong>
-       <br/>
+<br/>
        • 定期バックアップ（1時間毎）+ ライフサイクルフック
        <br/>
        • CloudWatch Logsはエラーログのみに限定してコスト削減
       </div>
-     </div>
-     <div class="practice-card">
-      <div class="practice-header">
-       <div class="practice-icon">
+</div>
+<div class="practice-card">
+<div class="practice-header">
+<div class="practice-icon">
         🔐
        </div>
-       <div class="practice-title">
+<div class="practice-title">
         3. IAMロールの適切な設定
        </div>
-      </div>
-      <div class="practice-content">
-       <strong>
+</div>
+<div class="practice-content">
+<strong>
         必須ポリシー:
        </strong>
-       <br/>
+<br/>
        •
        <code>
         AmazonS3FullAccess
@@ -3178,53 +2475,53 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        </code>
        (Run Command使用時)
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         セキュリティ:
        </strong>
-       <br/>
+<br/>
        • 最小権限の原則に従う
        <br/>
        • S3バケットポリシーでEC2からのみ書き込み許可
        <br/>
        • バケット暗号化（SSE-S3またはSSE-KMS）を有効化
       </div>
-     </div>
-     <div class="practice-card">
-      <div class="practice-header">
-       <div class="practice-icon">
+</div>
+<div class="practice-card">
+<div class="practice-header">
+<div class="practice-icon">
         📦
        </div>
-       <div class="practice-title">
+<div class="practice-title">
         4. ログの圧縮と保存形式
        </div>
-      </div>
-      <div class="practice-content">
-       <strong>
+</div>
+<div class="practice-content">
+<strong>
         圧縮は必須:
        </strong>
-       <br/>
+<br/>
        • tar.gz形式で圧縮（70-90%削減）
        <br/>
        • S3転送時間とストレージコストの両方を削減
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         ファイル命名規則:
        </strong>
-       <br/>
+<br/>
        •
        <code>
         logs-{instance-id}-{timestamp}.tar.gz
        </code>
-       <br/>
+<br/>
        • インスタンスIDと日時を含めて識別容易に
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         S3ストレージクラス:
        </strong>
-       <br/>
+<br/>
        • 直近30日: S3 Standard（頻繁アクセス）
        <br/>
        • 30-90日: S3 Standard-IA（低頻度アクセス）
@@ -3233,21 +2530,21 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        <br/>
        • ライフサイクルルールで自動移行設定
       </div>
-     </div>
-     <div class="practice-card">
-      <div class="practice-header">
-       <div class="practice-icon">
+</div>
+<div class="practice-card">
+<div class="practice-header">
+<div class="practice-icon">
         🔔
        </div>
-       <div class="practice-title">
+<div class="practice-title">
         5. 監視とアラート設定
        </div>
-      </div>
-      <div class="practice-content">
-       <strong>
+</div>
+<div class="practice-content">
+<strong>
         必須の監視項目:
        </strong>
-       <br/>
+<br/>
        • CloudWatch Logs Agentのステータス監視
        <br/>
        • S3バケットへのアップロード成功率
@@ -3256,79 +2553,79 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        <br/>
        • ログファイルサイズの急増検知
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         アラート設定:
        </strong>
-       <br/>
+<br/>
        • ログ転送失敗時にSNS通知
        <br/>
        • ライフサイクルフックのタイムアウト検知
        <br/>
        • S3バケットの容量監視
        <br/>
-       <br/>
-       <strong>
+<br/>
+<strong>
         定期確認:
        </strong>
-       <br/>
+<br/>
        • 月次でログ退避の成功率をレビュー
        <br/>
        • 四半期でリストアテスト実施
       </div>
-     </div>
-    </div>
-    <!-- Tips -->
-    <div class="tip-box">
-     <div class="tip-title">
-      <span>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
        💡
       </span>
-      <span>
+<span>
        実装時の重要ポイント
       </span>
-     </div>
-     <div class="tip-content">
-      <strong>
+</div>
+<div class="tip-content">
+<strong>
        1. まずは小規模でテスト:
       </strong>
-      <br/>
+<br/>
       本番環境に導入する前に、必ず開発環境で全ての手法をテストしましょう。
       <br/>
       特に、意図的にEC2を終了させて、ログが確実にS3に保存されるか確認。
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        2. タイムアウト値は余裕を持って:
       </strong>
-      <br/>
+<br/>
       ネットワーク遅延やS3のAPI制限を考慮し、推定時間の2〜3倍の猶予を設定。
       <br/>
       例: 通常30秒で完了するなら、タイムアウトは90秒に設定。
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        3. リトライロジックを実装:
       </strong>
-      <br/>
+<br/>
       S3アップロードに失敗した場合、最低3回はリトライする仕組みを組み込む。
       <br/>
       エクスポネンシャルバックオフ（再試行間隔を徐々に延ばす）が推奨。
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        4. ログローテーションとの連携:
       </strong>
-      <br/>
+<br/>
       ログファイルがローテーションされる前に退避するようスケジュール調整。
       <br/>
       例: logrotateが毎日0:00に実行されるなら、バックアップは23:00に。
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        5. コスト最適化:
       </strong>
-      <br/>
+<br/>
       CloudWatch Logsは便利だがコストがかかる。重要度に応じてログを分類：
       <br/>
       • 超重要（エラーログ、監査ログ）→ CloudWatch Logs
@@ -3337,20 +2634,20 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
       <br/>
       • 参考（アクセスログ）→ 定期バックアップ直接S3
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        6. 定期的なリストアテスト:
       </strong>
-      <br/>
+<br/>
       四半期に1回、実際にS3からログを取り出して復元できるか確認。
       <br/>
       「バックアップは取れているが復元できない」という最悪の事態を防ぐ。
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        7. ドキュメント化:
       </strong>
-      <br/>
+<br/>
       ログ退避の仕組みを必ずドキュメント化。運用チームが理解できるように。
       <br/>
       • どのログがどこに保存されるか
@@ -3359,11 +2656,11 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
       <br/>
       • リストア手順
       <br/>
-      <br/>
-      <strong>
+<br/>
+<strong>
        8. 法規制・コンプライアンス対応:
       </strong>
-      <br/>
+<br/>
       業界によっては、ログの保存期間や方法が法律で定められている場合があります。
       <br/>
       • 金融: 7年間の保存義務
@@ -3372,18 +2669,18 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
       <br/>
       • 個人情報: GDPR対応で削除要求への対応が必要
      </div>
-    </div>
-    <!-- まとめ -->
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
-     <h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
       🎓 まとめ
      </h2>
-     <div style="max-width: 1100px; margin: 0 auto;">
-      <div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
-       <h3 id="オフィス退去-=-EC2終了" style="font-size: 1.8em; margin-bottom: 15px;">
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="オフィス退去-=-EC2終了" style="font-size: 1.8em; margin-bottom: 15px;">
         🏢 オフィス退去 = EC2終了
        </h3>
-       <p style="font-size: 1.15em; line-height: 2;">
+<p style="font-size: 1.15em; line-height: 2;">
         重要な書類（ログ）を倉庫（S3）に移さないと永久に失われる。
         <br/>
         突然の閉鎖（強制終了）にも対応できる
@@ -3392,97 +2689,97 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
         </strong>
         が鍵！
        </p>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
-       <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
-        <div style="font-size: 2.5em; margin-bottom: 15px;">
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
          🏆
         </div>
-        <strong style="font-size: 1.3em;">
+<strong style="font-size: 1.3em;">
          本番環境
         </strong>
-        <br/>
-        <br/>
+<br/>
+<br/>
         CloudWatch Logs
         <br/>
         + ライフサイクルフック
         <br/>
         信頼性99.9%以上
        </div>
-       <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
-        <div style="font-size: 2.5em; margin-bottom: 15px;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
          💰
         </div>
-        <strong style="font-size: 1.3em;">
+<strong style="font-size: 1.3em;">
          コスト重視
         </strong>
-        <br/>
-        <br/>
+<br/>
+<br/>
         定期バックアップ
         <br/>
         + シャットダウンスクリプト
         <br/>
         ほぼ無料で実用的
        </div>
-       <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
-        <div style="font-size: 2.5em; margin-bottom: 15px;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
          🎯
         </div>
-        <strong style="font-size: 1.3em;">
+<strong style="font-size: 1.3em;">
          最適解
         </strong>
-        <br/>
-        <br/>
+<br/>
+<br/>
         複数手法の組み合わせ
         <br/>
         多層防御で
         <br/>
         データ損失を最小化
        </div>
-      </div>
-      <div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
-       <p style="font-size: 1.3em; line-height: 1.8;">
-        <strong>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+<p style="font-size: 1.3em; line-height: 1.8;">
+<strong>
          🎯 決定版の推奨構成:
         </strong>
-        <br/>
-        <br/>
-        <span style="font-size: 1.1em;">
-         <strong>
+<br/>
+<br/>
+<span style="font-size: 1.1em;">
+<strong>
           第1層:
          </strong>
          CloudWatch Logs（リアルタイム転送）
          <br/>
-         <strong>
+<strong>
           第2層:
          </strong>
          ライフサイクルフック（Auto Scaling時）
          <br/>
-         <strong>
+<strong>
           第3層:
          </strong>
          定期バックアップ（コスト最適化）
          <br/>
-         <strong>
+<strong>
           第4層:
          </strong>
          シャットダウンスクリプト（最終防衛）
          <br/>
-         <strong>
+<strong>
           第5層:
          </strong>
          EBSスナップショット（最終手段）
          <br/>
-         <br/>
+<br/>
          この
          <strong>
           5層防御
          </strong>
          でデータ損失率 0.1% 以下を実現！
         </span>
-       </p>
-      </div>
-      <p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+</p>
+</div>
+<p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
        ログは
        <strong>
         トラブルシューティング
@@ -3501,15 +2798,15 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
        <br/>
        今すぐ確実な退避戦略を実装しましょう 🎉
       </p>
-     </div>
-    </div>
-   </div>
-  </div>
-  <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+</div>
+</div>
+</div>
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
    🏠 リソース集に戻る
   </button>
-  <!-- 固定ヘッダー機能のJavaScript -->
-  <script>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
    // トップに戻るボタンの表示/非表示
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const readingProgress = document.getElementById('readingProgress');
@@ -3545,5 +2842,5 @@ rm -f /tmp/logs-${TIMESTAMP}.tar.gz</pre>
             });
         });
   </script>
- </body>
+</body>
 </html>

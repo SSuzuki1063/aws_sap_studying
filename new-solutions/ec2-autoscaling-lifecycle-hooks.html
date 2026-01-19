@@ -1,608 +1,154 @@
 <!DOCTYPE html>
+
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
    EC2 Auto Scaling ライフサイクルフックの図解
   </title>
-  <!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
-  <link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
-  <style>
-   body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            padding-top: 80px; /* 固定ヘッダー分のスペース確保 */
-            background-color: #f5f7f9;
-        }
-        
-        .container {
-            background-color: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1, h2, h3 {
-            color: #232f3e;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.2em;
-            border-bottom: 3px solid #dc7600;
-            padding-bottom: 10px;
-        }
-        
-        h2 {
-            margin-top: 30px;
-            font-size: 1.8em;
-            border-left: 5px solid #dc7600;
-            padding-left: 15px;
-        }
-        
-        .lifecycle-diagram {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 40px 0;
-        }
-        
-        .lifecycle-flow {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            width: 100%;
-            margin-bottom: 40px;
-        }
-        
-        .lifecycle-step {
-            position: relative;
-            width: 180px;
-            padding: 15px;
-            margin: 10px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
-        }
-        
-        .lifecycle-step:hover {
-            transform: translateY(-5px);
-        }
-        
-        .lifecycle-step h3 {
-            margin-top: 0;
-            font-size: 1.1em;
-        }
-        
-        .lifecycle-arrow {
-            align-self: center;
-            font-size: 24px;
-            color: #666;
-            margin: 0 5px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .hook-point {
-            position: relative;
-            width: 200px;
-            padding: 15px;
-            margin: 15px;
-            border-radius: 8px;
-            border: 2px dashed #e93800;
-            text-align: center;
-            background-color: #fff1e0;
-        }
-        
-        .hook-point h3 {
-            color: #e93800;
-            margin-top: 0;
-        }
-        
-        .highlight-box {
-            background-color: #eef7ff;
-            border-left: 5px solid #0073bb;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        .use-case-box {
-            background-color: #f0f8f0;
-            border: 1px solid #2E7D32;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-        }
-        
-        .use-case-box h3 {
-            color: #2e7d32;
-            margin-top: 0;
-        }
-        
-        .warning-box {
-            background-color: #fff8e6;
-            border-left: 5px solid #CA8A04;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        .step {
-            display: flex;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-        
-        .step-number {
-            background-color: #dc7600;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-        
-        .step-content {
-            flex-grow: 1;
-        }
-        
-        .code-box {
-            background-color: #f5f5f5;
-            border: 1px solid #A0A0A0;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 15px 0;
-            font-family: monospace;
-            white-space: pre-wrap;
-            overflow-x: auto;
-        }
-        
-        /* スタイル付きの状態表示 */
-        .pending {
-            background-color: #fff8e1;
-            border-color: #CA8A04;
-        }
-        
-        .in-service {
-            background-color: #e8f5e9;
-            border-color: #2E7D32;
-        }
-        
-        .terminating {
-            background-color: #ffebee;
-            border-color: #f44336;
-        }
-        
-        .terminated {
-            background-color: #eceff1;
-            border-color: #607d8b;
-        }
-        
-        /* レスポンシブ対応 */
-        @media (max-width: 768px) {
-            .lifecycle-flow {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .lifecycle-arrow {
-                transform: rotate(90deg);
-                margin: 10px 0;
-            }
-        }
-    
-        
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  &lt;!-- ページ固有CSSファイル --&gt;
+  <link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/ec2-autoscaling-lifecycle-hooks.css" rel="stylesheet"/>
+  
+  
 
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        @media (max-width: 768px) {
-            
-        }
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        /* 読書進捗インジケーター */
-        
-
-        
-
-        
-
-        /* トップに戻るボタン */
-        
-
-        
-
-        
-
-        
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            
-
-            
-
-            
-
-            
-
-            
-        }
-  </style>
- </head>
- <body>
-  <!-- 左サイドバー目次 -->
-  <div class="sidebar-toc" id="sidebar-toc">
-   <div class="sidebar-toc-header">
-    <h2>
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2 id="目次">
      📑 目次
     </h2>
-   </div>
-   <nav class="sidebar-toc-content">
-    <ul>
-     <li class="toc-h2">
-      <a href="#目次">
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2">
+<a href="#目次">
        📑 目次
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#EC2インスタンスのライフサイクル全体像">
+</li>
+<li class="toc-h2">
+<a href="#EC2インスタンスのライフサイクル全体像">
        📋 EC2インスタンスのライフサイクル全体像
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Pending">
+</li>
+<li class="toc-h3">
+<a href="#Pending">
        Pending
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#起動ライフサイクルフック">
+</li>
+<li class="toc-h3">
+<a href="#起動ライフサイクルフック">
        起動ライフサイクルフック
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#InService">
+</li>
+<li class="toc-h3">
+<a href="#InService">
        InService
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Terminating">
+</li>
+<li class="toc-h3">
+<a href="#Terminating">
        Terminating
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#終了ライフサイクルフック">
+</li>
+<li class="toc-h3">
+<a href="#終了ライフサイクルフック">
        終了ライフサイクルフック
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#Terminated">
+</li>
+<li class="toc-h3">
+<a href="#Terminated">
        Terminated
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#ライフサイクルフックの動作">
+</li>
+<li class="toc-h2">
+<a href="#ライフサイクルフックの動作">
        🔄 ライフサイクルフックの動作
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#一時停止とタイムアウト">
+</li>
+<li class="toc-h3">
+<a href="#一時停止とタイムアウト">
        一時停止とタイムアウト
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#通知の送信">
+</li>
+<li class="toc-h3">
+<a href="#通知の送信">
        通知の送信
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#カスタムアクションの実行">
+</li>
+<li class="toc-h3">
+<a href="#カスタムアクションの実行">
        カスタムアクションの実行
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#ライフサイクルアクションの完了">
+</li>
+<li class="toc-h3">
+<a href="#ライフサイクルアクションの完了">
        ライフサイクルアクションの完了
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#️-実用的なユースケース">
+</li>
+<li class="toc-h2">
+<a href="#️-実用的なユースケース">
        🛠️ 実用的なユースケース
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#起動時のライフサイクルフック活用例">
+</li>
+<li class="toc-h3">
+<a href="#起動時のライフサイクルフック活用例">
        起動時のライフサイクルフック活用例
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#終了時のライフサイクルフック活用例">
+</li>
+<li class="toc-h3">
+<a href="#終了時のライフサイクルフック活用例">
        終了時のライフサイクルフック活用例
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#ライフサイクルフックの設定方法">
+</li>
+<li class="toc-h2">
+<a href="#ライフサイクルフックの設定方法">
        📝 ライフサイクルフックの設定方法
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#通知先の準備">
+</li>
+<li class="toc-h3">
+<a href="#通知先の準備">
        通知先の準備
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#ライフサイクルフックの作成">
+</li>
+<li class="toc-h3">
+<a href="#ライフサイクルフックの作成">
        ライフサイクルフックの作成
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#カスタムロジックの実装">
+</li>
+<li class="toc-h3">
+<a href="#カスタムロジックの実装">
        カスタムロジックの実装
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#⚠️-注意点">
+</li>
+<li class="toc-h3">
+<a href="#⚠️-注意点">
        ⚠️ 注意点
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#まとめ">
+</li>
+<li class="toc-h2">
+<a href="#まとめ">
        🔍 まとめ
       </a>
-     </li>
-    </ul>
-   </nav>
-  </div>
-  <!-- サイドバー折りたたみボタン -->
-  <button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
-   <span id="sidebar-toc-toggle-icon">
+</li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">
     ◀
    </span>
-  </button>
-  <style>
-   /* ページ全体のレイアウト調整 */
-    body {
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }
+</button>
 
-    body.sidebar-collapsed {
-        padding-left: 0;
-    }
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 100vh;
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }
-
-    .sidebar-toc.collapsed {
-        transform: translateX(-100%);
-    }
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }
-
-    .sidebar-toc-header h2 {
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .sidebar-toc-content a {
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .sidebar-toc-content a:hover {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }
-
-    .sidebar-toc-content .toc-h2 a {
-        font-weight: 600;
-    }
-
-    .sidebar-toc-content .toc-h3 {
-        font-size: 0.9em;
-        padding-left: 20px;
-    }
-
-    .sidebar-toc-content .toc-h3 a {
-        color: #4b5563;
-        padding: 8px 12px;
-    }
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {
-        position: fixed;
-        left: 340px;
-        top: 20px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-toc-toggle:hover {
-        background: #2563eb;
-        transform: scale(1.05);
-    }
-
-    body.sidebar-collapsed .sidebar-toc-toggle {
-        left: 0;
-    }
-
-    /* スムーズスクロール */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        body {
-            padding-left: 0 !important;
-        }
-
-        .sidebar-toc {
-            width: 280px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar-toc.open {
-            transform: translateX(0);
-        }
-
-        .sidebar-toc-toggle {
-            left: 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {
-            font-size: 1.2em;
-        }
-
-        .sidebar-toc-content a {
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }
-    }
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        body {
-            padding-left: 310px;
-        }
-
-        .sidebar-toc {
-            width: 290px;
-        }
-
-        .sidebar-toc-toggle {
-            left: 290px;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-    }
-  </style>
-  <script>
+<script>
    function toggleSidebarTOC() {
         const sidebar = document.getElementById('sidebar-toc');
         const body = document.body;
@@ -674,156 +220,278 @@
         });
     });
   </script>
-  <!-- 固定ナビゲーションヘッダー -->
-  <div class="fixed-nav-header">
-   <div class="fixed-nav-container">
-    <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-    <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-     <a href="/aws_sap_studying/profile.html">
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
       自己紹介
      </a>
-     <a href="/aws_sap_studying/learning-resources.html">
+<a href="/aws_sap_studying/learning-resources.html">
       学習リソース集
      </a>
-     <a href="/aws_sap_studying/knowledge-base.html">
+<a href="/aws_sap_studying/knowledge-base.html">
       ナレッジベース
      </a>
-     <a href="/aws_sap_studying/quiz.html">
+<a href="/aws_sap_studying/quiz.html">
       クイズ
      </a>
-    </nav>
-   </div>
-  </div>
-  <!-- 読書進捗インジケーター -->
-  <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
-   <div class="reading-progress-bar" id="readingProgressBar">
-   </div>
-  </div>
-  <!-- トップに戻るボタン -->
-  <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
    ↑
   </button>
-  <div class="container">
-   <!-- ブレッドクラムナビゲーション -->
-   <nav class="breadcrumb-nav">
-    <a class="breadcrumb-home" href="../index.html">
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
      🏠 ホーム
     </a>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      その他
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      その他
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-current">
+<span class="breadcrumb-current">
      Ec2 Autoscaling Lifecycle Hooks
     </span>
-   </nav>
-   <h1>
+</nav>
+<h1>
     👨‍💻 Amazon EC2 Auto Scaling ライフサイクルフックの図解
    </h1>
-   <div class="highlight-box">
-    <p>
-     <strong>
+
+<!-- ページ内目次 -->
+<div id="toc-container" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 20px 25px; margin: 30px 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleTOC()">
+        <h2 style="color: #1e40af; margin: 0; font-size: 1.3em; display: flex; align-items: center;">
+            <span style="margin-right: 10px;">📑</span>
+            <span>目次</span>
+        </h2>
+        <button id="toc-toggle-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s;">
+            <span id="toc-toggle-icon">▶</span> <span id="toc-toggle-text">展開する</span>
+        </button>
+    </div>
+    <nav id="toc-content" class="collapsed" style="transition: all 0.3s ease;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li class="toc-h2"><a href="#目次">📑 目次</a></li>
+            <li class="toc-h2"><a href="#EC2インスタンスのライフサイクル全体像">📋 EC2インスタンスのライフサイクル全体像</a></li>
+            <li class="toc-h3"><a href="#Pending">Pending</a></li>
+            <li class="toc-h3"><a href="#起動ライフサイクルフック">起動ライフサイクルフック</a></li>
+            <li class="toc-h3"><a href="#InService">InService</a></li>
+            <li class="toc-h3"><a href="#Terminating">Terminating</a></li>
+            <li class="toc-h3"><a href="#終了ライフサイクルフック">終了ライフサイクルフック</a></li>
+            <li class="toc-h3"><a href="#Terminated">Terminated</a></li>
+            <li class="toc-h2"><a href="#ライフサイクルフックの動作">🔄 ライフサイクルフックの動作</a></li>
+            <li class="toc-h3"><a href="#一時停止とタイムアウト">一時停止とタイムアウト</a></li>
+            <li class="toc-h3"><a href="#通知の送信">通知の送信</a></li>
+            <li class="toc-h3"><a href="#カスタムアクションの実行">カスタムアクションの実行</a></li>
+            <li class="toc-h3"><a href="#ライフサイクルアクションの完了">ライフサイクルアクションの完了</a></li>
+            <li class="toc-h2"><a href="#️-実用的なユースケース">🛠️ 実用的なユースケース</a></li>
+            <li class="toc-h3"><a href="#起動時のライフサイクルフック活用例">起動時のライフサイクルフック活用例</a></li>
+            <li class="toc-h3"><a href="#終了時のライフサイクルフック活用例">終了時のライフサイクルフック活用例</a></li>
+            <li class="toc-h2"><a href="#ライフサイクルフックの設定方法">📝 ライフサイクルフックの設定方法</a></li>
+            <li class="toc-h3"><a href="#通知先の準備">通知先の準備</a></li>
+            <li class="toc-h3"><a href="#ライフサイクルフックの作成">ライフサイクルフックの作成</a></li>
+            <li class="toc-h3"><a href="#カスタムロジックの実装">カスタムロジックの実装</a></li>
+            <li class="toc-h3"><a href="#⚠️-注意点">⚠️ 注意点</a></li>
+            <li class="toc-h2"><a href="#まとめ">🔍 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<style>
+    #toc-container a {
+        color: #1e40af;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+
+    #toc-container a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    #toc-container .toc-h2 {
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-top: 10px;
+    }
+
+    #toc-container .toc-h3 {
+        font-size: 0.95em;
+        padding-left: 30px;
+        color: #4b5563;
+    }
+
+    #toc-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 768px) {
+        #toc-container {
+            padding: 15px;
+        }
+
+        #toc-container h2 {
+            font-size: 1.1em;
+        }
+    }
+</style>
+
+<script>
+    function toggleTOC() {
+        const content = document.getElementById('toc-content');
+        const icon = document.getElementById('toc-toggle-icon');
+        const text = document.getElementById('toc-toggle-text');
+
+        if (content.classList.contains('collapsed')) {
+            // 展開
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.classList.remove('collapsed');
+            icon.textContent = '▼';
+            text.textContent = '折りたたむ';
+        } else {
+            // 折りたたみ
+            content.style.maxHeight = '';  // インラインスタイルをクリア
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+            text.textContent = '展開する';
+        }
+    }
+
+    // ページロード時の処理（デフォルトは折りたたみ状態）
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContent = document.getElementById('toc-content');
+        if (tocContent) {
+            // 展開時のアニメーション用にmax-heightを保存
+            tocContent.dataset.maxHeight = tocContent.scrollHeight + 'px';
+        }
+    });
+</script>
+
+
+<div class="highlight-box">
+<p>
+<strong>
       ライフサイクルフックとは？
      </strong>
      Auto Scalingグループでインスタンスが起動または終了する際に、特定のアクションを実行するための「一時停止ポイント」です。これにより、インスタンスが完全に使用可能になる前や、終了する前に、カスタム処理を実行できます。
     </p>
-   </div>
-   <h2 id="EC2インスタンスのライフサイクル全体像">
+</div>
+<h2 id="EC2インスタンスのライフサイクル全体像">
     📋 EC2インスタンスのライフサイクル全体像
    </h2>
-   <div class="lifecycle-diagram">
-    <div class="lifecycle-flow">
-     <!-- 起動フロー -->
-     <div class="lifecycle-step pending">
-      <h3 id="Pending">
+<div class="lifecycle-diagram">
+<div class="lifecycle-flow">
+<!-- 起動フロー -->
+<div class="lifecycle-step pending">
+<h3 id="Pending">
        Pending
       </h3>
-      <p>
+<p>
        インスタンス起動中
       </p>
-     </div>
-     <div class="lifecycle-arrow">
+</div>
+<div class="lifecycle-arrow">
       →
      </div>
-     <div class="hook-point">
-      <h3 id="起動ライフサイクルフック">
+<div class="hook-point">
+<h3 id="起動ライフサイクルフック">
        起動ライフサイクルフック
       </h3>
-      <p>
+<p>
        ここで一時停止＆カスタム処理
       </p>
-     </div>
-     <div class="lifecycle-arrow">
+</div>
+<div class="lifecycle-arrow">
       →
      </div>
-     <div class="lifecycle-step in-service">
-      <h3 id="InService">
+<div class="lifecycle-step in-service">
+<h3 id="InService">
        InService
       </h3>
-      <p>
+<p>
        実行中・稼働状態
       </p>
-     </div>
-     <div class="lifecycle-arrow">
+</div>
+<div class="lifecycle-arrow">
       →
      </div>
-     <div class="lifecycle-step terminating">
-      <h3 id="Terminating">
+<div class="lifecycle-step terminating">
+<h3 id="Terminating">
        Terminating
       </h3>
-      <p>
+<p>
        終了処理中
       </p>
-     </div>
-     <div class="lifecycle-arrow">
+</div>
+<div class="lifecycle-arrow">
       →
      </div>
-     <div class="hook-point">
-      <h3 id="終了ライフサイクルフック">
+<div class="hook-point">
+<h3 id="終了ライフサイクルフック">
        終了ライフサイクルフック
       </h3>
-      <p>
+<p>
        ここで一時停止＆カスタム処理
       </p>
-     </div>
-     <div class="lifecycle-arrow">
+</div>
+<div class="lifecycle-arrow">
       →
      </div>
-     <div class="lifecycle-step terminated">
-      <h3 id="Terminated">
+<div class="lifecycle-step terminated">
+<h3 id="Terminated">
        Terminated
       </h3>
-      <p>
+<p>
        終了済み
       </p>
-     </div>
-    </div>
-   </div>
-   <h2 id="ライフサイクルフックの動作">
+</div>
+</div>
+</div>
+<h2 id="ライフサイクルフックの動作">
     🔄 ライフサイクルフックの動作
    </h2>
-   <div class="step">
-    <div class="step-number">
+<div class="step">
+<div class="step-number">
      1
     </div>
-    <div class="step-content">
-     <h3 id="一時停止とタイムアウト">
+<div class="step-content">
+<h3 id="一時停止とタイムアウト">
       一時停止とタイムアウト
      </h3>
-     <p>
+<p>
       ライフサイクルフックが設定されると、インスタンスは指定されたポイント（起動時または終了時）で
       <strong>
        一時停止状態
@@ -834,24 +502,24 @@
       </strong>
       継続しますが、設定により変更可能です。
      </p>
-    </div>
-   </div>
-   <div class="step">
-    <div class="step-number">
+</div>
+</div>
+<div class="step">
+<div class="step-number">
      2
     </div>
-    <div class="step-content">
-     <h3 id="通知の送信">
+<div class="step-content">
+<h3 id="通知の送信">
       通知の送信
      </h3>
-     <p>
+<p>
       インスタンスが一時停止すると、Auto Scalingは
       <strong>
        通知
       </strong>
       を送信します（Amazon SNS、Amazon SQS、または Lambda関数を通じて）。この通知には、インスタンスID、Auto Scalingグループ名などの情報が含まれます。
      </p>
-     <div class="code-box">
+<div class="code-box">
       // 通知メッセージの例（JSON形式）
 {
   "LifecycleHookName": "my-launch-hook",
@@ -864,45 +532,45 @@
   "NotificationMetadata": "カスタムメタデータ"
 }
      </div>
-    </div>
-   </div>
-   <div class="step">
-    <div class="step-number">
+</div>
+</div>
+<div class="step">
+<div class="step-number">
      3
     </div>
-    <div class="step-content">
-     <h3 id="カスタムアクションの実行">
+<div class="step-content">
+<h3 id="カスタムアクションの実行">
       カスタムアクションの実行
      </h3>
-     <p>
+<p>
       通知を受け取ったアプリケーションは、必要なカスタムアクションを実行します。例えば：
      </p>
-     <ul>
-      <li>
+<ul>
+<li>
        起動時：アプリケーションのインストール、データのダウンロード、設定など
       </li>
-      <li>
+<li>
        終了時：ログのアップロード、接続の終了、データのバックアップなど
       </li>
-     </ul>
-    </div>
-   </div>
-   <div class="step">
-    <div class="step-number">
+</ul>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
      4
     </div>
-    <div class="step-content">
-     <h3 id="ライフサイクルアクションの完了">
+<div class="step-content">
+<h3 id="ライフサイクルアクションの完了">
       ライフサイクルアクションの完了
      </h3>
-     <p>
+<p>
       カスタムアクションが完了したら、AWS CLIまたはSDKを使用して
       <strong>
        「完了」または「放棄」
       </strong>
       のシグナルをAuto Scalingに送信します。
      </p>
-     <div class="code-box">
+<div class="code-box">
       // AWS CLI を使用してライフサイクルアクションを完了させる例
 aws autoscaling complete-lifecycle-action \
   --lifecycle-hook-name my-launch-hook \
@@ -911,112 +579,112 @@ aws autoscaling complete-lifecycle-action \
   --instance-id i-1234567890abcdef0 \
   --lifecycle-action-token 87654321-4321-4321-4321-210987654321
      </div>
-    </div>
-   </div>
-   <h2 id="️-実用的なユースケース">
+</div>
+</div>
+<h2 id="️-実用的なユースケース">
     🛠️ 実用的なユースケース
    </h2>
-   <div class="use-case-box">
-    <h3 id="起動時のライフサイクルフック活用例">
+<div class="use-case-box">
+<h3 id="起動時のライフサイクルフック活用例">
      起動時のライフサイクルフック活用例
     </h3>
-    <ul>
-     <li>
-      <strong>
+<ul>
+<li>
+<strong>
        アプリケーションのインストールと構成：
       </strong>
       インスタンスが起動したら、必要なソフトウェアを自動的にインストール
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        データの事前ロード：
       </strong>
       インスタンス起動時に必要なデータをS3やデータベースから取得
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        セキュリティスキャン：
       </strong>
       インスタンスが本番環境に入る前にセキュリティチェックを実行
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        DNS登録：
       </strong>
       新しいインスタンスをDNSレコードに自動登録
      </li>
-    </ul>
-   </div>
-   <div class="use-case-box">
-    <h3 id="終了時のライフサイクルフック活用例">
+</ul>
+</div>
+<div class="use-case-box">
+<h3 id="終了時のライフサイクルフック活用例">
      終了時のライフサイクルフック活用例
     </h3>
-    <ul>
-     <li>
-      <strong>
+<ul>
+<li>
+<strong>
        グレースフルシャットダウン：
       </strong>
       アプリケーションのクリーンな終了処理を実行
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        ログのアップロード：
       </strong>
       終了前にログデータをS3やCloudWatchに送信
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        ステート情報の保存：
       </strong>
       重要なデータや状態をデータベースに保存
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        サービス登録解除：
       </strong>
       ロードバランサーやサービスディスカバリーからインスタンスを削除
      </li>
-    </ul>
-   </div>
-   <h2 id="ライフサイクルフックの設定方法">
+</ul>
+</div>
+<h2 id="ライフサイクルフックの設定方法">
     📝 ライフサイクルフックの設定方法
    </h2>
-   <div class="step">
-    <div class="step-number">
+<div class="step">
+<div class="step-number">
      1
     </div>
-    <div class="step-content">
-     <h3 id="通知先の準備">
+<div class="step-content">
+<h3 id="通知先の準備">
       通知先の準備
      </h3>
-     <p>
+<p>
       まず、ライフサイクルイベントの通知を受け取るために、以下のいずれかを設定します：
      </p>
-     <ul>
-      <li>
+<ul>
+<li>
        Amazon SNSトピック
       </li>
-      <li>
+<li>
        Amazon SQSキュー
       </li>
-      <li>
+<li>
        AWS Lambda関数
       </li>
-     </ul>
-    </div>
-   </div>
-   <div class="step">
-    <div class="step-number">
+</ul>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
      2
     </div>
-    <div class="step-content">
-     <h3 id="ライフサイクルフックの作成">
+<div class="step-content">
+<h3 id="ライフサイクルフックの作成">
       ライフサイクルフックの作成
      </h3>
-     <p>
+<p>
       AWS マネジメントコンソール、AWS CLI、またはAWS SDKを使用してライフサイクルフックを作成します。
      </p>
-     <div class="code-box">
+<div class="code-box">
       // AWS CLI を使用してライフサイクルフックを作成する例
 aws autoscaling put-lifecycle-hook \
   --lifecycle-hook-name my-launch-hook \
@@ -1027,69 +695,69 @@ aws autoscaling put-lifecycle-hook \
   --heartbeat-timeout 3600 \
   --default-result ABANDON
      </div>
-    </div>
-   </div>
-   <div class="step">
-    <div class="step-number">
+</div>
+</div>
+<div class="step">
+<div class="step-number">
      3
     </div>
-    <div class="step-content">
-     <h3 id="カスタムロジックの実装">
+<div class="step-content">
+<h3 id="カスタムロジックの実装">
       カスタムロジックの実装
      </h3>
-     <p>
+<p>
       通知を受け取ったときに実行するカスタムロジックを、Lambda関数、EC2インスタンス、またはその他のサービスに実装します。
      </p>
-    </div>
-   </div>
-   <div class="warning-box">
-    <h3 id="⚠️-注意点">
+</div>
+</div>
+<div class="warning-box">
+<h3 id="⚠️-注意点">
      ⚠️ 注意点
     </h3>
-    <ul>
-     <li>
-      <strong>
+<ul>
+<li>
+<strong>
        タイムアウト管理：
       </strong>
       ライフサイクルフックのタイムアウト時間内にアクションを完了させる必要があります。長時間かかる処理がある場合は、heartbeat-timeoutを適切に設定するか、定期的にハートビートを送信してタイムアウトを延長してください。
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        IAMアクセス権限：
       </strong>
       ライフサイクルフック通知を処理するサービスには、適切なIAMアクセス権限が必要です。
      </li>
-     <li>
-      <strong>
+<li>
+<strong>
        デフォルト結果：
       </strong>
       タイムアウト時の「デフォルト結果」を適切に設定しましょう（CONTINUE：処理を続行、ABANDON：処理を中止）。
      </li>
-    </ul>
-   </div>
-   <h2 id="まとめ">
+</ul>
+</div>
+<h2 id="まとめ">
     🔍 まとめ
    </h2>
-   <p>
+<p>
     ライフサイクルフックは、EC2 Auto Scalingの柔軟性を大幅に向上させる機能です。インスタンスの起動や終了時に独自のカスタムロジックを実行することで、アプリケーションの可用性、信頼性、およびパフォーマンスを向上させることができます。初心者の方も、この機能を活用してAuto Scalingをより効果的に利用しましょう！
    </p>
-  </div>
-  <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
    🏠 リソース集に戻る
   </button>
-  <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
-   <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
     Created by
     <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
      SSuzuki1063
     </a>
-   </p>
-   <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
     AWS SAP Learning Resources
    </p>
-  </div>
-  <!-- 固定ヘッダー機能のJavaScript -->
-  <script>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
    // トップに戻るボタンの表示/非表示
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const readingProgress = document.getElementById('readingProgress');
@@ -1125,5 +793,5 @@ aws autoscaling put-lifecycle-hook \
             });
         });
   </script>
- </body>
+</body>
 </html>

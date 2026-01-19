@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 19,
+    count: 20,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -24,7 +24,7 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 10,
+        count: 11,
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html' },
@@ -35,7 +35,8 @@ const categoriesData = [
           { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', href: 'networking/nacl-sg-comparison-guide.html' },
           { title: 'Amazon EKS セキュリティ完全図解ガイド', href: 'networking/eks-security-visual-guide.html' },
           { title: 'CloudFront HTTPセキュリティヘッダー完全ガイド', href: 'networking/cloudfront-security-headers-guide.html' },
-          { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', href: 'networking/s3-vpc-endpoint-policy-guide.html' }
+          { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', href: 'networking/s3-vpc-endpoint-policy-guide.html' },
+          { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', href: 'networking/guardduty-credential-exfiltration-guide-v2.html' }
         ]
       },
       {
@@ -53,12 +54,12 @@ const categoriesData = [
     id: 'security-governance',
     title: 'セキュリティ・ガバナンス',
     icon: '🔒',
-    count: 60,
+    count: 68,
     sections: [
       {
         title: 'IAM & 認証・認可',
         icon: '👤',
-        count: 17,
+        count: 20,
         resources: [
           { title: 'AWS Cognito インフォグラフィック', href: 'security-governance/aws-cognito-infographic.html' },
           { title: 'IAM フェデレーション', href: 'continuous-improvement/iam_federation_infographic.html' },
@@ -75,7 +76,10 @@ const categoriesData = [
           { title: 'AWS CLI 認証情報の指定方法 完全ガイド', href: 'security-governance/aws-cli-credentials-guide.html' },
           { title: 'IAM パーミッションバウンダリー 完全ガイド', href: 'security-governance/iam-permission-boundary-guide.html' },
           { title: 'SAML障害時のブレークグラスユーザー完全ガイド', href: 'security-governance/breakglass-user-guide.html' },
-          { title: 'IAM 認証情報レポート完全ガイド', href: 'security-governance/iam-credential-report-guide.html' }
+          { title: 'IAM 認証情報レポート完全ガイド', href: 'security-governance/iam-credential-report-guide.html' },
+          { title: 'IAM認証情報レポート - セキュリティインシデント初動調査ガイド', href: 'security-governance/iam-credential-report-incident-guide.html' },
+          { title: 'sts:ExternalId 完全マスターガイド', href: 'security-governance/sts-externalid-complete-guide.html' },
+          { title: 'IAM Identity Center 完全ガイド - Organizations一括管理', href: 'security-governance/iam-identity-center-guide.html' }
         ]
       },
       {
@@ -93,7 +97,7 @@ const categoriesData = [
       {
         title: 'Organizations & ガバナンス',
         icon: '🏢',
-        count: 29,
+        count: 32,
         resources: [
           { title: 'AWS CodeArtifact 完全ガイド', href: 'security-governance/codeartifact-guide.html' },
           { title: 'Cognito IDプールIAMロール完全ガイド', href: 'security-governance/cognito-identity-pool-roles-guide.html' },
@@ -122,13 +126,16 @@ const categoriesData = [
           { title: 'CloudTrail 管理イベント vs データイベント 完全ガイド', href: 'security-governance/cloudtrail-events-guide.html' },
           { title: 'Amazon Q Business アクセス制御 & ガードレール完全ガイド', href: 'security-governance/amazon-q-business-access-guardrails-guide.html' },
           { title: 'AWS Well-Architected フレームワーク 完全図解ガイド', href: 'security-governance/aws-well-architected-complete-guide.html' },
-          { title: 'AWS Config S3配信エラー解決ガイド', href: 'security-governance/aws-config-s3-delivery-error-guide.html' }
+          { title: 'AWS Config S3配信エラー解決ガイド', href: 'security-governance/aws-config-s3-delivery-error-guide.html' },
+          { title: 'AWS Config access-keys-rotated 完全ガイド', href: 'security-governance/aws-config-access-keys-rotated-guide.html' },
+          { title: 'AWS Config 管理ルール＆CloudTrail修復アクション完全ガイド', href: 'security-governance/aws-config-cloudtrail-remediation-guide.html' },
+          { title: 'AWS SCP構文 完全図解ガイド', href: 'security-governance/scp-syntax-visual-guide.html' }
         ]
       },
       {
         title: 'セキュリティ監視・脅威検知',
         icon: '🛡️',
-        count: 8,
+        count: 10,
         resources: [
           { title: 'AWS WAF インフォグラフィック', href: 'continuous-improvement/aws_waf_infographic.html' },
           { title: 'AWS EDR インフォグラフィック', href: 'continuous-improvement/aws_edr_infographic.html' },
@@ -137,7 +144,9 @@ const categoriesData = [
           { title: 'VPC トラフィックミラーリング完全ガイド', href: 'security-governance/vpc-traffic-mirroring-guide.html' },
           { title: 'ALB TLSセキュリティポリシー完全ガイド', href: 'security-governance/alb-tls-security-policy-guide.html' },
           { title: 'GuardDuty EKS Protection 完全ガイド', href: 'security-governance/guardduty-eks-protection-guide.html' },
-          { title: 'Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館', href: 'security-governance/security-lake-guide.html' }
+          { title: 'Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館', href: 'security-governance/security-lake-guide.html' },
+          { title: 'GuardDuty EKS/RDS Protection 完全ガイド', href: 'security-governance/guardduty-eks-rds-protection-guide.html' },
+          { title: 'ECS Exec 完全ガイド - コンテナモニタリングの決定版', href: 'security-governance/ecs-exec-monitoring-guide.html' }
         ]
       }
     ]

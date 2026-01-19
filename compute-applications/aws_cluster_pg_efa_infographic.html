@@ -1,662 +1,99 @@
 <!DOCTYPE html>
+
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
    AWS クラスタプレイスメントグループ + EFA 解説
   </title>
-  <!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
-  <link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
-  <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
-  <style>
-   * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            padding-top: 80px; /* 固定ヘッダー分のスペース確保 */
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);
-            color: white;
-            padding: 40px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="svg-title-1 svg-desc-1">
-    <title id="svg-title-1">コンピュート・アプリケーションの技術構成図</title>
-    <desc id="svg-desc-1">コンピュート・アプリケーションに関するAWS技術アーキテクチャを視覚的に表現した図。</desc><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="30" cy="30" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="70" cy="20" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="90" cy="40" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .header p {
-            font-size: 1.3em;
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .content {
-            padding: 40px;
-        }
-        
-        .section {
-            margin-bottom: 50px;
-        }
-        
-        .section h2 {
-            color: #2c3e50;
-            font-size: 2em;
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .section h2::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 4px;
-            background: linear-gradient(90deg, #ff9a56, #ffad56);
-            border-radius: 2px;
-        }
-        
-        .comparison-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 40px 0;
-        }
-        
-        .comparison-item {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid #ff9a56;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .comparison-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        
-        .comparison-item h3 {
-            color: #2c3e50;
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .icon {
-            width: 40px;
-            height: 40px;
-            margin-right: 15px;
-            background: linear-gradient(135deg, #ff9a56, #ffad56);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2em;
-        }
-        
-        .analogy-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px;
-            border-radius: 20px;
-            margin: 30px 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .analogy-box::before {
-            content: '💡';
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 3em;
-            opacity: 0.3;
-        }
-        
-        .analogy-box h3 {
-            font-size: 1.8em;
-            margin-bottom: 20px;
-        }
-        
-        .flow-diagram {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 40px 0;
-            flex-wrap: wrap;
-        }
-        
-        .flow-item {
-            background: white;
-            border: 3px solid #ff9a56;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            min-width: 200px;
-            position: relative;
-            margin: 10px;
-        }
-        
-        .flow-item::after {
-            content: '→';
-            position: absolute;
-            right: -30px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 2em;
-            color: #ff9a56;
-            font-weight: bold;
-        }
-        
-        .flow-item:last-child::after {
-            display: none;
-        }
-        
-        .benefits-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .benefit-card {
-            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-        
-        .benefit-card:hover {
-            transform: scale(1.05);
-        }
-        
-        .benefit-card h4 {
-            font-size: 1.3em;
-            margin-bottom: 10px;
-        }
-        
-        .stats-container {
-            background: #2c3e50;
-            color: white;
-            padding: 40px;
-            border-radius: 20px;
-            margin: 30px 0;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 30px;
-            margin-top: 20px;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 3em;
-            font-weight: bold;
-            color: #ff9a56;
-            display: block;
-        }
-        
-        .stat-label {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        
-        .use-cases {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            margin: 30px 0;
-        }
-        
-        .use-case-item {
-            display: flex;
-            align-items: center;
-            margin: 20px 0;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        .use-case-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #ff9a56, #ffad56);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 20px;
-            font-size: 1.5em;
-        }
-        
-        @media (max-width: 768px) {
-            .comparison-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .flow-diagram {
-                flex-direction: column;
-            }
-            
-            .flow-item::after {
-                content: '↓';
-                right: 50%;
-                transform: translateX(50%);
-                top: 100%;
-                bottom: -30px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .header p {
-                font-size: 1.1em;
-            }
-        }
-        
-        .highlight {
-            background: linear-gradient(120deg, #ff9a56 0%, #ffad56 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: bold;
-        }
-    
-        
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  &lt;!-- ページ固有CSSファイル --&gt;
+  <link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/aws_cluster_pg_efa_infographic.css" rel="stylesheet"/>
+  
+  
 
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        @media (max-width: 768px) {
-            
-        }
-
-    
-        
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        /* 読書進捗インジケーター */
-        
-
-        
-
-        
-
-        /* トップに戻るボタン */
-        
-
-        
-
-        
-
-        
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            
-
-            
-
-            
-
-            
-
-            
-        }
-  </style>
- </head>
- <body>
-  <!-- 左サイドバー目次 -->
-  <div class="sidebar-toc" id="sidebar-toc">
-   <div class="sidebar-toc-header">
-    <h2>
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2 id="目次">
      📑 目次
     </h2>
-   </div>
-   <nav class="sidebar-toc-content">
-    <ul>
-     <li class="toc-h2">
-      <a href="#目次">
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2">
+<a href="#目次">
        📑 目次
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#まずは基本を理解しよう">
+</li>
+<li class="toc-h2">
+<a href="#まずは基本を理解しよう">
        📍 まずは基本を理解しよう
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#クラスタプレイスメントグループ">
+</li>
+<li class="toc-h3">
+<a href="#クラスタプレイスメントグループ">
        🏢クラスタプレイスメントグループ
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#⚡EFA-Elastic-Fabric-Adapter">
+</li>
+<li class="toc-h3">
+<a href="#⚡EFA-Elastic-Fabric-Adapter">
        ⚡EFA (Elastic Fabric Adapter)
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#️-たとえ話で理解しよう">
+</li>
+<li class="toc-h3">
+<a href="#️-たとえ話で理解しよう">
        🏎️ たとえ話で理解しよう
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#動作の流れ">
+</li>
+<li class="toc-h2">
+<a href="#動作の流れ">
        🔄 動作の流れ
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#驚異のパフォーマンス数値">
+</li>
+<li class="toc-h2">
+<a href="#驚異のパフォーマンス数値">
        📊 驚異のパフォーマンス数値
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#実際の性能差をチェック！">
+</li>
+<li class="toc-h3">
+<a href="#実際の性能差をチェック！">
        実際の性能差をチェック！
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#✨-主要メリット">
+</li>
+<li class="toc-h2">
+<a href="#✨-主要メリット">
        ✨ 主要メリット
       </a>
-     </li>
-     <li class="toc-h2">
-      <a href="#主な使用場面">
+</li>
+<li class="toc-h2">
+<a href="#主な使用場面">
        🎯 主な使用場面
       </a>
-     </li>
-     <li class="toc-h3">
-      <a href="#なぜこの組み合わせが最強なのか？">
+</li>
+<li class="toc-h3">
+<a href="#なぜこの組み合わせが最強なのか？">
        🎯 なぜこの組み合わせが最強なのか？
       </a>
-     </li>
-    </ul>
-   </nav>
-  </div>
-  <!-- サイドバー折りたたみボタン -->
-  <button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
-   <span id="sidebar-toc-toggle-icon">
+</li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">
     ◀
    </span>
-  </button>
-  <style>
-   /* ページ全体のレイアウト調整 */
-    body {
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }
+</button>
 
-    body.sidebar-collapsed {
-        padding-left: 0;
-    }
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 100vh;
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }
-
-    .sidebar-toc.collapsed {
-        transform: translateX(-100%);
-    }
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }
-
-    .sidebar-toc-header h2 {
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .sidebar-toc-content a {
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .sidebar-toc-content a:hover {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }
-
-    .sidebar-toc-content .toc-h2 a {
-        font-weight: 600;
-    }
-
-    .sidebar-toc-content .toc-h3 {
-        font-size: 0.9em;
-        padding-left: 20px;
-    }
-
-    .sidebar-toc-content .toc-h3 a {
-        color: #4b5563;
-        padding: 8px 12px;
-    }
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {
-        position: fixed;
-        left: 340px;
-        top: 20px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar-toc-toggle:hover {
-        background: #2563eb;
-        transform: scale(1.05);
-    }
-
-    body.sidebar-collapsed .sidebar-toc-toggle {
-        left: 0;
-    }
-
-    /* スムーズスクロール */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-    }
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-    }
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {
-        body {
-            padding-left: 0 !important;
-        }
-
-        .sidebar-toc {
-            width: 280px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar-toc.open {
-            transform: translateX(0);
-        }
-
-        .sidebar-toc-toggle {
-            left: 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {
-            font-size: 1.2em;
-        }
-
-        .sidebar-toc-content a {
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }
-    }
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        body {
-            padding-left: 310px;
-        }
-
-        .sidebar-toc {
-            width: 290px;
-        }
-
-        .sidebar-toc-toggle {
-            left: 290px;
-        }
-
-        body.sidebar-collapsed .sidebar-toc-toggle {
-            left: 0;
-        }
-    }
-  </style>
-  <script>
+<script>
    function toggleSidebarTOC() {
         const sidebar = document.getElementById('sidebar-toc');
         const body = document.body;
@@ -728,417 +165,532 @@
         });
     });
   </script>
-  <!-- 固定ナビゲーションヘッダー -->
-  <div class="fixed-nav-header">
-   <div class="fixed-nav-container">
-    <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-    <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-     <a href="/aws_sap_studying/profile.html">
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
       自己紹介
      </a>
-     <a href="/aws_sap_studying/learning-resources.html">
+<a href="/aws_sap_studying/learning-resources.html">
       学習リソース集
      </a>
-     <a href="/aws_sap_studying/knowledge-base.html">
+<a href="/aws_sap_studying/knowledge-base.html">
       ナレッジベース
      </a>
-     <a href="/aws_sap_studying/quiz.html">
+<a href="/aws_sap_studying/quiz.html">
       クイズ
      </a>
-    </nav>
-   </div>
-  </div>
-  <!-- 読書進捗インジケーター -->
-  <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
-   <div class="reading-progress-bar" id="readingProgressBar">
-   </div>
-  </div>
-  <!-- トップに戻るボタン -->
-  <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
    ↑
   </button>
-  <div class="container">
-   <!-- ブレッドクラムナビゲーション -->
-   <nav class="breadcrumb-nav">
-    <a class="breadcrumb-home" href="../index.html">
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
      🏠 ホーム
     </a>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      コンピュート・アプリケーション
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-item">
+<span class="breadcrumb-item">
      コンテナ &amp; アプリケーション統合
     </span>
-    <span class="breadcrumb-separator">
+<span class="breadcrumb-separator">
      ›
     </span>
-    <span class="breadcrumb-current">
+<span class="breadcrumb-current">
      Aws Cluster Pg Efa Infographic
     </span>
-   </nav>
-   <div class="header">
-    <h1>
+</nav>
+<div class="header">
+<h1>
      🚀 AWS クラスタプレイスメントグループ + EFA
     </h1>
-    <p>
+
+<!-- ページ内目次 -->
+<div id="toc-container" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 20px 25px; margin: 30px 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleTOC()">
+        <h2 style="color: #1e40af; margin: 0; font-size: 1.3em; display: flex; align-items: center;">
+            <span style="margin-right: 10px;">📑</span>
+            <span>目次</span>
+        </h2>
+        <button id="toc-toggle-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s;">
+            <span id="toc-toggle-icon">▶</span> <span id="toc-toggle-text">展開する</span>
+        </button>
+    </div>
+    <nav id="toc-content" class="collapsed" style="transition: all 0.3s ease;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li class="toc-h2"><a href="#目次">📑 目次</a></li>
+            <li class="toc-h2"><a href="#まずは基本を理解しよう">📍 まずは基本を理解しよう</a></li>
+            <li class="toc-h3"><a href="#クラスタプレイスメントグループ">🏢
+        
+        クラスタプレイスメントグループ</a></li>
+            <li class="toc-h3"><a href="#⚡EFA-Elastic-Fabric-Adapter">⚡
+        
+        EFA (Elastic Fabric Adapter)</a></li>
+            <li class="toc-h3"><a href="#️-たとえ話で理解しよう">🏎️ たとえ話で理解しよう</a></li>
+            <li class="toc-h2"><a href="#動作の流れ">🔄 動作の流れ</a></li>
+            <li class="toc-h2"><a href="#驚異のパフォーマンス数値">📊 驚異のパフォーマンス数値</a></li>
+            <li class="toc-h3"><a href="#実際の性能差をチェック！">実際の性能差をチェック！</a></li>
+            <li class="toc-h2"><a href="#✨-主要メリット">✨ 主要メリット</a></li>
+            <li class="toc-h2"><a href="#主な使用場面">🎯 主な使用場面</a></li>
+            <li class="toc-h3"><a href="#なぜこの組み合わせが最強なのか？">🎯 なぜこの組み合わせが最強なのか？</a></li>
+        </ul>
+    </nav>
+</div>
+
+<style>
+    #toc-container a {
+        color: #1e40af;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+
+    #toc-container a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    #toc-container .toc-h2 {
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-top: 10px;
+    }
+
+    #toc-container .toc-h3 {
+        font-size: 0.95em;
+        padding-left: 30px;
+        color: #4b5563;
+    }
+
+    #toc-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 768px) {
+        #toc-container {
+            padding: 15px;
+        }
+
+        #toc-container h2 {
+            font-size: 1.1em;
+        }
+    }
+</style>
+
+<script>
+    function toggleTOC() {
+        const content = document.getElementById('toc-content');
+        const icon = document.getElementById('toc-toggle-icon');
+        const text = document.getElementById('toc-toggle-text');
+
+        if (content.classList.contains('collapsed')) {
+            // 展開
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.classList.remove('collapsed');
+            icon.textContent = '▼';
+            text.textContent = '折りたたむ';
+        } else {
+            // 折りたたみ
+            content.style.maxHeight = '';  // インラインスタイルをクリア
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+            text.textContent = '展開する';
+        }
+    }
+
+    // ページロード時の処理（デフォルトは折りたたみ状態）
+    document.addEventListener('DOMContentLoaded', function() {
+        const tocContent = document.getElementById('toc-content');
+        if (tocContent) {
+            // 展開時のアニメーション用にmax-heightを保存
+            tocContent.dataset.maxHeight = tocContent.scrollHeight + 'px';
+        }
+    });
+</script>
+
+
+<p>
      低レイテンシ・超高帯域幅を実現する最強コンビ
     </p>
-   </div>
-   <div class="content">
-    <div class="section">
-     <h2 id="まずは基本を理解しよう">
+</div>
+<div class="content">
+<div class="section">
+<h2 id="まずは基本を理解しよう">
       📍 まずは基本を理解しよう
      </h2>
-     <div class="comparison-grid">
-      <div class="comparison-item">
-       <h3 id="クラスタプレイスメントグループ">
-        <span class="icon">
+<div class="comparison-grid">
+<div class="comparison-item">
+<h3 id="クラスタプレイスメントグループ">
+<span class="icon">
          🏢
         </span>
         クラスタプレイスメントグループ
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          簡単に言うと：
         </strong>
         EC2インスタンスを物理的に近い場所にまとめて配置する仕組み
        </p>
-       <br/>
-       <p>
-        <strong>
+<br/>
+<p>
+<strong>
          メリット：
         </strong>
-       </p>
-       <ul>
-        <li>
+</p>
+<ul>
+<li>
          インスタンス間の通信が超高速
         </li>
-        <li>
+<li>
          ネットワーク遅延が最小限
         </li>
-        <li>
+<li>
          高性能コンピューティングに最適
         </li>
-       </ul>
-      </div>
-      <div class="comparison-item">
-       <h3 id="⚡EFA-Elastic-Fabric-Adapter">
-        <span class="icon">
+</ul>
+</div>
+<div class="comparison-item">
+<h3 id="⚡EFA-Elastic-Fabric-Adapter">
+<span class="icon">
          ⚡
         </span>
         EFA (Elastic Fabric Adapter)
        </h3>
-       <p>
-        <strong>
+<p>
+<strong>
          簡単に言うと：
         </strong>
         超高速ネットワーク接続を可能にする特別なネットワークインターface
        </p>
-       <br/>
-       <p>
-        <strong>
+<br/>
+<p>
+<strong>
          メリット：
         </strong>
-       </p>
-       <ul>
-        <li>
+</p>
+<ul>
+<li>
          通常のネットワークより10倍以上高速
         </li>
-        <li>
+<li>
          大量データの並列処理が可能
         </li>
-        <li>
+<li>
          HPC・機械学習に特化
         </li>
-       </ul>
-      </div>
-     </div>
-     <div class="analogy-box">
-      <h3 id="️-たとえ話で理解しよう">
+</ul>
+</div>
+</div>
+<div class="analogy-box">
+<h3 id="️-たとえ話で理解しよう">
        🏎️ たとえ話で理解しよう
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         クラスタプレイスメントグループ
        </strong>
        =
        <span class="highlight">
         同じビルの同じフロアに会社を配置
        </span>
-      </p>
-      <p>
+</p>
+<p>
        → 移動時間ゼロ、会議室も隣同士で会話が超スムーズ
       </p>
-      <br/>
-      <p>
-       <strong>
+<br/>
+<p>
+<strong>
         EFA
        </strong>
        =
        <span class="highlight">
         各オフィス間に光ファイバーの専用回線を設置
        </span>
-      </p>
-      <p>
+</p>
+<p>
        → 大容量ファイルも瞬時に共有、4K動画も遅延なし
       </p>
-      <br/>
-      <p>
-       <strong>
+<br/>
+<p>
+<strong>
         この組み合わせ
        </strong>
        =
        <span class="highlight">
         最強のチームワーク環境の完成！
        </span>
-      </p>
-     </div>
-    </div>
-    <div class="section">
-     <h2 id="動作の流れ">
+</p>
+</div>
+</div>
+<div class="section">
+<h2 id="動作の流れ">
       🔄 動作の流れ
      </h2>
-     <div class="flow-diagram">
-      <div class="flow-item">
-       <h4>
+<div class="flow-diagram">
+<div class="flow-item">
+<h4>
         1️⃣ インスタンス起動
        </h4>
-       <p>
+<p>
         クラスタPGを指定してEC2を起動
        </p>
-      </div>
-      <div class="flow-item">
-       <h4>
+</div>
+<div class="flow-item">
+<h4>
         2️⃣ 物理配置
        </h4>
-       <p>
+<p>
         AWS が同じラック内に配置
        </p>
-      </div>
-      <div class="flow-item">
-       <h4>
+</div>
+<div class="flow-item">
+<h4>
         3️⃣ EFA有効化
        </h4>
-       <p>
+<p>
         高速ネットワーク接続を確立
        </p>
-      </div>
-      <div class="flow-item">
-       <h4>
+</div>
+<div class="flow-item">
+<h4>
         4️⃣ 超高性能実現
        </h4>
-       <p>
+<p>
         低レイテンシ・高帯域幅で通信
        </p>
-      </div>
-     </div>
-    </div>
-    <div class="section">
-     <h2 id="驚異のパフォーマンス数値">
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="驚異のパフォーマンス数値">
       📊 驚異のパフォーマンス数値
      </h2>
-     <div class="stats-container">
-      <h3 id="実際の性能差をチェック！" style="text-align: center; margin-bottom: 20px;">
+<div class="stats-container">
+<h3 id="実際の性能差をチェック！" style="text-align: center; margin-bottom: 20px;">
        実際の性能差をチェック！
       </h3>
-      <div class="stats-grid">
-       <div class="stat-item">
-        <span class="stat-number">
+<div class="stats-grid">
+<div class="stat-item">
+<span class="stat-number">
          100
         </span>
-        <span class="stat-label">
+<span class="stat-label">
          Gbps のネットワーク帯域幅
         </span>
-       </div>
-       <div class="stat-item">
-        <span class="stat-number">
+</div>
+<div class="stat-item">
+<span class="stat-number">
          &lt; 1
         </span>
-        <span class="stat-label">
+<span class="stat-label">
          マイクロ秒のレイテンシ
         </span>
-       </div>
-       <div class="stat-item">
-        <span class="stat-number">
+</div>
+<div class="stat-item">
+<span class="stat-number">
          10x
         </span>
-        <span class="stat-label">
+<span class="stat-label">
          通常より高速な通信
         </span>
-       </div>
-       <div class="stat-item">
-        <span class="stat-number">
+</div>
+<div class="stat-item">
+<span class="stat-number">
          99.9
         </span>
-        <span class="stat-label">
+<span class="stat-label">
          % CPU使用効率
         </span>
-       </div>
-      </div>
-     </div>
-    </div>
-    <div class="section">
-     <h2 id="✨-主要メリット">
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="✨-主要メリット">
       ✨ 主要メリット
      </h2>
-     <div class="benefits-grid">
-      <div class="benefit-card">
-       <h4>
+<div class="benefits-grid">
+<div class="benefit-card">
+<h4>
         ⚡ 超低レイテンシ
        </h4>
-       <p>
+<p>
         マイクロ秒レベルの通信遅延でリアルタイム処理が可能
        </p>
-      </div>
-      <div class="benefit-card">
-       <h4>
+</div>
+<div class="benefit-card">
+<h4>
         📈 高帯域幅
        </h4>
-       <p>
+<p>
         100Gbps級の帯域幅で大容量データも瞬時に転送
        </p>
-      </div>
-      <div class="benefit-card">
-       <h4>
+</div>
+<div class="benefit-card">
+<h4>
         🔧 簡単設定
        </h4>
-       <p>
+<p>
         AWSコンソールから数クリックで設定完了
        </p>
-      </div>
-      <div class="benefit-card">
-       <h4>
+</div>
+<div class="benefit-card">
+<h4>
         💰 コスト効率
        </h4>
-       <p>
+<p>
         処理時間短縮により全体的なコスト削減を実現
        </p>
-      </div>
-     </div>
-    </div>
-    <div class="section">
-     <h2 id="主な使用場面">
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="主な使用場面">
       🎯 主な使用場面
      </h2>
-     <div class="use-cases">
-      <div class="use-case-item">
-       <div class="use-case-icon">
+<div class="use-cases">
+<div class="use-case-item">
+<div class="use-case-icon">
         🧠
        </div>
-       <div>
-        <h4>
+<div>
+<h4>
          機械学習・AI トレーニング
         </h4>
-        <p>
+<p>
          大規模データセットを使った深層学習モデルの分散トレーニング
         </p>
-       </div>
-      </div>
-      <div class="use-case-item">
-       <div class="use-case-icon">
+</div>
+</div>
+<div class="use-case-item">
+<div class="use-case-icon">
         🧬
        </div>
-       <div>
-        <h4>
+<div>
+<h4>
          科学技術計算 (HPC)
         </h4>
-        <p>
+<p>
          気象シミュレーション、創薬研究、遺伝子解析等の大規模計算
         </p>
-       </div>
-      </div>
-      <div class="use-case-item">
-       <div class="use-case-icon">
+</div>
+</div>
+<div class="use-case-item">
+<div class="use-case-icon">
         💹
        </div>
-       <div>
-        <h4>
+<div>
+<h4>
          高頻度取引 (HFT)
         </h4>
-        <p>
+<p>
          金融取引における超低レイテンシが要求されるシステム
         </p>
-       </div>
-      </div>
-      <div class="use-case-item">
-       <div class="use-case-icon">
+</div>
+</div>
+<div class="use-case-item">
+<div class="use-case-icon">
         🎮
        </div>
-       <div>
-        <h4>
+<div>
+<h4>
          リアルタイムシミュレーション
         </h4>
-        <p>
+<p>
          ゲーム、VR/AR、自動運転シミュレーション等
         </p>
-       </div>
-      </div>
-     </div>
-    </div>
-    <div class="section">
-     <div class="analogy-box">
-      <h3 id="なぜこの組み合わせが最強なのか？">
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="analogy-box">
+<h3 id="なぜこの組み合わせが最強なのか？">
        🎯 なぜこの組み合わせが最強なのか？
       </h3>
-      <p>
-       <strong>
+<p>
+<strong>
         レストランで例えると...
        </strong>
-      </p>
-      <br/>
-      <p>
+</p>
+<br/>
+<p>
        🍽️
        <strong>
         普通の配置
        </strong>
        ：キッチンが1階、ホールが3階、食材倉庫が地下
       </p>
-      <p>
+<p>
        → 料理を運ぶのに時間がかかり、お客様を待たせてしまう
       </p>
-      <br/>
-      <p>
+<br/>
+<p>
        🏆
        <strong>
         クラスタPG + EFA
        </strong>
        ：全部同じフロア + 専用エレベーター付き
       </p>
-      <p>
+<p>
        → 注文から提供まで超スピード、お客様大満足！
       </p>
-      <br/>
-      <p class="highlight">
+<br/>
+<p class="highlight">
        処理速度が命のシステムには、この組み合わせが絶対必要です！
       </p>
-     </div>
-    </div>
-   </div>
-  </div>
-  <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+</div>
+</div>
+</div>
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
    🏠 リソース集に戻る
   </button>
-  <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
-   <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
     Created by
     <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
      SSuzuki1063
     </a>
-   </p>
-   <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
     AWS SAP Learning Resources
    </p>
-  </div>
-  <!-- 固定ヘッダー機能のJavaScript -->
-  <script>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
    // トップに戻るボタンの表示/非表示
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const readingProgress = document.getElementById('readingProgress');
@@ -1174,5 +726,5 @@
             });
         });
   </script>
- </body>
+</body>
 </html>
