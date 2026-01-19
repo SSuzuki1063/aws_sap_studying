@@ -12,6 +12,22 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 **Stats**: 179 HTML resources, 194 quiz questions, 13 categories
 **Architecture**: Data-driven (data.js → render.js → index.js) static site with NO build process
 
+## ⚠️ CRITICAL: Always Use Skills for AWS Resource Integration
+
+When integrating new AWS learning resources to the webpage, you **MUST** use the aws-sap-dev skill:
+
+```bash
+/skill aws-sap-dev
+```
+
+**Why this is mandatory:**
+- Ensures proper workflow execution (categorization → breadcrumbs → TOC → data updates)
+- Validates data.js and index.js synchronization
+- Prevents common integration errors
+- Automates deployment verification
+
+**DO NOT** perform manual integration. The skill handles all required steps automatically.
+
 ## Quick Start
 
 ```bash
@@ -133,7 +149,15 @@ python3 scripts/ci/check_data_integrity.py
 
 ## Most Common Workflows
 
+**⚠️ MANDATORY: When integrating AWS resources to the webpage, you MUST use the `/skill aws-sap-dev` skill. DO NOT perform integration manually. The skill ensures proper workflow execution, data integrity, and deployment validation.**
+
 ### 1. Add New HTML Learning Resource
+
+**IMPORTANT: Always use the aws-sap-dev skill for resource integration:**
+```bash
+/skill aws-sap-dev
+```
+The skill provides guided workflows, automatic validation, and ensures compliance with data-driven architecture.
 
 ```bash
 # Step 1: Place HTML files in new_html/
@@ -321,9 +345,10 @@ See `.claude/skills/aws-sap-dev/SKILL.md` for details.
 ## Quick Reference Card
 
 **Most common mistakes:**
-1. Forgetting to update both `data.js` AND `index.js` when adding resources
-2. Using `/css/` instead of `/aws_sap_studying/css/` for asset paths
-3. Skipping W3C validation before committing
+1. **NOT using `/skill aws-sap-dev` when integrating AWS resources** (MANDATORY)
+2. Forgetting to update both `data.js` AND `index.js` when adding resources
+3. Using `/css/` instead of `/aws_sap_studying/css/` for asset paths
+4. Skipping W3C validation before committing
 
 **Pre-commit checklist:**
 ```bash
