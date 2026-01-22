@@ -206,7 +206,15 @@ const searchData = [
     { title: 'ACM + ALB + EC2 TLS証明書設定 完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/acm-alb-ec2-tls-guide.html' },
     { title: 'Lambda@Edge Origin Response X-Frame-Options完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/lambda-edge-x-frame-options-guide.html' },
     { title: 'CloudWatch Logs ログ保持期間 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/cloudwatch-logs-retention-guide.html' },
-    { title: 'QuickSight vs OpenSearch Dashboards 完全比較ガイド', category: 'ストレージ・データベース', file: 'storage-database/quicksight-opensearch-comparison-guide.html' }
+    { title: 'QuickSight vs OpenSearch Dashboards 完全比較ガイド', category: 'ストレージ・データベース', file: 'storage-database/quicksight-opensearch-comparison-guide.html' },
+    { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', category: 'ネットワーキング', file: 'networking/vpc-network-access-analyzer-guide.html' },
+    { title: 'Amazon Time Sync Service 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/amazon-time-sync-service-guide.html' },
+    { title: 'AWS CloudTrail主要操作 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-operations-guide.html' },
+    { title: 'AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-resource-policy-deny-guide.html' },
+    { title: 'Amazon Inspector Lambda関数スキャン 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/inspector-lambda-scan-guide.html' },
+    { title: 'AWS Security Hub 設定ポリシー完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/securityhub-configuration-policies-guide.html' },
+    { title: 'OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド', category: 'セキュリティ・ガバナンス', file: 'organizational-complexity/log-rotation-cloudwatch-guide.html' },
+    { title: 'Amazon EventBridge イベントパターン完全図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/eventbridge-event-patterns-guide.html' }
 ];
 
 // 検索機能

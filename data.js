@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 20,
+    count: 21,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -24,7 +24,7 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 11,
+        count: 12,
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html' },
@@ -36,7 +36,8 @@ const categoriesData = [
           { title: 'Amazon EKS セキュリティ完全図解ガイド', href: 'networking/eks-security-visual-guide.html' },
           { title: 'CloudFront HTTPセキュリティヘッダー完全ガイド', href: 'networking/cloudfront-security-headers-guide.html' },
           { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', href: 'networking/s3-vpc-endpoint-policy-guide.html' },
-          { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', href: 'networking/guardduty-credential-exfiltration-guide-v2.html' }
+          { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', href: 'networking/guardduty-credential-exfiltration-guide-v2.html' },
+          { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', href: 'networking/vpc-network-access-analyzer-guide.html' }
         ]
       },
       {
@@ -54,7 +55,7 @@ const categoriesData = [
     id: 'security-governance',
     title: 'セキュリティ・ガバナンス',
     icon: '🔒',
-    count: 68,
+    count: 74,
     sections: [
       {
         title: 'IAM & 認証・認可',
@@ -97,7 +98,7 @@ const categoriesData = [
       {
         title: 'Organizations & ガバナンス',
         icon: '🏢',
-        count: 32,
+        count: 38,
         resources: [
           { title: 'AWS CodeArtifact 完全ガイド', href: 'security-governance/codeartifact-guide.html' },
           { title: 'Cognito IDプールIAMロール完全ガイド', href: 'security-governance/cognito-identity-pool-roles-guide.html' },
@@ -129,7 +130,13 @@ const categoriesData = [
           { title: 'AWS Config S3配信エラー解決ガイド', href: 'security-governance/aws-config-s3-delivery-error-guide.html' },
           { title: 'AWS Config access-keys-rotated 完全ガイド', href: 'security-governance/aws-config-access-keys-rotated-guide.html' },
           { title: 'AWS Config 管理ルール＆CloudTrail修復アクション完全ガイド', href: 'security-governance/aws-config-cloudtrail-remediation-guide.html' },
-          { title: 'AWS SCP構文 完全図解ガイド', href: 'security-governance/scp-syntax-visual-guide.html' }
+          { title: 'AWS SCP構文 完全図解ガイド', href: 'security-governance/scp-syntax-visual-guide.html' },
+          { title: 'Amazon Time Sync Service 完全図解ガイド', href: 'security-governance/amazon-time-sync-service-guide.html' },
+          { title: 'AWS CloudTrail主要操作 完全図解ガイド', href: 'security-governance/cloudtrail-operations-guide.html' },
+          { title: 'AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド', href: 'security-governance/iam-resource-policy-deny-guide.html' },
+          { title: 'Amazon Inspector Lambda関数スキャン 完全図解ガイド', href: 'security-governance/inspector-lambda-scan-guide.html' },
+          { title: 'AWS Security Hub 設定ポリシー完全図解ガイド', href: 'security-governance/securityhub-configuration-policies-guide.html' },
+          { title: 'OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド', href: 'organizational-complexity/log-rotation-cloudwatch-guide.html' }
         ]
       },
       {
@@ -155,7 +162,7 @@ const categoriesData = [
     id: 'compute-applications',
     title: 'コンピュート・アプリケーション',
     icon: '💻',
-    count: 40,
+    count: 41,
     sections: [
       {
         title: 'EC2 & インスタンス管理',
@@ -173,7 +180,7 @@ const categoriesData = [
       {
         title: 'Auto Scaling & ロードバランシング',
         icon: '⚖️',
-        count: 19,
+        count: 20,
         resources: [
           { title: 'IAM PassRole vs AssumeRole 完全ガイド', href: 'compute-applications/iam-passrole-vs-assumerole-guide.html' },
           { title: 'Auto Scaling安全なOSアップデート戦略完全ガイド', href: 'compute-applications/autoscaling-safe-os-update-guide.html' },
@@ -193,7 +200,8 @@ const categoriesData = [
           { title: 'ALB ターゲットグループ完全ガイド', href: 'compute-applications/alb-target-group-guide.html' },
           { title: 'CodeシリーズでECS Fargateローリングデプロイ完全ガイド', href: 'compute-applications/ecs-fargate-rolling-deploy-complete-guide.html' },
           { title: 'VPC DHCP オプションとカスタム DNS 完全ガイド', href: 'compute-applications/vpc-dhcp-options-guide.html' },
-          { title: 'Auto Scaling インスタンスリフレッシュ完全ガイド', href: 'compute-applications/autoscaling-instance-refresh-guide.html' }
+          { title: 'Auto Scaling インスタンスリフレッシュ完全ガイド', href: 'compute-applications/autoscaling-instance-refresh-guide.html' },
+          { title: 'Amazon EventBridge イベントパターン完全図解ガイド', href: 'compute-applications/eventbridge-event-patterns-guide.html' }
         ]
       },
       {
@@ -441,9 +449,9 @@ const categoriesData = [
 
 // カテゴリクイックナビゲーション用データ
 const categoryQuickNav = [
-  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 19 },
-  { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 60 },
-  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 40 },
+  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 21 },
+  { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 74 },
+  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 41 },
   { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 16 },
   { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 15 },
   { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 11 },
@@ -455,7 +463,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '180+',
+  totalResources: '188+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
   lastUpdated: '2026/01/19'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
