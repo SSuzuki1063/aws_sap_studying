@@ -10,7 +10,7 @@ description: Development and deployment workflows for AWS SAP learning resource 
 This skill provides guided workflows for developing and deploying learning resources for the AWS Solutions Architect Professional (SAP) exam study repository.
 
 **Live Site:** https://ssuzuki1063.github.io/aws_sap_studying/
-**Current Stats:** 120+ HTML resources, 194 quiz questions across 13 categories
+**Current Stats:** 196+ HTML resources, 194 quiz questions across 13 categories
 **Architecture:** Data-driven (data.js + render.js + index.js)
 
 ## Core Workflows
@@ -38,22 +38,26 @@ This is the primary workflow for adding new AWS learning content to the reposito
    ```
 
    This orchestration script automatically runs in sequence:
-   - `integrate_new_html.py` - Categorizes and moves files
+   - `integrate_new_html.py` - Categorizes, moves files, **adds shared CSS links**, and **generates code snippets**
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
    - `add_toc.py` - Adds page-internal table of contents
 
-4. **CRITICAL: Manual data updates** (TWO places required):
+   **New Features (2026-01):**
+   - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
+   - ✅ **Code snippets generated**: Copy-paste ready snippets for data.js and index.js are printed at the end
+
+4. **Update data.js and index.js** (using generated snippets):
+
+   The script outputs copy-paste ready code snippets. Use them to:
 
    a. **Update data.js:**
-   - Find appropriate category and section
-   - Add resource object to `section.resources` array
-   - Increment `section.count`
-   - Increment `category.count`
-   - See [data_structure_guide.md](references/data_structure_guide.md)
+   - Copy the generated snippet to the appropriate section's `resources` array
+   - Run: `python3 scripts/html_management/update_counts.py` to auto-update all counts
 
    b. **Update index.js:**
-   - Add entry to `searchData` array with exact matching title and file path
-   - See [data_structure_guide.md](references/data_structure_guide.md)
+   - Copy the generated snippet to the end of the `searchData` array
+
+   See [data_structure_guide.md](references/data_structure_guide.md) for manual updates if needed.
 
 5. **W3C Validation** (REQUIRED):
    - Visit https://validator.w3.org/
@@ -205,6 +209,31 @@ python3 scripts/html_management/integrate_resource_complete.py --verbose
 This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_toc.py`
 
 See [automation_workflow.md](references/automation_workflow.md) for comprehensive documentation.
+
+#### New Utility Scripts (2026-01)
+
+**Count Verification:**
+```bash
+# Verify totalResources count in data.js
+python3 scripts/html_management/update_counts.py
+```
+Note: Due to data.js complexity, this script only verifies and guides manual fixes.
+
+**Post-Integration Verification:**
+```bash
+# Verify all files are properly integrated
+python3 scripts/ci/post_integration_check.py
+
+# Verbose output (show all missing files)
+python3 scripts/ci/post_integration_check.py --verbose
+```
+
+This checks:
+- ✅ Shared CSS links present
+- ✅ Breadcrumbs present
+- ✅ TOC present
+- ✅ data.js registration
+- ✅ index.js searchData registration
 
 #### Individual Script Usage
 

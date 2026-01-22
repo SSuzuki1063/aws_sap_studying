@@ -395,19 +395,40 @@ The `integrate_new_html.py` script uses these keyword mappings for automatic cat
 2. Manually move the file to the correct category directory
 3. Manually update data.js and index.js
 
+## ⚠️ CRITICAL: Directory vs data.js Category Mapping
+
+**Important**: Not all directories have corresponding categories in `data.js`. Some directories are sub-directories that map to categories in `data.js`:
+
+| Directory | data.js Category | data.js Section |
+|-----------|-----------------|-----------------|
+| `networking/` | networking | VPC & ネットワーク基礎, etc. |
+| `security-governance/` | security-governance | IAM & 認証・認可, Organizations & ガバナンス, etc. |
+| `compute-applications/` | compute-applications | Auto Scaling & ロードバランシング, etc. |
+| `organizational-complexity/` | **security-governance** ⚠️ | Organizations & ガバナンス |
+| `continuous-improvement/` | **compute-applications** ⚠️ | システム運用 & パッチ管理 |
+| `new-solutions/` | (various categories) | Resources are distributed |
+| `cost-control/` | (various categories) | Resources are distributed |
+
+**Key Point**: When adding resources from `organizational-complexity/` or `continuous-improvement/` directories:
+- In `data.js`: Add to `security-governance` or `compute-applications` category respectively
+- In `index.js` searchData: Use `セキュリティ・ガバナンス` or `コンピュート・アプリケーション`
+- File path remains as the actual directory (e.g., `organizational-complexity/file.html`)
+
 ## Japanese Category Names (for searchData)
 
 Use these exact names when adding to `searchData` in index.js:
 
-- `ネットワーキング` - networking
-- `セキュリティ・ガバナンス` - security-governance
-- `コンピュート・アプリケーション` - compute-applications
-- `コンテンツ配信・DNS` - content-delivery-dns
-- `開発・デプロイメント` - development-deployment
-- `ストレージ・データベース` - storage-database
-- `移行・転送` - migration
-- `分析・運用・クイズ` - analytics-bigdata
-- `組織・複雑性` - organizational-complexity
-- `継続的改善` - continuous-improvement
-- `コスト管理` - cost-control
-- `新規ソリューション` - new-solutions
+| Directory | searchData category |
+|-----------|-------------------|
+| `networking/` | `ネットワーキング` |
+| `security-governance/` | `セキュリティ・ガバナンス` |
+| `compute-applications/` | `コンピュート・アプリケーション` |
+| `content-delivery-dns/` | `コンテンツ配信・DNS` |
+| `development-deployment/` | `開発・デプロイメント` |
+| `storage-database/` | `ストレージ・データベース` |
+| `migration/` | `移行・転送` |
+| `analytics-bigdata/` | `分析・運用・クイズ` |
+| `organizational-complexity/` | `セキュリティ・ガバナンス` ⚠️ |
+| `continuous-improvement/` | `コンピュート・アプリケーション` ⚠️ |
+| `cost-control/` | `ストレージ・データベース` (varies) |
+| `new-solutions/` | (varies by content) |

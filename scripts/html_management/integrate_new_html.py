@@ -128,12 +128,24 @@ class HTMLIntegrator:
         }
     }
 
+    # 共有CSSリンク（GitHub Pages対応パス）
+    SHARED_CSS_LINKS = '''<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>'''
+
     def __init__(self, source_dir: str = "new_html", dry_run: bool = False):
         self.source_dir = Path(source_dir)
         self.dry_run = dry_run
-        self.repo_root = Path(__file__).parent
+        # リポジトリルートを正しく設定（スクリプトディレクトリの2階層上）
+        self.repo_root = Path(__file__).parent.parent.parent
         self.index_html = self.repo_root / "index.html"
         self.moved_files: List[Dict] = []
+        self.generated_snippets: Dict[str, List[str]] = {
+            "data_js": [],
+            "index_js": []
+        }
 
     def analyze_html_file(self, file_path: Path) -> Dict:
         """HTMLファイルを分析してメタデータを抽出"""
@@ -199,6 +211,57 @@ class HTMLIntegrator:
         # デフォルト: compute-applications
         return "compute-applications", "コンテナ & アプリケーション統合", "📦"
 
+    def add_shared_css(self, file_path: Path) -> bool:
+        """HTMLファイルに共有CSSリンクを追加"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # 既に共有CSSが含まれているかチェック
+            if '/aws_sap_studying/css/' in content:
+                return False  # 既に追加済み
+
+            # <head>タグの直後に共有CSSリンクを挿入
+            if '<head>' in content:
+                content = content.replace('<head>', f'<head>\n{self.SHARED_CSS_LINKS}', 1)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                return True
+            return False
+        except Exception as e:
+            print(f"   ⚠️  CSS追加エラー: {e}")
+            return False
+
+    def generate_snippets(self, title: str, category: str, filename: str, section: str) -> None:
+        """data.jsとindex.js用のコードスニペットを生成"""
+        # カテゴリからdata.js用のパスを生成
+        href = f"{category}/{filename}"
+
+        # カテゴリ名をマッピング
+        category_names = {
+            "networking": "ネットワーキング",
+            "security-governance": "セキュリティ・ガバナンス",
+            "compute-applications": "コンピュート・アプリケーション",
+            "content-delivery-dns": "コンテンツ配信・DNS",
+            "development-deployment": "開発・デプロイメント",
+            "storage-database": "ストレージ・データベース",
+            "migration": "移行・転送",
+            "migration-transfer": "移行・転送",
+            "organizational-complexity": "セキュリティ・ガバナンス",  # 実際のdata.jsカテゴリにマップ
+            "continuous-improvement": "コンピュート・アプリケーション",
+            "analytics-operations": "分析・運用・クイズ"
+        }
+
+        category_display = category_names.get(category, "セキュリティ・ガバナンス")
+
+        # data.js用スニペット
+        data_js_snippet = f"          {{ title: '{title}', href: '{href}' }}"
+        self.generated_snippets["data_js"].append(data_js_snippet)
+
+        # index.js用スニペット
+        index_js_snippet = f"    {{ title: '{title}', category: '{category_display}', file: '{href}' }}"
+        self.generated_snippets["index_js"].append(index_js_snippet)
+
     def move_file(self, source: Path, category: str) -> Optional[Path]:
         """ファイルを適切なカテゴリディレクトリに移動"""
         dest_dir = self.repo_root / category
@@ -217,6 +280,10 @@ class HTMLIntegrator:
             # ファイル移動
             shutil.move(str(source), str(dest_file))
             print(f"   ✅ 移動完了: {source.name} → {category}/")
+
+            # 共有CSSリンクを追加
+            if self.add_shared_css(dest_file):
+                print(f"   🎨 共有CSS追加完了")
         else:
             print(f"   [DRY RUN] 移動: {source.name} → {category}/")
 
@@ -325,6 +392,9 @@ class HTMLIntegrator:
             # ファイル移動
             dest_file = self.move_file(html_file, category)
 
+            # スニペット生成
+            self.generate_snippets(metadata["title"], category, html_file.name, section)
+
             files_info.append({
                 "filename": html_file.name,
                 "title": metadata["title"],
@@ -354,11 +424,44 @@ class HTMLIntegrator:
             print("⚠️  index.html の更新に問題がありました")
 
         # 空のディレクトリを削除
-        if not self.dry_run and not any(self.source_dir.iterdir()):
+        if not self.dry_run and self.source_dir.exists() and not any(self.source_dir.iterdir()):
             self.source_dir.rmdir()
             print(f"\n🗑️  空のディレクトリを削除: {self.source_dir}")
 
+        # コピペ可能なスニペットを出力
+        self._print_snippets()
+
         return True
+
+    def _print_snippets(self) -> None:
+        """data.jsとindex.js用のコピペ可能なスニペットを出力"""
+        if not self.generated_snippets["data_js"]:
+            return
+
+        print("\n" + "=" * 80)
+        print("📋 コピペ可能なコードスニペット")
+        print("=" * 80)
+
+        print("\n┌─────────────────────────────────────────────────────────────┐")
+        print("│ 📝 data.js に追加（適切なセクションのresources配列内に）   │")
+        print("└─────────────────────────────────────────────────────────────┘")
+        for snippet in self.generated_snippets["data_js"]:
+            print(snippet + ",")
+
+        print("\n┌─────────────────────────────────────────────────────────────┐")
+        print("│ 🔍 index.js に追加（searchData配列の末尾に）               │")
+        print("└─────────────────────────────────────────────────────────────┘")
+        for snippet in self.generated_snippets["index_js"]:
+            print(snippet + ",")
+
+        print("\n" + "─" * 80)
+        print("⚠️  重要: 上記スニペットを追加後、カウントも更新してください")
+        print("   • data.js: section.count と category.count をインクリメント")
+        print("   • data.js: categoryQuickNav の count をインクリメント")
+        print("   • data.js: siteStats.totalResources を更新")
+        print("")
+        print("💡 ヒント: python3 scripts/html_management/update_counts.py で自動更新可能")
+        print("─" * 80)
 
 
 def main():
