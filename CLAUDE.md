@@ -265,7 +265,7 @@ git push origin gh-pages  # Auto-deploys to GitHub Pages (1-2 min)
 | **HTML Management** |
 | `integrate_new_html.py` | Auto-categorize and integrate new HTML files | `python3 scripts/html_management/integrate_new_html.py [--dry-run]` |
 | `add_breadcrumbs.py` | Add breadcrumb navigation | `python3 scripts/html_management/add_breadcrumbs.py` |
-| `add_toc.py` | Add page-internal TOC | `python3 scripts/html_management/add_toc.py [--dry-run]` |
+| `add_sidebar_toc.py` | Add left sidebar TOC | `python3 scripts/html_management/add_sidebar_toc.py [--dry-run]` |
 | `add_svg_alt_text.py` | Add accessibility alt text to SVGs | `python3 scripts/html_management/add_svg_alt_text.py` |
 | **Quiz Management** |
 | `analyze_quiz.py` | Display quiz statistics | `python3 scripts/quiz_management/analyze_quiz.py` |

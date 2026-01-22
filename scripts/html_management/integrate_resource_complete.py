@@ -2,8 +2,8 @@
 """
 完全統合スクリプト - AWS SAP学習リソースの自動統合ワークフロー
 
-新規HTMLファイルを統合し、ブレッドクラムとTOCを自動追加する
-統合スクリプト（integrate_new_html.py + add_breadcrumbs.py + add_toc.py）
+新規HTMLファイルを統合し、ブレッドクラムと左サイドバーTOCを自動追加する
+統合スクリプト（integrate_new_html.py + add_breadcrumbs.py + add_sidebar_toc.py）
 """
 
 import subprocess
@@ -27,7 +27,7 @@ class IntegrationOrchestrator:
         required_scripts = [
             "integrate_new_html.py",
             "add_breadcrumbs.py",
-            "add_toc.py"
+            "add_sidebar_toc.py"
         ]
 
         for script in required_scripts:
@@ -139,11 +139,11 @@ class IntegrationOrchestrator:
         if not self.run_script("add_breadcrumbs.py"):
             print("⚠️  ブレッドクラムの追加に失敗しました（続行します）")
 
-        # ステップ4: TOC追加
-        print("\n📋 ステップ4: ページ内目次を追加中...")
+        # ステップ4: 左サイドバーTOC追加
+        print("\n📋 ステップ4: 左サイドバー目次を追加中...")
         args = ["--dir", str(self.repo_root)]
-        if not self.run_script("add_toc.py", args):
-            print("⚠️  目次の追加に失敗しました（続行します）")
+        if not self.run_script("add_sidebar_toc.py", args):
+            print("⚠️  左サイドバー目次の追加に失敗しました（続行します）")
 
         # 完了とリマインダー
         print("\n✅ 自動化ステップが完了しました！")

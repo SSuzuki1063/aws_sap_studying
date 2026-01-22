@@ -40,7 +40,7 @@ This is the primary workflow for adding new AWS learning content to the reposito
    This orchestration script automatically runs in sequence:
    - `integrate_new_html.py` - Categorizes, moves files, **adds shared CSS links**, and **generates code snippets**
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
-   - `add_toc.py` - Adds page-internal table of contents
+   - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
 
    **New Features (2026-01):**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
@@ -103,9 +103,9 @@ Run scripts individually in this order:
    python3 scripts/html_management/add_breadcrumbs.py
    ```
 
-3. **Add TOC:**
+3. **Add Left Sidebar TOC:**
    ```bash
-   python3 scripts/html_management/add_toc.py
+   python3 scripts/html_management/add_sidebar_toc.py
    ```
 
 4. **Continue with manual data updates** (same as Option A, steps 4-8)
@@ -206,7 +206,7 @@ python3 scripts/html_management/integrate_resource_complete.py --source custom_h
 python3 scripts/html_management/integrate_resource_complete.py --verbose
 ```
 
-This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_toc.py`
+This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py`
 
 See [automation_workflow.md](references/automation_workflow.md) for comprehensive documentation.
 
@@ -246,19 +246,23 @@ python3 scripts/html_management/add_breadcrumbs.py
 
 Adds breadcrumb navigation (Home > Category > SubCategory) to all HTML files.
 
-**TOC Management:**
+**TOC Management (Left Sidebar):**
 ```bash
 # Preview changes
-python3 scripts/html_management/add_toc.py --dry-run
+python3 scripts/html_management/add_sidebar_toc.py --dry-run
 
 # Execute
-python3 scripts/html_management/add_toc.py
+python3 scripts/html_management/add_sidebar_toc.py
 
 # Custom directory
-python3 scripts/html_management/add_toc.py --dir /path/to/directory
+python3 scripts/html_management/add_sidebar_toc.py --dir /path/to/directory
 ```
 
-Generates page-internal collapsible table of contents from h2/h3 headings.
+Generates **left sidebar table of contents** from h2/h3 headings. Features:
+- Fixed position on left side of page
+- Desktop: always visible, collapsible
+- Mobile: hidden by default, toggle button to open
+- Smooth scroll to sections
 
 **Quiz Statistics:**
 ```bash
