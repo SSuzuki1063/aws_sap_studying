@@ -27,7 +27,8 @@ class IntegrationOrchestrator:
         required_scripts = [
             "integrate_new_html.py",
             "add_breadcrumbs.py",
-            "add_sidebar_toc.py"
+            "add_sidebar_toc.py",
+            "add_home_button.py"
         ]
 
         for script in required_scripts:
@@ -144,6 +145,11 @@ class IntegrationOrchestrator:
         args = ["--dir", str(self.repo_root)]
         if not self.run_script("add_sidebar_toc.py", args):
             print("⚠️  左サイドバー目次の追加に失敗しました（続行します）")
+
+        # ステップ5: リソース集に戻るボタン追加
+        print("\n📋 ステップ5: リソース集に戻るボタンを追加中...")
+        if not self.run_script("add_home_button.py"):
+            print("⚠️  リソース集に戻るボタンの追加に失敗しました（続行します）")
 
         # 完了とリマインダー
         print("\n✅ 自動化ステップが完了しました！")

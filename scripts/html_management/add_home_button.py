@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-全てのAWS学習リソースHTMLファイルに「ホームに戻る」ボタンを追加するスクリプト
+全てのAWS学習リソースHTMLファイルに「リソース集に戻る」ボタンを追加するスクリプト
 
 使用方法:
     python3 scripts/html_management/add_home_button.py --dry-run  # プレビューのみ
@@ -12,9 +12,13 @@ import sys
 import argparse
 from pathlib import Path
 
-# ホームボタンのHTML（右下固定のフローティングボタン）
-HOME_BUTTON_HTML = '''<button style="position: fixed; bottom: 30px; right: 30px; background-color: #FF9900; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../index.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#FF9900'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 ホームに戻る</button>
+# リソース集に戻るボタンのHTML（右下固定のフローティングボタン）
+# WCAG 2.1 AA準拠: #dc7600 (アクセシブルなAWSオレンジ)
+RESOURCE_BUTTON_HTML = '''<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
 '''
+
+# 後方互換性のためのエイリアス
+HOME_BUTTON_HTML = RESOURCE_BUTTON_HTML
 
 # 学習リソースが配置されているカテゴリディレクトリ
 CATEGORY_DIRS = [
@@ -33,15 +37,15 @@ CATEGORY_DIRS = [
 ]
 
 def has_home_button(content):
-    """HTMLコンテンツに既にホームボタンがあるかチェック"""
-    return 'ホームに戻る' in content
+    """HTMLコンテンツに既にリソースボタンがあるかチェック（旧形式も含む）"""
+    return 'ホームに戻る' in content or 'リソース集に戻る' in content
 
 def add_home_button_to_html(content):
-    """HTMLコンテンツにホームボタンを追加"""
+    """HTMLコンテンツにリソース集に戻るボタンを追加"""
     # </body>タグの直前にボタンを挿入
     if '</body>' in content:
         # </body>の直前に改行とボタンを挿入
-        content = content.replace('</body>', f'{HOME_BUTTON_HTML}\n</body>')
+        content = content.replace('</body>', f'{RESOURCE_BUTTON_HTML}\n</body>')
         return content
     else:
         print("  WARNING: </body> タグが見つかりませんでした")
@@ -62,11 +66,11 @@ def process_html_file(file_path, dry_run=False):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # 既にホームボタンがある場合はスキップ
+        # 既にボタンがある場合はスキップ
         if has_home_button(content):
-            return ('skipped', "既にホームボタンあり - スキップ")
+            return ('skipped', "既にリソースボタンあり - スキップ")
 
-        # ホームボタンを追加
+        # リソース集に戻るボタンを追加
         updated_content = add_home_button_to_html(content)
 
         if updated_content is None:
@@ -76,9 +80,9 @@ def process_html_file(file_path, dry_run=False):
         if not dry_run:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(updated_content)
-            return ('updated', "ホームボタンを追加しました")
+            return ('updated', "リソース集に戻るボタンを追加しました")
         else:
-            return ('updated', "ホームボタンを追加予定（dry-run）")
+            return ('updated', "リソース集に戻るボタンを追加予定（dry-run）")
 
     except Exception as e:
         return ('error', f"エラー: {str(e)}")
@@ -109,7 +113,7 @@ def find_html_files(base_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='全てのAWS学習リソースHTMLファイルに「ホームに戻る」ボタンを追加'
+        description='全てのAWS学習リソースHTMLファイルに「リソース集に戻る」ボタンを追加'
     )
     parser.add_argument(
         '--dry-run',
@@ -174,7 +178,7 @@ def main():
     print("処理結果サマリー")
     print("=" * 70)
     print(f"合計ファイル数: {stats['total']}")
-    print(f"ホームボタン追加: {stats['updated']} ファイル")
+    print(f"リソースボタン追加: {stats['updated']} ファイル")
     print(f"スキップ: {stats['skipped']} ファイル")
     print(f"エラー: {stats['errors']} ファイル")
     print()
@@ -187,7 +191,7 @@ def main():
         print("次のステップ:")
         print("1. python3 server.py でローカルサーバーを起動してテスト")
         print("2. W3C Validator (https://validator.w3.org/) で修正したHTMLファイルを検証")
-        print("3. git add . && git commit -m 'feat: 全AWS学習リソースにホームボタンを追加'")
+        print("3. git add . && git commit -m 'feat: 全AWS学習リソースにリソース集に戻るボタンを追加'")
         print("4. git push origin gh-pages")
 
 if __name__ == '__main__':

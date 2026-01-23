@@ -41,10 +41,12 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - `integrate_new_html.py` - Categorizes, moves files, **adds shared CSS links**, and **generates code snippets**
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
    - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
+   - `add_home_button.py` - Adds **「リソース集に戻る」button** (右下固定フローティングボタン)
 
    **New Features (2026-01):**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
    - ✅ **Code snippets generated**: Copy-paste ready snippets for data.js and index.js are printed at the end
+   - ✅ **Return button auto-added**: 「リソース集に戻る」button is automatically added to all resources
 
 4. **Update data.js and index.js** (using generated snippets):
 
@@ -206,7 +208,7 @@ python3 scripts/html_management/integrate_resource_complete.py --source custom_h
 python3 scripts/html_management/integrate_resource_complete.py --verbose
 ```
 
-This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py`
+This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py` → `add_home_button.py`
 
 See [automation_workflow.md](references/automation_workflow.md) for comprehensive documentation.
 
@@ -263,6 +265,21 @@ Generates **left sidebar table of contents** from h2/h3 headings. Features:
 - Desktop: always visible, collapsible
 - Mobile: hidden by default, toggle button to open
 - Smooth scroll to sections
+
+**Return Button Management:**
+```bash
+# Add button to all resources
+python3 scripts/html_management/add_home_button.py
+
+# Preview changes
+python3 scripts/html_management/add_home_button.py --dry-run
+```
+
+Adds **「🏠 リソース集に戻る」button** (fixed bottom-right). Features:
+- Links to `../learning-resources.html`
+- WCAG 2.1 AA accessible color (#dc7600)
+- Hover effects with scale transform
+- Skips files that already have the button
 
 **Quiz Statistics:**
 ```bash
