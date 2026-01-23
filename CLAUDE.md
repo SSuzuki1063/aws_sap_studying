@@ -162,6 +162,7 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 | `scripts/html_management/integrate_new_html.py` | Categorize and move HTML files |
 | `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
 | `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC |
+| `scripts/html_management/add_home_button.py` | Add 「リソース集に戻る」button |
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
 | `scripts/ci/validate_html_w3c.py` | W3C HTML validation |
 | `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
