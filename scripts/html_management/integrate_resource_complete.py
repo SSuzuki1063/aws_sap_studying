@@ -28,7 +28,8 @@ class IntegrationOrchestrator:
             "integrate_new_html.py",
             "add_breadcrumbs.py",
             "add_sidebar_toc.py",
-            "add_home_button.py"
+            "add_home_button.py",
+            "add_prev_next_nav.py"
         ]
 
         for script in required_scripts:
@@ -150,6 +151,11 @@ class IntegrationOrchestrator:
         print("\n📋 ステップ5: リソース集に戻るボタンを追加中...")
         if not self.run_script("add_home_button.py"):
             print("⚠️  リソース集に戻るボタンの追加に失敗しました（続行します）")
+
+        # ステップ6: 前後ナビゲーション追加
+        print("\n📋 ステップ6: 前後ナビゲーションを追加中...")
+        if not self.run_script("add_prev_next_nav.py"):
+            print("⚠️  前後ナビゲーションの追加に失敗しました（続行します）")
 
         # 完了とリマインダー
         print("\n✅ 自動化ステップが完了しました！")

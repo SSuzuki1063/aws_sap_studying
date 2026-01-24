@@ -42,6 +42,7 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
    - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
    - `add_home_button.py` - Adds **「リソース集に戻る」button** (右下固定フローティングボタン)
+   - `add_prev_next_nav.py` - Adds **「← 前へ / 次へ →」navigation bar** (カテゴリ内ナビゲーション)
 
    **New Features (2026-01):**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
@@ -208,7 +209,7 @@ python3 scripts/html_management/integrate_resource_complete.py --source custom_h
 python3 scripts/html_management/integrate_resource_complete.py --verbose
 ```
 
-This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py` → `add_home_button.py`
+This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py` → `add_home_button.py` → `add_prev_next_nav.py`
 
 See [automation_workflow.md](references/automation_workflow.md) for comprehensive documentation.
 
@@ -276,6 +277,29 @@ python3 scripts/html_management/add_home_button.py --dry-run
 ```
 
 Adds **「🏠 リソース集に戻る」button** (fixed bottom-right). Features:
+- Links to `../learning-resources.html`
+- WCAG 2.1 AA accessible color (#dc7600)
+- Hover effects with scale transform
+- Skips files that already have the button
+
+**Prev/Next Navigation Management:**
+```bash
+# Add prev/next navigation to all resources
+python3 scripts/html_management/add_prev_next_nav.py
+
+# Preview changes
+python3 scripts/html_management/add_prev_next_nav.py --dry-run
+```
+
+Adds **「← 前へ / 次へ →」navigation bar** (fixed bottom bar). Features:
+- Navigates between resources within the same category
+- Shows progress counter (e.g., "5 / 21")
+- First resource: "← 前へ" disabled (gray)
+- Last resource: "次へ →" disabled (gray)
+- Responsive: adjusts for sidebar TOC on desktop
+- z-index: 999 (below header at 1002)
+- Positioned at bottom: 100px (above home button)
+- Skips files that already have the navigation
 
 **HTML Issues Bulk Fix:**
 ```bash

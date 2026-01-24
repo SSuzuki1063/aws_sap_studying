@@ -175,6 +175,7 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 | `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
 | `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC |
 | `scripts/html_management/add_home_button.py` | Add 「リソース集に戻る」button |
+| `scripts/html_management/add_prev_next_nav.py` | Add 「← 前へ / 次へ →」navigation bar |
 | `scripts/html_management/fix_html_issues.py` | Fix HTML entity escaping & sidebar TOC positioning |
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
 | `scripts/ci/validate_html_w3c.py` | W3C HTML validation |
