@@ -176,7 +176,7 @@ def generate_prev_next_nav_html(
     from_file: str
 ) -> str:
     """
-    前後ナビゲーションのHTMLを生成
+    前後ナビゲーションのHTMLを生成（折りたたみ可能）
 
     Args:
         prev_path: 前のリソースパス（Noneの場合はdisabled）
@@ -199,43 +199,148 @@ def generate_prev_next_nav_html(
     prev_onclick = f"window.location.href='{prev_href}'" if prev_path else "return false"
     next_onclick = f"window.location.href='{next_href}'" if next_path else "return false"
 
-    # ナビゲーションHTML（インラインスタイル）
-    nav_html = f'''<!-- 前後ナビゲーション -->
-<nav class="prev-next-nav" style="position: fixed; bottom: 100px; left: 0; right: 0; background: linear-gradient(135deg, #232F3E, #374151); padding: 12px 20px; z-index: 999; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; gap: 20px;">
+    # ナビゲーションHTML（折りたたみ可能、デフォルトは折りたたみ状態）
+    nav_html = f'''<!-- 前後ナビゲーション（折りたたみ可能） -->
+<div class="prev-next-nav-container" id="prevNextNavContainer">
     <style>
-        @media (min-width: 1025px) {{
-            .prev-next-nav {{
-                left: 360px !important;
-            }}
+        .prev-next-nav-container {{
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            z-index: 999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }}
-        @media (min-width: 769px) and (max-width: 1024px) {{
-            .prev-next-nav {{
-                left: 310px !important;
-            }}
+        .prev-next-toggle {{
+            background: linear-gradient(135deg, #232F3E, #374151);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .prev-next-toggle:hover {{
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }}
+        .prev-next-toggle .toggle-icon {{
+            transition: transform 0.3s ease;
+        }}
+        .prev-next-toggle.expanded .toggle-icon {{
+            transform: rotate(180deg);
+        }}
+        .prev-next-nav-expanded {{
+            position: absolute;
+            bottom: 50px;
+            right: 0;
+            background: linear-gradient(135deg, #232F3E, #374151);
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 200px;
+        }}
+        .prev-next-nav-expanded.show {{
+            display: flex;
+        }}
+        .prev-next-nav-expanded .nav-btn {{
+            background-color: #dc7600;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.95em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }}
+        .prev-next-nav-expanded .nav-btn:hover:not(.disabled) {{
+            background-color: #E68900;
+            transform: scale(1.02);
+        }}
+        .prev-next-nav-expanded .nav-btn.disabled {{
+            background-color: #6B7280;
+            cursor: not-allowed;
+        }}
+        .prev-next-nav-expanded .nav-counter {{
+            color: white;
+            font-size: 0.9em;
+            text-align: center;
+            padding: 5px 0;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            margin-top: 5px;
         }}
         @media (max-width: 768px) {{
-            .prev-next-nav {{
-                left: 0 !important;
-                flex-direction: column !important;
-                gap: 8px !important;
-                padding: 10px 15px !important;
+            .prev-next-nav-container {{
+                right: 15px;
+                bottom: 90px;
             }}
-            .prev-next-nav .nav-buttons {{
-                display: flex !important;
-                width: 100% !important;
-                gap: 10px !important;
-            }}
-            .prev-next-nav .nav-btn {{
-                flex: 1 !important;
+            .prev-next-nav-expanded {{
+                min-width: 180px;
             }}
         }}
     </style>
-    <div class="nav-buttons" style="display: flex; gap: 15px; align-items: center;">
-        <button class="nav-btn prev-btn {prev_disabled}" onclick="{prev_onclick}" style="background-color: {('#dc7600' if prev_path else '#6B7280')}; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-size: 1em; font-weight: bold; cursor: {'pointer' if prev_path else 'not-allowed'}; transition: all 0.3s ease; min-width: 100px;" {'onmouseover="this.style.backgroundColor=\'#E68900\'; this.style.transform=\'scale(1.05)\';" onmouseout="this.style.backgroundColor=\'#dc7600\'; this.style.transform=\'scale(1)\';"' if prev_path else ''}>← 前へ</button>
-        <span class="nav-counter" style="color: white; font-size: 0.95em; font-weight: 500; min-width: 60px; text-align: center;">{current_index} / {total_count}</span>
-        <button class="nav-btn next-btn {next_disabled}" onclick="{next_onclick}" style="background-color: {('#dc7600' if next_path else '#6B7280')}; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-size: 1em; font-weight: bold; cursor: {'pointer' if next_path else 'not-allowed'}; transition: all 0.3s ease; min-width: 100px;" {'onmouseover="this.style.backgroundColor=\'#E68900\'; this.style.transform=\'scale(1.05)\';" onmouseout="this.style.backgroundColor=\'#dc7600\'; this.style.transform=\'scale(1)\';"' if next_path else ''}>次へ →</button>
+    <button class="prev-next-toggle" id="prevNextToggle" onclick="togglePrevNextNav()" aria-label="前後ナビゲーションを開く" aria-expanded="false">
+        <span class="toggle-icon">▲</span>
+        <span>{current_index}/{total_count}</span>
+    </button>
+    <div class="prev-next-nav-expanded" id="prevNextExpanded" role="navigation" aria-label="前後ページナビゲーション">
+        <button class="nav-btn prev-btn {prev_disabled}" onclick="{prev_onclick}" {'disabled' if not prev_path else ''} aria-label="前のページへ">← 前へ</button>
+        <button class="nav-btn next-btn {next_disabled}" onclick="{next_onclick}" {'disabled' if not next_path else ''} aria-label="次のページへ">次へ →</button>
+        <div class="nav-counter">{current_index} / {total_count} ページ</div>
     </div>
-</nav>
+</div>
+<script>
+function togglePrevNextNav() {{
+    const toggle = document.getElementById('prevNextToggle');
+    const expanded = document.getElementById('prevNextExpanded');
+    const isExpanded = expanded.classList.contains('show');
+
+    if (isExpanded) {{
+        expanded.classList.remove('show');
+        toggle.classList.remove('expanded');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', '前後ナビゲーションを開く');
+        localStorage.setItem('prevNextNavExpanded', 'false');
+    }} else {{
+        expanded.classList.add('show');
+        toggle.classList.add('expanded');
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', '前後ナビゲーションを閉じる');
+        localStorage.setItem('prevNextNavExpanded', 'true');
+    }}
+}}
+
+// ページ読み込み時にlocalStorageから状態を復元
+document.addEventListener('DOMContentLoaded', function() {{
+    const savedState = localStorage.getItem('prevNextNavExpanded');
+    if (savedState === 'true') {{
+        const toggle = document.getElementById('prevNextToggle');
+        const expanded = document.getElementById('prevNextExpanded');
+        expanded.classList.add('show');
+        toggle.classList.add('expanded');
+        toggle.setAttribute('aria-expanded', 'true');
+    }}
+}});
+
+// クリック外で閉じる
+document.addEventListener('click', function(e) {{
+    const container = document.getElementById('prevNextNavContainer');
+    const expanded = document.getElementById('prevNextExpanded');
+    if (container && !container.contains(e.target) && expanded.classList.contains('show')) {{
+        togglePrevNextNav();
+    }}
+}});
+</script>
 '''
     return nav_html
 
@@ -245,8 +350,40 @@ def has_prev_next_nav(content: str) -> bool:
     return 'prev-next-nav' in content or '前後ナビゲーション' in content
 
 
-def add_prev_next_nav_to_html(content: str, nav_html: str) -> Optional[str]:
-    """HTMLコンテンツに前後ナビゲーションを追加"""
+def remove_old_prev_next_nav(content: str) -> str:
+    """
+    古い前後ナビゲーションをHTMLコンテンツから削除
+
+    2種類のナビゲーションを検出・削除:
+    1. 古い固定バー形式: <nav class="prev-next-nav"...>...</nav>
+    2. 新しい折りたたみ形式: <div class="prev-next-nav-container"...>...</div>
+    """
+    # 古い固定バー形式を削除
+    # <!-- 前後ナビゲーション --> から </nav> まで
+    old_nav_pattern = r'<!-- 前後ナビゲーション -->\s*<nav class="prev-next-nav".*?</nav>\s*'
+    content = re.sub(old_nav_pattern, '', content, flags=re.DOTALL)
+
+    # 新しい折りたたみ形式を削除
+    # <!-- 前後ナビゲーション（折りたたみ可能） --> から </script> まで
+    new_nav_pattern = r'<!-- 前後ナビゲーション（折りたたみ可能） -->\s*<div class="prev-next-nav-container".*?</script>\s*'
+    content = re.sub(new_nav_pattern, '', content, flags=re.DOTALL)
+
+    return content
+
+
+def add_prev_next_nav_to_html(content: str, nav_html: str, force_update: bool = False) -> Optional[str]:
+    """
+    HTMLコンテンツに前後ナビゲーションを追加
+
+    Args:
+        content: HTMLコンテンツ
+        nav_html: 追加するナビゲーションHTML
+        force_update: Trueの場合、既存のナビゲーションを削除して新しいものに置き換え
+    """
+    # force_updateの場合は既存のナビゲーションを削除
+    if force_update and has_prev_next_nav(content):
+        content = remove_old_prev_next_nav(content)
+
     # </body>タグの直前にナビゲーションを挿入
     if '</body>' in content:
         content = content.replace('</body>', f'{nav_html}\n</body>')
@@ -260,7 +397,8 @@ def process_html_file(
     file_path: Path,
     repo_root: Path,
     category_resources: Dict[str, List[str]],
-    dry_run: bool = False
+    dry_run: bool = False,
+    force_update: bool = False
 ) -> Tuple[str, str]:
     """
     HTMLファイルに前後ナビゲーションを追加
@@ -270,6 +408,7 @@ def process_html_file(
         repo_root: リポジトリルート
         category_resources: カテゴリ -> リソースマッピング
         dry_run: Trueの場合は実際の変更を行わない
+        force_update: Trueの場合は既存のナビゲーションを置き換え
 
     Returns:
         (status, message): 処理結果
@@ -281,9 +420,11 @@ def process_html_file(
         # 相対パスを計算
         rel_path = str(file_path.relative_to(repo_root))
 
-        # 既にナビゲーションがある場合はスキップ
+        # 既にナビゲーションがある場合
         if has_prev_next_nav(content):
-            return ('skipped', "既に前後ナビゲーションあり - スキップ")
+            if not force_update:
+                return ('skipped', "既に前後ナビゲーションあり - スキップ（--force-updateで上書き可能）")
+            # force_updateの場合は続行（後で古いものを削除）
 
         # data.jsに登録されているかチェック
         category_id = get_category_for_file(rel_path, category_resources)
@@ -303,8 +444,8 @@ def process_html_file(
             prev_path, next_path, current_idx, total, rel_path
         )
 
-        # ナビゲーションを追加
-        updated_content = add_prev_next_nav_to_html(content, nav_html)
+        # ナビゲーションを追加（force_updateの場合は古いものを削除して置き換え）
+        updated_content = add_prev_next_nav_to_html(content, nav_html, force_update=force_update)
 
         if updated_content is None:
             return ('error', "エラー: </body>タグが見つかりません")
@@ -313,9 +454,11 @@ def process_html_file(
         if not dry_run:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(updated_content)
-            return ('updated', f"前後ナビゲーション追加 ({current_idx}/{total})")
+            action = "更新" if force_update and has_prev_next_nav(content) else "追加"
+            return ('updated', f"前後ナビゲーション{action} ({current_idx}/{total})")
         else:
-            return ('updated', f"前後ナビゲーション追加予定 ({current_idx}/{total}, dry-run)")
+            action = "更新予定" if force_update else "追加予定"
+            return ('updated', f"前後ナビゲーション{action} ({current_idx}/{total}, dry-run)")
 
     except Exception as e:
         return ('error', f"エラー: {str(e)}")
@@ -356,6 +499,11 @@ def main():
         help='実際の変更を行わずにプレビューのみ表示'
     )
     parser.add_argument(
+        '--force-update',
+        action='store_true',
+        help='既存のナビゲーションを新しいバージョンに置き換え'
+    )
+    parser.add_argument(
         '--dir',
         type=str,
         default='.',
@@ -370,6 +518,12 @@ def main():
     if args.dry_run:
         print("=" * 70)
         print("DRY RUN MODE - 実際の変更は行いません")
+        print("=" * 70)
+        print()
+
+    if args.force_update:
+        print("=" * 70)
+        print("FORCE UPDATE MODE - 既存のナビゲーションを新しいバージョンに置き換えます")
         print("=" * 70)
         print()
 
@@ -409,7 +563,8 @@ def main():
         print(f"処理中: {rel_path}")
 
         status, message = process_html_file(
-            file_path, repo_root, category_resources, dry_run=args.dry_run
+            file_path, repo_root, category_resources,
+            dry_run=args.dry_run, force_update=args.force_update
         )
 
         if status == 'updated':
