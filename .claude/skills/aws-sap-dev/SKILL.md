@@ -42,12 +42,13 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
    - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
    - `add_home_button.py` - Adds **「リソース集に戻る」button** (右下固定フローティングボタン)
-   - `add_prev_next_nav.py` - Adds **「← 前へ / 次へ →」navigation bar** (カテゴリ内ナビゲーション)
+   - `add_prev_next_nav.py` - Adds **「← 前へ / 次へ →」collapsible button** (右下折りたたみナビゲーション)
 
    **New Features (2026-01):**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
    - ✅ **Code snippets generated**: Copy-paste ready snippets for data.js and index.js are printed at the end
    - ✅ **Return button auto-added**: 「リソース集に戻る」button is automatically added to all resources
+   - ✅ **Prev/Next navigation**: Collapsible button (`▲ 1/19`) that doesn't block content
 
 4. **Update data.js and index.js** (using generated snippets):
 
@@ -289,17 +290,23 @@ python3 scripts/html_management/add_prev_next_nav.py
 
 # Preview changes
 python3 scripts/html_management/add_prev_next_nav.py --dry-run
+
+# Update existing navigation to new version
+python3 scripts/html_management/add_prev_next_nav.py --force-update
 ```
 
-Adds **「← 前へ / 次へ →」navigation bar** (fixed bottom bar). Features:
+Adds **「← 前へ / 次へ →」collapsible navigation button** (右下折りたたみボタン). Features:
+- **Collapsible design**: Small toggle button (`▲ 1/19`) by default, expands on click
+- **Non-intrusive**: Doesn't block content when collapsed (デフォルト折りたたみでコンテンツを邪魔しない)
 - Navigates between resources within the same category
 - Shows progress counter (e.g., "5 / 21")
 - First resource: "← 前へ" disabled (gray)
 - Last resource: "次へ →" disabled (gray)
-- Responsive: adjusts for sidebar TOC on desktop
-- z-index: 999 (below header at 1002)
-- Positioned at bottom: 100px (above home button)
-- Skips files that already have the navigation
+- **localStorage persistence**: Remembers expanded/collapsed state
+- **Click outside to close**: Auto-collapses when clicking elsewhere
+- **Accessibility**: ARIA labels (`aria-expanded`, `aria-label`, `role="navigation"`)
+- `--force-update` flag: Replaces existing navigation with new version
+- Skips files that already have the navigation (use `--force-update` to replace)
 
 **HTML Issues Bulk Fix:**
 ```bash
