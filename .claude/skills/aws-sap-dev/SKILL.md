@@ -276,6 +276,19 @@ python3 scripts/html_management/add_home_button.py --dry-run
 ```
 
 Adds **「🏠 リソース集に戻る」button** (fixed bottom-right). Features:
+
+**HTML Issues Bulk Fix:**
+```bash
+# Fix HTML entity escaping and sidebar TOC positioning issues
+python3 scripts/html_management/fix_html_issues.py
+
+# Preview changes
+python3 scripts/html_management/fix_html_issues.py --dry-run
+```
+
+Fixes common HTML issues across all resources:
+- HTMLエンティティエスケープ問題（`&lt;` → `<`）
+- サイドバーTOC折りたたみボタン位置修正（ヘッダーとの重複回避）
 - Links to `../learning-resources.html`
 - WCAG 2.1 AA accessible color (#dc7600)
 - Hover effects with scale transform
