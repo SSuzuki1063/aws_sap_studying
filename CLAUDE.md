@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 170+ HTML resources, 194 quiz questions, 13 categories |
+| **Content** | 216+ HTML resources, 194 quiz questions, 13 categories |
 
 ## ⚠️ CRITICAL RULES
 
@@ -95,10 +95,22 @@ index.html          ← Shell page (HTML structure only)
 ### Shared CSS Files
 
 Located in `css/` directory:
-- `variables.css` - CSS custom properties
+- `variables.css` - CSS custom properties (z-index layers, colors, spacing)
 - `common.css` - Shared UI components (header, breadcrumbs, scroll-to-top)
 - `layout.css` - Layout utilities and grid
 - `responsive.css` - Media queries and mobile styles
+
+### Sidebar TOC Z-Index Hierarchy
+
+When adding sidebar TOC to pages, ensure proper z-index layering to avoid header overlap:
+
+| Element | Z-Index | Notes |
+|---------|---------|-------|
+| Header | `1002` (`--z-header`) | Fixed top navigation |
+| Sidebar TOC Toggle | `1003` | Must be above header |
+| Sidebar TOC | `1000` | Below header, uses `top: 60px` |
+
+**Important**: Sidebar TOC must use `top: 60px` (header height) and `height: calc(100vh - 60px)` to avoid overlapping with the fixed header.
 
 ## Common Workflows
 
@@ -163,6 +175,7 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 | `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
 | `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC |
 | `scripts/html_management/add_home_button.py` | Add 「リソース集に戻る」button |
+| `scripts/html_management/fix_html_issues.py` | Fix HTML entity escaping & sidebar TOC positioning |
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
 | `scripts/ci/validate_html_w3c.py` | W3C HTML validation |
 | `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
