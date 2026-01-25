@@ -26,6 +26,10 @@ class HTMLFixer:
         """HTMLエンティティエスケープ問題を修正"""
         # &lt;!-- ページ固有CSSファイル --&gt; を <!-- ページ固有CSSファイル --> に変換
         content = content.replace('&lt;!-- ページ固有CSSファイル --&gt;', '<!-- ページ固有CSSファイル -->')
+
+        # 不要なエスケープ済みコメントを削除（Webページ上に表示されてしまうため）
+        content = content.replace('  &lt;!-- 共通CSSファイル（データ駆動アーキテクチャ） --&gt;\n', '')
+
         return content
 
     def fix_sidebar_toc_style(self, content: str) -> str:
