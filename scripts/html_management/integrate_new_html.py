@@ -135,6 +135,81 @@ class HTMLIntegrator:
 <link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
 <link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>'''
 
+    # 固定ヘッダーHTML（共有CSSのスタイルを使用）
+    FIXED_HEADER_HTML = '''<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
+      自己紹介
+     </a>
+<a href="/aws_sap_studying/learning-resources.html">
+      学習リソース集
+     </a>
+<a href="/aws_sap_studying/knowledge-base.html">
+      ナレッジベース
+     </a>
+<a href="/aws_sap_studying/quiz.html">
+      クイズ
+     </a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>'''
+
+    # 固定ヘッダー機能のJavaScript
+    FIXED_HEADER_JS = '''
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>'''
+
     def __init__(self, source_dir: str = "new_html", dry_run: bool = False):
         self.source_dir = Path(source_dir)
         self.dry_run = dry_run
@@ -221,15 +296,57 @@ class HTMLIntegrator:
             if '/aws_sap_studying/css/' in content:
                 return False  # 既に追加済み
 
-            # <head>タグの直後に共有CSSリンクを挿入
-            if '<head>' in content:
-                content = content.replace('<head>', f'<head>\n{self.SHARED_CSS_LINKS}', 1)
+            # </title>の後に共有CSSリンクを挿入
+            if '</title>' in content:
+                content = content.replace('</title>', f'</title>\n{self.SHARED_CSS_LINKS}', 1)
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
                 return True
             return False
         except Exception as e:
             print(f"   ⚠️  CSS追加エラー: {e}")
+            return False
+
+    def add_fixed_header(self, file_path: Path) -> bool:
+        """HTMLファイルに固定ヘッダーを追加"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # 既に固定ヘッダーが含まれているかチェック
+            if 'fixed-nav-header' in content:
+                return False  # 既に追加済み
+
+            original_content = content
+
+            # <body>タグの直後に固定ヘッダーHTMLを挿入
+            body_pattern = r'(<body[^>]*>)'
+            content = re.sub(body_pattern, r'\1\n' + self.FIXED_HEADER_HTML, content, count=1)
+
+            # bodyにpadding-topを追加（インラインスタイルがある場合）
+            body_style_pattern = r'(body\s*\{[^}]*)'
+            def add_padding(match):
+                body_style = match.group(1)
+                if 'padding-top:' in body_style:
+                    body_style = re.sub(r'padding-top:\s*\d+px', 'padding-top: 70px', body_style)
+                elif 'padding:' in body_style:
+                    body_style = body_style.rstrip() + '\n            padding-top: 70px;'
+                else:
+                    body_style = body_style.rstrip() + '\n            padding-top: 70px;'
+                return body_style
+            content = re.sub(body_style_pattern, add_padding, content)
+
+            # JavaScriptを</body>の直前に挿入
+            if 'scrollToTopBtn' not in content:
+                content = content.replace('</body>', f'{self.FIXED_HEADER_JS}\n</body>', 1)
+
+            if content != original_content:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                return True
+            return False
+        except Exception as e:
+            print(f"   ⚠️  固定ヘッダー追加エラー: {e}")
             return False
 
     def generate_snippets(self, title: str, category: str, filename: str, section: str) -> None:
@@ -284,6 +401,10 @@ class HTMLIntegrator:
             # 共有CSSリンクを追加
             if self.add_shared_css(dest_file):
                 print(f"   🎨 共有CSS追加完了")
+
+            # 固定ヘッダーを追加
+            if self.add_fixed_header(dest_file):
+                print(f"   📌 固定ヘッダー追加完了")
         else:
             print(f"   [DRY RUN] 移動: {source.name} → {category}/")
 

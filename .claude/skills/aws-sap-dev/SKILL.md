@@ -38,7 +38,7 @@ This is the primary workflow for adding new AWS learning content to the reposito
    ```
 
    This orchestration script automatically runs in sequence:
-   - `integrate_new_html.py` - Categorizes, moves files, **adds shared CSS links**, and **generates code snippets**
+   - `integrate_new_html.py` - Categorizes, moves files, **adds shared CSS links**, **adds fixed header**, and **generates code snippets**
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
    - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
    - `add_home_button.py` - Adds **「リソース集に戻る」button** (右下固定フローティングボタン)
@@ -46,6 +46,7 @@ This is the primary workflow for adding new AWS learning content to the reposito
 
    **New Features (2026-01):**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
+   - ✅ **Fixed header auto-added**: Fixed navigation header with logo and nav links
    - ✅ **Code snippets generated**: Copy-paste ready snippets for data.js and index.js are printed at the end
    - ✅ **Return button auto-added**: 「リソース集に戻る」button is automatically added to all resources
    - ✅ **Prev/Next navigation**: Collapsible button (`▲ 1/19`) that doesn't block content
