@@ -180,6 +180,8 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
 | `scripts/ci/validate_html_w3c.py` | W3C HTML validation |
 | `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
+| `scripts/accessibility/check_heading_hierarchy.py` | Heading hierarchy (h1→h2→h3) check |
+| `scripts/accessibility/fix_heading_hierarchy.py` | Auto-fix heading hierarchy skips |
 
 ## Directory Structure
 
@@ -231,11 +233,19 @@ python3 server.py                                      # Local test
 python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js
 python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C validation
 python3 scripts/accessibility/check_contrast_ratio.py  # Color contrast
+python3 scripts/accessibility/check_heading_hierarchy.py  # Heading hierarchy
 node -c quiz-data-extended.js data.js render.js index.js  # JS syntax
 
 # Verify CSS paths (should return 0 incorrect)
 grep -r 'href="/css/' --include="*.html" | wc -l
 ```
+
+## Available Skills
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `aws-sap-dev` | `/skill aws-sap-dev` | HTML resource integration (categorization → breadcrumbs → TOC → data updates) |
+| `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 
 ## Detailed Documentation
 
@@ -248,4 +258,5 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 | CI/CD Pipeline | `docs/CI_CD_GUIDE.md` |
 | Accessibility | `docs/WCAG21_GUIDELINES.md` |
 | Development Rules | `.claude/claude_rules.json` |
-| Skill Details | `.claude/skills/aws-sap-dev/SKILL.md` |
+| AWS SAP Skill | `.claude/skills/aws-sap-dev/SKILL.md` |
+| WCAG Skill | `.claude/skills/wcag-accessibility/SKILL.md` |
