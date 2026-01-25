@@ -18,6 +18,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         # URLデコード
         self.path = unquote(self.path)
+
+        # GitHub Pages用パス(/aws_sap_studying/)をローカル用にリダイレクト
+        if self.path.startswith('/aws_sap_studying/'):
+            self.path = self.path[len('/aws_sap_studying'):]
+
         print(f"リクエスト: {self.path}")
         super().do_GET()
 

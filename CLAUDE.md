@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 216+ HTML resources, 194 quiz questions, 13 categories |
+| **Content** | 220+ HTML resources, 194 quiz questions, 13 categories |
 
 ## ⚠️ CRITICAL RULES
 

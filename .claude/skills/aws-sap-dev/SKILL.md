@@ -10,7 +10,7 @@ description: Development and deployment workflows for AWS SAP learning resource 
 This skill provides guided workflows for developing and deploying learning resources for the AWS Solutions Architect Professional (SAP) exam study repository.
 
 **Live Site:** https://ssuzuki1063.github.io/aws_sap_studying/
-**Current Stats:** 196+ HTML resources, 194 quiz questions across 13 categories
+**Current Stats:** 220+ HTML resources, 194 quiz questions across 13 categories
 **Architecture:** Data-driven (data.js + render.js + index.js)
 
 ## Core Workflows
