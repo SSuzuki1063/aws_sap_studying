@@ -271,6 +271,87 @@ grep -E "color:\s*#[Ff]{2}9{2}0{2}" *.css
 
 ---
 
+## NG-006: 色相衝突（Hue Clash）
+
+### 概要
+
+高彩度・異なる色相の背景色が大きな面積で隣接し、認知的な違和感・疲労・意味誤認を引き起こすパターン。
+
+詳細は `hue-clash-rules.md` を参照。
+
+### 発生条件
+
+1. 高彩度の背景色を広い面積で使用
+2. 直下または直上に異なる色相の高彩度背景が隣接
+3. 色の切り替えに構造情報（見出し・ラベル）がない
+4. 警告色（赤系）を装飾目的で使用
+
+### 関連WCAG基準
+
+- **1.4.1 色の使用** - 色だけに意味を依存しない
+- **1.3.1 情報及び関係性** - 視覚的手がかりに依存しない構造理解
+
+### Before（NG）
+
+```html
+<!-- 高彩度の赤いヒーロー直下に高彩度の青いセクション -->
+<section style="background: #DC143C; padding: 60px;">
+    <h1 style="color: #fff;">AWS Lambda完全ガイド</h1>
+</section>
+<section style="background: #1E90FF; padding: 40px;">
+    <h2 style="color: #fff;">基本概念</h2>
+    <p>説明内容...</p>
+</section>
+```
+
+**問題点：**
+- 赤 × 青の強い色相衝突
+- 色の切り替えが装飾的で意味説明がない
+- 技術解説なのに警告色（赤）をヒーローに使用
+
+### After（OK）
+
+```html
+<!-- パターンA: 同系色での明度差 -->
+<section style="background: #232F3E; padding: 60px;">
+    <h1 style="color: #fff;">AWS Lambda完全ガイド</h1>
+</section>
+<section style="background: #374151; padding: 40px;">
+    <h2 style="color: #e5e7eb;">基本概念</h2>
+    <p style="color: #e5e7eb;">説明内容...</p>
+</section>
+
+<!-- パターンB: 中立色背景 + アクセント -->
+<section style="background: #232F3E; padding: 60px;">
+    <h1 style="color: #fff;">AWS Lambda完全ガイド</h1>
+</section>
+<section style="background: #ffffff; padding: 40px;">
+    <h2 style="color: #1f2937; border-left: 4px solid #dc7600;">基本概念</h2>
+    <p style="color: #374151;">説明内容...</p>
+</section>
+```
+
+### 検出ルール
+
+自動検出は困難。手動レビュー時に以下を確認：
+
+1. 隣接セクションの背景色の色相差
+2. 高彩度（鮮やかな）背景の使用有無
+3. 色の切り替え箇所に構造情報があるか
+4. 赤系の色が警告以外で使われていないか
+
+### Yes/No チェックリスト
+
+| # | チェック項目 | Yes→PASS / No→NG |
+|---|-------------|-----------------|
+| Q1 | 高彩度背景が大面積で隣接していないか？ | |
+| Q2 | 色相切り替えは意味的な区切りと一致しているか？ | |
+| Q3 | 色の切り替えに構造情報が併記されているか？ | |
+| Q4 | 赤系が装飾目的で使用されていないか？ | |
+| Q5 | 色相衝突で文脈が混在して見えないか？ | |
+
+---
+
 ## 検出スクリプト一覧
 
 | NGパターン | 自動検出 | スクリプト/方法 |
@@ -280,6 +361,7 @@ grep -E "color:\s*#[Ff]{2}9{2}0{2}" *.css
 | NG-003 | 可能 | grep + CSS解析 |
 | NG-004 | 可能 | `check_contrast_ratio.py` |
 | NG-005 | 可能 | grep `#FF9900` |
+| NG-006 | 不可 | 手動レビュー（hue-clash-rules.md参照） |
 
 ---
 
