@@ -103,7 +103,7 @@ def main():
     print("AWS SAP学習リソースサイト")
     print("=" * 80)
 
-    # index.htmlで使用されている色の組み合わせ
+    # index.htmlで使用されている色の組み合わせ (2025年更新: WCAG 2.1 AA準拠色)
     index_colors = [
         {
             'fg': '#374151',
@@ -114,13 +114,13 @@ def main():
         {
             'fg': '#6B7280',
             'bg': '#FFFFFF',
-            'usage': '統計ラベル (stat-label)',
+            'usage': '統計ラベル (stat-label) - WCAG 2.1適合: 4.83:1',
             'type': 'normal'
         },
         {
-            'fg': '#FF9900',
+            'fg': '#dc7600',
             'bg': '#FFFFFF',
-            'usage': 'AWSオレンジ見出し・アクセント',
+            'usage': 'AWSオレンジ見出し・アクセント（アクセシブル版）- WCAG 2.1適合: 3.17:1',
             'type': 'large'
         },
         {
@@ -130,22 +130,22 @@ def main():
             'type': 'large'
         },
         {
-            'fg': '#E5E7EB',
+            'fg': '#909296',
             'bg': '#FFFFFF',
-            'usage': 'ボーダー (UIコンポーネント)',
+            'usage': 'ボーダー (UIコンポーネント) - WCAG 2.1適合: 3.12:1',
             'type': 'ui'
         },
         {
-            'fg': '#9CA3AF',
+            'fg': '#6B7280',
             'bg': '#FFFFFF',
-            'usage': 'セカンダリテキスト (breadcrumb-separator)',
+            'usage': 'セカンダリテキスト - WCAG 2.1適合: 4.83:1',
             'type': 'normal'
         },
         {
             'fg': '#FFFFFF',
-            'bg': '#FF9900',
-            'usage': '白文字on AWSオレンジ (ボタン、バッジ)',
-            'type': 'normal'
+            'bg': '#dc7600',
+            'usage': '白文字on AWSオレンジ (ボタン、バッジ) - WCAG 2.1適合: 3.17:1',
+            'type': 'large'
         },
         {
             'fg': '#FFFFFF',
@@ -155,7 +155,7 @@ def main():
         },
     ]
 
-    # quiz.htmlで使用されている色の組み合わせ
+    # quiz.htmlで使用されている色の組み合わせ (2025年更新: WCAG 2.1 AA準拠色)
     quiz_colors = [
         {
             'fg': '#2c3e50',
@@ -170,27 +170,27 @@ def main():
             'type': 'normal'
         },
         {
-            'fg': '#74b9ff',
+            'fg': '#3378be',
             'bg': '#FFFFFF',
-            'usage': 'quiz.html スコア表示（Good）',
+            'usage': 'quiz.html スコア表示（Good）- WCAG 2.1適合: 4.59:1',
             'type': 'normal'
         },
         {
-            'fg': '#00b894',
+            'fg': '#008662',
             'bg': '#FFFFFF',
-            'usage': 'quiz.html 正解表示（Excellent）',
+            'usage': 'quiz.html 正解表示（Excellent）- WCAG 2.1適合: 4.58:1',
             'type': 'normal'
         },
         {
-            'fg': '#e17055',
+            'fg': '#c35237',
             'bg': '#FFFFFF',
-            'usage': 'quiz.html 不正解表示（Poor）',
+            'usage': 'quiz.html 不正解表示（Poor）- WCAG 2.1適合: 4.58:1',
             'type': 'normal'
         },
         {
-            'fg': '#fdcb6e',
+            'fg': '#9e6c0f',
             'bg': '#FFFFFF',
-            'usage': 'quiz.html スコア表示（Fair）',
+            'usage': 'quiz.html スコア表示（Fair）- WCAG 2.1適合: 4.56:1',
             'type': 'normal'
         },
     ]

@@ -223,7 +223,16 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 | Secondary Text | `#6B7280` | Labels, helpers | 4.83:1 ✅ |
 | Border | `#909296` | Borders, UI components | 3.12:1 ✅ |
 
-⚠️ Original AWS Orange `#FF9900` is NOT accessible for normal text—use `#dc7600` instead.
+### Color Usage Rules
+
+⚠️ **Original AWS Orange `#FF9900`** is NOT accessible for normal text—use `#dc7600` instead.
+
+⚠️ **同系色背景×同系色文字は禁止**（NG-007）:
+- ❌ 薄緑背景に緑文字、薄紫背景に紫文字
+- ✅ 本文テキストは常に無彩色（`#374151`, `#1f2937`）を使用
+- ✅ テーマカラーは背景・枠線・アイコンのみに限定
+
+詳細は `.claude/skills/wcag-accessibility/SKILL.md` を参照。
 
 ## Pre-Commit Checklist
 
