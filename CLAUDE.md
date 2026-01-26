@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 220+ HTML resources, 194 quiz questions, 13 categories |
+| **Content** | 223 HTML resources, 194 quiz questions, 13 categories |
 
 ## ⚠️ CRITICAL RULES
 
@@ -231,6 +231,11 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 - ❌ 薄緑背景に緑文字、薄紫背景に紫文字
 - ✅ 本文テキストは常に無彩色（`#374151`, `#1f2937`）を使用
 - ✅ テーマカラーは背景・枠線・アイコンのみに限定
+
+⚠️ **同列情報の非対称レイアウトは禁止**（NG-008）:
+- ❌ 4要素を3+1に分割（下段が「余り」に見える）
+- ✅ 同列要素は均等グリッド（2×2, 3×2 等）で配置
+- ✅ 非対称を使う場合は見出し・ラベルで意味差を明示
 
 詳細は `.claude/skills/wcag-accessibility/SKILL.md` を参照。
 
