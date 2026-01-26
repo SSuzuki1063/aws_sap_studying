@@ -503,6 +503,173 @@ python3 scripts/accessibility/check_contrast_ratio.py path/to/file.html
 
 ---
 
+## NG-008: 同列情報の非対称レイアウト（WCAG-LAYOUT-STRUCT-001）
+
+### 概要
+
+意味的に同列な情報要素が、レイアウト上で非対称（例：3:1、3+1）に配置されることで、情報の重要度・主従関係について誤った印象を与えるパターン。
+
+### 関連WCAG基準
+
+- **1.3.1 情報及び関係性** - 視覚的表現に依存しない構造理解
+- **2.4.6 見出し及びラベル** - 主題または目的を説明する見出し・ラベル
+
+### 定義：「非対称レイアウト」とは
+
+| 条件 | 説明 |
+|------|------|
+| 3:1 配置 | 上段3要素、下段1要素（下段が「余り」に見える） |
+| 非均等グリッド | 同列要素なのにサイズ・余白が異なる |
+| 視覚的孤立 | 1要素だけ別位置に配置され、補足・例外に見える |
+
+---
+
+### 判定ルール（Yes / No）
+
+| # | チェック項目 | 判定 |
+|---|-------------|------|
+| Q1 | 同一セクション内で意味的に同列な情報要素は、視覚的にも同列（同サイズ・同カラム構造）で配置されているか？ | Yes=OK / No=NG |
+| Q2 | 3:1、3+1 などの非対称グリッドを使用している場合、その非対称性に明確な意味的理由（主従・補足・概念/具体の差）が明示されているか？ | Yes=OK / No=NG |
+| Q3 | 非対称レイアウトによって、「一部の情報が補足・重要度が低い」と誤認される可能性はないか？ | Yes（誤認なし）=OK / No=NG |
+| Q4 | 視覚的な配置に依存せず、見出し・ラベル・説明文のみで情報の関係性が理解可能か？ | Yes=OK / No=NG |
+
+---
+
+### NG パターン（実例）
+
+| パターン | 問題点 |
+|---------|--------|
+| 4構成要素を上段3+下段1に配置 | 下段要素が「余り」「例外」に見える |
+| 下段要素に意味ラベルなし | 「補足」「裏側」「仕組み」等の説明がない |
+| 同列カードのサイズ不揃い | 小さいカードが重要度低く見える |
+
+### Before（NG）
+
+```html
+<!-- NG: 4つの同列要素を3+1で配置 -->
+<section class="features">
+    <h2>サービスの4つの柱</h2>
+    <div class="grid-3">
+        <div class="card">柱1：可用性</div>
+        <div class="card">柱2：信頼性</div>
+        <div class="card">柱3：セキュリティ</div>
+    </div>
+    <div class="grid-1">
+        <!-- 「柱4」が視覚的に「余り」「補足」に見える -->
+        <div class="card">柱4：コスト最適化</div>
+    </div>
+</section>
+```
+
+### After（OK）
+
+**パターン A：同列要素は均等配置**
+
+```html
+<!-- OK: 2×2グリッドで均等配置 -->
+<section class="features">
+    <h2>サービスの4つの柱</h2>
+    <div class="grid-2x2">
+        <div class="card">柱1：可用性</div>
+        <div class="card">柱2：信頼性</div>
+        <div class="card">柱3：セキュリティ</div>
+        <div class="card">柱4：コスト最適化</div>
+    </div>
+</section>
+```
+
+**パターン B：非対称だが意味が明示されている**
+
+```html
+<!-- OK: 非対称だが意味的な差を明示 -->
+<section class="features">
+    <h2>サービスの4つの柱</h2>
+    <div class="grid-3">
+        <div class="card">柱1：可用性</div>
+        <div class="card">柱2：信頼性</div>
+        <div class="card">柱3：セキュリティ</div>
+    </div>
+    <!-- 明示的なラベルで非対称の意味を説明 -->
+    <div class="foundation-section">
+        <h3>すべてを支える共通原理</h3>
+        <div class="card card-foundation">柱4：コスト最適化</div>
+    </div>
+</section>
+```
+
+---
+
+### OK パターン（推奨設計）
+
+| パターン | 説明 |
+|---------|------|
+| 均等グリッド | 同列要素は必ず同サイズ・同カラム構造 |
+| 2×2、3×2 等 | 行と列が揃った配置 |
+| 意味差の明示 | 非対称を使う場合は見出し・ラベルで理由を説明 |
+| 視覚的差別化 | 非対称要素は背景色・サイズ・余白で「意図的」と分かる差を付ける |
+
+---
+
+### 推奨設計（再発防止）
+
+```css
+/* 同列要素は常に均等グリッド */
+.equal-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+/* 2×2 グリッド */
+.equal-grid.grid-2x2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* 4カラム（大画面）→ 2カラム（中画面）→ 1カラム（小画面） */
+.equal-grid.grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+    .equal-grid.grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .equal-grid.grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 非対称を使う場合は視覚的に「意図的」と分かる差をつける */
+.foundation-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+}
+
+.foundation-section h3 {
+    color: #64748b;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+}
+```
+
+---
+
+### 検出方法
+
+| 方法 | 詳細 |
+|------|------|
+| 自動化 | 不可（意味的判断が必要） |
+| 手動レビュー | 「同列要素が均等に配置されているか」を目視確認 |
+| チェックリスト | Q1〜Q4 の Yes/No 判定を実施 |
+
+---
+
 ## 検出スクリプト一覧
 
 | NGパターン | 自動検出 | スクリプト/方法 |
@@ -514,6 +681,7 @@ python3 scripts/accessibility/check_contrast_ratio.py path/to/file.html
 | NG-005 | 可能 | grep `#FF9900` |
 | NG-006 | 不可 | 手動レビュー（hue-clash-rules.md参照） |
 | NG-007 | 部分的 | `check_contrast_ratio.py` + 手動目視確認 |
+| NG-008 | 不可 | 手動レビュー（Q1〜Q4チェックリスト） |
 
 ---
 
@@ -539,6 +707,8 @@ python3 scripts/accessibility/check_contrast_ratio.py path/to/file.html
 - [ ] AWS公式オレンジを通常テキストに使用していないか？
 - [ ] 同系色の背景と文字色を組み合わせていないか？（NG-007）
 - [ ] 本文テキストはニュートラル色（無彩色）を使用しているか？
+- [ ] 同列要素が均等なグリッドで配置されているか？（NG-008）
+- [ ] 非対称レイアウトを使う場合、意味的な理由が見出し・ラベルで明示されているか？（NG-008）
 
 ### 3. プリコミットフック
 
