@@ -137,6 +137,10 @@ def format_message(msg):
     """
     W3Cエラーメッセージをフォーマット
     """
+    # 文字列が直接渡された場合の処理
+    if isinstance(msg, str):
+        return f"  {msg}"
+
     line = msg.get('lastLine', '?')
     col = msg.get('lastColumn', '?')
     message = msg.get('message', 'Unknown error')
