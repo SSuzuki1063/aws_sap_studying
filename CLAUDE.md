@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 223 HTML resources, 194 quiz questions, 13 categories |
+| **Content** | 220+ HTML resources, 194 quiz questions, 13 categories |
 
 ## ⚠️ CRITICAL RULES
 
@@ -33,6 +33,8 @@ When adding HTML resources, you **MUST** update **TWO** files:
 | `data.js` | Add to `section.resources` array, update counts | Resource won't appear in navigation |
 | `index.js` | Add to `searchData` array | Resource won't appear in search |
 
+**Verification:** Run `python3 scripts/ci/check_data_integrity.py` to detect sync issues.
+
 ### 3. GitHub Pages Path Requirement
 
 All CSS/asset paths **MUST** include `/aws_sap_studying/` prefix:
@@ -49,13 +51,15 @@ All CSS/asset paths **MUST** include `/aws_sap_studying/` prefix:
 
 All HTML **MUST** pass https://validator.w3.org/ before committing.
 
+Automated check: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
+
 ### 5. Immediate Push After Commit
 
 ```bash
 git add . && git commit -m "feat: description" && git push origin gh-pages
 ```
 
-Always push immediately—commits without push don't deploy.
+Always push immediately—commits without push don't deploy. CI runs on PRs to `gh-pages` and `master` branches.
 
 ## Quick Start
 
@@ -67,7 +71,9 @@ uv pip install beautifulsoup4 lxml html5lib requests
 # 2. Start dev server
 python3 server.py  # → http://localhost:8080/
 
-# 3. Make changes, then deploy
+# 3. Make changes, run checks, then deploy
+python3 scripts/ci/check_data_integrity.py    # Verify data.js ⟷ index.js sync
+python3 scripts/ci/validate_html_w3c.py --pr-mode  # W3C validation
 git add . && git commit -m "feat: description" && git push origin gh-pages
 ```
 
@@ -260,6 +266,21 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 |-------|-------|---------|
 | `aws-sap-dev` | `/skill aws-sap-dev` | HTML resource integration (categorization → breadcrumbs → TOC → data updates) |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
+| `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
+
+## CI/CD Pipeline
+
+GitHub Actions runs on PRs to `gh-pages` and `master` branches (`.github/workflows/pr-quality-check.yml`):
+
+| Check | Blocking | Command |
+|-------|----------|---------|
+| Data Integrity | ✅ Yes | `python3 scripts/ci/check_data_integrity.py` |
+| W3C HTML Validation | ✅ Yes | `python3 scripts/ci/validate_html_w3c.py --pr-mode` |
+| Color Contrast | ✅ Yes | `python3 scripts/accessibility/check_contrast_ratio.py` |
+| JavaScript Syntax | ✅ Yes | `node -c quiz-data-extended.js data.js render.js index.js` |
+| Heading Hierarchy | ⚠️ Warning | `python3 scripts/accessibility/check_heading_hierarchy.py` |
+| Internal Links | ⚠️ Warning | `python3 scripts/ci/check_internal_links.py` |
+| File Naming | ⚠️ Warning | `python3 scripts/ci/check_file_naming.py` |
 
 ## Detailed Documentation
 
@@ -274,3 +295,4 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 | Development Rules | `.claude/claude_rules.json` |
 | AWS SAP Skill | `.claude/skills/aws-sap-dev/SKILL.md` |
 | WCAG Skill | `.claude/skills/wcag-accessibility/SKILL.md` |
+| Knowledge Organizer Skill | `.claude/skills/aws-knowledge-organizer/SKILL.md` |
