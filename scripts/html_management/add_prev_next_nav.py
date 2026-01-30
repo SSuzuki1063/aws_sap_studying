@@ -422,43 +422,72 @@ def remove_bottom_nav(content: str) -> str:
     return content
 
 
+def find_container_close_position(content: str) -> Optional[int]:
+    """
+    <div class="container"> の対応する閉じタグの位置を見つける
+
+    開始・終了タグをカウントして対応する </div> を見つける
+
+    Returns:
+        container閉じタグの開始位置、見つからない場合はNone
+    """
+    # <div class="container"> を探す（fixed-nav-container は除外）
+    container_pattern = re.compile(r'<div\s+class="container">')
+    container_match = container_pattern.search(content)
+
+    if not container_match:
+        return None
+
+    start_pos = container_match.end()  # <div class="container"> の終了位置から開始
+    depth = 1  # 既に1つの div が開いている
+    pos = start_pos
+
+    # <div と </div> をすべて見つける
+    div_open_pattern = re.compile(r'<div\b')
+    div_close_pattern = re.compile(r'</div>')
+
+    while depth > 0 and pos < len(content):
+        # 次の <div または </div> を探す
+        open_match = div_open_pattern.search(content, pos)
+        close_match = div_close_pattern.search(content, pos)
+
+        if close_match is None:
+            # 閉じタグがない場合は終了
+            break
+
+        if open_match and open_match.start() < close_match.start():
+            # 開始タグが先にある
+            depth += 1
+            pos = open_match.end()
+        else:
+            # 閉じタグが先にある
+            depth -= 1
+            if depth == 0:
+                # 対応する閉じタグを見つけた
+                return close_match.start()
+            pos = close_match.end()
+
+    return None
+
+
 def find_bottom_nav_insertion_point(content: str) -> Optional[int]:
     """
-    下部ナビの挿入位置を検出（正規表現ベース）
+    下部ナビの挿入位置を検出
 
     優先順位:
-    1. ホームボタン（「リソース集に戻る」）の直前
-    2. 折りたたみ式ナビ（prev-next-nav-container）の直前
-    3. フォールバック: </body>の前
+    1. .container閉じタグの直前（資料コンテンツの幅に揃えるため）
+       → div開始/終了タグをカウントして正確に検出
+    2. フォールバック: </body>の前
 
     Returns:
         挿入位置のインデックス、見つからない場合はNone
     """
-    # 1. ホームボタン（「リソース集に戻る」）を探す
-    # パターン: <button ... 🏠 リソース集に戻る ... </button>
-    home_button_match = re.search(
-        r'<button[^>]*onclick="window\.location\.href=\'\.\./(learning-resources|index)\.html\'"[^>]*>',
-        content
-    )
-    if home_button_match:
-        return home_button_match.start()
+    # 1. <div class="container"> の対応する閉じタグを探す
+    container_close = find_container_close_position(content)
+    if container_close is not None:
+        return container_close
 
-    # 別パターン: 🏠 リソース集に戻る テキストを含むbutton
-    home_text_pos = content.find('🏠 リソース集に戻る')
-    if home_text_pos != -1:
-        # このテキストの前にある<buttonタグを探す（ボタンHTMLが長いので広範囲で検索）
-        search_start = max(0, home_text_pos - 1200)
-        button_search = content[search_start:home_text_pos]
-        last_button = button_search.rfind('<button')
-        if last_button != -1:
-            return search_start + last_button
-
-    # 2. 折りたたみ式ナビの直前
-    collapsible_nav = content.find('<!-- 前後ナビゲーション（折りたたみ可能） -->')
-    if collapsible_nav != -1:
-        return collapsible_nav
-
-    # 3. フォールバック: </body>の前
+    # 2. フォールバック: </body>の前
     body_close = content.rfind('</body>')
     if body_close != -1:
         return body_close
