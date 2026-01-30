@@ -2,11 +2,15 @@
 """
 AWSリソースページに前後ナビゲーション（← 前へ / 次へ →）ボタンを追加するスクリプト
 
-カテゴリ内のリソース間を移動できる固定ボトムバーを追加します。
+カテゴリ内のリソース間を移動できるナビゲーションを追加します。
+- 折りたたみ式ナビ: 右下固定、補助的なナビゲーション
+- 下部ナビ: ページ下部に配置、メインのナビゲーション（--add-bottom-nav で追加）
 
 使用方法:
-    python3 scripts/html_management/add_prev_next_nav.py --dry-run  # プレビューのみ
-    python3 scripts/html_management/add_prev_next_nav.py            # 実際に実行
+    python3 scripts/html_management/add_prev_next_nav.py --dry-run              # プレビューのみ
+    python3 scripts/html_management/add_prev_next_nav.py                        # 折りたたみ式ナビを追加
+    python3 scripts/html_management/add_prev_next_nav.py --add-bottom-nav       # 下部ナビも追加
+    python3 scripts/html_management/add_prev_next_nav.py --bottom-nav-only      # 下部ナビのみ追加
 """
 
 import os
@@ -345,6 +349,191 @@ document.addEventListener('click', function(e) {{
     return nav_html
 
 
+def generate_bottom_nav_html(
+    prev_path: Optional[str],
+    next_path: Optional[str],
+    current_index: int,
+    total_count: int,
+    from_file: str
+) -> str:
+    """
+    ページ下部ナビゲーションのHTMLを生成
+
+    Args:
+        prev_path: 前のリソースパス（Noneの場合はdisabled）
+        next_path: 次のリソースパス（Noneの場合はdisabled）
+        current_index: 現在のリソース番号（1始まり）
+        total_count: カテゴリ内の総リソース数
+        from_file: 現在のファイルパス（相対パス計算用）
+
+    Returns:
+        ナビゲーションHTML文字列
+    """
+    # 相対パスを計算
+    prev_href = calculate_relative_path(from_file, prev_path) if prev_path else "#"
+    next_href = calculate_relative_path(from_file, next_path) if next_path else "#"
+
+    # disabledクラス
+    prev_disabled = ' disabled' if not prev_path else ''
+    next_disabled = ' disabled' if not next_path else ''
+
+    # aria-disabled属性
+    prev_aria = ' aria-disabled="true"' if not prev_path else ''
+    next_aria = ' aria-disabled="true"' if not next_path else ''
+
+    # tabindex（無効時はフォーカス不可）
+    prev_tabindex = ' tabindex="-1"' if not prev_path else ''
+    next_tabindex = ' tabindex="-1"' if not next_path else ''
+
+    nav_html = f'''<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="{prev_href}" class="page-bottom-nav-link prev{prev_disabled}"{prev_aria}{prev_tabindex} aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">{current_index}</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">{total_count}</span>
+    </div>
+    <a href="{next_href}" class="page-bottom-nav-link next{next_disabled}"{next_aria}{next_tabindex} aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+'''
+    return nav_html
+
+
+def has_bottom_nav(content: str) -> bool:
+    """HTMLコンテンツに既に下部ナビゲーション（navタグ）があるかチェック"""
+    # CSSリンクではなく、実際のnavタグをチェック
+    return '<nav class="page-bottom-nav"' in content
+
+
+def remove_bottom_nav(content: str) -> str:
+    """
+    下部ナビゲーションをHTMLコンテンツから削除
+    """
+    # <!-- ページ下部ナビゲーション --> から </nav> まで
+    bottom_nav_pattern = r'<!-- ページ下部ナビゲーション -->\s*<nav class="page-bottom-nav".*?</nav>\s*'
+    content = re.sub(bottom_nav_pattern, '', content, flags=re.DOTALL)
+    return content
+
+
+def find_bottom_nav_insertion_point(content: str) -> Optional[int]:
+    """
+    下部ナビの挿入位置を検出（正規表現ベース）
+
+    優先順位:
+    1. ホームボタン（「リソース集に戻る」）の直前
+    2. 折りたたみ式ナビ（prev-next-nav-container）の直前
+    3. フォールバック: </body>の前
+
+    Returns:
+        挿入位置のインデックス、見つからない場合はNone
+    """
+    # 1. ホームボタン（「リソース集に戻る」）を探す
+    # パターン: <button ... 🏠 リソース集に戻る ... </button>
+    home_button_match = re.search(
+        r'<button[^>]*onclick="window\.location\.href=\'\.\./(learning-resources|index)\.html\'"[^>]*>',
+        content
+    )
+    if home_button_match:
+        return home_button_match.start()
+
+    # 別パターン: 🏠 リソース集に戻る テキストを含むbutton
+    home_text_pos = content.find('🏠 リソース集に戻る')
+    if home_text_pos != -1:
+        # このテキストの前にある<buttonタグを探す（ボタンHTMLが長いので広範囲で検索）
+        search_start = max(0, home_text_pos - 1200)
+        button_search = content[search_start:home_text_pos]
+        last_button = button_search.rfind('<button')
+        if last_button != -1:
+            return search_start + last_button
+
+    # 2. 折りたたみ式ナビの直前
+    collapsible_nav = content.find('<!-- 前後ナビゲーション（折りたたみ可能） -->')
+    if collapsible_nav != -1:
+        return collapsible_nav
+
+    # 3. フォールバック: </body>の前
+    body_close = content.rfind('</body>')
+    if body_close != -1:
+        return body_close
+
+    return None
+
+
+def ensure_bottom_nav_css_link(content: str) -> str:
+    """
+    下部ナビ用CSSリンクを<head>に追加（未追加の場合のみ）
+
+    Args:
+        content: HTMLコンテンツ
+
+    Returns:
+        CSSリンクが追加されたHTMLコンテンツ
+    """
+    css_path = '/aws_sap_studying/css/components/page-bottom-nav.css'
+
+    # 既にリンクがある場合はスキップ
+    if css_path in content:
+        return content
+
+    # </head>の直前に追加
+    css_link = f'<link href="{css_path}" rel="stylesheet"/>'
+    head_close = content.find('</head>')
+
+    if head_close != -1:
+        content = content[:head_close] + css_link + '\n' + content[head_close:]
+
+    return content
+
+
+def add_bottom_nav_to_html(
+    content: str,
+    nav_html: str,
+    force_update: bool = False
+) -> Optional[str]:
+    """
+    HTMLコンテンツに下部ナビゲーションを追加
+
+    Args:
+        content: HTMLコンテンツ
+        nav_html: 追加するナビゲーションHTML
+        force_update: Trueの場合、既存のナビゲーションを削除して新しいものに置き換え
+    """
+    # force_updateの場合は既存の下部ナビを削除
+    if force_update and has_bottom_nav(content):
+        content = remove_bottom_nav(content)
+
+    # 既に下部ナビがある場合はスキップ
+    if has_bottom_nav(content):
+        return None
+
+    # 挿入位置を検出
+    insertion_point = find_bottom_nav_insertion_point(content)
+
+    if insertion_point is None:
+        return None
+
+    # CSSリンクを追加
+    content = ensure_bottom_nav_css_link(content)
+
+    # 挿入位置を再計算（CSSリンク追加で位置がずれる可能性）
+    insertion_point = find_bottom_nav_insertion_point(content)
+
+    if insertion_point is None:
+        return None
+
+    # ナビゲーションを挿入
+    content = content[:insertion_point] + nav_html + '\n' + content[insertion_point:]
+
+    return content
+
+
 def has_prev_next_nav(content: str) -> bool:
     """HTMLコンテンツに既に前後ナビゲーションがあるかチェック"""
     return 'prev-next-nav' in content or '前後ナビゲーション' in content
@@ -398,7 +587,9 @@ def process_html_file(
     repo_root: Path,
     category_resources: Dict[str, List[str]],
     dry_run: bool = False,
-    force_update: bool = False
+    force_update: bool = False,
+    add_bottom_nav: bool = False,
+    bottom_nav_only: bool = False
 ) -> Tuple[str, str]:
     """
     HTMLファイルに前後ナビゲーションを追加
@@ -409,6 +600,8 @@ def process_html_file(
         category_resources: カテゴリ -> リソースマッピング
         dry_run: Trueの場合は実際の変更を行わない
         force_update: Trueの場合は既存のナビゲーションを置き換え
+        add_bottom_nav: Trueの場合は下部ナビも追加
+        bottom_nav_only: Trueの場合は下部ナビのみ追加（折りたたみ式はスキップ）
 
     Returns:
         (status, message): 処理結果
@@ -419,12 +612,6 @@ def process_html_file(
 
         # 相対パスを計算
         rel_path = str(file_path.relative_to(repo_root))
-
-        # 既にナビゲーションがある場合
-        if has_prev_next_nav(content):
-            if not force_update:
-                return ('skipped', "既に前後ナビゲーションあり - スキップ（--force-updateで上書き可能）")
-            # force_updateの場合は続行（後で古いものを削除）
 
         # data.jsに登録されているかチェック
         category_id = get_category_for_file(rel_path, category_resources)
@@ -439,26 +626,58 @@ def process_html_file(
         if total == 0:
             return ('skipped', "カテゴリ内リソースなし - スキップ")
 
-        # ナビゲーションHTMLを生成
-        nav_html = generate_prev_next_nav_html(
-            prev_path, next_path, current_idx, total, rel_path
-        )
+        updated = False
+        messages = []
+        original_content = content
 
-        # ナビゲーションを追加（force_updateの場合は古いものを削除して置き換え）
-        updated_content = add_prev_next_nav_to_html(content, nav_html, force_update=force_update)
+        # 下部ナビの処理
+        if add_bottom_nav or bottom_nav_only:
+            if has_bottom_nav(content) and not force_update:
+                messages.append("下部ナビ既存 - スキップ")
+            else:
+                # 下部ナビHTMLを生成
+                bottom_html = generate_bottom_nav_html(
+                    prev_path, next_path, current_idx, total, rel_path
+                )
+                # 下部ナビを追加
+                new_content = add_bottom_nav_to_html(content, bottom_html, force_update=force_update)
+                if new_content:
+                    content = new_content
+                    updated = True
+                    action = "更新" if force_update and has_bottom_nav(original_content) else "追加"
+                    messages.append(f"下部ナビ{action}")
+                else:
+                    messages.append("下部ナビ挿入位置検出失敗")
 
-        if updated_content is None:
-            return ('error', "エラー: </body>タグが見つかりません")
+        # 折りたたみ式ナビの処理（bottom_nav_onlyでない場合）
+        if not bottom_nav_only:
+            if has_prev_next_nav(content) and not force_update:
+                messages.append("折りたたみナビ既存 - スキップ")
+            else:
+                # ナビゲーションHTMLを生成
+                nav_html = generate_prev_next_nav_html(
+                    prev_path, next_path, current_idx, total, rel_path
+                )
+                # ナビゲーションを追加
+                new_content = add_prev_next_nav_to_html(content, nav_html, force_update=force_update)
+                if new_content:
+                    content = new_content
+                    updated = True
+                    action = "更新" if force_update and has_prev_next_nav(original_content) else "追加"
+                    messages.append(f"折りたたみナビ{action}")
+                else:
+                    messages.append("折りたたみナビ: </body>タグなし")
+
+        if not updated:
+            return ('skipped', ", ".join(messages) if messages else "更新なし")
 
         # dry-runでない場合のみファイルを更新
         if not dry_run:
             with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(updated_content)
-            action = "更新" if force_update and has_prev_next_nav(content) else "追加"
-            return ('updated', f"前後ナビゲーション{action} ({current_idx}/{total})")
+                f.write(content)
+            return ('updated', f"{', '.join(messages)} ({current_idx}/{total})")
         else:
-            action = "更新予定" if force_update else "追加予定"
-            return ('updated', f"前後ナビゲーション{action} ({current_idx}/{total}, dry-run)")
+            return ('updated', f"{', '.join(messages)} ({current_idx}/{total}, dry-run)")
 
     except Exception as e:
         return ('error', f"エラー: {str(e)}")
@@ -504,6 +723,16 @@ def main():
         help='既存のナビゲーションを新しいバージョンに置き換え'
     )
     parser.add_argument(
+        '--add-bottom-nav',
+        action='store_true',
+        help='ページ下部ナビゲーションも追加（折りたたみ式と併用）'
+    )
+    parser.add_argument(
+        '--bottom-nav-only',
+        action='store_true',
+        help='ページ下部ナビゲーションのみ追加（折りたたみ式はスキップ）'
+    )
+    parser.add_argument(
         '--dir',
         type=str,
         default='.',
@@ -511,6 +740,10 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # bottom-nav-onlyが指定された場合、add-bottom-navも有効にする
+    if args.bottom_nav_only:
+        args.add_bottom_nav = True
 
     # リポジトリのルートディレクトリを取得
     repo_root = Path(args.dir).resolve()
@@ -524,6 +757,17 @@ def main():
     if args.force_update:
         print("=" * 70)
         print("FORCE UPDATE MODE - 既存のナビゲーションを新しいバージョンに置き換えます")
+        print("=" * 70)
+        print()
+
+    if args.bottom_nav_only:
+        print("=" * 70)
+        print("BOTTOM NAV ONLY MODE - 下部ナビのみ追加（折りたたみ式はスキップ）")
+        print("=" * 70)
+        print()
+    elif args.add_bottom_nav:
+        print("=" * 70)
+        print("ADD BOTTOM NAV MODE - 下部ナビも追加")
         print("=" * 70)
         print()
 
@@ -564,7 +808,10 @@ def main():
 
         status, message = process_html_file(
             file_path, repo_root, category_resources,
-            dry_run=args.dry_run, force_update=args.force_update
+            dry_run=args.dry_run,
+            force_update=args.force_update,
+            add_bottom_nav=args.add_bottom_nav,
+            bottom_nav_only=args.bottom_nav_only
         )
 
         if status == 'updated':
