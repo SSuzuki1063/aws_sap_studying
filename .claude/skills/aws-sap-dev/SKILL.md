@@ -42,14 +42,14 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - `add_breadcrumbs.py` - Adds breadcrumb navigation
    - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
    - `add_home_button.py` - Adds **「リソース集に戻る」button** (右下固定フローティングボタン)
-   - `add_prev_next_nav.py` - Adds **「← 前へ / 次へ →」collapsible button** (右下折りたたみナビゲーション)
+   - `add_prev_next_nav.py --bottom-nav-only` - Adds **「← 前のページ / 次のページ →」page bottom navigation** (ページ下部ナビゲーション)
 
    **New Features (2026-01):**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
    - ✅ **Fixed header auto-added**: Fixed navigation header with logo and nav links
    - ✅ **Code snippets generated**: Copy-paste ready snippets for data.js and index.js are printed at the end
    - ✅ **Return button auto-added**: 「リソース集に戻る」button is automatically added to all resources
-   - ✅ **Prev/Next navigation**: Collapsible button (`▲ 1/19`) that doesn't block content
+   - ✅ **Page bottom navigation**: Full-width navigation bar at page bottom with prev/next buttons and page counter (資料幅に揃えたページ下部ナビ)
 
 4. **Update data.js and index.js** (using generated snippets):
 
@@ -211,7 +211,7 @@ python3 scripts/html_management/integrate_resource_complete.py --source custom_h
 python3 scripts/html_management/integrate_resource_complete.py --verbose
 ```
 
-This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py` → `add_home_button.py` → `add_prev_next_nav.py`
+This chains: `integrate_new_html.py` → `add_breadcrumbs.py` → `add_sidebar_toc.py` → `add_home_button.py` → `add_prev_next_nav.py --bottom-nav-only`
 
 See [automation_workflow.md](references/automation_workflow.md) for comprehensive documentation.
 
@@ -286,27 +286,27 @@ Adds **「🏠 リソース集に戻る」button** (fixed bottom-right). Feature
 
 **Prev/Next Navigation Management:**
 ```bash
-# Add prev/next navigation to all resources
-python3 scripts/html_management/add_prev_next_nav.py
+# Add page bottom navigation to all resources (RECOMMENDED)
+python3 scripts/html_management/add_prev_next_nav.py --bottom-nav-only
 
 # Preview changes
-python3 scripts/html_management/add_prev_next_nav.py --dry-run
+python3 scripts/html_management/add_prev_next_nav.py --bottom-nav-only --dry-run
 
 # Update existing navigation to new version
-python3 scripts/html_management/add_prev_next_nav.py --force-update
+python3 scripts/html_management/add_prev_next_nav.py --bottom-nav-only --force-update
 ```
 
-Adds **「← 前へ / 次へ →」collapsible navigation button** (右下折りたたみボタン). Features:
-- **Collapsible design**: Small toggle button (`▲ 1/19`) by default, expands on click
-- **Non-intrusive**: Doesn't block content when collapsed (デフォルト折りたたみでコンテンツを邪魔しない)
+Adds **「← 前のページ / 次のページ →」page bottom navigation** (ページ下部ナビゲーション). Features:
+- **Page bottom placement**: Located at the end of content, inside `.container` (資料幅に揃えた配置)
+- **Content-width aligned**: Matches the max-width of the content area (1200px)
 - Navigates between resources within the same category
-- Shows progress counter (e.g., "5 / 21")
-- First resource: "← 前へ" disabled (gray)
-- Last resource: "次へ →" disabled (gray)
-- **localStorage persistence**: Remembers expanded/collapsed state
-- **Click outside to close**: Auto-collapses when clicking elsewhere
-- **Accessibility**: ARIA labels (`aria-expanded`, `aria-label`, `role="navigation"`)
+- Shows progress counter (e.g., "1 / 19")
+- First resource: "← 前のページ" disabled (gray)
+- Last resource: "次のページ →" disabled (gray)
+- **Responsive design**: Full-width on mobile with stacked layout
+- **Accessibility**: ARIA labels (`aria-label`, `aria-disabled`, `role="status"`)
 - `--force-update` flag: Replaces existing navigation with new version
+- `--bottom-nav-only` flag: Adds page bottom navigation only (recommended)
 - Skips files that already have the navigation (use `--force-update` to replace)
 
 **HTML Issues Bulk Fix:**

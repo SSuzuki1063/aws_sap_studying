@@ -152,10 +152,11 @@ class IntegrationOrchestrator:
         if not self.run_script("add_home_button.py"):
             print("⚠️  リソース集に戻るボタンの追加に失敗しました（続行します）")
 
-        # ステップ6: 前後ナビゲーション追加
-        print("\n📋 ステップ6: 前後ナビゲーションを追加中...")
-        if not self.run_script("add_prev_next_nav.py"):
-            print("⚠️  前後ナビゲーションの追加に失敗しました（続行します）")
+        # ステップ6: ページ下部ナビゲーション追加
+        print("\n📋 ステップ6: ページ下部ナビゲーションを追加中...")
+        args = ["--bottom-nav-only"]
+        if not self.run_script("add_prev_next_nav.py", args):
+            print("⚠️  ページ下部ナビゲーションの追加に失敗しました（続行します）")
 
         # 完了とリマインダー
         print("\n✅ 自動化ステップが完了しました！")
