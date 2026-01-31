@@ -214,7 +214,20 @@ const searchData = [
     { title: 'Amazon Inspector Lambda関数スキャン 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/inspector-lambda-scan-guide.html' },
     { title: 'AWS Security Hub 設定ポリシー完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/securityhub-configuration-policies-guide.html' },
     { title: 'OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド', category: 'セキュリティ・ガバナンス', file: 'organizational-complexity/log-rotation-cloudwatch-guide.html' },
-    { title: 'Amazon EventBridge イベントパターン完全図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/eventbridge-event-patterns-guide.html' }
+    { title: 'Amazon EventBridge イベントパターン完全図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/eventbridge-event-patterns-guide.html' },
+
+    // 2026-01-31 追加: 新規リソース11件
+    { title: 'AWS Direct Connect BGP ルーティング完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html' },
+    { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', category: 'ネットワーキング', file: 'networking/jumbo-frame-mtu-guide.html' },
+    { title: 'EC2インスタンスのネットワークMTU完全ガイド', category: 'ネットワーキング', file: 'networking/ec2-mtu-guide.html' },
+    { title: 'CIDRブロック集約と許可プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/cidr-aggregation-prefix-list-guide.html' },
+    { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html' },
+    { title: 'AWS Transit Gateway ピアリング完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html' },
+    { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html' },
+    { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-private-hosted-zone-guide.html' },
+    { title: 'Amazon Redshift Data Sharing 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/redshift-data-sharing-guide.html' },
+    { title: 'Amazon OpenSearch Service 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/opensearch-guide.html' },
+    { title: 'AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/aws-us-east-1-outage-analysis.html' }
 ];
 
 // 検索機能

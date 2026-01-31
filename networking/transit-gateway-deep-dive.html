@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Transit Gateway Deep Dive 完全ガイド</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 20px;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        /* ========== Header ========== */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🔀';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.1;
+            top: -40px;
+            right: -40px;
+        }
+        
+        .header::after {
+            content: '🌐';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.08;
+            bottom: -30px;
+            left: -30px;
+        }
+        
+        .header h1 {
+            font-size: 3.2em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.4em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 30px;
+            margin-top: 20px;
+            font-size: 0.95em;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* ========== Content ========== */
+        .content {
+            padding: 50px;
+        }
+        
+        /* ========== Conclusion First ========== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border-left: 8px solid #f59e0b;
+            position: relative;
+        }
+        
+        .conclusion-first::before {
+            content: '💡';
+            position: absolute;
+            font-size: 4em;
+            top: 20px;
+            right: 30px;
+            opacity: 0.3;
+        }
+        
+        .conclusion-first h2 {
+            color: #92400e;
+            font-size: 2em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .key-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .key-point {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .key-point h4 {
+            color: #d97706;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .key-point p {
+            color: #78350f;
+            font-size: 0.95em;
+        }
+        
+        /* ========== Analogy Section ========== */
+        .analogy-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+            border-radius: 20px;
+            padding: 50px;
+            margin-bottom: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .analogy-section::before {
+            content: '✈️';
+            position: absolute;
+            font-size: 15em;
+            opacity: 0.1;
+            top: -30px;
+            right: -30px;
+        }
+        
+        .analogy-section h2 {
+            color: #0369a1;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .analogy-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .analogy-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-box h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-box.airport h3 {
+            color: #0369a1;
+        }
+        
+        .analogy-box.aws h3 {
+            color: #7c3aed;
+        }
+        
+        .analogy-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .analogy-box.airport .analogy-item {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+        
+        .analogy-box.aws .analogy-item {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        }
+        
+        .analogy-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .analogy-icon {
+            font-size: 2em;
+            flex-shrink: 0;
+        }
+        
+        .analogy-text h4 {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .analogy-text p {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        /* ========== Architecture Diagram ========== */
+        .architecture-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .architecture-diagram {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+            border-radius: 20px;
+            padding: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .vpc-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .vpc-box {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+            position: relative;
+        }
+        
+        .vpc-box::after {
+            content: '→';
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            color: #a78bfa;
+        }
+        
+        .tgw-hub {
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 50%;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            box-shadow: 0 15px 40px rgba(124, 58, 237, 0.5);
+            position: relative;
+            z-index: 2;
+            min-width: 200px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .tgw-hub .emoji {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .external-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .external-box {
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+            position: relative;
+        }
+        
+        .external-box::before {
+            content: '←';
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            color: #a78bfa;
+        }
+        
+        .vpn-box {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+        }
+        
+        .dx-box {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+        
+        .peering-box {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            box-shadow: 0 8px 25px rgba(217, 119, 6, 0.4);
+        }
+        
+        .diagram-legend {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+        }
+        
+        /* ========== Concepts Section ========== */
+        .concepts-section {
+            margin-bottom: 50px;
+        }
+        
+        .concepts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+        
+        .concept-card {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .concept-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+        
+        .concept-card.attachment {
+            border-top: 6px solid #10b981;
+        }
+        
+        .concept-card.route-table {
+            border-top: 6px solid #3b82f6;
+        }
+        
+        .concept-card.association {
+            border-top: 6px solid #f59e0b;
+        }
+        
+        .concept-card.propagation {
+            border-top: 6px solid #ec4899;
+        }
+        
+        .concept-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+        
+        .concept-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+        
+        .concept-card .subtitle {
+            font-size: 0.95em;
+            color: #64748b;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .concept-card p {
+            color: #475569;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+        
+        .concept-highlight {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .concept-highlight p {
+            font-size: 0.9em;
+            color: #92400e;
+            margin: 0;
+        }
+        
+        /* ========== Attachment Types ========== */
+        .attachments-section {
+            margin-bottom: 50px;
+        }
+        
+        .attachments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        
+        .attachment-card {
+            background: white;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .attachment-card:hover {
+            transform: scale(1.02);
+        }
+        
+        .attachment-header {
+            padding: 25px;
+            color: white;
+            text-align: center;
+        }
+        
+        .attachment-card.vpc .attachment-header {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+        
+        .attachment-card.vpn .attachment-header {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        
+        .attachment-card.dx .attachment-header {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        }
+        
+        .attachment-card.peering .attachment-header {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        }
+        
+        .attachment-card.connect .attachment-header {
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+        }
+        
+        .attachment-header .emoji {
+            font-size: 2.5em;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .attachment-header h4 {
+            font-size: 1.3em;
+        }
+        
+        .attachment-body {
+            padding: 25px;
+            padding-top: 70px;}
+        
+        .attachment-body p {
+            color: #475569;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .attachment-features {
+            list-style: none;
+        }
+        
+        .attachment-features li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 0.85em;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .attachment-features li:last-child {
+            border-bottom: none;
+        }
+        
+        /* ========== Routing Flow ========== */
+        .routing-section {
+            margin-bottom: 50px;
+        }
+        
+        .routing-diagram {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+        
+        .flow-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .flow-step {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            min-width: 180px;
+        }
+        
+        .flow-step .step-number {
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 15px;
+            font-weight: bold;
+        }
+        
+        .flow-step h4 {
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .flow-step p {
+            font-size: 0.85em;
+            color: #64748b;
+        }
+        
+        .flow-arrow {
+            font-size: 2em;
+            color: #a78bfa;
+        }
+        
+        .route-evaluation {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .route-evaluation h3 {
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .priority-list {
+            counter-reset: priority;
+        }
+        
+        .priority-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 12px;
+            position: relative;
+        }
+        
+        .priority-item::before {
+            counter-increment: priority;
+            content: counter(priority);
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.85em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .priority-item strong {
+            color: #1e293b;
+        }
+        
+        .priority-item span {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+        
+        /* ========== Use Cases ========== */
+        .usecases-section {
+            margin-bottom: 50px;
+        }
+        
+        .usecase-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .usecase-tab {
+            padding: 12px 25px;
+            background: #f1f5f9;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #64748b;
+        }
+        
+        .usecase-tab:hover, .usecase-tab.active {
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+            color: white;
+        }
+        
+        .usecase-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .usecase-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .usecase-header {
+            padding: 30px;
+            color: white;
+        }
+        
+        .usecase-card:nth-child(1) .usecase-header {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+        
+        .usecase-card:nth-child(2) .usecase-header {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        }
+        
+        .usecase-card:nth-child(3) .usecase-header {
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+        }
+        
+        .usecase-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4em;
+        }
+        
+        .usecase-body {
+            padding: 30px;
+            padding-top: 70px;}
+        
+        .usecase-body p {
+            color: #475569;
+            margin-bottom: 20px;
+        }
+        
+        .usecase-scenario {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #7c3aed;
+        }
+        
+        .usecase-scenario h4 {
+            color: #1e293b;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        
+        .usecase-scenario p {
+            margin: 0;
+            font-size: 0.9em;
+        }
+        
+        /* ========== Quota Section ========== */
+        .quota-section {
+            margin-bottom: 50px;
+        }
+        
+        .quota-table {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .quota-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .quota-table th {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            color: white;
+            padding: 18px 20px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .quota-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        
+        .quota-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .quota-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .quota-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .quota-badge.adjustable {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .quota-badge.fixed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* ========== Best Practices ========== */
+        .best-practices-section {
+            margin-bottom: 50px;
+        }
+        
+        .practices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .practice-card {
+            background: white;
+            border-radius: 18px;
+            padding: 30px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .practice-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .practice-card.do {
+            border-left: 5px solid #10b981;
+        }
+        
+        .practice-card.dont {
+            border-left: 5px solid #ef4444;
+        }
+        
+        .practice-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        
+        .practice-card.do h4 {
+            color: #059669;
+        }
+        
+        .practice-card.dont h4 {
+            color: #dc2626;
+        }
+        
+        .practice-card ul {
+            list-style: none;
+        }
+        
+        .practice-card li {
+            padding: 10px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 0.9em;
+            color: #475569;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .practice-card li:last-child {
+            border-bottom: none;
+        }
+        
+        /* ========== FAQ Section ========== */
+        .faq-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .faq-section h2 {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+        
+        .faq-item h4 {
+            color: #7c3aed;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 1em;
+        }
+        
+        .faq-item p {
+            color: #475569;
+            font-size: 0.9em;
+            line-height: 1.7;
+            padding-left: 28px;
+        }
+        
+        /* ========== Footer ========== */
+        .footer {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .footer p {
+            opacity: 0.8;
+            font-size: 0.95em;
+        }
+        
+        .footer .resources {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .footer a {
+            color: #a78bfa;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer a:hover {
+            color: #c4b5fd;
+        }
+        
+        /* ========== Responsive ========== */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+            
+            .analogy-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-container {
+                flex-direction: column;
+            }
+            
+            .vpc-box::after, .external-box::before {
+                display: none;
+            }
+            
+            .flow-steps {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .faq-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }
+
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論ファースト-Transit-Gateway-とは">💡 結論ファースト：Transit Gateway とは</a></li>
+            <li class="toc-h2"><a href="#✈️-たとえ話-国際空港のハブで理解する">✈️ たとえ話：国際空港のハブで理解する</a></li>
+            <li class="toc-h3"><a href="#✈️-国際空港ハブ">✈️ 国際空港ハブ</a></li>
+            <li class="toc-h3"><a href="#☁️-AWS-Transit-Gateway">☁️ AWS Transit Gateway</a></li>
+            <li class="toc-h2"><a href="#️-Transit-Gateway-アーキテクチャ全体像">🏗️ Transit Gateway アーキテクチャ全体像</a></li>
+            <li class="toc-h2"><a href="#4つのコアコンセプトを理解する">📚 4つのコアコンセプトを理解する</a></li>
+            <li class="toc-h3"><a href="#Attachmentアタッチメント">Attachment（アタッチメント）</a></li>
+            <li class="toc-h3"><a href="#Route-Tableルートテーブル">Route Table（ルートテーブル）</a></li>
+            <li class="toc-h3"><a href="#Associationアソシエーション">Association（アソシエーション）</a></li>
+            <li class="toc-h3"><a href="#Propagationプロパゲーション">Propagation（プロパゲーション）</a></li>
+            <li class="toc-h2"><a href="#アタッチメントの種類">🔌 アタッチメントの種類</a></li>
+            <li class="toc-h2"><a href="#ルーティングの仕組み">🚦 ルーティングの仕組み</a></li>
+            <li class="toc-h3"><a href="#ルート評価の優先順位Best-Path-Selection">📊 ルート評価の優先順位（Best Path Selection）</a></li>
+            <li class="toc-h2"><a href="#代表的なユースケース">💼 代表的なユースケース</a></li>
+            <li class="toc-h3"><a href="#Shared-VPC-構成">🏢 Shared VPC 構成</a></li>
+            <li class="toc-h3"><a href="#ハイブリッドクラウド">🌐 ハイブリッドクラウド</a></li>
+            <li class="toc-h3"><a href="#グローバル展開">🌍 グローバル展開</a></li>
+            <li class="toc-h2"><a href="#主要なクォータ制限">📏 主要なクォータ（制限）</a></li>
+            <li class="toc-h2"><a href="#✅-ベストプラクティス">✅ ベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問FAQ">❓ よくある質問（FAQ）</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<style>
+    /* ページ全体のレイアウト調整 */
+    body {
+        padding-left: 360px;
+        transition: padding-left 0.3s ease;
+    }
+
+    body.sidebar-collapsed {
+        padding-left: 0;
+    }
+
+    /* 左サイドバー目次 */
+    .sidebar-toc {
+        position: fixed;
+        left: 0;
+        top: 60px;  /* ヘッダーの高さ分下げる */
+        width: 340px;
+        height: calc(100vh - 60px);  /* ヘッダー分を引く */
+        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+        border-right: 4px solid #3b82f6;
+        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        padding: 20px;
+    }
+
+    .sidebar-toc.collapsed {
+        transform: translateX(-100%);
+    }
+
+    /* サイドバーヘッダー */
+    .sidebar-toc-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #3b82f6;
+    }
+
+    .sidebar-toc-header h2 {
+        color: #1e40af;
+        margin: 0;
+        font-size: 1.4em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* 目次コンテンツ */
+    .sidebar-toc-content ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .sidebar-toc-content a {
+        color: #1e40af;
+        text-decoration: none;
+        display: block;
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin: 6px 0;
+        transition: all 0.2s ease;
+        font-size: 0.95em;
+        line-height: 1.4;
+    }
+
+    .sidebar-toc-content a:hover {
+        background: rgba(59, 130, 246, 0.15);
+        color: #2563eb;
+        transform: translateX(5px);
+    }
+
+    /* h2とh3のスタイル */
+    .sidebar-toc-content .toc-h2 {
+        font-weight: 600;
+        font-size: 1em;
+        margin-top: 12px;
+    }
+
+    .sidebar-toc-content .toc-h2 a {
+        font-weight: 600;
+    }
+
+    .sidebar-toc-content .toc-h3 {
+        font-size: 0.9em;
+        padding-left: 20px;
+    }
+
+    .sidebar-toc-content .toc-h3 a {
+        color: #4b5563;
+        padding: 8px 12px;
+    }
+
+    /* 折りたたみボタン */
+    .sidebar-toc-toggle {
+        position: fixed;
+        left: 340px;
+        top: 80px;  /* ヘッダーの下に配置 */
+        background: #3b82f6;
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 0 8px 8px 0;
+        cursor: pointer;
+        font-size: 1.2em;
+        transition: all 0.3s ease;
+        z-index: 1003;  /* ヘッダー(1002)より上に */
+        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar-toc-toggle:hover {
+        background: #2563eb;
+        transform: scale(1.05);
+    }
+
+    body.sidebar-collapsed .sidebar-toc-toggle {
+        left: 0;
+    }
+
+    /* スムーズスクロール */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* スクロールバーのスタイリング */
+    .sidebar-toc::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .sidebar-toc::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+    }
+
+    .sidebar-toc::-webkit-scrollbar-thumb {
+        background: #3b82f6;
+        border-radius: 4px;
+    }
+
+    .sidebar-toc::-webkit-scrollbar-thumb:hover {
+        background: #2563eb;
+    }
+
+    /* モバイル対応 */
+    @media (max-width: 768px) {
+        body {
+            padding-left: 0 !important;
+        }
+
+        .sidebar-toc {
+            width: 280px;
+            top: 60px;  /* ヘッダーの下 */
+            height: calc(100vh - 60px);
+            transform: translateX(-100%);
+        }
+
+        .sidebar-toc.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-toc-toggle {
+            left: 0;
+            top: 80px;  /* ヘッダーの下に配置 */
+            border-radius: 0 8px 8px 0;
+        }
+
+        body.sidebar-collapsed .sidebar-toc-toggle {
+            left: 0;
+        }
+
+        /* モバイルでは初期状態で折りたたみ */
+        .sidebar-toc-header h2 {
+            font-size: 1.2em;
+        }
+
+        .sidebar-toc-content a {
+            padding: 8px 10px;
+            font-size: 0.9em;
+        }
+    }
+
+    /* タブレット対応 */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        body {
+            padding-left: 310px;
+        }
+
+        .sidebar-toc {
+            width: 290px;
+            top: 60px;  /* ヘッダーの下 */
+            height: calc(100vh - 60px);
+        }
+
+        .sidebar-toc-toggle {
+            left: 290px;
+            top: 80px;  /* ヘッダーの下に配置 */
+        }
+
+        body.sidebar-collapsed .sidebar-toc-toggle {
+            left: 0;
+        }
+    }
+</style>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
+      自己紹介
+     </a>
+<a href="/aws_sap_studying/learning-resources.html">
+      学習リソース集
+     </a>
+<a href="/aws_sap_studying/knowledge-base.html">
+      ナレッジベース
+     </a>
+<a href="/aws_sap_studying/quiz.html">
+      クイズ
+     </a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+    <div class="container">
+        
+    <!-- ブレッドクラムナビゲーション -->
+    <nav class="breadcrumb-nav">
+        <a href="../index.html" class="breadcrumb-home">🏠 ホーム</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">ネットワーキング</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">Transit Gateway & ゲートウェイ</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-current">Transit Gateway Deep Dive</span>
+    </nav>
+<!-- Header -->
+        <header class="header">
+            <h1>🔀 AWS Transit Gateway Deep Dive</h1>
+            <p class="subtitle">VPCネットワークの中央集約ハブを完全理解</p>
+            <span class="badge">📘 AWS Black Belt シリーズ準拠</span>
+        </header>
+        
+        <div class="content">
+            <!-- Conclusion First -->
+            <section class="conclusion-first">
+                <h2 id="結論ファースト-Transit-Gateway-とは">💡 結論ファースト：Transit Gateway とは</h2>
+                <div class="key-points">
+                    <div class="key-point">
+                        <h4>🎯 一言で言うと</h4>
+                        <p>複数のVPCとオンプレミスを<strong>一箇所で集中管理</strong>する「ネットワークのハブ空港」。VPC Peeringの複雑な接続管理から解放されます。</p>
+                    </div>
+                    <div class="key-point">
+                        <h4>🔢 導入タイミング</h4>
+                        <p>VPCが<strong>3つ以上</strong>あり増加見込み、Direct Connect接続VPCが<strong>20超</strong>、通信監査・ガバナンスが必要な場合</p>
+                    </div>
+                    <div class="key-point">
+                        <h4>⚡ 主要機能</h4>
+                        <p>VPC/VPN/Direct Connect接続、複数ルートテーブル、リージョン間ピアリング、マルチキャスト対応</p>
+                    </div>
+                    <div class="key-point">
+                        <h4>📊 帯域幅</h4>
+                        <p>VPCアタッチメント: <strong>最大100Gbps/AZ</strong>、MTU: <strong>8500バイト</strong> のジャンボフレーム対応</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Analogy Section -->
+            <section class="analogy-section">
+                <h2 id="✈️-たとえ話-国際空港のハブで理解する">✈️ たとえ話：国際空港のハブで理解する</h2>
+                <div class="analogy-content">
+                    <div class="analogy-box airport">
+                        <h3 id="✈️-国際空港ハブ">✈️ 国際空港ハブ</h3>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🏛️</span>
+                            <div class="analogy-text">
+                                <h4>空港ターミナル（ハブ空港）</h4>
+                                <p>すべての便が発着する中央拠点。ここを経由すれば世界中どこへでも行ける</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🚪</span>
+                            <div class="analogy-text">
+                                <h4>搭乗ゲート</h4>
+                                <p>各都市への出発口。東京行き、NY行きなど目的地ごとに分かれている</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">📋</span>
+                            <div class="analogy-text">
+                                <h4>フライト案内板</h4>
+                                <p>「福岡行き→ゲート15」のように、どのゲートに行けばよいか案内</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🛃</span>
+                            <div class="analogy-text">
+                                <h4>国際線・国内線の分離</h4>
+                                <p>セキュリティ要件により、国際線と国内線のエリアを分けて管理</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-box aws">
+                        <h3 id="☁️-AWS-Transit-Gateway">☁️ AWS Transit Gateway</h3>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🔀</span>
+                            <div class="analogy-text">
+                                <h4>Transit Gateway（中央ハブ）</h4>
+                                <p>すべてのVPCが接続する中央拠点。ここを経由すればすべてのVPCに到達可能</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🔗</span>
+                            <div class="analogy-text">
+                                <h4>Attachment（アタッチメント）</h4>
+                                <p>各VPC/VPN/DXからの接続口。VPC-A用、VPC-B用と接続先ごとに作成</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🗺️</span>
+                            <div class="analogy-text">
+                                <h4>Route Table（ルートテーブル）</h4>
+                                <p>「10.1.0.0/16→VPC-A」のように、どのアタッチメントに送ればよいか経路案内</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analogy-item">
+                            <span class="analogy-icon">🔐</span>
+                            <div class="analogy-text">
+                                <h4>ルートテーブル分割</h4>
+                                <p>本番環境と開発環境を別テーブルで分離し、通信制御を実現</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Architecture Diagram -->
+            <section class="architecture-section">
+                <h2 id="️-Transit-Gateway-アーキテクチャ全体像" class="section-title">🏗️ Transit Gateway アーキテクチャ全体像</h2>
+                <div class="architecture-diagram">
+                    <div class="diagram-container">
+                        <div class="vpc-group">
+                            <div class="vpc-box">🏢 VPC-A (10.1.0.0/16)<br>本番環境</div>
+                            <div class="vpc-box">🧪 VPC-B (10.2.0.0/16)<br>開発環境</div>
+                            <div class="vpc-box">🛡️ VPC-C (10.3.0.0/16)<br>セキュリティ</div>
+                        </div>
+                        
+                        <div class="tgw-hub">
+                            <span class="emoji">🔀</span>
+                            <div>Transit Gateway</div>
+                            <small style="opacity: 0.8; margin-top: 10px; display: block;">中央ハブ</small>
+                        </div>
+                        
+                        <div class="external-group">
+                            <div class="external-box vpn-box">🔒 Site-to-Site VPN<br>オンプレミス接続</div>
+                            <div class="external-box dx-box">📡 Direct Connect<br>専用線接続</div>
+                            <div class="external-box peering-box">🌍 TGW Peering<br>他リージョン接続</div>
+                        </div>
+                    </div>
+                    
+                    <div class="diagram-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #10b981;"></div>
+                            <span>VPC Attachment</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ef4444;"></div>
+                            <span>VPN Attachment</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #3b82f6;"></div>
+                            <span>Direct Connect Attachment</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #f59e0b;"></div>
+                            <span>Peering Attachment</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Core Concepts -->
+            <section class="concepts-section">
+                <h2 id="4つのコアコンセプトを理解する" class="section-title">📚 4つのコアコンセプトを理解する</h2>
+                <div class="concepts-grid">
+                    <div class="concept-card attachment">
+                        <div class="concept-icon">🔗</div>
+                        <h3 id="Attachmentアタッチメント">Attachment（アタッチメント）</h3>
+                        <div class="subtitle">空港の「搭乗ゲート」</div>
+                        <p>VPC、VPN、Direct Connect、他のTGWなどをTransit Gatewayに接続する「入口」です。各接続先ごとに1つのアタッチメントを作成します。</p>
+                        <div class="concept-highlight">
+                            <p>💡 <strong>重要：</strong>VPCアタッチメントは各AZにサブネット(/28以上)が必要。ENIがサブネット内に作成されます。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="concept-card route-table">
+                        <div class="concept-icon">🗺️</div>
+                        <h3 id="Route-Tableルートテーブル">Route Table（ルートテーブル）</h3>
+                        <div class="subtitle">空港の「フライト案内板」</div>
+                        <p>パケットをどのアタッチメントに転送するか決める経路情報です。Transit Gatewayは複数のルートテーブルを持てるため、環境分離が可能です。</p>
+                        <div class="concept-highlight">
+                            <p>💡 <strong>重要：</strong>最低1つのルートテーブルが必要。デフォルトで1つ作成され、最大20個まで作成可能（上限緩和可）</p>
+                        </div>
+                    </div>
+                    
+                    <div class="concept-card association">
+                        <div class="concept-icon">🎫</div>
+                        <h3 id="Associationアソシエーション">Association（アソシエーション）</h3>
+                        <div class="subtitle">「搭乗券とゲートの紐付け」</div>
+                        <p>アタッチメントとルートテーブルを紐付けます。VPCからTGWに入ったパケットは、アソシエートされたルートテーブルを参照して転送先を決定します。</p>
+                        <div class="concept-highlight">
+                            <p>💡 <strong>重要：</strong>1つのアタッチメントは1つのルートテーブルにしかアソシエートできません（1対1）</p>
+                        </div>
+                    </div>
+                    
+                    <div class="concept-card propagation">
+                        <div class="concept-icon">📢</div>
+                        <h3 id="Propagationプロパゲーション">Propagation（プロパゲーション）</h3>
+                        <div class="subtitle">「新規就航便の案内板への自動登録」</div>
+                        <p>アタッチメントのCIDR情報をルートテーブルに自動伝播します。手動でスタティックルートを書く代わりに、動的に経路を登録できます。</p>
+                        <div class="concept-highlight">
+                            <p>💡 <strong>重要：</strong>プロパゲーションは複数のルートテーブルに設定可能。アソシエーションとは独立した設定です。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Attachment Types -->
+            <section class="attachments-section">
+                <h2 id="アタッチメントの種類" class="section-title">🔌 アタッチメントの種類</h2>
+                <div class="attachments-grid">
+                    <div class="attachment-card vpc">
+                        <div class="attachment-header">
+                            <span class="emoji">🏢</span>
+                            <h4>VPC Attachment</h4>
+                        </div>
+                        <div class="attachment-body">
+                            <p>同一リージョン内のVPCを接続。最も基本的なアタッチメント。</p>
+                            <ul class="attachment-features">
+                                <li>✅ 帯域: 最大100Gbps/AZ</li>
+                                <li>✅ MTU: 8500バイト対応</li>
+                                <li>✅ IPv4/IPv6サポート</li>
+                                <li>⚠️ 各AZにサブネット必要</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="attachment-card vpn">
+                        <div class="attachment-header">
+                            <span class="emoji">🔒</span>
+                            <h4>VPN Attachment</h4>
+                        </div>
+                        <div class="attachment-body">
+                            <p>Site-to-Site VPNでオンプレミスと暗号化接続。</p>
+                            <ul class="attachment-features">
+                                <li>✅ 帯域: 最大1.25Gbps/トンネル</li>
+                                <li>✅ ECMPで帯域集約可能</li>
+                                <li>✅ BGPまたは静的ルート</li>
+                                <li>⚠️ Private IP VPNも対応</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="attachment-card dx">
+                        <div class="attachment-header">
+                            <span class="emoji">📡</span>
+                            <h4>Direct Connect Gateway</h4>
+                        </div>
+                        <div class="attachment-body">
+                            <p>Transit VIF経由でDirect Connect Gatewayと接続。</p>
+                            <ul class="attachment-features">
+                                <li>✅ 専用線で安定した接続</li>
+                                <li>✅ 複数VPCを1本のDXで接続</li>
+                                <li>✅ BGPによる動的ルーティング</li>
+                                <li>⚠️ Private VIFとの併用不可</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="attachment-card peering">
+                        <div class="attachment-header">
+                            <span class="emoji">🌍</span>
+                            <h4>Peering Attachment</h4>
+                        </div>
+                        <div class="attachment-body">
+                            <p>他のTransit Gatewayとピアリング接続。</p>
+                            <ul class="attachment-features">
+                                <li>✅ リージョン間接続対応</li>
+                                <li>✅ 同一リージョン内も可能</li>
+                                <li>⚠️ スタティックルートのみ</li>
+                                <li>⚠️ 双方でアクセプト必要</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="attachment-card connect">
+                        <div class="attachment-header">
+                            <span class="emoji">🔀</span>
+                            <h4>Connect Attachment</h4>
+                        </div>
+                        <div class="attachment-body">
+                            <p>SD-WANアプライアンスとGRE/BGPで接続。</p>
+                            <ul class="attachment-features">
+                                <li>✅ 帯域: 最大5Gbps/GREトンネル</li>
+                                <li>✅ VPCまたはDXGWがトランスポート</li>
+                                <li>✅ ECMPサポート</li>
+                                <li>⚠️ BGP over GREが必須</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Routing Flow -->
+            <section class="routing-section">
+                <h2 id="ルーティングの仕組み" class="section-title">🚦 ルーティングの仕組み</h2>
+                <div class="routing-diagram">
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <div class="step-number">1</div>
+                            <h4>VPCからパケット送信</h4>
+                            <p>VPCのルートテーブルで<br>宛先をTGWに向ける</p>
+                        </div>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-step">
+                            <div class="step-number">2</div>
+                            <h4>TGWがパケット受信</h4>
+                            <p>アタッチメント経由で<br>パケットがTGWに到達</p>
+                        </div>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-step">
+                            <div class="step-number">3</div>
+                            <h4>ルートテーブル参照</h4>
+                            <p>アソシエートされた<br>TGWルートテーブルで検索</p>
+                        </div>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-step">
+                            <div class="step-number">4</div>
+                            <h4>転送先決定・送信</h4>
+                            <p>マッチしたルートの<br>アタッチメントへ転送</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="route-evaluation">
+                    <h3 id="ルート評価の優先順位Best-Path-Selection">📊 ルート評価の優先順位（Best Path Selection）</h3>
+                    <div class="priority-list">
+                        <div class="priority-item">
+                            <strong>Most Specific Route</strong>
+                            <span>最もプレフィックスが長い（詳細な）ルートが優先</span>
+                        </div>
+                        <div class="priority-item">
+                            <strong>Static Routes</strong>
+                            <span>手動設定のスタティックルート（Site-to-Site VPN含む）</span>
+                        </div>
+                        <div class="priority-item">
+                            <strong>Prefix List Referenced Routes</strong>
+                            <span>プレフィックスリストを参照するルート</span>
+                        </div>
+                        <div class="priority-item">
+                            <strong>VPC Propagated Routes</strong>
+                            <span>VPCアタッチメントからの伝播ルート</span>
+                        </div>
+                        <div class="priority-item">
+                            <strong>Direct Connect Gateway Routes</strong>
+                            <span>DXGWからの伝播ルート</span>
+                        </div>
+                        <div class="priority-item">
+                            <strong>Transit Gateway Connect Routes</strong>
+                            <span>Connectアタッチメントからの伝播ルート</span>
+                        </div>
+                        <div class="priority-item">
+                            <strong>Site-to-Site VPN Routes</strong>
+                            <span>VPN接続からの伝播ルート</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Use Cases -->
+            <section class="usecases-section">
+                <h2 id="代表的なユースケース" class="section-title">💼 代表的なユースケース</h2>
+                <div class="usecase-cards">
+                    <div class="usecase-card">
+                        <div class="usecase-header">
+                            <h3 id="Shared-VPC-構成">🏢 Shared VPC 構成</h3>
+                        </div>
+                        <div class="usecase-body">
+                            <p>共通サービス（AD、DNS、Endpointなど）を置いたShared VPCを全VPCからアクセス可能にしつつ、ワークロードVPC間は分離する構成です。</p>
+                            <div class="usecase-scenario">
+                                <h4>📌 シナリオ例</h4>
+                                <p>本番VPC・開発VPC・テストVPCはお互いに通信させたくないが、監視や認証のためのShared VPCには全員がアクセスできるようにしたい。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-header">
+                            <h3 id="ハイブリッドクラウド">🌐 ハイブリッドクラウド</h3>
+                        </div>
+                        <div class="usecase-body">
+                            <p>オンプレミスデータセンターとAWS環境をVPN/Direct Connectで接続し、すべてのVPCとオンプレ間の通信をTGWで集約管理します。</p>
+                            <div class="usecase-scenario">
+                                <h4>📌 シナリオ例</h4>
+                                <p>既存のオンプレミス基盤を維持しながら、新規サービスをAWSで展開。両環境間のセキュアな通信とルーティング一元管理を実現。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="usecase-card">
+                        <div class="usecase-header">
+                            <h3 id="グローバル展開">🌍 グローバル展開</h3>
+                        </div>
+                        <div class="usecase-body">
+                            <p>複数リージョンにまたがるワークロードをTGWピアリングで接続。AWSのグローバルバックボーンを活用した低遅延なリージョン間通信を実現。</p>
+                            <div class="usecase-scenario">
+                                <h4>📌 シナリオ例</h4>
+                                <p>東京リージョンのアプリケーションから、シンガポール・オレゴンリージョンのデータベースレプリカにアクセス。災害対策とグローバルサービス展開を両立。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Quota Section -->
+            <section class="quota-section">
+                <h2 id="主要なクォータ制限" class="section-title">📏 主要なクォータ（制限）</h2>
+                <div class="quota-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>項目</th>
+                                <th>デフォルト値</th>
+                                <th>上限緩和</th>
+                                <th>備考</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>アカウントあたりのTGW数</td>
+                                <td><strong>5</strong></td>
+                                <td><span class="quota-badge adjustable">可能</span></td>
+                                <td>リージョンごと</td>
+                            </tr>
+                            <tr>
+                                <td>TGWあたりのルートテーブル数</td>
+                                <td><strong>20</strong></td>
+                                <td><span class="quota-badge adjustable">可能</span></td>
+                                <td>環境分離に影響</td>
+                            </tr>
+                            <tr>
+                                <td>TGWあたりの経路数</td>
+                                <td><strong>10,000</strong></td>
+                                <td><span class="quota-badge adjustable">可能</span></td>
+                                <td>全ルートテーブル合計</td>
+                            </tr>
+                            <tr>
+                                <td>TGWあたりのアタッチメント数</td>
+                                <td><strong>5,000</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ハードリミット</td>
+                            </tr>
+                            <tr>
+                                <td>VPCあたりのTGW接続数</td>
+                                <td><strong>5</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ハードリミット</td>
+                            </tr>
+                            <tr>
+                                <td>VPCアタッチメント帯域幅</td>
+                                <td><strong>100 Gbps/AZ</strong></td>
+                                <td><span class="quota-badge adjustable">要相談</span></td>
+                                <td>バースト上限</td>
+                            </tr>
+                            <tr>
+                                <td>VPNトンネル帯域幅</td>
+                                <td><strong>1.25 Gbps</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ECMPで集約可能</td>
+                            </tr>
+                            <tr>
+                                <td>MTU</td>
+                                <td><strong>8,500 bytes</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ジャンボフレーム対応</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Best Practices -->
+            <section class="best-practices-section">
+                <h2 id="✅-ベストプラクティス" class="section-title">✅ ベストプラクティス</h2>
+                <div class="practices-grid">
+                    <div class="practice-card do">
+                        <h4>✅ 推奨事項（Do）</h4>
+                        <ul>
+                            <li>✓ 各AZにアタッチメント用サブネットを配置し、可用性を確保する</li>
+                            <li>✓ ルートテーブルを用途・環境ごとに分割し、セキュリティ境界を明確にする</li>
+                            <li>✓ Propagationを活用して動的にルートを管理し、運用負荷を軽減する</li>
+                            <li>✓ VPC Flow Logsと合わせてトラフィックを可視化・監査する</li>
+                            <li>✓ TGWのAZごとの帯域上限を考慮した設計をする</li>
+                            <li>✓ ECMP対応環境ではVPN接続を複数束ねて帯域を確保する</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="practice-card dont">
+                        <h4>❌ アンチパターン（Don't）</h4>
+                        <ul>
+                            <li>✗ VPC数が少ない（2つ以下）のにTGWを使用する → VPC Peeringで十分</li>
+                            <li>✗ 単一AZにのみアタッチメントを作成する → 可用性リスク</li>
+                            <li>✗ Transit VIFとPrivate VIFを同じDXGWで併用しようとする → 不可</li>
+                            <li>✗ ピアリング接続でBGPによる動的ルーティングを期待する → スタティックのみ</li>
+                            <li>✗ VPCサブネットのルートテーブルでTGW向けのルートを設定し忘れる</li>
+                            <li>✗ マルチキャストを後から有効化しようとする → TGW作成時のみ</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- FAQ Section -->
+            <section class="faq-section">
+                <h2 id="❓-よくある質問FAQ">❓ よくある質問（FAQ）</h2>
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <h4>Q: VPC PeeringとTransit Gatewayの違いは？</h4>
+                        <p>VPC Peeringは2つのVPC間の1対1接続で、接続数が増えるとフルメッシュ構成が必要になり管理が複雑化します。Transit Gatewayはハブ＆スポーク型で、VPCが増えても管理がシンプルです。VPCが3つ以上ならTGWを検討しましょう。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>Q: TGWの料金体系は？</h4>
+                        <p>アタッチメント時間（$/hour）とデータ処理量（$/GB）の2軸で課金されます。VPC Peeringより割高ですが、管理コストの削減や機能面でのメリットとのトレードオフを検討しましょう。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>Q: 別アカウントのVPCも接続できる？</h4>
+                        <p>はい。Resource Access Manager（RAM）を使ってTGWを他のAWSアカウントと共有できます。AWS Organizationsと連携すれば、組織内でのマルチアカウント構成が容易になります。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>Q: セキュリティグループは適用される？</h4>
+                        <p>TGW自体にセキュリティグループは適用できません。TGW通過後の通信制御は、各VPC内のセキュリティグループやNACL、またはNetwork Firewallで行います。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>Q: Cloud WANとの違いは？</h4>
+                        <p>Transit Gatewayはリージョン単位で管理（Customer Managed）、Cloud WANはグローバルレベルで一元管理（AWS Managed）です。Cloud WANはBGPベースのリージョン間接続、Intent-basedポリシーなど高度な機能がありますが、TGWは柔軟なDIY設計が可能です。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>Q: マルチキャストはどう使う？</h4>
+                        <p>TGW作成時にマルチキャストを有効化すると、TGWがマルチキャストルーターとして動作します。IGMPv2をサポートし、VPCアタッチメントのみで利用可能です。後から有効化はできないので注意。</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p>📘 AWS Transit Gateway Deep Dive Complete Guide</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">AWS Black Belt Online Seminar 2025年1月版を参考に作成</p>
+            <div class="resources">
+                <a href="https://docs.aws.amazon.com/vpc/latest/tgw/" target="_blank">📖 公式ドキュメント</a>
+                <a href="https://aws.amazon.com/transit-gateway/pricing/" target="_blank">💰 料金ページ</a>
+                <a href="https://docs.aws.amazon.com/vpc/latest/tgw/transit-gateway-quotas.html" target="_blank">📏 クォータ一覧</a>
+            </div>
+        </footer>
+    <!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="../organizational-complexity/aws-ram-tgw-sharing.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">24</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">26</span>
+    </div>
+    <a href="transit-gateway-peering-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+</body>
+</html>

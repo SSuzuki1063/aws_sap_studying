@@ -7,24 +7,25 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 21,
+    count: 28,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
-        count: 5,
+        count: 6,
         resources: [
           { title: 'Direct Connect ガイド', href: 'networking/aws-direct-connect-guide.html' },
           { title: 'Direct Connect & VGW', href: 'new-solutions/aws-direct-connect-vgw.html' },
           { title: 'VPN with Direct Connect ガイド', href: 'networking/aws-vpn-with-direct-connect-guide.html' },
           { title: 'Direct Connect 暗号化 VPN', href: 'networking/direct_connect_encryption_vpn.html' },
-          { title: 'VPN vs PrivateLink', href: 'new-solutions/vpn-vs-privatelink.html' }
+          { title: 'VPN vs PrivateLink', href: 'new-solutions/vpn-vs-privatelink.html' },
+          { title: 'AWS Direct Connect BGP ルーティング完全ガイド', href: 'networking/direct-connect-bgp-routing-guide.html' }
         ]
       },
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 12,
+        count: 15,
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html' },
@@ -37,16 +38,22 @@ const categoriesData = [
           { title: 'CloudFront HTTPセキュリティヘッダー完全ガイド', href: 'networking/cloudfront-security-headers-guide.html' },
           { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', href: 'networking/s3-vpc-endpoint-policy-guide.html' },
           { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', href: 'networking/guardduty-credential-exfiltration-guide-v2.html' },
-          { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', href: 'networking/vpc-network-access-analyzer-guide.html' }
+          { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', href: 'networking/vpc-network-access-analyzer-guide.html' },
+          { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', href: 'networking/jumbo-frame-mtu-guide.html' },
+          { title: 'EC2インスタンスのネットワークMTU完全ガイド', href: 'networking/ec2-mtu-guide.html' },
+          { title: 'CIDRブロック集約と許可プレフィックスリスト完全ガイド', href: 'networking/cidr-aggregation-prefix-list-guide.html' }
         ]
       },
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 3,
+        count: 7,
         resources: [
           { title: 'AWS ゲートウェイ', href: 'networking/aws-gateways.html' },
-          { title: 'Transit Gateway 共有', href: 'organizational-complexity/aws-ram-tgw-sharing.html' }
+          { title: 'Transit Gateway 共有', href: 'organizational-complexity/aws-ram-tgw-sharing.html' },
+          { title: 'AWS Transit Gateway Deep Dive 完全ガイド', href: 'networking/transit-gateway-deep-dive.html' },
+          { title: 'AWS Transit Gateway ピアリング完全ガイド', href: 'networking/transit-gateway-peering-guide.html' },
+          { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' }
         ]
       }
     ]
@@ -162,7 +169,7 @@ const categoriesData = [
     id: 'compute-applications',
     title: 'コンピュート・アプリケーション',
     icon: '💻',
-    count: 41,
+    count: 42,
     sections: [
       {
         title: 'EC2 & インスタンス管理',
@@ -228,7 +235,7 @@ const categoriesData = [
       {
         title: 'システム運用 & パッチ管理',
         icon: '🔧',
-        count: 8,
+        count: 9,
         resources: [
           { title: 'AWS ECR イメージスキャン完全ガイド', href: 'continuous-improvement/ecr-image-scanning-guide.html' },
           { title: 'CloudWatch INSIGHT_RULE_METRIC 完全ガイド', href: 'continuous-improvement/cloudwatch-insight-rule-metric-guide.html' },
@@ -237,7 +244,8 @@ const categoriesData = [
           { title: 'EC2 Image Builder 完全ガイド', href: 'continuous-improvement/ec2-image-builder-guide.html' },
           { title: 'CloudWatch Logs データ保護ポリシー完全ガイド', href: 'continuous-improvement/cloudwatch-logs-data-protection-guide.html' },
           { title: 'AWS Systems Manager OpsCenter 完全ガイド', href: 'compute-applications/opscenter-guide.html' },
-          { title: 'AWS Config ec2-managedinstance-applications-required 完全ガイド', href: 'continuous-improvement/ec2-managedinstance-applications-required-guide.html' }
+          { title: 'AWS Config ec2-managedinstance-applications-required 完全ガイド', href: 'continuous-improvement/ec2-managedinstance-applications-required-guide.html' },
+          { title: 'AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析', href: 'continuous-improvement/aws-us-east-1-outage-analysis.html' }
         ]
       }
     ]
@@ -246,7 +254,7 @@ const categoriesData = [
     id: 'content-delivery-dns',
     title: 'コンテンツ配信・DNS',
     icon: '🚀',
-    count: 16,
+    count: 17,
     sections: [
       {
         title: 'CloudFront & コンテンツ配信',
@@ -269,12 +277,13 @@ const categoriesData = [
       {
         title: 'Route53 & DNS管理',
         icon: '🌍',
-        count: 5,
+        count: 6,
         resources: [
           { title: 'DNS インフォグラフィック', href: 'content-delivery-dns/aws-dns-infographic.html' },
           { title: 'Route53 ホストゾーン', href: 'new-solutions/route53_hosted_zones_infographic.html' },
           { title: 'Route53 クロスアカウントガイド', href: 'content-delivery-dns/route53_cross_account_guide.html' },
-          { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', href: 'content-delivery-dns/route53-dnssec-guide.html' }
+          { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', href: 'content-delivery-dns/route53-dnssec-guide.html' },
+          { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', href: 'content-delivery-dns/route53-private-hosted-zone-guide.html' }
         ]
       }
     ]
@@ -327,7 +336,7 @@ const categoriesData = [
     id: 'storage-database',
     title: 'ストレージ・データベース',
     icon: '💾',
-    count: 11,
+    count: 13,
     sections: [
       {
         title: 'S3 & オブジェクトストレージ',
@@ -353,12 +362,14 @@ const categoriesData = [
       {
         title: 'データベース & キャッシング',
         icon: '🗄️',
-        count: 4,
+        count: 6,
         resources: [
           { title: 'Aurora Data API & IAM', href: 'storage-database/aurora_dataapi_iam_infographic.html' },
           { title: 'ElastiCache インフォグラフィック', href: 'storage-database/elasticache_infographic.html' },
           { title: 'Redis クラスターモード', href: 'storage-database/redis_cluster_mode_infographic.html' },
-          { title: 'Amazon MSK インフォグラフィック', href: 'storage-database/amazon_msk_infographic.html' }
+          { title: 'Amazon MSK インフォグラフィック', href: 'storage-database/amazon_msk_infographic.html' },
+          { title: 'Amazon Redshift Data Sharing 完全ガイド', href: 'storage-database/redshift-data-sharing-guide.html' },
+          { title: 'Amazon OpenSearch Service 完全ガイド', href: 'storage-database/opensearch-guide.html' }
         ]
       }
     ]
@@ -449,12 +460,12 @@ const categoriesData = [
 
 // カテゴリクイックナビゲーション用データ
 const categoryQuickNav = [
-  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 21 },
+  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 28 },
   { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 74 },
-  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 41 },
-  { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 16 },
+  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 42 },
+  { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 17 },
   { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 15 },
-  { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 11 },
+  { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 13 },
   { id: 'migration', icon: '🔄', text: '移行・転送', count: 11 },
   { id: 'analytics-operations', icon: '📊', text: '分析・運用・クイズ', count: 14 }
 ];
@@ -463,7 +474,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '196+',
+  totalResources: '207+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
   lastUpdated: '2026/01/30'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
