@@ -32,7 +32,10 @@ function renderCategoryQuickNav(navData) {
  */
 function renderResourceList(resources) {
   const resourceItems = resources.map(resource => `
-    <li><a href="${resource.href}">${resource.title}</a></li>
+    <li>
+      <a href="${resource.href}">${resource.title}</a>
+      <button class="bookmark-icon" data-href="${resource.href}" onclick="handleBookmarkClick(event, '${resource.href}')" aria-label="ブックマークに追加" title="ブックマークに追加">☆</button>
+    </li>
   `).join('');
 
   return `
