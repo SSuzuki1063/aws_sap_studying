@@ -219,6 +219,12 @@ class QuizApp {
         document.getElementById('submitBtn').disabled = true;
         document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('explanation').classList.remove('show');
+
+        // 関連リソースセクションを非表示にリセット
+        const resourcesContainer = document.getElementById('explanationResources');
+        if (resourcesContainer) {
+            resourcesContainer.style.display = 'none';
+        }
     }
 
     selectAnswer(answerIndex) {
@@ -306,6 +312,9 @@ class QuizApp {
         // 解説を表示
         document.getElementById('explanationText').textContent = question.explanation;
         document.getElementById('explanation').classList.add('show');
+
+        // 関連リソースを表示（存在する場合）
+        this.renderRelatedResources(question.relatedResources);
 
         // ボタンの状態を更新
         document.getElementById('submitBtn').style.display = 'none';
@@ -433,6 +442,50 @@ class QuizApp {
 
     restartQuiz() {
         this.startQuiz(this.currentCategory);
+    }
+
+    // 関連リソースを表示する
+    renderRelatedResources(relatedResources) {
+        const resourcesContainer = document.getElementById('explanationResources');
+        const resourcesList = document.getElementById('resourcesList');
+
+        // relatedResources がない場合は非表示
+        if (!relatedResources || relatedResources.length === 0) {
+            resourcesContainer.style.display = 'none';
+            return;
+        }
+
+        // リストをクリア（安全なDOM操作）
+        resourcesList.replaceChildren();
+
+        // 各リソースをリンクとして生成
+        relatedResources.forEach(resource => {
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+
+            if (resource.type === 'internal') {
+                // 内部リンク（サイト内資料）
+                link.href = resource.path;
+                link.className = 'resource-link internal';
+                link.textContent = resource.title;
+                // 同じタブで開く
+                link.target = '_self';
+            } else if (resource.type === 'external') {
+                // 外部リンク（AWS公式等）
+                link.href = resource.url;
+                link.className = 'resource-link external';
+                link.textContent = resource.title;
+                // 新しいタブで開く + セキュリティ対策
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+            }
+
+            li.appendChild(link);
+            resourcesList.appendChild(li);
+        });
+
+        // 表示する
+        resourcesContainer.style.display = 'block';
     }
 
     goBackToCategories() {

@@ -14,7 +14,11 @@ const quizData = {
                     "同一リージョン内のみで接続可能で、推移的ルーティングはサポートしない"
                 ],
                 correct: 1,
-                explanation: "VPC Peeringは異なるリージョン間でも接続可能ですが、推移的ルーティング（A→B→Cの間接接続）はサポートしていません。各VPC間で個別にPeering接続を設定する必要があります。"
+                explanation: "VPC Peeringは異なるリージョン間でも接続可能ですが、推移的ルーティング（A→B→Cの間接接続）はサポートしていません。各VPC間で個別にPeering接続を設定する必要があります。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -26,7 +30,12 @@ const quizData = {
                     "Direct Connect Gatewayを使用する"
                 ],
                 correct: 1,
-                explanation: "冗長性を確保するには、異なるDirect Connectロケーションに2本の専用線を設置することがベストプラクティスです。同一ロケーションでは施設全体の障害時にすべての接続が影響を受けます。"
+                explanation: "冗長性を確保するには、異なるDirect Connectロケーションに2本の専用線を設置することがベストプラクティスです。同一ロケーションでは施設全体の障害時にすべての接続が影響を受けます。",
+                relatedResources: [
+                    { title: "Direct Connect ガイド", path: "networking/aws-direct-connect-guide.html", type: "internal" },
+                    { title: "AWS Direct Connect BGP ルーティング完全ガイド", path: "networking/direct-connect-bgp-routing-guide.html", type: "internal" },
+                    { title: "AWS Direct Connect Documentation", url: "https://docs.aws.amazon.com/directconnect/latest/UserGuide/", type: "external" }
+                ]
             },
             {
                 id: 3,
@@ -38,7 +47,12 @@ const quizData = {
                     "NAT Gatewayが不要になる"
                 ],
                 correct: 0,
-                explanation: "VPC PrivateLinkの主な利点は、インターネットを経由せずにAWSサービスや他のVPCのサービスに安全にアクセスできることです。トラフィックはAWSネットワーク内にとどまります。"
+                explanation: "VPC PrivateLinkの主な利点は、インターネットを経由せずにAWSサービスや他のVPCのサービスに安全にアクセスできることです。トラフィックはAWSネットワーク内にとどまります。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "VPC PrivateLink CIDR オーバーラップ", path: "new-solutions/vpc_privatelink_cidr_overlap.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -50,7 +64,12 @@ const quizData = {
                     "Direct Connect接続はサポートしていない"
                 ],
                 correct: 2,
-                explanation: "Transit Gatewayは推移的ルーティングをサポートし、ルートテーブルを使って詳細な接続制御ができます。最大5,000個のVPCを接続でき、Direct Connect接続もサポートしています。"
+                explanation: "Transit Gatewayは推移的ルーティングをサポートし、ルートテーブルを使って詳細な接続制御ができます。最大5,000個のVPCを接続でき、Direct Connect接続もサポートしています。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 5,
@@ -62,7 +81,11 @@ const quizData = {
                     "2つのCustomer Gatewayと1つのVPN接続"
                 ],
                 correct: 2,
-                explanation: "高可用性を実現するには、2つの独立したCustomer Gateway（異なる場所またはデバイス）に対してそれぞれVPN接続を設定し、合計2つのVPN接続を使用することが推奨されます。"
+                explanation: "高可用性を実現するには、2つの独立したCustomer Gateway（異なる場所またはデバイス）に対してそれぞれVPN接続を設定し、合計2つのVPN接続を使用することが推奨されます。",
+                relatedResources: [
+                    { title: "VPN with Direct Connect ガイド", path: "networking/aws-vpn-with-direct-connect-guide.html", type: "internal" },
+                    { title: "Direct Connect 暗号化 VPN", path: "networking/direct_connect_encryption_vpn.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -74,7 +97,12 @@ const quizData = {
                     "セキュリティのため常にPrivateLink VPC Endpointを使用する"
                 ],
                 correct: 1,
-                explanation: "VPC EndpointはAWS APIへの通信をプライベートネットワーク内で完結させ、NAT GatewayはサードパーティAPIやインターネットリソースへのアクセスに使用します。適切な使い分けでコストとセキュリティを最適化できます。"
+                explanation: "VPC EndpointはAWS APIへの通信をプライベートネットワーク内で完結させ、NAT GatewayはサードパーティAPIやインターネットリソースへのアクセスに使用します。適切な使い分けでコストとセキュリティを最適化できます。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "EIP & NAT インフォグラフィック", path: "new-solutions/aws_eip_nat_infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -86,7 +114,12 @@ const quizData = {
                     "コストが半分になる"
                 ],
                 correct: 1,
-                explanation: "Direct Connect + VPN構成では、Direct Connectの冗長性を確保しつつ、VPNによってトラフィックを暗号化できます。金融機関など高いセキュリティ要件がある場合に適用されます。"
+                explanation: "Direct Connect + VPN構成では、Direct Connectの冗長性を確保しつつ、VPNによってトラフィックを暗号化できます。金融機関など高いセキュリティ要件がある場合に適用されます。",
+                relatedResources: [
+                    { title: "Direct Connect ガイド", path: "networking/aws-direct-connect-guide.html", type: "internal" },
+                    { title: "AWS Direct Connect BGP ルーティング完全ガイド", path: "networking/direct-connect-bgp-routing-guide.html", type: "internal" },
+                    { title: "AWS Direct Connect Documentation", url: "https://docs.aws.amazon.com/directconnect/latest/UserGuide/", type: "external" }
+                ]
             },
             {
                 id: 8,
@@ -98,7 +131,12 @@ const quizData = {
                     "自動的にロードバランシングされる"
                 ],
                 correct: 1,
-                explanation: "ENIのホットアタッチにより、実行中のインスタンスを停止することなく、追加のネットワークインターフェースをアタッチして、IPアドレスやセキュリティグループを動的に変更できます。"
+                explanation: "ENIのホットアタッチにより、実行中のインスタンスを停止することなく、追加のネットワークインターフェースをアタッチして、IPアドレスやセキュリティグループを動的に変更できます。",
+                relatedResources: [
+                    { title: "ENI インフォグラフィック", path: "networking/aws-eni-infographic.html", type: "internal" },
+                    { title: "ネットワークACL vs セキュリティグループ 完全ガイド", path: "networking/nacl-sg-comparison-guide.html", type: "internal" },
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -110,7 +148,12 @@ const quizData = {
                     "ElasticSearch + Kibana"
                 ],
                 correct: 1,
-                explanation: "大量のVPC Flow LogsをS3に保存し、Athenaでクエリ分析、QuickSightで可視化する組み合わせが、コスト効率とスケーラビリティの両面で最適です。"
+                explanation: "大量のVPC Flow LogsをS3に保存し、Athenaでクエリ分析、QuickSightで可視化する組み合わせが、コスト効率とスケーラビリティの両面で最適です。",
+                relatedResources: [
+                    { title: "Amazon VPC Network Access Analyzer 完全図解ガイド", path: "networking/vpc-network-access-analyzer-guide.html", type: "internal" },
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 10,
@@ -122,7 +165,12 @@ const quizData = {
                     "内部向けはNLB、外部向けはALB"
                 ],
                 correct: 1,
-                explanation: "NLBは極低レイテンシ（マイクロ秒単位）とstatic IP要件に適し、ALBはHTTP/HTTPSの高度なルーティング（パスベース、ホストベース）と AWS WAF連携に適しています。"
+                explanation: "NLBは極低レイテンシ（マイクロ秒単位）とstatic IP要件に適し、ALBはHTTP/HTTPSの高度なルーティング（パスベース、ホストベース）と AWS WAF連携に適しています。",
+                relatedResources: [
+                    { title: "AWS ゲートウェイ", path: "networking/aws-gateways.html", type: "internal" },
+                    { title: "CloudFront HTTPセキュリティヘッダー完全ガイド", path: "networking/cloudfront-security-headers-guide.html", type: "internal" },
+                    { title: "AWS WAF Documentation", url: "https://docs.aws.amazon.com/waf/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 11,
@@ -134,7 +182,12 @@ const quizData = {
                     "NAT Gateway の高速版"
                 ],
                 correct: 1,
-                explanation: "VPC Lattice（2023年リリース）は、アプリケーションレイヤー（L7）サービスメッシュです。複数VPC、複数アカウント、オンプレミスにまたがるマイクロサービスを、サービス名ベースで検出・接続し、統一的な認証（IAM、SigV4）、きめ細かいアクセス制御、L7ロードバランシング、詳細な可観測性を提供します。従来のVPC Peering、Transit Gateway、PrivateLinkの複雑な組み合わせを簡素化します。"
+                explanation: "VPC Lattice（2023年リリース）は、アプリケーションレイヤー（L7）サービスメッシュです。複数VPC、複数アカウント、オンプレミスにまたがるマイクロサービスを、サービス名ベースで検出・接続し、統一的な認証（IAM、SigV4）、きめ細かいアクセス制御、L7ロードバランシング、詳細な可観測性を提供します。従来のVPC Peering、Transit Gateway、PrivateLinkの複雑な組み合わせを簡素化します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -146,7 +199,12 @@ const quizData = {
                     "AWS Global Acceleratorを使用してすべてのリージョンを接続する"
                 ],
                 correct: 2,
-                explanation: "マルチリージョン・ハイブリッド環境では、各リージョンにTransit Gatewayを配置し、Transit Gateway Peeringで接続するのがベストプラクティスです。Transit Gateway Connectでオンプレミスと統合し、各Transit Gatewayのルートテーブルで詳細な通信制御（どのVPCがどのリージョン/データセンターと通信可能か）を実現します。単一リージョンのTransit Gatewayでは他リージョンへの遅延が増加し、VPC Peeringでは管理が複雑になります（N×Nの接続管理）。"
+                explanation: "マルチリージョン・ハイブリッド環境では、各リージョンにTransit Gatewayを配置し、Transit Gateway Peeringで接続するのがベストプラクティスです。Transit Gateway Connectでオンプレミスと統合し、各Transit Gatewayのルートテーブルで詳細な通信制御（どのVPCがどのリージョン/データセンターと通信可能か）を実現します。単一リージョンのTransit Gatewayでは他リージョンへの遅延が増加し、VPC Peeringでは管理が複雑になります（N×Nの接続管理）。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -158,7 +216,12 @@ const quizData = {
                     "CloudFrontのオリジングループでプライマリとセカンダリを設定する"
                 ],
                 correct: 1,
-                explanation: "この要件では、Transit Gatewayのルートテーブルで平常時はDR環境向けルートをブラックホール（破棄）に設定し、Route 53 Application Recovery Controller（ARC）で災害時にルート切り替えを自動化する構成が最適です。ARCはリージョン障害時の高速フェイルオーバー（数秒）を実現し、手動/自動切り替えの制御とルーティングコントロールを提供します。オンプレミスからはDirect Connect Gatewayを介して両リージョンのTransit Gatewayに接続し、平常時は本番環境のみアクセス可能にします。"
+                explanation: "この要件では、Transit Gatewayのルートテーブルで平常時はDR環境向けルートをブラックホール（破棄）に設定し、Route 53 Application Recovery Controller（ARC）で災害時にルート切り替えを自動化する構成が最適です。ARCはリージョン障害時の高速フェイルオーバー（数秒）を実現し、手動/自動切り替えの制御とルーティングコントロールを提供します。オンプレミスからはDirect Connect Gatewayを介して両リージョンのTransit Gatewayに接続し、平常時は本番環境のみアクセス可能にします。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 14,
@@ -170,7 +233,12 @@ const quizData = {
                     "Transit Gatewayで全顧客VPCを接続する"
                 ],
                 correct: 1,
-                explanation: "マルチテナントSaaSでは、PrivateLink VPC Endpoint Serviceが最適です。SaaS側がEndpoint Serviceを作成し、各顧客がVPC Endpoint（Interface型）を作成するだけで接続完了。トラフィックはAWSネットワーク内に閉じ、顧客間は完全に分離されます。接続受け入れ承認機能で制御でき、CloudWatch Logsで監査ログを記録可能。VPC Peeringは管理が煩雑（100件の個別設定）、Transit Gatewayは顧客間分離の設定が複雑、インターネット経由はセキュリティ要件を満たしません。"
+                explanation: "マルチテナントSaaSでは、PrivateLink VPC Endpoint Serviceが最適です。SaaS側がEndpoint Serviceを作成し、各顧客がVPC Endpoint（Interface型）を作成するだけで接続完了。トラフィックはAWSネットワーク内に閉じ、顧客間は完全に分離されます。接続受け入れ承認機能で制御でき、CloudWatch Logsで監査ログを記録可能。VPC Peeringは管理が煩雑（100件の個別設定）、Transit Gatewayは顧客間分離の設定が複雑、インターネット経由はセキュリティ要件を満たしません。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -182,7 +250,12 @@ const quizData = {
                     "PrivateLink VPC Endpointを使用する"
                 ],
                 correct: 1,
-                explanation: "Auto Scaling環境で送信元IP固定化が必要な場合、各AZにNAT Gatewayを配置し、それぞれにElastic IPを関連付けるのがベストプラクティスです。複数の固定IPアドレスをサードパーティに登録する必要がありますが、高可用性を確保できます。単一AZのNAT GatewayではそのAZ障害時に全サービスが停止します。各インスタンスへのElastic IP割り当ては台数変動時の管理が複雑になり、コストも増加します。PrivateLinkはAWSサービス/VPC間の接続用でサードパーティAPIには使用できません。"
+                explanation: "Auto Scaling環境で送信元IP固定化が必要な場合、各AZにNAT Gatewayを配置し、それぞれにElastic IPを関連付けるのがベストプラクティスです。複数の固定IPアドレスをサードパーティに登録する必要がありますが、高可用性を確保できます。単一AZのNAT GatewayではそのAZ障害時に全サービスが停止します。各インスタンスへのElastic IP割り当ては台数変動時の管理が複雑になり、コストも増加します。PrivateLinkはAWSサービス/VPC間の接続用でサードパーティAPIには使用できません。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "EIP & NAT インフォグラフィック", path: "new-solutions/aws_eip_nat_infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 16,
@@ -194,7 +267,12 @@ const quizData = {
                     "Kubernetesクラスタを構築してIstioをデプロイする"
                 ],
                 correct: 1,
-                explanation: "VPC Lattice（2023年リリース）は、まさにこのような複雑なマルチアカウント・マルチVPC・ハイブリッド環境でのマイクロサービス通信を簡素化するために設計されたL7サービスメッシュです。Service Networkに各サービス（Lambda、ECS、EC2、オンプレミス）を登録するだけで、サービス名ベースの検出・接続が可能になります。IAM、SigV4、リソースベースポリシーで統一的な認証・認可を実現し、VPC Peering/Transit Gateway/PrivateLinkの複雑な組み合わせが不要になります。詳細なメトリクスとログをCloudWatchで一元管理でき、既存の複雑なネットワーク構成を大幅に簡素化します。"
+                explanation: "VPC Lattice（2023年リリース）は、まさにこのような複雑なマルチアカウント・マルチVPC・ハイブリッド環境でのマイクロサービス通信を簡素化するために設計されたL7サービスメッシュです。Service Networkに各サービス（Lambda、ECS、EC2、オンプレミス）を登録するだけで、サービス名ベースの検出・接続が可能になります。IAM、SigV4、リソースベースポリシーで統一的な認証・認可を実現し、VPC Peering/Transit Gateway/PrivateLinkの複雑な組み合わせが不要になります。詳細なメトリクスとログをCloudWatchで一元管理でき、既存の複雑なネットワーク構成を大幅に簡素化します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -212,7 +290,12 @@ const quizData = {
                     "デフォルトで12時間有効で、最大7日間まで延長可能"
                 ],
                 correct: 1,
-                explanation: "IAM Roleの一時的な認証情報は、デフォルトで1時間有効です。AssumeRole APIを使用する場合、DurationSecondsパラメータで最大12時間（43,200秒）まで延長できます。"
+                explanation: "IAM Roleの一時的な認証情報は、デフォルトで1時間有効です。AssumeRole APIを使用する場合、DurationSecondsパラメータで最大12時間（43,200秒）まで延長できます。",
+                relatedResources: [
+                    { title: "IAM ロール：権限ポリシー vs 信頼ポリシー完全ガイド", path: "security-governance/iam-role-policies-guide.html", type: "internal" },
+                    { title: "IAM 権限評価モデル & 操作経路 完全ガイド", path: "security-governance/iam-permission-evaluation-guide.html", type: "internal" },
+                    { title: "AWS IAM Documentation", url: "https://docs.aws.amazon.com/IAM/latest/UserGuide/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -224,7 +307,12 @@ const quizData = {
                     "SCPは個別のIAMユーザーに直接適用できる"
                 ],
                 correct: 2,
-                explanation: "SCP（Service Control Policy）は拒否リスト（ガードレール）として機能し、IAMポリシーの許可があってもSCPで拒否されていれば実行できません。マスターアカウントには適用されません。"
+                explanation: "SCP（Service Control Policy）は拒否リスト（ガードレール）として機能し、IAMポリシーの許可があってもSCPで拒否されていれば実行できません。マスターアカウントには適用されません。",
+                relatedResources: [
+                    { title: "SCP 簡単解説", path: "organizational-complexity/aws-scp-simplified.html", type: "internal" },
+                    { title: "AWS SCP構文 完全図解ガイド", path: "security-governance/scp-syntax-visual-guide.html", type: "internal" },
+                    { title: "AWS Organizations Documentation", url: "https://docs.aws.amazon.com/organizations/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 3,
@@ -236,7 +324,11 @@ const quizData = {
                     "すべてのAWSサービスで利用できる"
                 ],
                 correct: 1,
-                explanation: "AWS WAFのマネージドルールグループは、AWSやMarketplaceの専門家が作成・保守し、新しい脅威に対して自動的に更新されるため、運用負荷を軽減できます。"
+                explanation: "AWS WAFのマネージドルールグループは、AWSやMarketplaceの専門家が作成・保守し、新しい脅威に対して自動的に更新されるため、運用負荷を軽減できます。",
+                relatedResources: [
+                    { title: "CloudFront HTTPセキュリティヘッダー完全ガイド", path: "networking/cloudfront-security-headers-guide.html", type: "internal" },
+                    { title: "AWS WAF Documentation", url: "https://docs.aws.amazon.com/waf/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 4,
@@ -248,7 +340,12 @@ const quizData = {
                     "両方とも無料で利用できる"
                 ],
                 correct: 1,
-                explanation: "CloudTrailのマネジメントイベント（API呼び出し等）は各リージョンで無料ですが、データイベント（S3オブジェクトアクセス等）は有料です。"
+                explanation: "CloudTrailのマネジメントイベント（API呼び出し等）は各リージョンで無料ですが、データイベント（S3オブジェクトアクセス等）は有料です。",
+                relatedResources: [
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail Documentation", url: "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 5,
@@ -260,7 +357,12 @@ const quizData = {
                     "手動実行のみ"
                 ],
                 correct: 2,
-                explanation: "AWS Configルールは、リソースの設定変更時にトリガーされる評価と、指定した間隔での定期評価の両方をサポートしています。ルールの種類に応じて適切な評価方法を選択できます。"
+                explanation: "AWS Configルールは、リソースの設定変更時にトリガーされる評価と、指定した間隔での定期評価の両方をサポートしています。ルールの種類に応じて適切な評価方法を選択できます。",
+                relatedResources: [
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" },
+                    { title: "AWS Config コンフォーマンスパック & StackSets 完全ガイド", path: "security-governance/aws-config-conformance-stacksets-guide.html", type: "internal" },
+                    { title: "AWS Config Documentation", url: "https://docs.aws.amazon.com/config/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 6,
@@ -272,7 +374,12 @@ const quizData = {
                     "CloudTrailログのみを分析"
                 ],
                 correct: 1,
-                explanation: "GuardDutyは機械学習、異常検出、脅威インテリジェンスを組み合わせて、VPC Flow Logs、DNS logs、CloudTrail logsを分析し、未知の脅威や異常な行動パターンを自動検出します。"
+                explanation: "GuardDutyは機械学習、異常検出、脅威インテリジェンスを組み合わせて、VPC Flow Logs、DNS logs、CloudTrail logsを分析し、未知の脅威や異常な行動パターンを自動検出します。",
+                relatedResources: [
+                    { title: "Amazon VPC Network Access Analyzer 完全図解ガイド", path: "networking/vpc-network-access-analyzer-guide.html", type: "internal" },
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -284,7 +391,12 @@ const quizData = {
                     "外部システム連携時のみSecrets Managerを使用"
                 ],
                 correct: 1,
-                explanation: "Secrets Managerは自動ローテーション機能とクロスサービス統合に優れ、Parameter Storeは階層化された設定管理に適しています。機密レベルと必要機能に応じて使い分けます。"
+                explanation: "Secrets Managerは自動ローテーション機能とクロスサービス統合に優れ、Parameter Storeは階層化された設定管理に適しています。機密レベルと必要機能に応じて使い分けます。",
+                relatedResources: [
+                    { title: "AWS KMS グラント（Grants）完全ガイド", path: "security-governance/kms-grants-guide.html", type: "internal" },
+                    { title: "RAM VPC プレフィックス", path: "organizational-complexity/aws_ram_vpc_prefix_infographic.html", type: "internal" },
+                    { title: "Transit Gateway 共有", path: "organizational-complexity/aws-ram-tgw-sharing.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -296,7 +408,12 @@ const quizData = {
                     "IAMポリシーの自動生成"
                 ],
                 correct: 1,
-                explanation: "AWS Macieは機械学習を使用してS3内の個人識別情報（PII）や機密データを自動で検出・分類し、データプライバシー規制のコンプライアンス維持を支援します。"
+                explanation: "AWS Macieは機械学習を使用してS3内の個人識別情報（PII）や機密データを自動で検出・分類し、データプライバシー規制のコンプライアンス維持を支援します。",
+                relatedResources: [
+                    { title: "AWS Config - S3パブリックアクセス検出完全ガイド", path: "security-governance/aws-config-s3-public-access-guide.html", type: "internal" },
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 9,
@@ -308,7 +425,12 @@ const quizData = {
                     "セキュリティポリシーの自動生成"
                 ],
                 correct: 1,
-                explanation: "Security Hubは GuardDuty、Inspector、Macie等のAWSセキュリティサービスと、サードパーティセキュリティツールの検出結果を統合し、一元的なセキュリティ態勢管理を提供します。"
+                explanation: "Security Hubは GuardDuty、Inspector、Macie等のAWSセキュリティサービスと、サードパーティセキュリティツールの検出結果を統合し、一元的なセキュリティ態勢管理を提供します。",
+                relatedResources: [
+                    { title: "GuardDuty InstanceCredentialExfiltration 完全対処ガイド", path: "networking/guardduty-credential-exfiltration-guide-v2.html", type: "internal" },
+                    { title: "AWS GuardDuty Documentation", url: "https://docs.aws.amazon.com/guardduty/latest/ug/", type: "external" },
+                    { title: "AWS Config - S3パブリックアクセス検出完全ガイド", path: "security-governance/aws-config-s3-public-access-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -320,7 +442,11 @@ const quizData = {
                     "ネットワーク設定の脆弱性のみ"
                 ],
                 correct: 1,
-                explanation: "Inspector V2は EC2インスタンスのOS・アプリケーション脆弱性と、ECRに保存されたコンテナイメージの脆弱性を継続的にスキャンし、CVE情報との照合により脆弱性を特定します。"
+                explanation: "Inspector V2は EC2インスタンスのOS・アプリケーション脆弱性と、ECRに保存されたコンテナイメージの脆弱性を継続的にスキャンし、CVE情報との照合により脆弱性を特定します。",
+                relatedResources: [
+                    { title: "Amazon Inspector エージェントレス脆弱性評価 完全ガイド", path: "security-governance/amazon-inspector-agentless-guide.html", type: "internal" },
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 11,
@@ -332,7 +458,12 @@ const quizData = {
                     "WAF + Shield Standard のみ"
                 ],
                 correct: 1,
-                explanation: "PCI-DSS準拠には包括的なセキュリティ対策が必須: ①ネットワーク分離（VPC）、②ロギング（CloudTrail全リージョン、VPC Flow Logs、Config）、③脅威検出（GuardDuty、Security Hub）、④暗号化（KMS、転送時・保管時暗号化）、⑤アクセス制御（IAM、MFA）、⑥コンプライアンス監視（Config Rules、Audit Manager）、⑦定期侵入テスト。AWS Artifact でPCI-DSSコンプライアンスレポートを入手できます。"
+                explanation: "PCI-DSS準拠には包括的なセキュリティ対策が必須: ①ネットワーク分離（VPC）、②ロギング（CloudTrail全リージョン、VPC Flow Logs、Config）、③脅威検出（GuardDuty、Security Hub）、④暗号化（KMS、転送時・保管時暗号化）、⑤アクセス制御（IAM、MFA）、⑥コンプライアンス監視（Config Rules、Audit Manager）、⑦定期侵入テスト。AWS Artifact でPCI-DSSコンプライアンスレポートを入手できます。",
+                relatedResources: [
+                    { title: "Amazon VPC Network Access Analyzer 完全図解ガイド", path: "networking/vpc-network-access-analyzer-guide.html", type: "internal" },
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -344,7 +475,12 @@ const quizData = {
                     "IAM Rolesのみで環境を分離する"
                 ],
                 correct: 1,
-                explanation: "HIPAA準拠のマルチアカウント環境では、AWS Organizationsによる統制が必須です。SCP（Service Control Policy）で組織単位/アカウント単位の権限を制限し、開発者が本番PHIにアクセスできないよう制御します。CloudTrail組織証跡で全アカウントのAPI呼び出しを一元監視、AWS Config組織ルールで暗号化・アクセス制御などのコンプライアンスを継続的に監視します。Amazon Macieで S3 内のPHIを自動検出・分類し、機密データの場所を可視化。KMS カスタマー管理キーでPHI暗号化を強制し、キーポリシーで本番データへのアクセスを本番アカウントのみに制限します。"
+                explanation: "HIPAA準拠のマルチアカウント環境では、AWS Organizationsによる統制が必須です。SCP（Service Control Policy）で組織単位/アカウント単位の権限を制限し、開発者が本番PHIにアクセスできないよう制御します。CloudTrail組織証跡で全アカウントのAPI呼び出しを一元監視、AWS Config組織ルールで暗号化・アクセス制御などのコンプライアンスを継続的に監視します。Amazon Macieで S3 内のPHIを自動検出・分類し、機密データの場所を可視化。KMS カスタマー管理キーでPHI暗号化を強制し、キーポリシーで本番データへのアクセスを本番アカウントのみに制限します。",
+                relatedResources: [
+                    { title: "SCP 簡単解説", path: "organizational-complexity/aws-scp-simplified.html", type: "internal" },
+                    { title: "AWS SCP構文 完全図解ガイド", path: "security-governance/scp-syntax-visual-guide.html", type: "internal" },
+                    { title: "AWS Organizations Documentation", url: "https://docs.aws.amazon.com/organizations/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 13,
@@ -356,7 +492,12 @@ const quizData = {
                     "サードパーティのSIEMツールのみを使用する"
                 ],
                 correct: 1,
-                explanation: "大規模マルチアカウント環境のセキュリティ統制には、AWS Security Hubが中核となります。Security Hubは全アカウントのセキュリティ検出結果（GuardDuty、Inspector、Macie、IAM Access Analyzer、Config）を集約し、AWS Foundational Security Best Practicesなどの標準フレームワークで自動評価します。検出された問題はEventBridgeルールでキャッチし、Lambda関数またはSystems Manager Automationドキュメントで自動修復（例: パブリックS3バケットのブロック、MFAの強制通知、過剰権限IAMポリシーの修正提案）を実行します。GuardDutyはルートユーザーの使用や異常なAPI呼び出しをML検出、IAM Access Analyzerは意図しない外部アクセスを分析します。"
+                explanation: "大規模マルチアカウント環境のセキュリティ統制には、AWS Security Hubが中核となります。Security Hubは全アカウントのセキュリティ検出結果（GuardDuty、Inspector、Macie、IAM Access Analyzer、Config）を集約し、AWS Foundational Security Best Practicesなどの標準フレームワークで自動評価します。検出された問題はEventBridgeルールでキャッチし、Lambda関数またはSystems Manager Automationドキュメントで自動修復（例: パブリックS3バケットのブロック、MFAの強制通知、過剰権限IAMポリシーの修正提案）を実行します。GuardDutyはルートユーザーの使用や異常なAPI呼び出しをML検出、IAM Access Analyzerは意図しない外部アクセスを分析します。",
+                relatedResources: [
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" },
+                    { title: "AWS Config コンフォーマンスパック & StackSets 完全ガイド", path: "security-governance/aws-config-conformance-stacksets-guide.html", type: "internal" },
+                    { title: "AWS Config Documentation", url: "https://docs.aws.amazon.com/config/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 14,
@@ -368,7 +509,12 @@ const quizData = {
                     "S3 Glacier の自動暗号化に依存する"
                 ],
                 correct: 1,
-                explanation: "金融機関の厳格な要件には、KMSカスタマー管理キー（CMK）が必須です。各リージョンに独立したCMKを作成し、データレジデンシー要件を満たします。KMS自動ローテーション（年1回）を有効化し、キーポリシーで特定IAMロール/ユーザーのみにアクセスを制限します。S3バケットポリシーで「aws:SecureTransport」条件によりTLS転送を強制し、デフォルト暗号化でSSE-KMSを指定して保存時暗号化を保証します。CloudTrailのKMS API監査ログにより、いつ誰がどのキーを使用したか完全追跡可能です。リージョン間レプリケーションが必要な場合は、レプリケート先リージョンの独立したCMKで再暗号化し、データレジデンシーを維持します。SSE-S3はAWS管理キーで監査証跡が限定的、クライアント側暗号化のみではS3側での暗号化強制ができません。"
+                explanation: "金融機関の厳格な要件には、KMSカスタマー管理キー（CMK）が必須です。各リージョンに独立したCMKを作成し、データレジデンシー要件を満たします。KMS自動ローテーション（年1回）を有効化し、キーポリシーで特定IAMロール/ユーザーのみにアクセスを制限します。S3バケットポリシーで「aws:SecureTransport」条件によりTLS転送を強制し、デフォルト暗号化でSSE-KMSを指定して保存時暗号化を保証します。CloudTrailのKMS API監査ログにより、いつ誰がどのキーを使用したか完全追跡可能です。リージョン間レプリケーションが必要な場合は、レプリケート先リージョンの独立したCMKで再暗号化し、データレジデンシーを維持します。SSE-S3はAWS管理キーで監査証跡が限定的、クライアント側暗号化のみではS3側での暗号化強制ができません。",
+                relatedResources: [
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail Documentation", url: "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 15,
@@ -380,7 +526,12 @@ const quizData = {
                     "AWS SSOのみを使用する"
                 ],
                 correct: 1,
-                explanation: "マルチテナントSaaSでのエンタープライズSSO統合には、Amazon Cognito User Poolsが最適です。User PoolsはSAML 2.0とOpenID Connect（OIDC）をサポートし、数千の外部IDプロバイダーを統合可能です。各顧客のIDプロバイダーをUser Poolのフェデレーションとして設定し、属性マッピングでユーザー情報を取得します。Cognito Groupsで顧客ごと・ロールごとの権限を管理し、ALB認証機能やAPI Gateway Cognitoオーソライザーでアプリケーションレベルの認可を実装します。セッショントークンの有効期限管理、リフレッシュトークンによる長期セッション、MFA統合も可能です。CloudWatch LogsとCognito自体の監査ログで、すべての認証イベント（ログイン、ログアウト、失敗）を追跡できます。IAMユーザーは数千規模では管理不可能、AWS SSOはAWS内部リソース向けで外部SaaSアプリケーションには適しません。"
+                explanation: "マルチテナントSaaSでのエンタープライズSSO統合には、Amazon Cognito User Poolsが最適です。User PoolsはSAML 2.0とOpenID Connect（OIDC）をサポートし、数千の外部IDプロバイダーを統合可能です。各顧客のIDプロバイダーをUser Poolのフェデレーションとして設定し、属性マッピングでユーザー情報を取得します。Cognito Groupsで顧客ごと・ロールごとの権限を管理し、ALB認証機能やAPI Gateway Cognitoオーソライザーでアプリケーションレベルの認可を実装します。セッショントークンの有効期限管理、リフレッシュトークンによる長期セッション、MFA統合も可能です。CloudWatch LogsとCognito自体の監査ログで、すべての認証イベント（ログイン、ログアウト、失敗）を追跡できます。IAMユーザーは数千規模では管理不可能、AWS SSOはAWS内部リソース向けで外部SaaSアプリケーションには適しません。",
+                relatedResources: [
+                    { title: "ENI インフォグラフィック", path: "networking/aws-eni-infographic.html", type: "internal" },
+                    { title: "AWS ゲートウェイ", path: "networking/aws-gateways.html", type: "internal" },
+                    { title: "AWS Cognito インフォグラフィック", path: "security-governance/aws-cognito-infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 16,
@@ -392,7 +543,12 @@ const quizData = {
                     "VPC Endpointのみでセキュリティを確保する"
                 ],
                 correct: 1,
-                explanation: "医療データの厳格なセキュリティ・コンプライアンス要件には包括的な対策が必要です。①暗号化: S3 SSE-KMSで保存時暗号化、TLS 1.2+で転送時暗号化。②最小権限: IAMロールで機械学習ワークロード専用の権限を付与し、S3バケットポリシーで特定VPC Endpointからのアクセスのみ許可。③監査: CloudTrail（データイベント）でS3オブジェクトレベルのAPI呼び出しを記録、S3 Access LoggingでHTTPアクセスを詳細記録。④改ざん検出と保持: S3 Object Lock（Complianceモード）で7年間の削除・変更を物理的に禁止（WORM）。⑤退職者対策: AWS SSOとSCIM自動プロビジョニングで、IDプロバイダー（Azure AD等）でのユーザー削除を検知し、AWSアクセス権を自動削除。Amazon Macieで異常なデータアクセスパターン（大量ダウンロード等）を検出します。"
+                explanation: "医療データの厳格なセキュリティ・コンプライアンス要件には包括的な対策が必要です。①暗号化: S3 SSE-KMSで保存時暗号化、TLS 1.2+で転送時暗号化。②最小権限: IAMロールで機械学習ワークロード専用の権限を付与し、S3バケットポリシーで特定VPC Endpointからのアクセスのみ許可。③監査: CloudTrail（データイベント）でS3オブジェクトレベルのAPI呼び出しを記録、S3 Access LoggingでHTTPアクセスを詳細記録。④改ざん検出と保持: S3 Object Lock（Complianceモード）で7年間の削除・変更を物理的に禁止（WORM）。⑤退職者対策: AWS SSOとSCIM自動プロビジョニングで、IDプロバイダー（Azure AD等）でのユーザー削除を検知し、AWSアクセス権を自動削除。Amazon Macieで異常なデータアクセスパターン（大量ダウンロード等）を検出します。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -410,7 +566,12 @@ const quizData = {
                     "ターゲット追跡スケーリングと同じ機能"
                 ],
                 correct: 0,
-                explanation: "予測スケーリングは、過去のトラフィックパターンをAIが学習し、将来の需要を予測して事前にインスタンスをスケーリングする機能です。需要の急激な変化に対応できます。"
+                explanation: "予測スケーリングは、過去のトラフィックパターンをAIが学習し、将来の需要を予測して事前にインスタンスをスケーリングする機能です。需要の急激な変化に対応できます。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 2,
@@ -422,7 +583,12 @@ const quizData = {
                     "制限はなく、無制限に同時実行可能"
                 ],
                 correct: 0,
-                explanation: "Lambdaの同時実行数は、リージョンごとにデフォルト1,000まで（引き上げ申請可能）で、特定の関数に予約済み同時実行数を設定することで安定性を確保できます。"
+                explanation: "Lambdaの同時実行数は、リージョンごとにデフォルト1,000まで（引き上げ申請可能）で、特定の関数に予約済み同時実行数を設定することで安定性を確保できます。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 3,
@@ -434,7 +600,12 @@ const quizData = {
                     "Dockerコンテナをサポートしていない"
                 ],
                 correct: 1,
-                explanation: "ECS Fargateはサーバーレスのコンテナ実行環境で、EC2インスタンスの管理が不要です。EC2起動タイプより単価は高いですが、運用コストを削減できます。"
+                explanation: "ECS Fargateはサーバーレスのコンテナ実行環境で、EC2インスタンスの管理が不要です。EC2起動タイプより単価は高いですが、運用コストを削減できます。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 4,
@@ -446,7 +617,10 @@ const quizData = {
                     "追加料金が発生する"
                 ],
                 correct: 2,
-                explanation: "Session ManagerはIAMロールベースでアクセス制御でき、セッションログを記録可能です。SSH/RDPポートを開く必要がなく、パブリックIPも不要で、追加料金もかかりません。"
+                explanation: "Session ManagerはIAMロールベースでアクセス制御でき、セッションログを記録可能です。SSH/RDPポートを開く必要がなく、パブリックIPも不要で、追加料金もかかりません。",
+                relatedResources: [
+                    { title: "Systems Manager 完全ガイド", path: "continuous-improvement/systems-manager-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -458,7 +632,11 @@ const quizData = {
                     "Lambda関数のトリガーのみ"
                 ],
                 correct: 1,
-                explanation: "カスタムイベントバスは、サードパーティアプリケーションや独自のアプリケーションからのイベントを管理するために使用します。デフォルトイベントバスとは分離してイベントを管理できます。"
+                explanation: "カスタムイベントバスは、サードパーティアプリケーションや独自のアプリケーションからのイベントを管理するために使用します。デフォルトイベントバスとは分離してイベントを管理できます。",
+                relatedResources: [
+                    { title: "EventBridge vs SNS/SQS 完全比較ガイド", path: "compute-applications/eventbridge-comparison-guide.html", type: "internal" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -482,7 +660,12 @@ const quizData = {
                     "コストが最も安くなる"
                 ],
                 correct: 1,
-                explanation: "Target Tracking スケーリングは指定した目標値（CPU使用率70%など）を維持するように滑らかにスケーリングし、急激な変動を抑制してアプリケーションの安定性を保ちます。"
+                explanation: "Target Tracking スケーリングは指定した目標値（CPU使用率70%など）を維持するように滑らかにスケーリングし、急激な変動を抑制してアプリケーションの安定性を保ちます。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "ECS 高可用性パターン完全ガイド", path: "compute-applications/ecs-high-availability-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -506,7 +689,12 @@ const quizData = {
                     "メモリ使用量を最適化する"
                 ],
                 correct: 1,
-                explanation: "Provisioned Concurrencyは指定した数のLambda実行環境を事前に準備することで、コールドスタートによるレイテンシを排除し、一貫したパフォーマンスを提供します。"
+                explanation: "Provisioned Concurrencyは指定した数のLambda実行環境を事前に準備することで、コールドスタートによるレイテンシを排除し、一貫したパフォーマンスを提供します。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 10,
@@ -518,7 +706,12 @@ const quizData = {
                     "パブリック向けはFargate、プライベート向けはEC2"
                 ],
                 correct: 1,
-                explanation: "Fargateはサーバーレスでノード管理が不要ですが単価が高く、EC2はノード管理が必要ですがコスト効率とカスタマイズ性に優れます。要件に応じて選択します。"
+                explanation: "Fargateはサーバーレスでノード管理が不要ですが単価が高く、EC2はノード管理が必要ですがコスト効率とカスタマイズ性に優れます。要件に応じて選択します。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 11,
@@ -530,7 +723,12 @@ const quizData = {
                     "コスト削減には両方とも不要"
                 ],
                 correct: 1,
-                explanation: "Provisioned Concurrency は関数を事前に初期化・ウォーム状態に保ち、コールドスタート遅延（数秒）をゼロにします。レイテンシが重要なAPI、Alexaスキル等で使用。Reserved Concurrency は特定関数に同時実行枠を予約し、他の関数がアカウント全体の同時実行制限を使い切っても、その関数は確実に実行されるよう保証します。用途が異なるため、併用も可能です。"
+                explanation: "Provisioned Concurrency は関数を事前に初期化・ウォーム状態に保ち、コールドスタート遅延（数秒）をゼロにします。レイテンシが重要なAPI、Alexaスキル等で使用。Reserved Concurrency は特定関数に同時実行枠を予約し、他の関数がアカウント全体の同時実行制限を使い切っても、その関数は確実に実行されるよう保証します。用途が異なるため、併用も可能です。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 12,
@@ -542,7 +740,12 @@ const quizData = {
                     "ECS on EC2のみを使用する"
                 ],
                 correct: 1,
-                explanation: "急激なトラフィック変動に対応するには、完全サーバーレスアーキテクチャが最適です。CloudFrontで動画をエッジキャッシュし、S3から配信することでオリジン負荷を削減。API Gateway + Lambdaで無制限のスケーラビリティを確保し、Provisioned Concurrencyでコールドスタートを排除。AWS MediaConvertは動画エンコーディングを自動スケールし、複数の解像度・ビットレートに変換します。DynamoDBのオンデマンドモードでトラフィックに応じて自動スケール。EventBridge + SQSで非同期処理を疎結合化し、Lambdaで処理します。EC2 Auto Scalingではスケールアウトに数分かかり、重大ニュース発生直後の急激なトラフィック増加に対応できません。"
+                explanation: "急激なトラフィック変動に対応するには、完全サーバーレスアーキテクチャが最適です。CloudFrontで動画をエッジキャッシュし、S3から配信することでオリジン負荷を削減。API Gateway + Lambdaで無制限のスケーラビリティを確保し、Provisioned Concurrencyでコールドスタートを排除。AWS MediaConvertは動画エンコーディングを自動スケールし、複数の解像度・ビットレートに変換します。DynamoDBのオンデマンドモードでトラフィックに応じて自動スケール。EventBridge + SQSで非同期処理を疎結合化し、Lambdaで処理します。EC2 Auto Scalingではスケールアウトに数分かかり、重大ニュース発生直後の急激なトラフィック増加に対応できません。",
+                relatedResources: [
+                    { title: "API Gateway 認証・認可", path: "security-governance/api_gateway_auth_infographic.html", type: "internal" },
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -554,7 +757,12 @@ const quizData = {
                     "S3 + Athena でバッチ処理する"
                 ],
                 correct: 1,
-                explanation: "高頻度ストリーミングデータの処理には、Kinesis Data Streamsが最適です。パーティションキー（銘柄コード等）でシャード分割し、順序保証を実現します。Lambda Enhanced Fan-Outで各Lambdaが専用のスループット（2MB/秒/シャード）を確保し、並列処理でレイテンシを最小化します。Kinesis Data Analyticsで複雑なSQL/Apache Flinkクエリ（タンブリングウィンドウ、ホッピングウィンドウ）を実行し、移動平均等を計算。結果はDynamoDBに保存し、DynamoDB StreamsでAPI Gateway WebSocket APIに変更を通知してリアルタイム配信します。Lambdaのイベントソースマッピングでチェックポイント管理により、Exactly-Once処理を保証します。SQSは順序保証が弱く（FIFOでも制限あり）、S3 + Athenaはバッチ処理でリアルタイム要件を満たしません。"
+                explanation: "高頻度ストリーミングデータの処理には、Kinesis Data Streamsが最適です。パーティションキー（銘柄コード等）でシャード分割し、順序保証を実現します。Lambda Enhanced Fan-Outで各Lambdaが専用のスループット（2MB/秒/シャード）を確保し、並列処理でレイテンシを最小化します。Kinesis Data Analyticsで複雑なSQL/Apache Flinkクエリ（タンブリングウィンドウ、ホッピングウィンドウ）を実行し、移動平均等を計算。結果はDynamoDBに保存し、DynamoDB StreamsでAPI Gateway WebSocket APIに変更を通知してリアルタイム配信します。Lambdaのイベントソースマッピングでチェックポイント管理により、Exactly-Once処理を保証します。SQSは順序保証が弱く（FIFOでも制限あり）、S3 + Athenaはバッチ処理でリアルタイム要件を満たしません。",
+                relatedResources: [
+                    { title: "API Gateway 認証・認可", path: "security-governance/api_gateway_auth_infographic.html", type: "internal" },
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -566,7 +774,12 @@ const quizData = {
                     "RDSのストアドプロシージャで全処理を実行する"
                 ],
                 correct: 1,
-                explanation: "複雑な分散トランザクションには、AWS Step Functionsが最適です。Standard Workflowで在庫確認（DynamoDB条件付き書き込み）→ 決済API呼び出し → 在庫減算の各ステップをオーケストレーションします。DynamoDBトランザクションAPIで、在庫確認と仮予約をアトミックに実行し、過剰販売を防ぎます。決済失敗時はStep FunctionsのCatch句でCompensationステップ（在庫復元、キャンセル通知）を自動実行し、Sagaパターンで分散トランザクションの整合性を保証します。各ステップはLambdaで実装し、無制限にスケール。SQS DLQでリトライ不能な失敗を隔離します。単一Lambda関数では複雑なエラーハンドリングが困難で、タイムアウトリスクがあります。RDSはブラックフライデーのスケールに対応できず、書き込みスケーラビリティに限界があります。"
+                explanation: "複雑な分散トランザクションには、AWS Step Functionsが最適です。Standard Workflowで在庫確認（DynamoDB条件付き書き込み）→ 決済API呼び出し → 在庫減算の各ステップをオーケストレーションします。DynamoDBトランザクションAPIで、在庫確認と仮予約をアトミックに実行し、過剰販売を防ぎます。決済失敗時はStep FunctionsのCatch句でCompensationステップ（在庫復元、キャンセル通知）を自動実行し、Sagaパターンで分散トランザクションの整合性を保証します。各ステップはLambdaで実装し、無制限にスケール。SQS DLQでリトライ不能な失敗を隔離します。単一Lambda関数では複雑なエラーハンドリングが困難で、タイムアウトリスクがあります。RDSはブラックフライデーのスケールに対応できず、書き込みスケーラビリティに限界があります。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 15,
@@ -578,7 +791,12 @@ const quizData = {
                     "オンデマンドのSpot Instancesのみを使用する"
                 ],
                 correct: 1,
-                explanation: "GPU推論でコスト効率とレイテンシ要件を両立するには、ECS on Fargateが最適です（Fargateは2023年からGPUサポート開始）。Application Auto Scalingで、ALBのリクエスト数やSQSキュー長に基づいてECSタスク数を動的に調整します。リクエストゼロ時は1タスクのみ稼働させ、モデルをメモリにロードした状態を維持（ウォームプール）することで、次のリクエスト時に30秒のコールドスタートを回避します。急激なトラフィック増加時は、Target Tracking Scalingで数分以内に数十タスクまでスケールアウト。ALBのヘルスチェックで異常タスクを自動置換します。24時間稼働のGPU EC2は無駄なコストが高く、LambdaはGPUをサポートせず、Spot Instancesは中断リスクで推論レイテンシSLAを保証できません。"
+                explanation: "GPU推論でコスト効率とレイテンシ要件を両立するには、ECS on Fargateが最適です（Fargateは2023年からGPUサポート開始）。Application Auto Scalingで、ALBのリクエスト数やSQSキュー長に基づいてECSタスク数を動的に調整します。リクエストゼロ時は1タスクのみ稼働させ、モデルをメモリにロードした状態を維持（ウォームプール）することで、次のリクエスト時に30秒のコールドスタートを回避します。急激なトラフィック増加時は、Target Tracking Scalingで数分以内に数十タスクまでスケールアウト。ALBのヘルスチェックで異常タスクを自動置換します。24時間稼働のGPU EC2は無駄なコストが高く、LambdaはGPUをサポートせず、Spot Instancesは中断リスクで推論レイテンシSLAを保証できません。",
+                relatedResources: [
+                    { title: "AWS ゲートウェイ", path: "networking/aws-gateways.html", type: "internal" },
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 16,
@@ -590,7 +808,12 @@ const quizData = {
                     "Route 53のみでサービスディスカバリを行う"
                 ],
                 correct: 1,
-                explanation: "マイクロサービスの複雑なサービス間通信には、AWS App Meshが最適です。App Meshは、各ECSタスクにEnvoyプロキシサイドカーをインジェクトし、全サービス間通信をプロキシ経由で制御します。Cloud Mapでサービスレジストリを管理し、動的なサービスディスカバリを実現。App Meshのリトライポリシー（指数バックオフ）、タイムアウト設定、サーキットブレーカー（連続失敗時に一時的に通信遮断）で耐障害性を向上します。mTLS（相互TLS認証）で全サービス間通信を暗号化し、AWS X-Rayで分散トレーシング（リクエストフロー全体の可視化）を実現します。これらの機能をアプリケーションコードに実装する必要がなく、インフラレイヤーで統一的に管理できます。ハードコードされたエンドポイントは変更時にデプロイが必要で、Route 53のみでは負荷分散やサーキットブレーカーが実装できません。"
+                explanation: "マイクロサービスの複雑なサービス間通信には、AWS App Meshが最適です。App Meshは、各ECSタスクにEnvoyプロキシサイドカーをインジェクトし、全サービス間通信をプロキシ経由で制御します。Cloud Mapでサービスレジストリを管理し、動的なサービスディスカバリを実現。App Meshのリトライポリシー（指数バックオフ）、タイムアウト設定、サーキットブレーカー（連続失敗時に一時的に通信遮断）で耐障害性を向上します。mTLS（相互TLS認証）で全サービス間通信を暗号化し、AWS X-Rayで分散トレーシング（リクエストフロー全体の可視化）を実現します。これらの機能をアプリケーションコードに実装する必要がなく、インフラレイヤーで統一的に管理できます。ハードコードされたエンドポイントは変更時にデプロイが必要で、Route 53のみでは負荷分散やサーキットブレーカーが実装できません。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "AWS KMS キーの種類 完全ガイド", path: "security-governance/kms-key-types.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -608,7 +831,12 @@ const quizData = {
                     "セキュリティの強化"
                 ],
                 correct: 1,
-                explanation: "Origin Groupsは、プライマリオリジンが利用できない場合にセカンダリオリジンに自動的にフェイルオーバーする高可用性機能です。"
+                explanation: "Origin Groupsは、プライマリオリジンが利用できない場合にセカンダリオリジンに自動的にフェイルオーバーする高可用性機能です。",
+                relatedResources: [
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" },
+                    { title: "CloudFront HTTPセキュリティヘッダー完全ガイド", path: "networking/cloudfront-security-headers-guide.html", type: "internal" },
+                    { title: "Amazon CloudFront Documentation", url: "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -620,7 +848,11 @@ const quizData = {
                     "機能的な違いはない"
                 ],
                 correct: 1,
-                explanation: "エイリアスレコードはゾーンapex（example.com）で使用でき、AWSリソースへのマッピングは無料です。CNAMEレコードはゾーンapexでは使用できません。"
+                explanation: "エイリアスレコードはゾーンapex（example.com）で使用でき、AWSリソースへのマッピングは無料です。CNAMEレコードはゾーンapexでは使用できません。",
+                relatedResources: [
+                    { title: "Route 53 完全ガイド", path: "content-delivery-dns/route53-guide.html", type: "internal" },
+                    { title: "Amazon Route 53 Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/", type: "external" }
+                ]
             },
             {
                 id: 3,
@@ -632,7 +864,12 @@ const quizData = {
                     "データ圧縮による転送量削減"
                 ],
                 correct: 1,
-                explanation: "S3 Transfer AccelerationはCloudFrontのエッジロケーションを利用し、世界中からS3バケットへの転送を高速化する機能です。"
+                explanation: "S3 Transfer AccelerationはCloudFrontのエッジロケーションを利用し、世界中からS3バケットへの転送を高速化する機能です。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "CloudFront HTTPセキュリティヘッダー完全ガイド", path: "networking/cloudfront-security-headers-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -644,7 +881,12 @@ const quizData = {
                     "CloudWatchアラームのみ"
                 ],
                 correct: 1,
-                explanation: "Route53ヘルスチェックは、HTTPエンドポイント、TCP接続、他のヘルスチェックを組み合わせた計算されたヘルスチェック、CloudWatchアラームを監視できます。"
+                explanation: "Route53ヘルスチェックは、HTTPエンドポイント、TCP接続、他のヘルスチェックを組み合わせた計算されたヘルスチェック、CloudWatchアラームを監視できます。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "Route 53 完全ガイド", path: "content-delivery-dns/route53-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -656,7 +898,12 @@ const quizData = {
                     "S3バケットの暗号化が自動化される"
                 ],
                 correct: 0,
-                explanation: "S3 MRAPは単一のグローバルエンドポイントを提供し、複数リージョンのS3バケットに自動的にルーティングします。最も近いリージョンまたは最適なリージョンにリクエストを転送します。"
+                explanation: "S3 MRAPは単一のグローバルエンドポイントを提供し、複数リージョンのS3バケットに自動的にルーティングします。最も近いリージョンまたは最適なリージョンにリクエストを転送します。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -668,7 +915,12 @@ const quizData = {
                     "OACは有料、OAIは無料"
                 ],
                 correct: 1,
-                explanation: "OAC（Origin Access Control）はOAIの後継で、Signature Version 4認証をサポートし、S3以外のAWSサービス（EventBridge、Lambda等）との統合も可能な、より汎用的なアクセス制御機能です。"
+                explanation: "OAC（Origin Access Control）はOAIの後継で、Signature Version 4認証をサポートし、S3以外のAWSサービス（EventBridge、Lambda等）との統合も可能な、より汎用的なアクセス制御機能です。",
+                relatedResources: [
+                    { title: "EIP & NAT インフォグラフィック", path: "new-solutions/aws_eip_nat_infographic.html", type: "internal" },
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -680,7 +932,11 @@ const quizData = {
                     "CloudFrontのDNSキャッシュ設定"
                 ],
                 correct: 1,
-                explanation: "Resolver Rulesはハイブリッド環境で、特定のドメイン名クエリをオンプレミスDNSサーバーに転送するための条件付きフォワーディングルールを設定します。"
+                explanation: "Resolver Rulesはハイブリッド環境で、特定のドメイン名クエリをオンプレミスDNSサーバーに転送するための条件付きフォワーディングルールを設定します。",
+                relatedResources: [
+                    { title: "Route 53 完全ガイド", path: "content-delivery-dns/route53-guide.html", type: "internal" },
+                    { title: "Amazon Route 53 Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/", type: "external" }
+                ]
             },
             {
                 id: 8,
@@ -692,7 +948,12 @@ const quizData = {
                     "アクセス頻度に関係なく一定期間で移動"
                 ],
                 correct: 1,
-                explanation: "S3 Intelligent Tieringはオブジェクトのアクセスパターンを機械学習で分析し、アクセス頻度に基づいて自動的に最適なストレージクラス（Frequent/Infrequent/Archive）間を移動します。"
+                explanation: "S3 Intelligent Tieringはオブジェクトのアクセスパターンを機械学習で分析し、アクセス頻度に基づいて自動的に最適なストレージクラス（Frequent/Infrequent/Archive）間を移動します。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -704,7 +965,12 @@ const quizData = {
                     "コスト重視はCloudFront、性能重視はGlobal Accelerator"
                 ],
                 correct: 1,
-                explanation: "CloudFrontはHTTPSコンテンツ配信とキャッシュに特化し、Global AcceleratorはTCP/UDPトラフィックの最適化とヘルスチェックベースのフェイルオーバーに適しています。"
+                explanation: "CloudFrontはHTTPSコンテンツ配信とキャッシュに特化し、Global AcceleratorはTCP/UDPトラフィックの最適化とヘルスチェックベースのフェイルオーバーに適しています。",
+                relatedResources: [
+                    { title: "ElastiCache 完全ガイド", path: "storage-database/elasticache-guide.html", type: "internal" },
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" },
+                    { title: "CloudFront HTTPセキュリティヘッダー完全ガイド", path: "networking/cloudfront-security-headers-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -716,7 +982,12 @@ const quizData = {
                     "DNSクエリの高速化"
                 ],
                 correct: 1,
-                explanation: "ARC（Application Recovery Controller）はアプリケーションの可用性を監視し、リージョン障害時に readiness check と routing control により、確実で制御されたフェイルオーバーを実現します。"
+                explanation: "ARC（Application Recovery Controller）はアプリケーションの可用性を監視し、リージョン障害時に readiness check と routing control により、確実で制御されたフェイルオーバーを実現します。",
+                relatedResources: [
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" },
+                    { title: "Route 53 完全ガイド", path: "content-delivery-dns/route53-guide.html", type: "internal" },
+                    { title: "Amazon Route 53 Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/", type: "external" }
+                ]
             },
             {
                 id: 11,
@@ -728,7 +999,12 @@ const quizData = {
                     "キャッシュヒット率の向上"
                 ],
                 correct: 1,
-                explanation: "Field-Level Encryptionは、POSTリクエスト内の特定フィールドをCloudFrontエッジで暗号化し、アプリケーションまで暗号化状態を保持します。PCI-DSSなど厳格なコンプライアンス要件で、機密データへのアクセスを最小限の権限者に限定できます。"
+                explanation: "Field-Level Encryptionは、POSTリクエスト内の特定フィールドをCloudFrontエッジで暗号化し、アプリケーションまで暗号化状態を保持します。PCI-DSSなど厳格なコンプライアンス要件で、機密データへのアクセスを最小限の権限者に限定できます。",
+                relatedResources: [
+                    { title: "AWS Config - S3パブリックアクセス検出完全ガイド", path: "security-governance/aws-config-s3-public-access-guide.html", type: "internal" },
+                    { title: "AWS KMS キーの種類 完全ガイド", path: "security-governance/kms-key-types.html", type: "internal" },
+                    { title: "CMK インフォグラフィック", path: "security-governance/aws_cmk_infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -740,7 +1016,11 @@ const quizData = {
                     "DNSSEC署名の自動設定"
                 ],
                 correct: 1,
-                explanation: "Traffic Flowは、地理的ルーティング、レイテンシベースルーティング、加重ルーティング、ヘルスチェックを組み合わせた複雑なトラフィック管理ポリシーをビジュアルエディタで作成し、複数のホストゾーンに適用できる機能です。"
+                explanation: "Traffic Flowは、地理的ルーティング、レイテンシベースルーティング、加重ルーティング、ヘルスチェックを組み合わせた複雑なトラフィック管理ポリシーをビジュアルエディタで作成し、複数のホストゾーンに適用できる機能です。",
+                relatedResources: [
+                    { title: "Route 53 完全ガイド", path: "content-delivery-dns/route53-guide.html", type: "internal" },
+                    { title: "Amazon Route 53 Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/", type: "external" }
+                ]
             },
             {
                 id: 13,
@@ -752,7 +1032,12 @@ const quizData = {
                     "Lambda@Edge は本番のみ、CloudFront Functions は開発のみ"
                 ],
                 correct: 1,
-                explanation: "Lambda@EdgeはNode.js/Pythonでより複雑な処理（外部API呼び出し、リクエスト/レスポンスボディ変更、1-5秒の実行時間）が可能。CloudFront FunctionsはJavaScriptでサブミリ秒の超高速実行に特化し、軽量な操作（ヘッダー操作、URL書き換え、リクエスト認証）に最適で、コストも1/6です。"
+                explanation: "Lambda@EdgeはNode.js/Pythonでより複雑な処理（外部API呼び出し、リクエスト/レスポンスボディ変更、1-5秒の実行時間）が可能。CloudFront FunctionsはJavaScriptでサブミリ秒の超高速実行に特化し、軽量な操作（ヘッダー操作、URL書き換え、リクエスト認証）に最適で、コストも1/6です。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 14,
@@ -764,7 +1049,11 @@ const quizData = {
                     "レイテンシが最小のエンドポイントにルーティング"
                 ],
                 correct: 1,
-                explanation: "Geoproximity Routingは、ユーザーとリソース間の地理的距離に基づいてルーティングし、バイアス値（-99～+99）で特定リソースへのトラフィック量を調整できます。これによりリージョン間の負荷分散やトラフィックシフトを細かく制御できます。"
+                explanation: "Geoproximity Routingは、ユーザーとリソース間の地理的距離に基づいてルーティングし、バイアス値（-99～+99）で特定リソースへのトラフィック量を調整できます。これによりリージョン間の負荷分散やトラフィックシフトを細かく制御できます。",
+                relatedResources: [
+                    { title: "Route 53 完全ガイド", path: "content-delivery-dns/route53-guide.html", type: "internal" },
+                    { title: "Amazon Route 53 Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/", type: "external" }
+                ]
             },
             {
                 id: 15,
@@ -776,7 +1065,12 @@ const quizData = {
                     "コスト削減のためのログ圧縮"
                 ],
                 correct: 1,
-                explanation: "CloudFront Real-Time Logsは、リクエストログを数秒以内にKinesis Data Streamsに送信します。これをLambda、Kinesis Data Analytics、外部SIEM（Splunk、Datadog）と連携し、不正アクセス検知、DDoS攻撃の早期発見、キャッシュヒット率のリアルタイム監視、地域別パフォーマンス分析が可能です。"
+                explanation: "CloudFront Real-Time Logsは、リクエストログを数秒以内にKinesis Data Streamsに送信します。これをLambda、Kinesis Data Analytics、外部SIEM（Splunk、Datadog）と連携し、不正アクセス検知、DDoS攻撃の早期発見、キャッシュヒット率のリアルタイム監視、地域別パフォーマンス分析が可能です。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             }
         ]
     },
@@ -794,7 +1088,10 @@ const quizData = {
                     "スタックのロールバック機能"
                 ],
                 correct: 1,
-                explanation: "CloudFormation StackSetsは、複数のAWSアカウントや複数リージョンにわたって、CloudFormationスタックを一括でデプロイ・管理する機能です。"
+                explanation: "CloudFormation StackSetsは、複数のAWSアカウントや複数リージョンにわたって、CloudFormationスタックを一括でデプロイ・管理する機能です。",
+                relatedResources: [
+                    { title: "CloudFormationドリフト検出と自動修復完全ガイド", path: "security-governance/cloudformation-drift-detection-auto-remediation-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 2,
@@ -806,7 +1103,10 @@ const quizData = {
                     "設定が簡単"
                 ],
                 correct: 2,
-                explanation: "Blue/Greenデプロイは、新しい環境（Green）を並行で構築し、トラフィックを切り替えることでゼロダウンタイムを実現し、問題時には即座に元の環境（Blue）に戻せます。"
+                explanation: "Blue/Greenデプロイは、新しい環境（Green）を並行で構築し、トラフィックを切り替えることでゼロダウンタイムを実現し、問題時には即座に元の環境（Blue）に戻せます。",
+                relatedResources: [
+                    { title: "CodeDeploy 完全ガイド", path: "development-deployment/codedeploy-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -818,7 +1118,10 @@ const quizData = {
                     "AWSサービスのコストが削減される"
                 ],
                 correct: 1,
-                explanation: "AWS CDKは、TypeScript、Python、Java等のプログラミング言語でインフラを定義でき、オブジェクト指向の概念を活用して再利用可能なコンポーネント（Construct）を作成できます。"
+                explanation: "AWS CDKは、TypeScript、Python、Java等のプログラミング言語でインフラを定義でき、オブジェクト指向の概念を活用して再利用可能なコンポーネント（Construct）を作成できます。",
+                relatedResources: [
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -830,7 +1133,10 @@ const quizData = {
                     "セキュリティコンプライアンスの監査"
                 ],
                 correct: 1,
-                explanation: "AWS Service Catalogは、IT管理者が承認済みの製品（CloudFormationテンプレート）をカタログ化し、エンドユーザーが簡単にデプロイできるセルフサービス環境を提供します。"
+                explanation: "AWS Service Catalogは、IT管理者が承認済みの製品（CloudFormationテンプレート）をカタログ化し、エンドユーザーが簡単にデプロイできるセルフサービス環境を提供します。",
+                relatedResources: [
+                    { title: "CloudFormationドリフト検出と自動修復完全ガイド", path: "security-governance/cloudformation-drift-detection-auto-remediation-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -842,7 +1148,11 @@ const quizData = {
                     "移行コストの見積もりを提供する"
                 ],
                 correct: 1,
-                explanation: "AWS Migration Hubは、複数の移行ツール（Application Migration Service、Database Migration Service等）を使用した移行プロジェクトの進捗を一元的に追跡・監視する管理サービスです。"
+                explanation: "AWS Migration Hubは、複数の移行ツール（Application Migration Service、Database Migration Service等）を使用した移行プロジェクトの進捗を一元的に追跡・監視する管理サービスです。",
+                relatedResources: [
+                    { title: "AWS DMS 完全ガイド", path: "migration/dms-guide.html", type: "internal" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -854,7 +1164,10 @@ const quizData = {
                     "複雑なパイプラインでは並列実行を避ける"
                 ],
                 correct: 1,
-                explanation: "並列実行は独立したテスト（ユニットテスト、統合テスト、セキュリティスキャン）を同時実行して時間短縮を図り、シーケンシャル実行はビルド→テスト→デプロイのような依存関係があるステージで使用します。"
+                explanation: "並列実行は独立したテスト（ユニットテスト、統合テスト、セキュリティスキャン）を同時実行して時間短縮を図り、シーケンシャル実行はビルド→テスト→デプロイのような依存関係があるステージで使用します。",
+                relatedResources: [
+                    { title: "CodePipeline 完全ガイド", path: "development-deployment/codepipeline-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -902,7 +1215,10 @@ const quizData = {
                     "チーム内でランダムに選択"
                 ],
                 correct: 1,
-                explanation: "CloudFormationは宣言的でシンプルな設定に適し、CDKはプログラミング言語の特性（条件分岐、ループ、クラス継承）を活用した複雑なインフラストラクチャ定義に適しています。"
+                explanation: "CloudFormationは宣言的でシンプルな設定に適し、CDKはプログラミング言語の特性（条件分岐、ループ、クラス継承）を活用した複雑なインフラストラクチャ定義に適しています。",
+                relatedResources: [
+                    { title: "CloudFormationドリフト検出と自動修復完全ガイド", path: "security-governance/cloudformation-drift-detection-auto-remediation-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 11,
@@ -914,7 +1230,10 @@ const quizData = {
                     "すべて手動でデプロイ"
                 ],
                 correct: 1,
-                explanation: "CodePipelineでは、各環境へのデプロイステージの間にManual Approval Actionを配置することで、前の環境でのテスト完了後に承認者がレビュー・承認してから次の環境へデプロイする段階的リリースを実装できます。これにより、本番環境への影響を最小化できます。"
+                explanation: "CodePipelineでは、各環境へのデプロイステージの間にManual Approval Actionを配置することで、前の環境でのテスト完了後に承認者がレビュー・承認してから次の環境へデプロイする段階的リリースを実装できます。これにより、本番環境への影響を最小化できます。",
+                relatedResources: [
+                    { title: "CodePipeline 完全ガイド", path: "development-deployment/codepipeline-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -926,7 +1245,12 @@ const quizData = {
                     "RDSデータベースの管理専用"
                 ],
                 correct: 1,
-                explanation: "AWS SAMはCloudFormationの拡張で、Lambda関数、API Gateway、DynamoDBテーブル等のサーバーレスアプリケーションを簡潔なYAML/JSON構文で定義できます。sam deployコマンドで、関数のパッケージング、S3アップロード、CloudFormationスタック作成を自動実行します。"
+                explanation: "AWS SAMはCloudFormationの拡張で、Lambda関数、API Gateway、DynamoDBテーブル等のサーバーレスアプリケーションを簡潔なYAML/JSON構文で定義できます。sam deployコマンドで、関数のパッケージング、S3アップロード、CloudFormationスタック作成を自動実行します。",
+                relatedResources: [
+                    { title: "API Gateway 認証・認可", path: "security-governance/api_gateway_auth_infographic.html", type: "internal" },
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -938,7 +1262,10 @@ const quizData = {
                     "Ansible Playbook"
                 ],
                 correct: 1,
-                explanation: "CDKはプログラミング言語でインフラを定義し、cdk synthコマンドでCloudFormationテンプレートを生成します。その後cdk deployでCloudFormationを使って実際のリソースをデプロイします。これによりIDEの補完機能、型チェック、再利用可能なコンポーネント（Construct）が活用できます。"
+                explanation: "CDKはプログラミング言語でインフラを定義し、cdk synthコマンドでCloudFormationテンプレートを生成します。その後cdk deployでCloudFormationを使って実際のリソースをデプロイします。これによりIDEの補完機能、型チェック、再利用可能なコンポーネント（Construct）が活用できます。",
+                relatedResources: [
+                    { title: "CloudFormationドリフト検出と自動修復完全ガイド", path: "security-governance/cloudformation-drift-detection-auto-remediation-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -950,7 +1277,11 @@ const quizData = {
                     "In-place の方が高速"
                 ],
                 correct: 1,
-                explanation: "In-placeデプロイは既存EC2インスタンスで旧バージョンを停止→新バージョンをデプロイするため短時間のダウンタイムが発生。Blue/Greenデプロイは新しいインスタンス群を構築し、ELBのトラフィックを切り替えることでゼロダウンタイムを実現し、問題時には即座にロールバック可能です。"
+                explanation: "In-placeデプロイは既存EC2インスタンスで旧バージョンを停止→新バージョンをデプロイするため短時間のダウンタイムが発生。Blue/Greenデプロイは新しいインスタンス群を構築し、ELBのトラフィックを切り替えることでゼロダウンタイムを実現し、問題時には即座にロールバック可能です。",
+                relatedResources: [
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" },
+                    { title: "CodeDeploy 完全ガイド", path: "development-deployment/codedeploy-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -962,7 +1293,12 @@ const quizData = {
                     "メトリクスの集計専用"
                 ],
                 correct: 1,
-                explanation: "EventBridgeは、EC2状態変化、S3バケットイベント、カスタムアプリケーションイベント、SaaSパートナーからのイベントを受信し、ルールに基づいて20以上のAWSサービスや外部HTTPエンドポイントにルーティングします。イベント駆動アーキテクチャの中核となるサービスです。"
+                explanation: "EventBridgeは、EC2状態変化、S3バケットイベント、カスタムアプリケーションイベント、SaaSパートナーからのイベントを受信し、ルールに基づいて20以上のAWSサービスや外部HTTPエンドポイントにルーティングします。イベント駆動アーキテクチャの中核となるサービスです。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -980,7 +1316,12 @@ const quizData = {
                     "セキュリティが強化される"
                 ],
                 correct: 1,
-                explanation: "AWS RAMを使用することで、異なるAWSアカウント間でTransit Gatewayを共有でき、各アカウントが独自のTransit Gatewayを作成する必要がなくなり、ネットワーク管理を簡素化できます。"
+                explanation: "AWS RAMを使用することで、異なるAWSアカウント間でTransit Gatewayを共有でき、各アカウントが独自のTransit Gatewayを作成する必要がなくなり、ネットワーク管理を簡素化できます。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -992,7 +1333,12 @@ const quizData = {
                     "最大5つのTransit Gatewayまで接続可能"
                 ],
                 correct: 1,
-                explanation: "Transit Gateway Peeringは異なるリージョン間で接続可能ですが、VPC Peeringと同様に推移的ルーティングはサポートしていません。直接接続されたTransit Gateway間でのみ通信できます。"
+                explanation: "Transit Gateway Peeringは異なるリージョン間で接続可能ですが、VPC Peeringと同様に推移的ルーティングはサポートしていません。直接接続されたTransit Gateway間でのみ通信できます。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -1004,7 +1350,12 @@ const quizData = {
                     "NAT Gatewayの設定"
                 ],
                 correct: 1,
-                explanation: "Transit Gateway Route Tableは、Transit Gatewayに接続された各アタッチメント（VPC、VPN、Direct Connect Gateway等）間のトラフィックフローを詳細に制御するために使用します。"
+                explanation: "Transit Gateway Route Tableは、Transit Gatewayに接続された各アタッチメント（VPC、VPN、Direct Connect Gateway等）間のトラフィックフローを詳細に制御するために使用します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 4,
@@ -1016,7 +1367,12 @@ const quizData = {
                     "追加料金は発生しない"
                 ],
                 correct: 1,
-                explanation: "Transit Gateway Multicastは、指定したVPCとサブネット内でマルチキャストトラフィックを有効にする機能で、明示的に設定する必要があります。マルチキャストドメインを作成して管理します。"
+                explanation: "Transit Gateway Multicastは、指定したVPCとサブネット内でマルチキャストトラフィックを有効にする機能で、明示的に設定する必要があります。マルチキャストドメインを作成して管理します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 5,
@@ -1028,7 +1384,12 @@ const quizData = {
                     "特別な前提条件はない"
                 ],
                 correct: 1,
-                explanation: "AWS RAMでリソースを共有するには、AWS Organizations内でリソース共有を有効にするか、外部アカウントに招待を送信して承認してもらう必要があります。"
+                explanation: "AWS RAMでリソースを共有するには、AWS Organizations内でリソース共有を有効にするか、外部アカウントに招待を送信して承認してもらう必要があります。",
+                relatedResources: [
+                    { title: "Organizations インフォグラフィック", path: "organizational-complexity/aws_org_infographic.html", type: "internal" },
+                    { title: "Organization & Control Tower", path: "security-governance/aws-organization-control-tower.html", type: "internal" },
+                    { title: "RAM VPC プレフィックス", path: "organizational-complexity/aws_ram_vpc_prefix_infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -1040,7 +1401,12 @@ const quizData = {
                     "associationは有料、propagationは無料"
                 ],
                 correct: 1,
-                explanation: "Route Table Associationはアタッチメント（VPC、VPN等）をルートテーブルに関連付け、Route Propagationは接続されたネットワークのルート情報を自動的にルートテーブルに伝搬する機能です。"
+                explanation: "Route Table Associationはアタッチメント（VPC、VPN等）をルートテーブルに関連付け、Route Propagationは接続されたネットワークのルート情報を自動的にルートテーブルに伝搬する機能です。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 7,
@@ -1052,7 +1418,12 @@ const quizData = {
                     "Subnet"
                 ],
                 correct: 2,
-                explanation: "Security GroupsはVPC固有のリソースであり、AWS RAMでは共有できません。Subnet、Route53 Resolver Rules、Transit Gateway、License Manager configurations等は共有可能です。"
+                explanation: "Security GroupsはVPC固有のリソースであり、AWS RAMでは共有できません。Subnet、Route53 Resolver Rules、Transit Gateway、License Manager configurations等は共有可能です。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 8,
@@ -1064,7 +1435,12 @@ const quizData = {
                     "オンプレミスとの VPN接続"
                 ],
                 correct: 1,
-                explanation: "Transit Gateway Connectは、SD-WANアプライアンスやルーターとの間でBGP over GREトンネルを確立し、動的ルーティングによる柔軟なネットワーク接続を提供します。"
+                explanation: "Transit Gateway Connectは、SD-WANアプライアンスやルーターとの間でBGP over GREトンネルを確立し、動的ルーティングによる柔軟なネットワーク接続を提供します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 9,
@@ -1076,7 +1452,12 @@ const quizData = {
                     "すべてのAWSサービスが利用可能"
                 ],
                 correct: 1,
-                explanation: "Cross-Region Peering では、接続するTransit Gateway間でCIDRブロックの重複があると通信ができません。また、帯域幅制限やリージョン間の制約があります。"
+                explanation: "Cross-Region Peering では、接続するTransit Gateway間でCIDRブロックの重複があると通信ができません。また、帯域幅制限やリージョン間の制約があります。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 10,
@@ -1088,7 +1469,12 @@ const quizData = {
                     "ルート情報の圧縮"
                 ],
                 correct: 1,
-                explanation: "Blackhole routeは特定のCIDRブロックへのトラフィックを明示的に破棄する設定で、セキュリティポリシーによる通信制御やトラブルシューティングに使用されます。"
+                explanation: "Blackhole routeは特定のCIDRブロックへのトラフィックを明示的に破棄する設定で、セキュリティポリシーによる通信制御やトラブルシューティングに使用されます。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 11,
@@ -1100,7 +1486,12 @@ const quizData = {
                     "セキュリティグループのみで制御"
                 ],
                 correct: 1,
-                explanation: "Transit Gatewayの複数ルートテーブル機能により、本番VPC、開発VPC、DMZ VPCをそれぞれ異なるルートテーブルに関連付け、通信パターンを細かく制御できます。例：本番→開発の通信は拒否、DMZ→本番は許可、開発→共有サービスVPCのみ許可、など。"
+                explanation: "Transit Gatewayの複数ルートテーブル機能により、本番VPC、開発VPC、DMZ VPCをそれぞれ異なるルートテーブルに関連付け、通信パターンを細かく制御できます。例：本番→開発の通信は拒否、DMZ→本番は許可、開発→共有サービスVPCのみ許可、など。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 12,
@@ -1112,7 +1503,12 @@ const quizData = {
                     "オンプレミス接続専用"
                 ],
                 correct: 1,
-                explanation: "Transit Gateway Connectは、GRE（Generic Routing Encapsulation）トンネルを使用してSD-WANアプライアンス（Cisco Viptela、VMware VeloCloud等）とTransit Gatewayを統合します。1つのConnectアタッチメントで複数のBGPピアリングをサポートし、50 Gbpsまでのスループットを実現します。"
+                explanation: "Transit Gateway Connectは、GRE（Generic Routing Encapsulation）トンネルを使用してSD-WANアプライアンス（Cisco Viptela、VMware VeloCloud等）とTransit Gatewayを統合します。1つのConnectアタッチメントで複数のBGPピアリングをサポートし、50 Gbpsまでのスループットを実現します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -1124,7 +1520,12 @@ const quizData = {
                     "Direct Connectのみ使用"
                 ],
                 correct: 1,
-                explanation: "マルチリージョンアーキテクチャでは、各リージョンにTransit Gatewayを配置し、リージョン間はTransit Gateway Peering（AWSバックボーン経由）で接続します。これにより各リージョン内のVPC間通信はローカルTGWで処理され、リージョン間通信は最適化されたルートで転送されます。"
+                explanation: "マルチリージョンアーキテクチャでは、各リージョンにTransit Gatewayを配置し、リージョン間はTransit Gateway Peering（AWSバックボーン経由）で接続します。これにより各リージョン内のVPC間通信はローカルTGWで処理され、リージョン間通信は最適化されたルートで転送されます。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 14,
@@ -1136,7 +1537,12 @@ const quizData = {
                     "Transit Gatewayは共有できない"
                 ],
                 correct: 1,
-                explanation: "Transit GatewayをAWS RAMで共有することで、中央ネットワークアカウントが1つのTransit Gatewayを管理し、組織内の他のアカウントがそれぞれのVPCをアタッチできます。これにより、管理の集中化、コスト削減、一貫したネットワークポリシー適用が実現します。"
+                explanation: "Transit GatewayをAWS RAMで共有することで、中央ネットワークアカウントが1つのTransit Gatewayを管理し、組織内の他のアカウントがそれぞれのVPCをアタッチできます。これにより、管理の集中化、コスト削減、一貫したネットワークポリシー適用が実現します。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             },
             {
                 id: 15,
@@ -1148,7 +1554,12 @@ const quizData = {
                     "セキュリティスキャン専用"
                 ],
                 correct: 1,
-                explanation: "Transit Gateway Network Managerは、AWS Cloud WAN、Transit Gateway、VPN接続、オンプレミスサイトを含むグローバルWAN全体をダッシュボードで可視化します。ネットワークトポロジ、接続状態、パフォーマンスメトリクス、ルート分析、イベント監視を一元管理できます。"
+                explanation: "Transit Gateway Network Managerは、AWS Cloud WAN、Transit Gateway、VPN接続、オンプレミスサイトを含むグローバルWAN全体をダッシュボードで可視化します。ネットワークトポロジ、接続状態、パフォーマンスメトリクス、ルート分析、イベント監視を一元管理できます。",
+                relatedResources: [
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway ピアリング完全ガイド", path: "networking/transit-gateway-peering-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
             }
         ]
     },
@@ -1167,7 +1578,12 @@ const quizData = {
                     "セキュリティ設定は後から手動で行う"
                 ],
                 correct: 1,
-                explanation: "Account Factoryで作成されるアカウントには、事前に定義されたガードレール（SCP）、ベースライン設定（CloudTrail、Config等）が自動的に適用され、組織のセキュリティとガバナンス要件を満たします。"
+                explanation: "Account Factoryで作成されるアカウントには、事前に定義されたガードレール（SCP）、ベースライン設定（CloudTrail、Config等）が自動的に適用され、組織のセキュリティとガバナンス要件を満たします。",
+                relatedResources: [
+                    { title: "SCP 簡単解説", path: "organizational-complexity/aws-scp-simplified.html", type: "internal" },
+                    { title: "AWS SCP構文 完全図解ガイド", path: "security-governance/scp-syntax-visual-guide.html", type: "internal" },
+                    { title: "AWS Organizations Documentation", url: "https://docs.aws.amazon.com/organizations/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -1179,7 +1595,12 @@ const quizData = {
                     "同一リージョン内のアカウントのみ"
                 ],
                 correct: 1,
-                explanation: "Organizations の一括請求では、Reserved Instanceの容量とコスト削減効果が組織内のすべてのアカウント間で自動的に共有され、全体的なコスト最適化が実現されます。"
+                explanation: "Organizations の一括請求では、Reserved Instanceの容量とコスト削減効果が組織内のすべてのアカウント間で自動的に共有され、全体的なコスト最適化が実現されます。",
+                relatedResources: [
+                    { title: "Organizations インフォグラフィック", path: "organizational-complexity/aws_org_infographic.html", type: "internal" },
+                    { title: "Organization & Control Tower", path: "security-governance/aws-organization-control-tower.html", type: "internal" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -1191,7 +1612,12 @@ const quizData = {
                     "すべてのAWSサービスに無制限アクセス"
                 ],
                 correct: 1,
-                explanation: "IAM Identity Center は Active Directory や外部 SAML プロバイダーと連携し、ユーザーとグループ情報を自動同期して、複数 AWS アカウントへの一元的なアクセス管理を実現します。"
+                explanation: "IAM Identity Center は Active Directory や外部 SAML プロバイダーと連携し、ユーザーとグループ情報を自動同期して、複数 AWS アカウントへの一元的なアクセス管理を実現します。",
+                relatedResources: [
+                    { title: "IAM フェデレーション", path: "continuous-improvement/iam_federation_infographic.html", type: "internal" },
+                    { title: "SAML証明書ローテーション完全ガイド", path: "security-governance/saml-certificate-rotation-guide.html", type: "internal" },
+                    { title: "IAM Identity Center 完全ガイド", path: "security-governance/iam-identity-center-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -1203,7 +1629,12 @@ const quizData = {
                     "ROOT OUのSCPのみが有効"
                 ],
                 correct: 1,
-                explanation: "SCPは階層的に継承され、子OUは親OUのすべてのSCPを継承します。さらに子OUレベルで追加の制限を設けることで、より厳しいガバナンスを実現できます。"
+                explanation: "SCPは階層的に継承され、子OUは親OUのすべてのSCPを継承します。さらに子OUレベルで追加の制限を設けることで、より厳しいガバナンスを実現できます。",
+                relatedResources: [
+                    { title: "SCP 簡単解説", path: "organizational-complexity/aws-scp-simplified.html", type: "internal" },
+                    { title: "AWS SCP構文 完全図解ガイド", path: "security-governance/scp-syntax-visual-guide.html", type: "internal" },
+                    { title: "AWS Organizations Documentation", url: "https://docs.aws.amazon.com/organizations/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 5,
@@ -1215,7 +1646,12 @@ const quizData = {
                     "手動での設定収集が必要"
                 ],
                 correct: 1,
-                explanation: "Config Aggregatorは組織内の複数アカウント・複数リージョンから設定情報を自動収集し、コンプライアンス状況を一元的に監視・分析できるため、大規模組織のガバナンス管理を効率化します。"
+                explanation: "Config Aggregatorは組織内の複数アカウント・複数リージョンから設定情報を自動収集し、コンプライアンス状況を一元的に監視・分析できるため、大規模組織のガバナンス管理を効率化します。",
+                relatedResources: [
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" },
+                    { title: "AWS Config コンフォーマンスパック & StackSets 完全ガイド", path: "security-governance/aws-config-conformance-stacksets-guide.html", type: "internal" },
+                    { title: "AWS Config Documentation", url: "https://docs.aws.amazon.com/config/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 6,
@@ -1227,7 +1663,11 @@ const quizData = {
                     "Control Tower は有料、Landing Zone は無料"
                 ],
                 correct: 1,
-                explanation: "AWS Control Tower は AWS Landing Zone の後継サービスで、アカウント作成からガバナンス設定まで高度に自動化されたマネージドサービスとして提供されています。"
+                explanation: "AWS Control Tower は AWS Landing Zone の後継サービスで、アカウント作成からガバナンス設定まで高度に自動化されたマネージドサービスとして提供されています。",
+                relatedResources: [
+                    { title: "Control Tower Guardrails", path: "security-governance/aws-control-tower-guardrails.html", type: "internal" },
+                    { title: "Control Tower 自動展開 (CfCT) ガイド", path: "organizational-complexity/control-tower-cfct-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -1239,7 +1679,10 @@ const quizData = {
                     "コスト計算時のみ適用"
                 ],
                 correct: 1,
-                explanation: "Tag Policies では、リソース作成時にタグの命名規則、許可される値、必須タグを強制でき、組織全体でのタグ標準化とコスト管理を実現できます。"
+                explanation: "Tag Policies では、リソース作成時にタグの命名規則、許可される値、必須タグを強制でき、組織全体でのタグ標準化とコスト管理を実現できます。",
+                relatedResources: [
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -1251,7 +1694,10 @@ const quizData = {
                     "コストが高くなる"
                 ],
                 correct: 1,
-                explanation: "StackSets の Organization 統合により、新しいアカウントが作成されると自動的に定義されたスタック（セキュリティベースライン等）がデプロイされ、一貫したガバナンスを維持できます。"
+                explanation: "StackSets の Organization 統合により、新しいアカウントが作成されると自動的に定義されたスタック（セキュリティベースライン等）がデプロイされ、一貫したガバナンスを維持できます。",
+                relatedResources: [
+                    { title: "CloudFormationドリフト検出と自動修復完全ガイド", path: "security-governance/cloudformation-drift-detection-auto-remediation-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -1263,7 +1709,12 @@ const quizData = {
                     "料金の一元管理"
                 ],
                 correct: 1,
-                explanation: "Trusted Access は、CloudFormation StackSets や Config Aggregator 等のサービスが、組織内の各アカウントに代わって必要な操作を実行することを許可する機能です。"
+                explanation: "Trusted Access は、CloudFormation StackSets や Config Aggregator 等のサービスが、組織内の各アカウントに代わって必要な操作を実行することを許可する機能です。",
+                relatedResources: [
+                    { title: "Organizations インフォグラフィック", path: "organizational-complexity/aws_org_infographic.html", type: "internal" },
+                    { title: "Organization & Control Tower", path: "security-governance/aws-organization-control-tower.html", type: "internal" },
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -1287,7 +1738,12 @@ const quizData = {
                     "単一アカウントのみ作成可能"
                 ],
                 correct: 1,
-                explanation: "Control Tower の Account Factory は、Service Catalog と統合されており、ユーザーがセルフサービスで新規アカウントを作成すると、事前定義されたネットワーク（VPC構成）、セキュリティ（Guardrails）、ログ（CloudTrail、Config）が自動適用され、ガバナンス基準に準拠したアカウントが即座にプロビジョニングされます。"
+                explanation: "Control Tower の Account Factory は、Service Catalog と統合されており、ユーザーがセルフサービスで新規アカウントを作成すると、事前定義されたネットワーク（VPC構成）、セキュリティ（Guardrails）、ログ（CloudTrail、Config）が自動適用され、ガバナンス基準に準拠したアカウントが即座にプロビジョニングされます。",
+                relatedResources: [
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail Documentation", url: "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 12,
@@ -1299,7 +1755,12 @@ const quizData = {
                     "特定のアカウントのみ割引適用"
                 ],
                 correct: 1,
-                explanation: "Consolidated Billing により、全メンバーアカウントの EC2、S3、データ転送等の使用量が自動的に合算され、AWS のボリューム階層割引（例: S3 の段階的価格、データ転送料金の階層）が組織全体に適用されます。また、Reserved Instance や Savings Plans も組織内で自動共有されます。"
+                explanation: "Consolidated Billing により、全メンバーアカウントの EC2、S3、データ転送等の使用量が自動的に合算され、AWS のボリューム階層割引（例: S3 の段階的価格、データ転送料金の階層）が組織全体に適用されます。また、Reserved Instance や Savings Plans も組織内で自動共有されます。",
+                relatedResources: [
+                    { title: "Organizations インフォグラフィック", path: "organizational-complexity/aws_org_infographic.html", type: "internal" },
+                    { title: "Organization & Control Tower", path: "security-governance/aws-organization-control-tower.html", type: "internal" },
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -1311,7 +1772,12 @@ const quizData = {
                     "手動でレポートを収集"
                 ],
                 correct: 1,
-                explanation: "Config Aggregator を中央監査アカウント（Security/Compliance OU）に作成し、Organizations 統合を有効にすることで、全アカウント・全リージョンの Config データを集約できます。これにより、組織全体のコンプライアンス状態を単一ダッシュボードで監視し、Config Rules の違反を一元管理できます。"
+                explanation: "Config Aggregator を中央監査アカウント（Security/Compliance OU）に作成し、Organizations 統合を有効にすることで、全アカウント・全リージョンの Config データを集約できます。これにより、組織全体のコンプライアンス状態を単一ダッシュボードで監視し、Config Rules の違反を一元管理できます。",
+                relatedResources: [
+                    { title: "Organizations インフォグラフィック", path: "organizational-complexity/aws_org_infographic.html", type: "internal" },
+                    { title: "Organization & Control Tower", path: "security-governance/aws-organization-control-tower.html", type: "internal" },
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -1323,7 +1789,12 @@ const quizData = {
                     "単一アカウントでのみ使用可能"
                 ],
                 correct: 1,
-                explanation: "IAM Identity Center（旧 AWS SSO）は、組織内の全アカウントへのアクセスを一元管理し、Active Directory、Okta、Azure AD 等の既存 IdP と統合できます。ユーザーは一度のサインインで全アカウントにアクセスでき、Permission Sets により各アカウントでのロールベースアクセス制御を統一的に管理できます。"
+                explanation: "IAM Identity Center（旧 AWS SSO）は、組織内の全アカウントへのアクセスを一元管理し、Active Directory、Okta、Azure AD 等の既存 IdP と統合できます。ユーザーは一度のサインインで全アカウントにアクセスでき、Permission Sets により各アカウントでのロールベースアクセス制御を統一的に管理できます。",
+                relatedResources: [
+                    { title: "IAM フェデレーション", path: "continuous-improvement/iam_federation_infographic.html", type: "internal" },
+                    { title: "SAML証明書ローテーション完全ガイド", path: "security-governance/saml-certificate-rotation-guide.html", type: "internal" },
+                    { title: "IAM Identity Center 完全ガイド", path: "security-governance/iam-identity-center-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -1335,7 +1806,12 @@ const quizData = {
                     "Landing Zone の方が新しい"
                 ],
                 correct: 1,
-                explanation: "AWS Landing Zone は CloudFormation ベースの旧世代マルチアカウント環境構築ソリューションでしたが、AWS Control Tower はそれをマネージドサービス化した後継です。Control Tower は、Guardrails（予防・検出型ルール）、Account Factory、ダッシュボード、自動ドリフト検出等を提供し、マルチアカウント環境のセットアップと継続的ガバナンスを大幅に簡素化します。"
+                explanation: "AWS Landing Zone は CloudFormation ベースの旧世代マルチアカウント環境構築ソリューションでしたが、AWS Control Tower はそれをマネージドサービス化した後継です。Control Tower は、Guardrails（予防・検出型ルール）、Account Factory、ダッシュボード、自動ドリフト検出等を提供し、マルチアカウント環境のセットアップと継続的ガバナンスを大幅に簡素化します。",
+                relatedResources: [
+                    { title: "Control Tower Guardrails", path: "security-governance/aws-control-tower-guardrails.html", type: "internal" },
+                    { title: "Control Tower 自動展開 (CfCT) ガイド", path: "organizational-complexity/control-tower-cfct-guide.html", type: "internal" },
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -1353,7 +1829,12 @@ const quizData = {
                     "1年経過後"
                 ],
                 correct: 1,
-                explanation: "S3 Intelligent Tieringはアクセスパターンが変動的または予測困難なオブジェクトに対して、作成直後から適用することで、自動的に最適なストレージクラスに配置してコストを最適化します。"
+                explanation: "S3 Intelligent Tieringはアクセスパターンが変動的または予測困難なオブジェクトに対して、作成直後から適用することで、自動的に最適なストレージクラスに配置してコストを最適化します。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 2,
@@ -1365,7 +1846,11 @@ const quizData = {
                     "すべての推奨事項を即座に適用"
                 ],
                 correct: 1,
-                explanation: "Compute Optimizer は最低14日間（推奨は3ヶ月）のCloudWatchメトリクスを分析し、Enhanced Infrastructure Metricsを有効にすることで、より正確なサイジング推奨事項を提供します。"
+                explanation: "Compute Optimizer は最低14日間（推奨は3ヶ月）のCloudWatchメトリクスを分析し、Enhanced Infrastructure Metricsを有効にすることで、より正確なサイジング推奨事項を提供します。",
+                relatedResources: [
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -1377,7 +1862,12 @@ const quizData = {
                     "重要なワークロードでも積極活用"
                 ],
                 correct: 1,
-                explanation: "Spot Instanceは最大90%のコスト削減が可能ですが、中断されても影響が少ないワークロードに限定し、複数のAZとインスタンスタイプに分散して可用性を確保することが重要です。"
+                explanation: "Spot Instanceは最大90%のコスト削減が可能ですが、中断されても影響が少ないワークロードに限定し、複数のAZとインスタンスタイプに分散して可用性を確保することが重要です。",
+                relatedResources: [
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" },
+                    { title: "Fargate Spot 完全ガイド", path: "compute-applications/fargate-spot-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -1389,7 +1879,11 @@ const quizData = {
                     "ランダムに適用"
                 ],
                 correct: 1,
-                explanation: "Reserved Instanceは最も具体的な属性（AZ、インスタンスファミリー、サイズ）にマッチするインスタンスから優先的に適用され、その後より柔軟な条件へと適用範囲が広がります。"
+                explanation: "Reserved Instanceは最も具体的な属性（AZ、インスタンスファミリー、サイズ）にマッチするインスタンスから優先的に適用され、その後より柔軟な条件へと適用範囲が広がります。",
+                relatedResources: [
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -1413,7 +1907,12 @@ const quizData = {
                     "Reserved Instance の方が常に有利"
                 ],
                 correct: 1,
-                explanation: "Compute Savings Plans は EC2、Fargate、Lambda で使え柔軟性に優れ、EC2 Instance Savings Plans は最大72%の割引率を提供します。ワークロードの予測可能性に応じて組み合わせが最適です。"
+                explanation: "Compute Savings Plans は EC2、Fargate、Lambda で使え柔軟性に優れ、EC2 Instance Savings Plans は最大72%の割引率を提供します。ワークロードの予測可能性に応じて組み合わせが最適です。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 7,
@@ -1425,7 +1924,12 @@ const quizData = {
                     "追加料金が高額"
                 ],
                 correct: 1,
-                explanation: "S3 Storage Lens の組織設定により、全アカウントのストレージ使用状況、アクセスパターン、コスト最適化機会を一元的に可視化し、データドリブンなストレージ管理が可能になります。"
+                explanation: "S3 Storage Lens の組織設定により、全アカウントのストレージ使用状況、アクセスパターン、コスト最適化機会を一元的に可視化し、データドリブンなストレージ管理が可能になります。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -1437,7 +1941,12 @@ const quizData = {
                     "手動での月次レポート作成"
                 ],
                 correct: 1,
-                explanation: "CUR を S3 に保存し、Athena でクエリ分析、QuickSight で可視化する組み合わせにより、詳細なコスト分析、トレンド分析、カスタムダッシュボード作成が効率的に実現できます。"
+                explanation: "CUR を S3 に保存し、Athena でクエリ分析、QuickSight で可視化する組み合わせにより、詳細なコスト分析、トレンド分析、カスタムダッシュボード作成が効率的に実現できます。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Athena 完全ガイド", path: "analytics-bigdata/athena-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -1449,7 +1958,12 @@ const quizData = {
                     "最大メモリで常に実行"
                 ],
                 correct: 1,
-                explanation: "Lambda はメモリサイズに比例してCPU性能も向上するため、適切なメモリ増加により実行時間が短縮され、結果的に総コスト（実行時間×メモリサイズ）が削減される場合があります。"
+                explanation: "Lambda はメモリサイズに比例してCPU性能も向上するため、適切なメモリ増加により実行時間が短縮され、結果的に総コスト（実行時間×メモリサイズ）が削減される場合があります。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 10,
@@ -1461,7 +1975,12 @@ const quizData = {
                     "月次の手動確認"
                 ],
                 correct: 1,
-                explanation: "Cost Explorer API を Lambda で定期実行し、コスト異常検出、予算超過アラート、部門別コスト分析レポート自動生成により、プロアクティブなコスト管理を実現できます。"
+                explanation: "Cost Explorer API を Lambda で定期実行し、コスト異常検出、予算超過アラート、部門別コスト分析レポート自動生成により、プロアクティブなコスト管理を実現できます。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 11,
@@ -1473,7 +1992,12 @@ const quizData = {
                     "小規模はSavings Plans、大規模はRI"
                 ],
                 correct: 1,
-                explanation: "Savings Plansは1年/3年のコミットメントで、EC2、Lambda、Fargateをまたいで柔軟に適用可能（最大72%割引）。Reserved Instancesは特定のインスタンスタイプ・リージョン・OSに固定されますが、最大75%の割引率を実現できます。ワークロードの予測可能性と柔軟性要件に応じて選択します。"
+                explanation: "Savings Plansは1年/3年のコミットメントで、EC2、Lambda、Fargateをまたいで柔軟に適用可能（最大72%割引）。Reserved Instancesは特定のインスタンスタイプ・リージョン・OSに固定されますが、最大75%の割引率を実現できます。ワークロードの予測可能性と柔軟性要件に応じて選択します。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 12,
@@ -1485,7 +2009,12 @@ const quizData = {
                     "手動で判断せずに完全自動化"
                 ],
                 correct: 1,
-                explanation: "Compute Optimizerは機械学習でEC2、EBS、Lambda、Auto Scaling、ECSの最適化推奨を提供しますが、アプリケーション固有の要件（バースト性能、メモリ要件、I/O特性）を考慮し、テスト環境で負荷テストを実施してから本番適用することが重要です。"
+                explanation: "Compute Optimizerは機械学習でEC2、EBS、Lambda、Auto Scaling、ECSの最適化推奨を提供しますが、アプリケーション固有の要件（バースト性能、メモリ要件、I/O特性）を考慮し、テスト環境で負荷テストを実施してから本番適用することが重要です。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -1497,7 +2026,12 @@ const quizData = {
                     "手動でのみアーカイブ可能"
                 ],
                 correct: 1,
-                explanation: "S3 Intelligent-Tieringのオプション設定で、90日以上アクセスのないデータをArchive Access層（Glacier相当）、180日以上をDeep Archive Access層（Glacier Deep Archive相当）に自動移行できます。ストレージコストを最大95%削減しつつ、必要時には自動的に取得可能です。"
+                explanation: "S3 Intelligent-Tieringのオプション設定で、90日以上アクセスのないデータをArchive Access層（Glacier相当）、180日以上をDeep Archive Access層（Glacier Deep Archive相当）に自動移行できます。ストレージコストを最大95%削減しつつ、必要時には自動的に取得可能です。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -1509,7 +2043,11 @@ const quizData = {
                     "月次レポートのみ提供"
                 ],
                 correct: 1,
-                explanation: "Cost Anomaly Detectionは機械学習で過去の支出パターンを分析し、サービス、リンクアカウント、コスト配分タグ単位で異常なコスト増加を自動検出します。SNS/Slack/Emailで即座に通知し、予期せぬコスト急増（インスタンス誤起動、設定ミス等）を早期に発見できます。"
+                explanation: "Cost Anomaly Detectionは機械学習で過去の支出パターンを分析し、サービス、リンクアカウント、コスト配分タグ単位で異常なコスト増加を自動検出します。SNS/Slack/Emailで即座に通知し、予期せぬコスト急増（インスタンス誤起動、設定ミス等）を早期に発見できます。",
+                relatedResources: [
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -1521,7 +2059,12 @@ const quizData = {
                     "タグはレポート目的のみ"
                 ],
                 correct: 1,
-                explanation: "AWS OrganizationsのTag Policiesで組織全体に統一的なタグ付けルールを強制します。Environment（本番/開発）、Project（プロジェクト名）、CostCenter（コストセンター）、Owner（所有者）などの標準タグにより、Cost ExplorerやCURで詳細なコスト分析、部門別/プロジェクト別のコスト配分、チャージバックが可能になります。"
+                explanation: "AWS OrganizationsのTag Policiesで組織全体に統一的なタグ付けルールを強制します。Environment（本番/開発）、Project（プロジェクト名）、CostCenter（コストセンター）、Owner（所有者）などの標準タグにより、Cost ExplorerやCURで詳細なコスト分析、部門別/プロジェクト別のコスト配分、チャージバックが可能になります。",
+                relatedResources: [
+                    { title: "Organizations インフォグラフィック", path: "organizational-complexity/aws_org_infographic.html", type: "internal" },
+                    { title: "Organization & Control Tower", path: "security-governance/aws-organization-control-tower.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -1539,7 +2082,10 @@ const quizData = {
                     "同一OS間の移行のみ可能"
                 ],
                 correct: 1,
-                explanation: "MGN（旧CloudEndure Migration）は、継続的なブロックレベルレプリケーションにより、ソースサーバーを最小限のダウンタイム（数分）でAWSに移行できるリフト&シフトソリューションです。"
+                explanation: "MGN（旧CloudEndure Migration）は、継続的なブロックレベルレプリケーションにより、ソースサーバーを最小限のダウンタイム（数分）でAWSに移行できるリフト&シフトソリューションです。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 2,
@@ -1551,7 +2097,11 @@ const quizData = {
                     "同一データベースエンジン間のみ対応"
                 ],
                 correct: 1,
-                explanation: "DMS の CDC機能は、初期フルロード後に継続的にソースDBの変更を同期し、切り替えタイミングでのダウンタイムを最小化（数分）してゼロダウンタイム移行を実現します。"
+                explanation: "DMS の CDC機能は、初期フルロード後に継続的にソースDBの変更を同期し、切り替えタイミングでのダウンタイムを最小化（数分）してゼロダウンタイム移行を実現します。",
+                relatedResources: [
+                    { title: "AWS DMS 完全ガイド", path: "migration/dms-guide.html", type: "internal" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -1563,7 +2113,12 @@ const quizData = {
                     "モバイルアプリケーションのみ"
                 ],
                 correct: 1,
-                explanation: "App2Container は既存の .NET Framework (IIS) および Java (Tomcat) で動作するレガシーWebアプリケーションを自動的に分析・コンテナ化し、ECSやEKSで実行可能にするツールです。"
+                explanation: "App2Container は既存の .NET Framework (IIS) および Java (Tomcat) で動作するレガシーWebアプリケーションを自動的に分析・コンテナ化し、ECSやEKSで実行可能にするツールです。",
+                relatedResources: [
+                    { title: "ECS 高可用性パターン完全ガイド", path: "compute-applications/ecs-high-availability-guide.html", type: "internal" },
+                    { title: "Amazon ECS Documentation", url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/", type: "external" },
+                    { title: "Amazon EKS セキュリティ完全図解ガイド", path: "networking/eks-security-visual-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -1575,7 +2130,11 @@ const quizData = {
                     "データベースのスキーマのみ"
                 ],
                 correct: 1,
-                explanation: "Migration Evaluator は、オンプレミス環境のサーバー使用状況、アプリケーション依存関係、コストデータを収集・分析し、AWS移行の ROI とビジネスケースを定量的に算出します。"
+                explanation: "Migration Evaluator は、オンプレミス環境のサーバー使用状況、アプリケーション依存関係、コストデータを収集・分析し、AWS移行の ROI とビジネスケースを定量的に算出します。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -1587,7 +2146,10 @@ const quizData = {
                     "ネットワーク設計時"
                 ],
                 correct: 1,
-                explanation: "Strangler Fig Pattern は、既存のモノリシックシステムを段階的にマイクロサービスに置き換える移行戦略で、新機能を新サービスで実装し、段階的に旧システムの機能を置き換えていく手法です。"
+                explanation: "Strangler Fig Pattern は、既存のモノリシックシステムを段階的にマイクロサービスに置き換える移行戦略で、新機能を新サービスで実装し、段階的に旧システムの機能を置き換えていく手法です。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -1599,7 +2161,11 @@ const quizData = {
                     "ネットワーク設定の変換"
                 ],
                 correct: 1,
-                explanation: "SCT は、Oracle から PostgreSQL、SQL Server から MySQL など、異なるデータベースエンジン間でのスキーマ、ストアドプロシージャ、ビューの自動変換と移行アセスメントレポートを提供します。"
+                explanation: "SCT は、Oracle から PostgreSQL、SQL Server から MySQL など、異なるデータベースエンジン間でのスキーマ、ストアドプロシージャ、ビューの自動変換と移行アセスメントレポートを提供します。",
+                relatedResources: [
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -1611,7 +2177,10 @@ const quizData = {
                     "コストのみで判断"
                 ],
                 correct: 1,
-                explanation: "Snow Family は転送データ量に応じた選択が重要で、Snowcone（エッジコンピューティング＋小規模転送）、Snowball Edge（中〜大規模転送）、Snowmobile（超大規模転送）の特性を理解して選択します。"
+                explanation: "Snow Family は転送データ量に応じた選択が重要で、Snowcone（エッジコンピューティング＋小規模転送）、Snowball Edge（中〜大規模転送）、Snowmobile（超大規模転送）の特性を理解して選択します。",
+                relatedResources: [
+                    { title: "QuickSight 完全ガイド", path: "analytics-bigdata/quicksight-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -1635,7 +2204,12 @@ const quizData = {
                     "常に ECS を選択"
                 ],
                 correct: 1,
-                explanation: "ECS は AWS ネイティブで運用が簡単、EKS は Kubernetes エコシステムとポータビリティを提供します。既存の技術スタック、運用体制、移行後の拡張計画を総合的に評価して選択します。"
+                explanation: "ECS は AWS ネイティブで運用が簡単、EKS は Kubernetes エコシステムとポータビリティを提供します。既存の技術スタック、運用体制、移行後の拡張計画を総合的に評価して選択します。",
+                relatedResources: [
+                    { title: "ECS 高可用性パターン完全ガイド", path: "compute-applications/ecs-high-availability-guide.html", type: "internal" },
+                    { title: "Amazon ECS Documentation", url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/", type: "external" },
+                    { title: "Amazon EKS セキュリティ完全図解ガイド", path: "networking/eks-security-visual-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -1647,7 +2221,12 @@ const quizData = {
                     "すべて同等のコスト"
                 ],
                 correct: 0,
-                explanation: "一般的にコスト効率順は: Retire（廃止、コスト0）→ Retain（保持、移行コスト0）→ Rehost（リフト&シフト、最小移行コスト）→ Replatform → Refactor → Repurchase となります。"
+                explanation: "一般的にコスト効率順は: Retire（廃止、コスト0）→ Retain（保持、移行コスト0）→ Rehost（リフト&シフト、最小移行コスト）→ Replatform → Refactor → Repurchase となります。",
+                relatedResources: [
+                    { title: "AWS Well-Architected フレームワーク 完全図解ガイド", path: "security-governance/aws-well-architected-complete-guide.html", type: "internal" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 11,
@@ -1671,7 +2250,10 @@ const quizData = {
                     "オンプレミスツールのみで分析を完結"
                 ],
                 correct: 1,
-                explanation: "Application Discovery Service で収集したデータは AWS Migration Hub に自動的に統合され、アプリケーションのグルーピング、依存関係の可視化、移行の進捗管理が可能になります。これにより、移行リスクを最小化し、計画的な移行を実現できます。"
+                explanation: "Application Discovery Service で収集したデータは AWS Migration Hub に自動的に統合され、アプリケーションのグルーピング、依存関係の可視化、移行の進捗管理が可能になります。これにより、移行リスクを最小化し、計画的な移行を実現できます。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -1683,7 +2265,12 @@ const quizData = {
                     "SaaSソリューションに置き換え"
                 ],
                 correct: 1,
-                explanation: "Replatform（リフト、ティンカー＆シフト）は、コアアーキテクチャは維持しつつ、クラウドの利点を活用するため一部最適化を行う戦略です。例：自己管理DBからRDSへの移行、アプリケーションサーバーをEC2からElastic Beanstalkへ移行など。コード変更は最小限で、運用負荷を削減しつつクラウドメリットを享受できます。"
+                explanation: "Replatform（リフト、ティンカー＆シフト）は、コアアーキテクチャは維持しつつ、クラウドの利点を活用するため一部最適化を行う戦略です。例：自己管理DBからRDSへの移行、アプリケーションサーバーをEC2からElastic Beanstalkへ移行など。コード変更は最小限で、運用負荷を削減しつつクラウドメリットを享受できます。",
+                relatedResources: [
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" },
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -1695,7 +2282,11 @@ const quizData = {
                     "移行後のアプリケーション性能の自動最適化"
                 ],
                 correct: 1,
-                explanation: "Migration Hub は、AWS Application Migration Service (MGN)、Database Migration Service (DMS)、Server Migration Service (SMS) など複数の移行ツールの進捗状況を一元的に追跡・可視化します。これにより、数百～数千のサーバー・DBを含む大規模移行プロジェクトでも、全体の進捗状況、依存関係、移行ステータスを一目で把握できます。"
+                explanation: "Migration Hub は、AWS Application Migration Service (MGN)、Database Migration Service (DMS)、Server Migration Service (SMS) など複数の移行ツールの進捗状況を一元的に追跡・可視化します。これにより、数百～数千のサーバー・DBを含む大規模移行プロジェクトでも、全体の進捗状況、依存関係、移行ステータスを一目で把握できます。",
+                relatedResources: [
+                    { title: "AWS DMS 完全ガイド", path: "migration/dms-guide.html", type: "internal" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -1707,7 +2298,12 @@ const quizData = {
                     "データセンター内: Snowball Edge、データセンター外: Snowmobile"
                 ],
                 correct: 2,
-                explanation: "Snowball Edge は最大80TB/台で、数十TB～数PBのデータ転送に適し、複数台を並行利用可能です。Snowmobile は最大100PBの超大規模データ転送用の45フィートコンテナトラックで、データセンター全体の移行やエクサバイト級データに使用します。コスト、転送速度、物理的制約を考慮して選択します。"
+                explanation: "Snowball Edge は最大80TB/台で、数十TB～数PBのデータ転送に適し、複数台を並行利用可能です。Snowmobile は最大100PBの超大規模データ転送用の45フィートコンテナトラックで、データセンター全体の移行やエクサバイト級データに使用します。コスト、転送速度、物理的制約を考慮して選択します。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" },
+                    { title: "QuickSight 完全ガイド", path: "analytics-bigdata/quicksight-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 16,
@@ -1719,7 +2315,12 @@ const quizData = {
                     "オンプレミスストレージの完全代替"
                 ],
                 correct: 1,
-                explanation: "Snowball Edge Compute Optimized は、52 vCPU、208GB メモリを搭載し、AWS IoT Greengrass、EC2インスタンス、Lambda関数をローカル実行できます。リモートサイトや船舶・航空機などネットワーク接続が限られた環境で、データ収集・前処理・ML推論を行いながら、後でAWSにデータ転送する用途に最適です。"
+                explanation: "Snowball Edge Compute Optimized は、52 vCPU、208GB メモリを搭載し、AWS IoT Greengrass、EC2インスタンス、Lambda関数をローカル実行できます。リモートサイトや船舶・航空機などネットワーク接続が限られた環境で、データ収集・前処理・ML推論を行いながら、後でAWSにデータ転送する用途に最適です。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 17,
@@ -1731,7 +2332,10 @@ const quizData = {
                     "VPN経由でVMを直接コピー"
                 ],
                 correct: 1,
-                explanation: "オンプレミスVM移行には、AWS VM Import/Export（VMDK/OVA形式のイメージをAMIに変換）または AWS MGN（継続的レプリケーションでダウンタイム最小化）を使用します。MGNの方が最小ダウンタイムで移行でき、最新のベストプラクティスです。VM Import/Exportは一括移行やオフライン移行に適しています。"
+                explanation: "オンプレミスVM移行には、AWS VM Import/Export（VMDK/OVA形式のイメージをAMIに変換）または AWS MGN（継続的レプリケーションでダウンタイム最小化）を使用します。MGNの方が最小ダウンタイムで移行でき、最新のベストプラクティスです。VM Import/Exportは一括移行やオフライン移行に適しています。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 18,
@@ -1743,7 +2347,11 @@ const quizData = {
                     "セキュリティグループ設定のみ確認"
                 ],
                 correct: 1,
-                explanation: "インポートしたAMIは、オンプレミス環境用のドライバや設定が含まれています。本番利用前に、Systems Manager Run Command/State Manager で、①最新パッチ適用、②不要なオンプレミス用ドライバ削除、③CloudWatch/Systems Manager エージェント導入、④セキュリティ設定の最適化を行うことが推奨されます。"
+                explanation: "インポートしたAMIは、オンプレミス環境用のドライバや設定が含まれています。本番利用前に、Systems Manager Run Command/State Manager で、①最新パッチ適用、②不要なオンプレミス用ドライバ削除、③CloudWatch/Systems Manager エージェント導入、④セキュリティ設定の最適化を行うことが推奨されます。",
+                relatedResources: [
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" },
+                    { title: "Systems Manager 完全ガイド", path: "continuous-improvement/systems-manager-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 19,
@@ -1755,7 +2363,12 @@ const quizData = {
                     "手動でのrsync代替ツール"
                 ],
                 correct: 1,
-                explanation: "DataSync は、NFS/SMBストレージとAWS（S3/EFS/FSx）間で、TB～PBスケールのファイル転送を自動化します。並列転送、ネットワーク最適化、組み込み暗号化、自動整合性チェック、スケジューリング機能により、手動スクリプトやオープンソースツールより最大10倍高速で信頼性の高いデータ転送を実現します。"
+                explanation: "DataSync は、NFS/SMBストレージとAWS（S3/EFS/FSx）間で、TB～PBスケールのファイル転送を自動化します。並列転送、ネットワーク最適化、組み込み暗号化、自動整合性チェック、スケジューリング機能により、手動スクリプトやオープンソースツールより最大10倍高速で信頼性の高いデータ転送を実現します。",
+                relatedResources: [
+                    { title: "AWS KMS キーの種類 完全ガイド", path: "security-governance/kms-key-types.html", type: "internal" },
+                    { title: "CMK インフォグラフィック", path: "security-governance/aws_cmk_infographic.html", type: "internal" },
+                    { title: "AWS KMS Documentation", url: "https://docs.aws.amazon.com/kms/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 20,
@@ -1767,7 +2380,12 @@ const quizData = {
                     "VPN経由で手動コピー"
                 ],
                 correct: 0,
-                explanation: "DataSync エージェント（VMware/Hyper-V/EC2にデプロイ）をオンプレミスに配置し、DataSync タスクをスケジュール実行（1時間/日次/週次）することで、変更ファイルのみを自動的に増分転送できます。メタデータ、パーミッション、タイムスタンプも保持され、CloudWatch でモニタリング可能です。"
+                explanation: "DataSync エージェント（VMware/Hyper-V/EC2にデプロイ）をオンプレミスに配置し、DataSync タスクをスケジュール実行（1時間/日次/週次）することで、変更ファイルのみを自動的に増分転送できます。メタデータ、パーミッション、タイムスタンプも保持され、CloudWatch でモニタリング可能です。",
+                relatedResources: [
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" },
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 21,
@@ -1779,7 +2397,12 @@ const quizData = {
                     "EC2へのSSHアクセス提供"
                 ],
                 correct: 1,
-                explanation: "AWS Transfer Family（SFTP/FTPS/FTP/AS2対応）は、レガシーなファイル転送プロトコルを使用する既存のワークフロー（EDI、金融機関、サプライチェーン統合等）を変更することなく、バックエンドにS3またはEFSを使用できます。クライアント側のコード変更不要で、マネージド・高可用性・スケーラブルなファイル転送を実現します。"
+                explanation: "AWS Transfer Family（SFTP/FTPS/FTP/AS2対応）は、レガシーなファイル転送プロトコルを使用する既存のワークフロー（EDI、金融機関、サプライチェーン統合等）を変更することなく、バックエンドにS3またはEFSを使用できます。クライアント側のコード変更不要で、マネージド・高可用性・スケーラブルなファイル転送を実現します。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "EFS 完全ガイド", path: "storage-database/efs-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 22,
@@ -1791,7 +2414,12 @@ const quizData = {
                     "パスワード認証のみ使用"
                 ],
                 correct: 1,
-                explanation: "セキュアなB2Bファイル転送には、①SFTP/FTPSプロトコル使用、②IAM認証または Active Directory/LDAP統合、③パートナーごとに専用のS3バケット/プレフィックス割り当て、④S3バケットポリシーで送信元IP制限、⑤CloudTrail/CloudWatch Logsで全アクセスログ記録、⑥転送後のLambda自動処理、が推奨されます。"
+                explanation: "セキュアなB2Bファイル転送には、①SFTP/FTPSプロトコル使用、②IAM認証または Active Directory/LDAP統合、③パートナーごとに専用のS3バケット/プレフィックス割り当て、④S3バケットポリシーで送信元IP制限、⑤CloudTrail/CloudWatch Logsで全アクセスログ記録、⑥転送後のLambda自動処理、が推奨されます。",
+                relatedResources: [
+                    { title: "CIDRブロック集約と許可プレフィックスリスト完全ガイド", path: "networking/cidr-aggregation-prefix-list-guide.html", type: "internal" },
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 23,
@@ -1803,7 +2431,12 @@ const quizData = {
                     "メインフレームの単純な仮想化のみ"
                 ],
                 correct: 1,
-                explanation: "AWS Mainframe Modernization は、①Automated Refactoring（COBOL→Javaへ自動変換）、②Runtime Platform（Micro Focus/Blu Age実行環境でCOBOLをそのまま実行）の2つのパターンを提供します。段階的移行、既存COBOLスキル活用、クラウドネイティブサービス統合が可能で、大規模メインフレームのモダナイゼーションを加速します。"
+                explanation: "AWS Mainframe Modernization は、①Automated Refactoring（COBOL→Javaへ自動変換）、②Runtime Platform（Micro Focus/Blu Age実行環境でCOBOLをそのまま実行）の2つのパターンを提供します。段階的移行、既存COBOLスキル活用、クラウドネイティブサービス統合が可能で、大規模メインフレームのモダナイゼーションを加速します。",
+                relatedResources: [
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" },
+                    { title: "RAM VPC プレフィックス", path: "organizational-complexity/aws_ram_vpc_prefix_infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 24,
@@ -1815,7 +2448,10 @@ const quizData = {
                     "メインフレームをそのまま仮想化"
                 ],
                 correct: 1,
-                explanation: "「Retain & Augment」は、リスクの高いコアバッチ処理や大規模トランザクション処理はメインフレームに残しつつ、新しい顧客向けWebアプリ、モバイルアプリ、分析基盤はAWSで構築し、API Gateway経由でメインフレームと統合するハイブリッド戦略です。段階的モダナイゼーションが可能で、ビジネスリスクを最小化します。"
+                explanation: "「Retain & Augment」は、リスクの高いコアバッチ処理や大規模トランザクション処理はメインフレームに残しつつ、新しい顧客向けWebアプリ、モバイルアプリ、分析基盤はAWSで構築し、API Gateway経由でメインフレームと統合するハイブリッド戦略です。段階的モダナイゼーションが可能で、ビジネスリスクを最小化します。",
+                relatedResources: [
+                    { title: "API Gateway 認証・認可", path: "security-governance/api_gateway_auth_infographic.html", type: "internal" }
+                ]
             },
             {
                 id: 25,
@@ -1827,7 +2463,12 @@ const quizData = {
                     "Homogeneous はバックアップベース、Heterogeneous はレプリケーションベース"
                 ],
                 correct: 1,
-                explanation: "Homogeneous Migration（同種移行）は、Oracle→RDS Oracle、MySQL→RDS MySQL等、同じDBエンジン間の移行で、DMSが直接バイナリレプリケーションを実行。Heterogeneous Migration（異種移行）は、Oracle→Aurora PostgreSQL、SQL Server→MySQL等、異なるDBエンジン間の移行で、AWS Schema Conversion Tool (SCT) でスキーマ・コード変換が必要です。"
+                explanation: "Homogeneous Migration（同種移行）は、Oracle→RDS Oracle、MySQL→RDS MySQL等、同じDBエンジン間の移行で、DMSが直接バイナリレプリケーションを実行。Heterogeneous Migration（異種移行）は、Oracle→Aurora PostgreSQL、SQL Server→MySQL等、異なるDBエンジン間の移行で、AWS Schema Conversion Tool (SCT) でスキーマ・コード変換が必要です。",
+                relatedResources: [
+                    { title: "Aurora グローバルデータベース完全ガイド", path: "storage-database/aurora-global-database-guide.html", type: "internal" },
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" },
+                    { title: "AWS DMS 完全ガイド", path: "migration/dms-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 26,
@@ -1839,7 +2480,12 @@ const quizData = {
                     "手動でSQL dumpを取得して移行"
                 ],
                 correct: 1,
-                explanation: "大規模DB移行のベストプラクティス: ①DMS初期フルロード（数時間～数日、本番稼働継続）、②CDC有効化で継続的に変更データ同期（レプリケーションラグをゼロに近づける）、③アプリケーション停止、④最終同期確認、⑤接続先をAWSのDBに切替（数分のダウンタイム）。Snowball + DMS組み合わせ（初期ロードをSnowball経由、その後CDC）も有効です。"
+                explanation: "大規模DB移行のベストプラクティス: ①DMS初期フルロード（数時間～数日、本番稼働継続）、②CDC有効化で継続的に変更データ同期（レプリケーションラグをゼロに近づける）、③アプリケーション停止、④最終同期確認、⑤接続先をAWSのDBに切替（数分のダウンタイム）。Snowball + DMS組み合わせ（初期ロードをSnowball経由、その後CDC）も有効です。",
+                relatedResources: [
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" },
+                    { title: "AWS DMS 完全ガイド", path: "migration/dms-guide.html", type: "internal" },
+                    { title: "Migration Hub 完全ガイド", path: "migration/migration-hub-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -1858,7 +2504,12 @@ const quizData = {
                     "Read Replica の方が可用性が高い"
                 ],
                 correct: 0,
-                explanation: "Multi-AZ は同期レプリケーションによる高可用性（フェイルオーバー）を提供し、Read Replica は非同期レプリケーションによる読み取り性能スケーリングを目的とします。"
+                explanation: "Multi-AZ は同期レプリケーションによる高可用性（フェイルオーバー）を提供し、Read Replica は非同期レプリケーションによる読み取り性能スケーリングを目的とします。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -1870,7 +2521,12 @@ const quizData = {
                     "バックアップ頻度のみ"
                 ],
                 correct: 1,
-                explanation: "Aurora Auto Scaling は、Read Replica の自動追加・削除（読み取りワークロード対応）と、Aurora Serverless でのコンピュート容量自動調整の両方をサポートします。"
+                explanation: "Aurora Auto Scaling は、Read Replica の自動追加・削除（読み取りワークロード対応）と、Aurora Serverless でのコンピュート容量自動調整の両方をサポートします。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "Aurora グローバルデータベース完全ガイド", path: "storage-database/aurora-global-database-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -1882,7 +2538,11 @@ const quizData = {
                     "一貫性保証なし"
                 ],
                 correct: 1,
-                explanation: "DynamoDB Global Tables は結果整合性モデルを採用し、一つのリージョンでの更新が通常1秒以内に他のすべてのリージョンに非同期で伝搬されます。"
+                explanation: "DynamoDB Global Tables は結果整合性モデルを採用し、一つのリージョンでの更新が通常1秒以内に他のすべてのリージョンに非同期で伝搬されます。",
+                relatedResources: [
+                    { title: "DynamoDB グローバルテーブル完全ガイド", path: "storage-database/dynamodb-global-tables-guide.html", type: "internal" },
+                    { title: "Amazon DynamoDB Documentation", url: "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 4,
@@ -1894,7 +2554,11 @@ const quizData = {
                     "手動でのレプリケーション設定が必要"
                 ],
                 correct: 1,
-                explanation: "S3 CRR を設定するには、ソースとデスティネーション両方のバケットでバージョニングが有効になっている必要があります。異なるアカウント間でも設定可能です。"
+                explanation: "S3 CRR を設定するには、ソースとデスティネーション両方のバケットでバージョニングが有効になっている必要があります。異なるアカウント間でも設定可能です。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 5,
@@ -1906,7 +2570,10 @@ const quizData = {
                     "ネットワーク接続の暗号化"
                 ],
                 correct: 1,
-                explanation: "Redis Auth Token は、Redis クラスターへの接続時にクライアントが提供する必要がある認証パスワードで、認証機能を有効にすることでセキュリティを向上させます。"
+                explanation: "Redis Auth Token は、Redis クラスターへの接続時にクライアントが提供する必要がある認証パスワードで、認証機能を有効にすることでセキュリティを向上させます。",
+                relatedResources: [
+                    { title: "ElastiCache 完全ガイド", path: "storage-database/elasticache-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -1918,7 +2585,10 @@ const quizData = {
                     "コストで決定"
                 ],
                 correct: 1,
-                explanation: "General Purpose は低レイテンシを提供し、Max I/O はより高いスループットと IOPS を実現しますが、わずかにレイテンシが高くなります。ワークロードの要件に応じて選択します。"
+                explanation: "General Purpose は低レイテンシを提供し、Max I/O はより高いスループットと IOPS を実現しますが、わずかにレイテンシが高くなります。ワークロードの要件に応じて選択します。",
+                relatedResources: [
+                    { title: "EFS 完全ガイド", path: "storage-database/efs-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -1930,7 +2600,12 @@ const quizData = {
                     "データの自動暗号化"
                 ],
                 correct: 1,
-                explanation: "RDS Proxy は接続プーリング、接続の再利用、フェイルオーバー時の迅速な接続切り替えを提供し、特に Lambda のようなサーバーレス環境での DB 接続効率を大幅に改善します。"
+                explanation: "RDS Proxy は接続プーリング、接続の再利用、フェイルオーバー時の迅速な接続切り替えを提供し、特に Lambda のようなサーバーレス環境での DB 接続効率を大幅に改善します。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 8,
@@ -1942,7 +2617,12 @@ const quizData = {
                     "バックアップ処理"
                 ],
                 correct: 1,
-                explanation: "DAX は DynamoDB の前面に配置されるインメモリキャッシュで、読み取りレイテンシをミリ秒からマイクロ秒レベルまで短縮し、読み取り集約型アプリケーションのパフォーマンスを劇的に向上させます。"
+                explanation: "DAX は DynamoDB の前面に配置されるインメモリキャッシュで、読み取りレイテンシをミリ秒からマイクロ秒レベルまで短縮し、読み取り集約型アプリケーションのパフォーマンスを劇的に向上させます。",
+                relatedResources: [
+                    { title: "DynamoDB グローバルテーブル完全ガイド", path: "storage-database/dynamodb-global-tables-guide.html", type: "internal" },
+                    { title: "Amazon DynamoDB Documentation", url: "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/", type: "external" },
+                    { title: "ElastiCache 完全ガイド", path: "storage-database/elasticache-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -1954,7 +2634,12 @@ const quizData = {
                     "セキュリティ向上のみ"
                 ],
                 correct: 1,
-                explanation: "Multipart Upload は大きなオブジェクト（100MB以上推奨）を複数の部分に分割して並列アップロードし、ネットワーク効率向上、障害時の部分リトライ、アップロード再開を可能にします。"
+                explanation: "Multipart Upload は大きなオブジェクト（100MB以上推奨）を複数の部分に分割して並列アップロードし、ネットワーク効率向上、障害時の部分リトライ、アップロード再開を可能にします。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "AWS Directory Service 完全ガイド", path: "networking/aws-directory-service-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -1966,7 +2651,10 @@ const quizData = {
                     "バックアップ頻度を調整"
                 ],
                 correct: 1,
-                explanation: "Concurrency Scaling は、読み取りクエリのキューイングが発生した際に、追加の Redshift クラスターを自動起動してクエリを分散処理し、一貫したパフォーマンスを維持します。"
+                explanation: "Concurrency Scaling は、読み取りクエリのキューイングが発生した際に、追加の Redshift クラスターを自動起動してクエリを分散処理し、一貫したパフォーマンスを維持します。",
+                relatedResources: [
+                    { title: "Redshift 完全ガイド", path: "analytics-bigdata/redshift-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 11,
@@ -1978,7 +2666,12 @@ const quizData = {
                     "読み取り性能の向上のみ"
                 ],
                 correct: 1,
-                explanation: "Aurora Global Databaseは、最大5つのセカンダリリージョンに1秒未満のレイテンシでレプリケーションし、リージョン障害時には1分未満でフェイルオーバー可能です。グローバルな読み取りスケーリングとディザスタリカバリを同時に実現します。"
+                explanation: "Aurora Global Databaseは、最大5つのセカンダリリージョンに1秒未満のレイテンシでレプリケーションし、リージョン障害時には1分未満でフェイルオーバー可能です。グローバルな読み取りスケーリングとディザスタリカバリを同時に実現します。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "Aurora グローバルデータベース完全ガイド", path: "storage-database/aurora-global-database-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -1990,7 +2683,12 @@ const quizData = {
                     "1日複数回アクセスされるデータ"
                 ],
                 correct: 1,
-                explanation: "S3 Glacier Instant Retrievalは、年に数回しかアクセスされないが、必要時には即座（ミリ秒）に取得が必要なデータに最適です。S3 Standard-IAより68%低コストで、取得時間はS3 Standardと同等です。医療画像、ニュースアーカイブ、コンプライアンスデータに適しています。"
+                explanation: "S3 Glacier Instant Retrievalは、年に数回しかアクセスされないが、必要時には即座（ミリ秒）に取得が必要なデータに最適です。S3 Standard-IAより68%低コストで、取得時間はS3 Standardと同等です。医療画像、ニュースアーカイブ、コンプライアンスデータに適しています。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -2002,7 +2700,12 @@ const quizData = {
                     "Auto Scaling はリアルタイム対応不可"
                 ],
                 correct: 1,
-                explanation: "Auto Scalingは予測可能なトラフィックパターンでコスト効率が良く、On-Demandモードはトラフィックが予測不可能、新規ワークロード、スパイク性トラフィックに適しています。On-Demandは事前容量プランニング不要で、使用量に応じた従量課金です。"
+                explanation: "Auto Scalingは予測可能なトラフィックパターンでコスト効率が良く、On-Demandモードはトラフィックが予測不可能、新規ワークロード、スパイク性トラフィックに適しています。On-Demandは事前容量プランニング不要で、使用量に応じた従量課金です。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "DynamoDB グローバルテーブル完全ガイド", path: "storage-database/dynamodb-global-tables-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -2014,7 +2717,12 @@ const quizData = {
                     "ストレージ容量の自動拡張"
                 ],
                 correct: 1,
-                explanation: "RDS Proxyは、データベース接続をプールし、Lambda等のサーバーレスアプリケーションからの大量の短命接続を効率的に管理します。フェイルオーバー時間を最大66%短縮し、IAM認証、Secrets Manager統合によるセキュリティ強化も提供します。"
+                explanation: "RDS Proxyは、データベース接続をプールし、Lambda等のサーバーレスアプリケーションからの大量の短命接続を効率的に管理します。フェイルオーバー時間を最大66%短縮し、IAM認証、Secrets Manager統合によるセキュリティ強化も提供します。",
+                relatedResources: [
+                    { title: "AWS KMS グラント（Grants）完全ガイド", path: "security-governance/kms-grants-guide.html", type: "internal" },
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -2026,7 +2734,10 @@ const quizData = {
                     "自動で最適化される"
                 ],
                 correct: 1,
-                explanation: "Performance Modeは汎用（レイテンシ重視）と最大I/O（高スループット・並列性重視）から選択。Throughput Modeはバースティング（小～中規模）、プロビジョンド（一定の高スループット）、Elastic（自動スケール、推奨）から選択します。ビッグデータ分析は最大I/O+Elastic、Webサーバーは汎用+バースティングが適しています。"
+                explanation: "Performance Modeは汎用（レイテンシ重視）と最大I/O（高スループット・並列性重視）から選択。Throughput Modeはバースティング（小～中規模）、プロビジョンド（一定の高スループット）、Elastic（自動スケール、推奨）から選択します。ビッグデータ分析は最大I/O+Elastic、Webサーバーは汎用+バースティングが適しています。",
+                relatedResources: [
+                    { title: "EFS 完全ガイド", path: "storage-database/efs-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -2044,7 +2755,12 @@ const quizData = {
                     "Data Streams はバッチ処理専用"
                 ],
                 correct: 1,
-                explanation: "Data Streams はリアルタイムデータ処理（Lambda、Analytics）に適し、Data Firehose はデータレイクやデータウェアハウスへの継続的配信に最適化されています。"
+                explanation: "Data Streams はリアルタイムデータ処理（Lambda、Analytics）に適し、Data Firehose はデータレイクやデータウェアハウスへの継続的配信に最適化されています。",
+                relatedResources: [
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" },
+                    { title: "Lambda VPC接続完全ガイド", path: "compute-applications/lambda-vpc-connection-guide.html", type: "internal" },
+                    { title: "AWS Lambda Documentation", url: "https://docs.aws.amazon.com/lambda/latest/dg/", type: "external" }
+                ]
             },
             {
                 id: 2,
@@ -2056,7 +2772,12 @@ const quizData = {
                     "データのバックアップ"
                 ],
                 correct: 1,
-                explanation: "Glue Crawler は S3、RDS、DynamoDB 等のデータソースを自動スキャンし、スキーマ情報を検出して AWS Glue Data Catalog にメタデータとして登録します。"
+                explanation: "Glue Crawler は S3、RDS、DynamoDB 等のデータソースを自動スキャンし、スキーマ情報を検出して AWS Glue Data Catalog にメタデータとして登録します。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" }
+                ]
             },
             {
                 id: 3,
@@ -2068,7 +2789,10 @@ const quizData = {
                     "コスト削減効果がない"
                 ],
                 correct: 1,
-                explanation: "EMR では Master と Core ノードの中断がクラスター全体に影響するため、Task ノード（処理のみ）でSpot Instanceを使用し、Core ノードは On-Demand で安定性を保つのがベストプラクティスです。"
+                explanation: "EMR では Master と Core ノードの中断がクラスター全体に影響するため、Task ノード（処理のみ）でSpot Instanceを使用し、Core ノードは On-Demand で安定性を保つのがベストプラクティスです。",
+                relatedResources: [
+                    { title: "Fargate Spot 完全ガイド", path: "compute-applications/fargate-spot-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -2080,7 +2804,10 @@ const quizData = {
                     "テキスト形式での保存"
                 ],
                 correct: 1,
-                explanation: "Athena のパフォーマンス最適化には、適切なパーティション設計、Parquet等の列指向形式、圧縮、適切なファイルサイズ（128MB-1GB）の組み合わせが効果的です。"
+                explanation: "Athena のパフォーマンス最適化には、適切なパーティション設計、Parquet等の列指向形式、圧縮、適切なファイルサイズ（128MB-1GB）の組み合わせが効果的です。",
+                relatedResources: [
+                    { title: "Athena 完全ガイド", path: "analytics-bigdata/athena-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -2104,7 +2831,10 @@ const quizData = {
                     "ウィンドウ処理はサポートしていない"
                 ],
                 correct: 1,
-                explanation: "Kinesis Data Analytics は時間ベースの固定ウィンドウ、スライディングウィンドウ、非アクティブ時間によるセッションウィンドウなど、多様なウィンドウ処理をサポートします。"
+                explanation: "Kinesis Data Analytics は時間ベースの固定ウィンドウ、スライディングウィンドウ、非アクティブ時間によるセッションウィンドウなど、多様なウィンドウ処理をサポートします。",
+                relatedResources: [
+                    { title: "Kinesis 完全ガイド", path: "analytics-bigdata/kinesis-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -2116,7 +2846,12 @@ const quizData = {
                     "データ暗号化機能のみ"
                 ],
                 correct: 1,
-                explanation: "SPICE（Super-fast, Parallel, In-memory Calculation Engine）は、データを高速なインメモリストレージに格納し、分析クエリを大幅に高速化すると同時に、ソースデータベースへの負荷も軽減します。"
+                explanation: "SPICE（Super-fast, Parallel, In-memory Calculation Engine）は、データを高速なインメモリストレージに格納し、分析クエリを大幅に高速化すると同時に、ソースデータベースへの負荷も軽減します。",
+                relatedResources: [
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" },
+                    { title: "QuickSight 完全ガイド", path: "analytics-bigdata/quicksight-guide.html", type: "internal" },
+                    { title: "Amazon Q Business アクセス制御 & ガードレール完全ガイド", path: "security-governance/amazon-q-business-access-guardrails-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -2128,7 +2863,12 @@ const quizData = {
                     "Glue はバッチ処理のみ"
                 ],
                 correct: 1,
-                explanation: "Data Pipeline は EC2 ベースの従来型ETLとスケジューリングに適し、Glue はサーバーレスETL、自動スケーリング、データカタログ統合に優れ、モダンなデータ処理に適しています。"
+                explanation: "Data Pipeline は EC2 ベースの従来型ETLとスケジューリングに適し、Glue はサーバーレスETL、自動スケーリング、データカタログ統合に優れ、モダンなデータ処理に適しています。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "Lambda エフェメラルストレージ完全ガイド", path: "compute-applications/lambda-ephemeral-storage-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -2140,7 +2880,12 @@ const quizData = {
                     "データノードは必要ない"
                 ],
                 correct: 1,
-                explanation: "大規模クラスターでは、専用マスターノード（クラスター管理）、データノード（インデックス・検索）、UltraWarm ノード（アーカイブデータ）の役割分離により、安定性とコスト効率を両立します。"
+                explanation: "大規模クラスターでは、専用マスターノード（クラスター管理）、データノード（インデックス・検索）、UltraWarm ノード（アーカイブデータ）の役割分離により、安定性とコスト効率を両立します。",
+                relatedResources: [
+                    { title: "OpenSearch Dashboards によるログデータの可視化 完全ガイド", path: "security-governance/opensearch-dashboards-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" },
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -2152,7 +2897,12 @@ const quizData = {
                     "認証機能なし"
                 ],
                 correct: 1,
-                explanation: "MSK は KMS による保存時暗号化、TLS による転送時暗号化、IAM および SASL/SCRAM 認証、Kafka ACL によるトピック・コンシューマーグループレベルの詳細な権限制御を提供します。"
+                explanation: "MSK は KMS による保存時暗号化、TLS による転送時暗号化、IAM および SASL/SCRAM 認証、Kafka ACL によるトピック・コンシューマーグループレベルの詳細な権限制御を提供します。",
+                relatedResources: [
+                    { title: "AWS KMS キーの種類 完全ガイド", path: "security-governance/kms-key-types.html", type: "internal" },
+                    { title: "CMK インフォグラフィック", path: "security-governance/aws_cmk_infographic.html", type: "internal" },
+                    { title: "AWS KMS Documentation", url: "https://docs.aws.amazon.com/kms/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 11,
@@ -2164,7 +2914,12 @@ const quizData = {
                     "ログ保存専用"
                 ],
                 correct: 1,
-                explanation: "Kinesis Data Analytics for Apache Flink は、ストリーミングデータに対してウィンドウ集計、結合、パターン検出、機械学習推論などの複雑な処理を、Apache Flink の Java/Scala/SQL API で実装できるマネージドサービスです。自動スケーリング、チェックポイント、フォールトトレランスを提供します。"
+                explanation: "Kinesis Data Analytics for Apache Flink は、ストリーミングデータに対してウィンドウ集計、結合、パターン検出、機械学習推論などの複雑な処理を、Apache Flink の Java/Scala/SQL API で実装できるマネージドサービスです。自動スケーリング、チェックポイント、フォールトトレランスを提供します。",
+                relatedResources: [
+                    { title: "EC2 Auto Scaling ターゲット追跡ガイド", path: "compute-applications/ec2-auto-scaling-target-tracking-guide.html", type: "internal" },
+                    { title: "ASG スケーリングポリシー完全ガイド", path: "compute-applications/asg-scaling-policies-guide.html", type: "internal" },
+                    { title: "Kinesis 完全ガイド", path: "analytics-bigdata/kinesis-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -2176,7 +2931,12 @@ const quizData = {
                     "データのコピーが必須"
                 ],
                 correct: 1,
-                explanation: "Redshift Spectrum は、S3 上の構造化・半構造化データ（Parquet、ORC、JSON、CSV等）を Redshift クラスターにロードすることなく、標準 SQL でクエリできます。Redshift のテーブルと S3 のデータを JOIN することも可能で、コスト効率的なデータレイク分析を実現します。"
+                explanation: "Redshift Spectrum は、S3 上の構造化・半構造化データ（Parquet、ORC、JSON、CSV等）を Redshift クラスターにロードすることなく、標準 SQL でクエリできます。Redshift のテーブルと S3 のデータを JOIN することも可能で、コスト効率的なデータレイク分析を実現します。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Redshift 完全ガイド", path: "analytics-bigdata/redshift-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 13,
@@ -2188,7 +2948,10 @@ const quizData = {
                     "リアルタイムストリーミング"
                 ],
                 correct: 1,
-                explanation: "AWS Glue DataBrew は、データアナリストやビジネスユーザーがコードを書かずに、ビジュアルインターフェースで250以上の事前構築済み変換を使用してデータのクレンジング、正規化、標準化を行えるサービスです。データ品質ルールの定義、異常値検出、データプロファイリングも可能です。"
+                explanation: "AWS Glue DataBrew は、データアナリストやビジネスユーザーがコードを書かずに、ビジュアルインターフェースで250以上の事前構築済み変換を使用してデータのクレンジング、正規化、標準化を行えるサービスです。データ品質ルールの定義、異常値検出、データプロファイリングも可能です。",
+                relatedResources: [
+                    { title: "Glue 完全ガイド", path: "analytics-bigdata/glue-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -2200,7 +2963,12 @@ const quizData = {
                     "リアルタイムデータのみ対応"
                 ],
                 correct: 1,
-                explanation: "SPICE（Super-fast, Parallel, In-memory Calculation Engine）は、QuickSight のインメモリエンジンで、データを圧縮・最適化してメモリに格納し、数百万行のデータセットでも秒以下の応答時間を実現します。データソースへの負荷を削減し、コスト効率的な BI 分析を提供します。"
+                explanation: "SPICE（Super-fast, Parallel, In-memory Calculation Engine）は、QuickSight のインメモリエンジンで、データを圧縮・最適化してメモリに格納し、数百万行のデータセットでも秒以下の応答時間を実現します。データソースへの負荷を削減し、コスト効率的な BI 分析を提供します。",
+                relatedResources: [
+                    { title: "QuickSight 完全ガイド", path: "analytics-bigdata/quicksight-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" },
+                    { title: "Amazon Q Business アクセス制御 & ガードレール完全ガイド", path: "security-governance/amazon-q-business-access-guardrails-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -2212,7 +2980,12 @@ const quizData = {
                     "リアルタイム処理専用"
                 ],
                 correct: 1,
-                explanation: "Lake Formation は、S3 ベースのデータレイクを数日で構築できるサービスで、①データ取り込み（バッチ/ストリーミング）、②Glue データカタログとの統合、③行・列・セルレベルの詳細なアクセス制御、④データガバナンス（監査ログ、データ系列追跡）を一元管理します。複雑な IAM ポリシー設定が不要になります。"
+                explanation: "Lake Formation は、S3 ベースのデータレイクを数日で構築できるサービスで、①データ取り込み（バッチ/ストリーミング）、②Glue データカタログとの統合、③行・列・セルレベルの詳細なアクセス制御、④データガバナンス（監査ログ、データ系列追跡）を一元管理します。複雑な IAM ポリシー設定が不要になります。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Kinesis 完全ガイド", path: "analytics-bigdata/kinesis-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -2230,7 +3003,12 @@ const quizData = {
                     "AWS標準の名前空間のみ使用"
                 ],
                 correct: 1,
-                explanation: "Custom Metrics は「MyCompany/Production/WebApp」のような階層的な名前空間設計により、メトリクスの整理、フィルタリング、権限管理、コスト配分を効率化できます。"
+                explanation: "Custom Metrics は「MyCompany/Production/WebApp」のような階層的な名前空間設計により、メトリクスの整理、フィルタリング、権限管理、コスト配分を効率化できます。",
+                relatedResources: [
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 2,
@@ -2242,7 +3020,10 @@ const quizData = {
                     "重要なAPIのみを記録"
                 ],
                 correct: 1,
-                explanation: "X-Ray サンプリングルールは、トレースデータの記録割合を動的に制御し、パフォーマンス影響とコストを最適化しながら、統計的に有意なトレース情報を収集します。"
+                explanation: "X-Ray サンプリングルールは、トレースデータの記録割合を動的に制御し、パフォーマンス影響とコストを最適化しながら、統計的に有意なトレース情報を収集します。",
+                relatedResources: [
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 3,
@@ -2254,7 +3035,11 @@ const quizData = {
                     "並列処理は使用しない"
                 ],
                 correct: 1,
-                explanation: "Logs Insights では、検索時間範囲の適切な指定、必要なフィールドのみの選択、filter による早期データ絞り込みにより、クエリパフォーマンスとコストを最適化できます。"
+                explanation: "Logs Insights では、検索時間範囲の適切な指定、必要なフィールドのみの選択、filter による早期データ絞り込みにより、クエリパフォーマンスとコストを最適化できます。",
+                relatedResources: [
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" },
+                    { title: "CloudWatch Logs 集中集約完全ガイド", path: "security-governance/cloudwatch-logs-subscription-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -2266,7 +3051,10 @@ const quizData = {
                     "パフォーマンスのみ"
                 ],
                 correct: 1,
-                explanation: "SSM Compliance は、パッチ適用状況、セキュリティ設定、インストール済みソフトウェア、カスタム設定などを評価し、組織のコンプライアンス要件に対する準拠状況を一元管理します。"
+                explanation: "SSM Compliance は、パッチ適用状況、セキュリティ設定、インストール済みソフトウェア、カスタム設定などを評価し、組織のコンプライアンス要件に対する準拠状況を一元管理します。",
+                relatedResources: [
+                    { title: "Systems Manager 完全ガイド", path: "continuous-improvement/systems-manager-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 5,
@@ -2278,7 +3066,10 @@ const quizData = {
                     "ログ情報のみ"
                 ],
                 correct: 1,
-                explanation: "Container Insights は、CPU、メモリ、ディスク、ネットワーク使用率をクラスター、サービス、タスク/Pod、コンテナの各レベルで収集し、コンテナ環境の詳細な可視化を提供します。"
+                explanation: "Container Insights は、CPU、メモリ、ディスク、ネットワーク使用率をクラスター、サービス、タスク/Pod、コンテナの各レベルで収集し、コンテナ環境の詳細な可視化を提供します。",
+                relatedResources: [
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -2290,7 +3081,12 @@ const quizData = {
                     "エラーのAPIコールのみ"
                 ],
                 correct: 1,
-                explanation: "CloudTrail Insights は機械学習を使用して、通常の API 使用パターンを学習し、異常なボリューム増加、新しいユーザーエージェント、地理的に異常なアクセスなどを自動検出します。"
+                explanation: "CloudTrail Insights は機械学習を使用して、通常の API 使用パターンを学習し、異常なボリューム増加、新しいユーザーエージェント、地理的に異常なアクセスなどを自動検出します。",
+                relatedResources: [
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail Documentation", url: "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/", type: "external" }
+                ]
             },
             {
                 id: 7,
@@ -2302,7 +3098,11 @@ const quizData = {
                     "数値比較はできない"
                 ],
                 correct: 1,
-                explanation: "EventBridge は JSON イベントの構造を理解し、ネストしたフィールド、配列、数値範囲、文字列パターンなどの複雑な条件でイベントをフィルタリング・ルーティングできます。"
+                explanation: "EventBridge は JSON イベントの構造を理解し、ネストしたフィールド、配列、数値範囲、文字列パターンなどの複雑な条件でイベントをフィルタリング・ルーティングできます。",
+                relatedResources: [
+                    { title: "EventBridge vs SNS/SQS 完全比較ガイド", path: "compute-applications/eventbridge-comparison-guide.html", type: "internal" },
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -2314,7 +3114,10 @@ const quizData = {
                     "データベース監視のみ"
                 ],
                 correct: 1,
-                explanation: "CloudWatch Synthetics は、REST API の可用性・レスポンス時間監視と、実際のブラウザを使用したユーザージャーニー（ログイン、購入フローなど）の総合監視を提供します。"
+                explanation: "CloudWatch Synthetics は、REST API の可用性・レスポンス時間監視と、実際のブラウザを使用したユーザージャーニー（ログイン、購入フローなど）の総合監視を提供します。",
+                relatedResources: [
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 9,
@@ -2326,7 +3129,12 @@ const quizData = {
                     "削除のみ可能"
                 ],
                 correct: 1,
-                explanation: "Config Rules の自動修復機能は、非準拠リソースを検出すると事前定義された SSM Document や Lambda 関数を自動実行し、セキュリティグループ設定修正やタグ追加などの自動修復を行います。"
+                explanation: "Config Rules の自動修復機能は、非準拠リソースを検出すると事前定義された SSM Document や Lambda 関数を自動実行し、セキュリティグループ設定修正やタグ追加などの自動修復を行います。",
+                relatedResources: [
+                    { title: "ネットワークACL vs セキュリティグループ 完全ガイド", path: "networking/nacl-sg-comparison-guide.html", type: "internal" },
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" },
+                    { title: "AWS Config コンフォーマンスパック & StackSets 完全ガイド", path: "security-governance/aws-config-conformance-stacksets-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -2338,7 +3146,10 @@ const quizData = {
                     "コスト監視のみ"
                 ],
                 correct: 1,
-                explanation: "Application Signals は、分散アプリケーションのレスポンス時間、エラー率、スループットを自動計測し、SLI（Service Level Indicators）と SLO（Service Level Objectives）によるサービス品質管理を支援します。"
+                explanation: "Application Signals は、分散アプリケーションのレスポンス時間、エラー率、スループットを自動計測し、SLI（Service Level Indicators）と SLO（Service Level Objectives）によるサービス品質管理を支援します。",
+                relatedResources: [
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 11,
@@ -2350,7 +3161,10 @@ const quizData = {
                     "単純なキーワード検索のみ"
                 ],
                 correct: 1,
-                explanation: "CloudWatch Logs Insightsは、fields、filter、stats、sort等のコマンドを使い、JSON/構造化ログから特定フィールドを抽出・集計・可視化できます。例：5xx エラーの時系列推移、レスポンスタイムのパーセンタイル分析、IPアドレス別アクセス数など。数十億行のログを数秒で分析可能です。"
+                explanation: "CloudWatch Logs Insightsは、fields、filter、stats、sort等のコマンドを使い、JSON/構造化ログから特定フィールドを抽出・集計・可視化できます。例：5xx エラーの時系列推移、レスポンスタイムのパーセンタイル分析、IPアドレス別アクセス数など。数十億行のログを数秒で分析可能です。",
+                relatedResources: [
+                    { title: "CloudWatch Logs 集中集約完全ガイド", path: "security-governance/cloudwatch-logs-subscription-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -2362,7 +3176,12 @@ const quizData = {
                     "ネットワーク設定専用"
                 ],
                 correct: 1,
-                explanation: "OpsCenterは、CloudWatchアラーム、Config非準拠、EventBridgeイベント、手動作成からOpsItems（運用問題チケット）を自動生成します。関連ログ、メトリクス、設定変更履歴を集約し、Runbook（自動化ドキュメント）と連携して問題解決を支援します。チーム間のコラボレーションとMTTR短縮を実現します。"
+                explanation: "OpsCenterは、CloudWatchアラーム、Config非準拠、EventBridgeイベント、手動作成からOpsItems（運用問題チケット）を自動生成します。関連ログ、メトリクス、設定変更履歴を集約し、Runbook（自動化ドキュメント）と連携して問題解決を支援します。チーム間のコラボレーションとMTTR短縮を実現します。",
+                relatedResources: [
+                    { title: "AWS Config × Organizations 完全ガイド", path: "security-governance/aws-config-organizations-guide.html", type: "internal" },
+                    { title: "AWS Config コンフォーマンスパック & StackSets 完全ガイド", path: "security-governance/aws-config-conformance-stacksets-guide.html", type: "internal" },
+                    { title: "AWS Config Documentation", url: "https://docs.aws.amazon.com/config/latest/developerguide/", type: "external" }
+                ]
             },
             {
                 id: 13,
@@ -2374,7 +3193,11 @@ const quizData = {
                     "データベースの監視専用"
                 ],
                 correct: 1,
-                explanation: "Synthetics Canariesは、Node.js/Pythonスクリプトで、Webサイトのマルチステップユーザージャーニー、REST API、UIワークフロー、リンク切れ、ログインフローを定期実行（1分～1時間間隔）し、エンドユーザーが問題に気づく前に障害を検出します。スクリーンショット、HAR ファイル、詳細ログを保存します。"
+                explanation: "Synthetics Canariesは、Node.js/Pythonスクリプトで、Webサイトのマルチステップユーザージャーニー、REST API、UIワークフロー、リンク切れ、ログインフローを定期実行（1分～1時間間隔）し、エンドユーザーが問題に気づく前に障害を検出します。スクリーンショット、HAR ファイル、詳細ログを保存します。",
+                relatedResources: [
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド", path: "security-governance/aws-monitoring-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 14,
@@ -2386,7 +3209,12 @@ const quizData = {
                     "セキュリティスキャン専用"
                 ],
                 correct: 1,
-                explanation: "Amazon Managed Service for Prometheus（AMP）でコンテナ、Kubernetes、アプリケーションメトリクスを収集・保存し、Amazon Managed Grafana（AMG）で可視化・ダッシュボード作成・アラート設定します。EKS、ECS、EC2、オンプレミスからのメトリクスを統合し、長期保存、高可用性、スケーラビリティをマネージドで実現します。"
+                explanation: "Amazon Managed Service for Prometheus（AMP）でコンテナ、Kubernetes、アプリケーションメトリクスを収集・保存し、Amazon Managed Grafana（AMG）で可視化・ダッシュボード作成・アラート設定します。EKS、ECS、EC2、オンプレミスからのメトリクスを統合し、長期保存、高可用性、スケーラビリティをマネージドで実現します。",
+                relatedResources: [
+                    { title: "ECS 高可用性パターン完全ガイド", path: "compute-applications/ecs-high-availability-guide.html", type: "internal" },
+                    { title: "Amazon ECS Documentation", url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/", type: "external" },
+                    { title: "Amazon EKS セキュリティ完全図解ガイド", path: "networking/eks-security-visual-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 15,
@@ -2398,7 +3226,12 @@ const quizData = {
                     "ネットワーク設定専用"
                 ],
                 correct: 1,
-                explanation: "Contributor Insightsは、VPC Flow Logs、CloudTrail、アプリケーションログから、トップ10のIPアドレス、最も頻繁なエラーコード、最大帯域幅消費者などを自動抽出します。DDoS攻撃の検出、ボトルネックの特定、異常なAPI呼び出し元の発見に有効です。ルールベースの分析で、リアルタイムに可視化されます。"
+                explanation: "Contributor Insightsは、VPC Flow Logs、CloudTrail、アプリケーションログから、トップ10のIPアドレス、最も頻繁なエラーコード、最大帯域幅消費者などを自動抽出します。DDoS攻撃の検出、ボトルネックの特定、異常なAPI呼び出し元の発見に有効です。ルールベースの分析で、リアルタイムに可視化されます。",
+                relatedResources: [
+                    { title: "Amazon VPC Network Access Analyzer 完全図解ガイド", path: "networking/vpc-network-access-analyzer-guide.html", type: "internal" },
+                    { title: "CloudTrail 管理イベント vs データイベント 完全ガイド", path: "security-governance/cloudtrail-events-guide.html", type: "internal" },
+                    { title: "AWS CloudTrail主要操作 完全図解ガイド", path: "security-governance/cloudtrail-operations-guide.html", type: "internal" }
+                ]
             }
         ]
     },
@@ -2416,7 +3249,12 @@ const quizData = {
                     "ストリーミング推論のみ"
                 ],
                 correct: 1,
-                explanation: "SageMaker は用途に応じて、リアルタイム推論（低レイテンシ）、バッチ変換（大量データ）、マルチモデルエンドポイント（コスト効率）、非同期推論（長時間処理）の選択肢を提供します。"
+                explanation: "SageMaker は用途に応じて、リアルタイム推論（低レイテンシ）、バッチ変換（大量データ）、マルチモデルエンドポイント（コスト効率）、非同期推論（長時間処理）の選択肢を提供します。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "Savings Plans 完全ガイド", path: "cost-control/savings-plans-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 2,
@@ -2440,7 +3278,10 @@ const quizData = {
                     "顔検識の方が高精度"
                 ],
                 correct: 1,
-                explanation: "顔検識（DetectFaces）は画像内の顔検出と属性分析を行い、顔検索（SearchFaces）は事前に登録された顔コレクションとの照合により人物特定を行います。"
+                explanation: "顔検識（DetectFaces）は画像内の顔検出と属性分析を行い、顔検索（SearchFaces）は事前に登録された顔コレクションとの照合により人物特定を行います。",
+                relatedResources: [
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 4,
@@ -2464,7 +3305,11 @@ const quizData = {
                     "UIのみ改善"
                 ],
                 correct: 1,
-                explanation: "Lex V2 は、リアルタイムストリーミング会話、多言語サポート（8言語以上）、改善されたNLU（Natural Language Understanding）エンジン、柔軟な会話フローを提供します。"
+                explanation: "Lex V2 は、リアルタイムストリーミング会話、多言語サポート（8言語以上）、改善されたNLU（Natural Language Understanding）エンジン、柔軟な会話フローを提供します。",
+                relatedResources: [
+                    { title: "EIP & NAT インフォグラフィック", path: "new-solutions/aws_eip_nat_infographic.html", type: "internal" },
+                    { title: "Kinesis 完全ガイド", path: "analytics-bigdata/kinesis-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 6,
@@ -2476,7 +3321,10 @@ const quizData = {
                     "カスタマイズ機能なし"
                 ],
                 correct: 1,
-                explanation: "Amazon Polly は SSML（Speech Synthesis Markup Language）をサポートし、発音記号、イントネーション、間合い、音声速度、音量を詳細にカスタマイズして自然な音声合成を実現します。"
+                explanation: "Amazon Polly は SSML（Speech Synthesis Markup Language）をサポートし、発音記号、イントネーション、間合い、音声速度、音量を詳細にカスタマイズして自然な音声合成を実現します。",
+                relatedResources: [
+                    { title: "Systems Manager 完全ガイド", path: "continuous-improvement/systems-manager-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 7,
@@ -2488,7 +3336,10 @@ const quizData = {
                     "ランダムに選択"
                 ],
                 correct: 1,
-                explanation: "Amazon Forecast の AutoML は、CNN-QR、Prophet、ARIMA、ETS など複数の予測アルゴリズムを自動評価し、データセットに最適なアルゴリズムまたはアンサンブルを選択します。"
+                explanation: "Amazon Forecast の AutoML は、CNN-QR、Prophet、ARIMA、ETS など複数の予測アルゴリズムを自動評価し、データセットに最適なアルゴリズムまたはアンサンブルを選択します。",
+                relatedResources: [
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 8,
@@ -2512,7 +3363,10 @@ const quizData = {
                     "話者の年齢のみ識別"
                 ],
                 correct: 1,
-                explanation: "Speaker Diarization は、音声ファイル内の複数話者を自動で識別・分離し、「話者A」「話者B」として発話内容をタイムスタンプ付きで分類する機能です。"
+                explanation: "Speaker Diarization は、音声ファイル内の複数話者を自動で識別・分離し、「話者A」「話者B」として発話内容をタイムスタンプ付きで分類する機能です。",
+                relatedResources: [
+                    { title: "Reserved Instances 完全ガイド", path: "cost-control/reserved-instances-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 10,
@@ -2524,7 +3378,10 @@ const quizData = {
                     "専用ハードウェアが必要"
                 ],
                 correct: 1,
-                explanation: "Amazon Bedrock は、Anthropic Claude、Meta Llama 等の事前トレーニング済み基盤モデルを API 経由で利用でき、さらに独自データでのファインチューニングも可能なマネージドサービスです。"
+                explanation: "Amazon Bedrock は、Anthropic Claude、Meta Llama 等の事前トレーニング済み基盤モデルを API 経由で利用でき、さらに独自データでのファインチューニングも可能なマネージドサービスです。",
+                relatedResources: [
+                    { title: "DR戦略完全ガイド", path: "migration/dr-strategy-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 11,
@@ -2536,7 +3393,12 @@ const quizData = {
                     "バッチ推論のみ対応"
                 ],
                 correct: 1,
-                explanation: "Multi-Model Endpoint は、S3 に保存された複数のモデルを 1 つの SageMaker エンドポイントでホストし、リクエストに応じて動的にモデルをロード・推論します。モデルごとにエンドポイントを作成する必要がなく、推論インスタンスのコストを最大70%削減できます。"
+                explanation: "Multi-Model Endpoint は、S3 に保存された複数のモデルを 1 つの SageMaker エンドポイントでホストし、リクエストに応じて動的にモデルをロード・推論します。モデルごとにエンドポイントを作成する必要がなく、推論インスタンスのコストを最大70%削減できます。",
+                relatedResources: [
+                    { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" },
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "EC2インスタンスのネットワークMTU完全ガイド", path: "networking/ec2-mtu-guide.html", type: "internal" }
+                ]
             },
             {
                 id: 12,
@@ -2584,7 +3446,12 @@ const quizData = {
                     "外部データソース非対応"
                 ],
                 correct: 1,
-                explanation: "Amazon Kendra は、自然言語処理と機械学習を活用した企業向けインテリジェント検索サービスで、「どのように〜するか？」等の質問形式のクエリから意図を理解し、S3、SharePoint、Salesforce、RDS、Confluence等の複数データソースから最適な回答を抽出します。単純なキーワード検索より遥かに高精度な検索結果を提供します。"
+                explanation: "Amazon Kendra は、自然言語処理と機械学習を活用した企業向けインテリジェント検索サービスで、「どのように〜するか？」等の質問形式のクエリから意図を理解し、S3、SharePoint、Salesforce、RDS、Confluence等の複数データソースから最適な回答を抽出します。単純なキーワード検索より遥かに高精度な検索結果を提供します。",
+                relatedResources: [
+                    { title: "S3バケットポリシー Principal要素 完全ガイド", path: "networking/s3-bucket-policy-principal-guide.html", type: "internal" },
+                    { title: "Amazon S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/", type: "external" },
+                    { title: "Amazon RDS Documentation", url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/", type: "external" }
+                ]
             }
         ]
     }
