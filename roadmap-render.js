@@ -81,9 +81,12 @@ function renderDomainCoverageChart(domainFocus) {
     const bars = Object.entries(examDomains).map(([domainId, domain]) => {
         const percentage = domainFocus.coverage[domainId] || 0;
         const isPrimary = domainFocus.primary === domainId;
+        // ドメイン名を短縮（モバイル対応）
+        const shortTitle = domain.title.length > 15 ? domain.title.substring(0, 14) + '…' : domain.title;
         return `
             <div class="coverage-bar-item ${isPrimary ? 'primary' : ''}" title="${domain.title}: ${percentage}%">
                 <span class="coverage-domain-icon" aria-hidden="true">${domain.icon}</span>
+                <span class="coverage-domain-label">D${domainId.slice(-1)}: ${shortTitle}</span>
                 <div class="coverage-bar-track">
                     <div class="coverage-bar-fill" style="width: ${percentage}%; background-color: ${domain.color};"></div>
                 </div>
@@ -139,11 +142,12 @@ function renderDomainProgressSummary(levelId) {
         const percentage = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
         return `
-            <div class="domain-progress-card">
+            <div class="domain-progress-card" title="${domain.title}">
                 <div class="domain-card-header">
                     <span class="domain-card-icon" aria-hidden="true">${domain.icon}</span>
                     <span class="domain-card-label">D${domainId.slice(-1)} (${domain.weight}%)</span>
                 </div>
+                <div class="domain-card-title">${domain.title}</div>
                 <div class="domain-card-bar">
                     <div class="domain-card-bar-fill" style="width: ${percentage}%; background-color: ${domain.color};"></div>
                 </div>
