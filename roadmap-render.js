@@ -1,11 +1,172 @@
 /**
  * AWS SAP学習リソース - ロードマップ機能 レンダリング
  * データからHTMLを生成する関数群
+ * SAP-C02試験ドメイン対応
  *
  * セキュリティ注: このファイルで使用するinnerHTMLは全て
  * 信頼できる内部データ（roadmap-data.js）から生成されており、
  * ユーザー入力は含まれません。
  */
+
+// ==========================================
+// ドメイン関連レンダリング関数
+// ==========================================
+
+/**
+ * リソースのドメインバッジをレンダリング
+ * @param {string} href - リソースのパス
+ * @returns {string} HTMLバッジ文字列
+ */
+function renderDomainBadges(href) {
+    const mapping = resourceDomainMapping[href];
+    if (!mapping) return '';
+
+    const badges = mapping.domains.map(domainId => {
+        const domain = examDomains[domainId];
+        if (!domain) return '';
+        return `<span class="domain-badge" style="background-color: ${domain.color}20; color: ${domain.color}; border-color: ${domain.color}40;" title="${domain.title}">${domain.icon} D${domainId.slice(-1)}</span>`;
+    }).join('');
+
+    const taskBadges = mapping.tasks.slice(0, 2).map(taskId => {
+        return `<span class="task-badge">${taskId}</span>`;
+    }).join('');
+
+    return `<div class="resource-domain-badges">${badges}${taskBadges}</div>`;
+}
+
+/**
+ * 学習目標セクションをレンダリング
+ * @param {Object} learningObjectives - 学習目標オブジェクト
+ * @param {number} weekNum - 週番号
+ * @returns {string} HTML文字列
+ */
+function renderLearningObjectives(learningObjectives, weekNum) {
+    if (!learningObjectives) return '';
+
+    const objectivesList = learningObjectives.objectives.map((obj, i) =>
+        `<li><span class="objective-number">${i + 1}</span>${obj}</li>`
+    ).join('');
+
+    return `
+        <details class="learning-objectives-section">
+            <summary class="learning-objectives-toggle">
+                <span class="learning-objectives-icon" aria-hidden="true">📚</span>
+                <span>目的と到達目標</span>
+                <span class="toggle-indicator" aria-hidden="true">▼</span>
+            </summary>
+            <div class="learning-objectives-content">
+                <div class="learning-purpose">
+                    <h4><span aria-hidden="true">🎯</span> 目的</h4>
+                    <p>${learningObjectives.purpose}</p>
+                </div>
+                <div class="learning-goals">
+                    <h4><span aria-hidden="true">✅</span> 到達目標</h4>
+                    <ol class="objectives-list">
+                        ${objectivesList}
+                    </ol>
+                </div>
+            </div>
+        </details>
+    `;
+}
+
+/**
+ * ドメインカバレッジチャートをレンダリング
+ * @param {Object} domainFocus - ドメインフォーカス情報
+ * @returns {string} HTML文字列
+ */
+function renderDomainCoverageChart(domainFocus) {
+    if (!domainFocus || !domainFocus.coverage) return '';
+
+    const bars = Object.entries(examDomains).map(([domainId, domain]) => {
+        const percentage = domainFocus.coverage[domainId] || 0;
+        const isPrimary = domainFocus.primary === domainId;
+        return `
+            <div class="coverage-bar-item ${isPrimary ? 'primary' : ''}" title="${domain.title}: ${percentage}%">
+                <span class="coverage-domain-icon" aria-hidden="true">${domain.icon}</span>
+                <div class="coverage-bar-track">
+                    <div class="coverage-bar-fill" style="width: ${percentage}%; background-color: ${domain.color};"></div>
+                </div>
+                <span class="coverage-percentage">${percentage}%</span>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="domain-coverage-chart">
+            <div class="coverage-label">ドメインカバレッジ</div>
+            <div class="coverage-bars">
+                ${bars}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * ダッシュボードにドメイン別進捗サマリーをレンダリング
+ * @param {string} levelId - レベルID
+ * @returns {string} HTML文字列
+ */
+function renderDomainProgressSummary(levelId) {
+    const plan = weeklyPlans[levelId];
+    if (!plan) return '';
+
+    // 各ドメインの完了リソース数をカウント
+    const domainStats = {};
+    Object.keys(examDomains).forEach(domainId => {
+        domainStats[domainId] = { completed: 0, total: 0 };
+    });
+
+    // 全リソースをスキャンしてドメインごとにカウント
+    plan.forEach(week => {
+        week.resources.forEach(href => {
+            const mapping = resourceDomainMapping[href];
+            if (mapping) {
+                mapping.domains.forEach(domainId => {
+                    if (domainStats[domainId]) {
+                        domainStats[domainId].total++;
+                        if (RoadmapProgressManager.isCompleted(href)) {
+                            domainStats[domainId].completed++;
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    const cards = Object.entries(examDomains).map(([domainId, domain]) => {
+        const stats = domainStats[domainId];
+        const percentage = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+
+        return `
+            <div class="domain-progress-card">
+                <div class="domain-card-header">
+                    <span class="domain-card-icon" aria-hidden="true">${domain.icon}</span>
+                    <span class="domain-card-label">D${domainId.slice(-1)} (${domain.weight}%)</span>
+                </div>
+                <div class="domain-card-bar">
+                    <div class="domain-card-bar-fill" style="width: ${percentage}%; background-color: ${domain.color};"></div>
+                </div>
+                <div class="domain-card-stats">
+                    <span class="domain-card-percent">${percentage}%</span>
+                    <span class="domain-card-count">${stats.completed}/${stats.total}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="domain-progress-summary">
+            <h3 class="domain-summary-title">
+                <span aria-hidden="true">📊</span>
+                試験ドメイン別カバレッジ
+            </h3>
+            <div class="domain-progress-grid">
+                ${cards}
+            </div>
+        </div>
+    `;
+}
 
 /**
  * レベル選択カードをレンダリング
@@ -50,6 +211,9 @@ function renderLevelSelection(containerId, levels) {
 /**
  * 進捗ダッシュボードをレンダリング
  * @param {string} containerId - コンテナ要素のID
+ *
+ * セキュリティ注: innerHTMLは信頼できる内部データ（roadmap-data.js）から
+ * 生成されたHTMLのみを使用。ユーザー入力は含まれません。
  */
 function renderDashboard(containerId) {
     const container = document.getElementById(containerId);
@@ -73,6 +237,9 @@ function renderDashboard(containerId) {
     const startDateFormatted = startDate
         ? new Date(startDate).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
         : '-';
+
+    // ドメイン別進捗サマリーを生成（信頼できる内部データから）
+    const domainSummaryHTML = renderDomainProgressSummary(levelId);
 
     container.innerHTML = `
         <div class="roadmap-dashboard">
@@ -120,6 +287,8 @@ function renderDashboard(containerId) {
                     <div class="roadmap-stat-label">学習開始日</div>
                 </div>
             </div>
+
+            ${domainSummaryHTML}
         </div>
     `;
 }
@@ -127,6 +296,9 @@ function renderDashboard(containerId) {
 /**
  * 週別プランをレンダリング
  * @param {string} containerId - コンテナ要素のID
+ *
+ * セキュリティ注: innerHTMLは信頼できる内部データ（roadmap-data.js）から
+ * 生成されたHTMLのみを使用。ユーザー入力は含まれません。
  */
 function renderWeeklyPlans(containerId) {
     const container = document.getElementById(containerId);
@@ -158,12 +330,20 @@ function renderWeeklyPlans(containerId) {
         const isCurrent = weekNum === currentWeek;
         const progress = weeklyProgress[index];
 
-        // リソースリストを生成
+        // 学習目標セクションを生成（信頼できる内部データから）
+        const learningObjectivesHTML = renderLearningObjectives(week.learningObjectives, weekNum);
+
+        // ドメインカバレッジチャートを生成（信頼できる内部データから）
+        const domainCoverageHTML = renderDomainCoverageChart(week.domainFocus);
+
+        // リソースリストを生成（信頼できる内部データから）
         const resourcesHTML = week.resources.map(href => {
             const isCompleted = RoadmapProgressManager.isCompleted(href);
             // hrefからタイトルを抽出（ファイル名をタイトル化）
             const title = getResourceTitleFromHref(href);
             const estimatedTime = classifyResourceDifficulty(href).estimatedMinutes;
+            // ドメインバッジを生成（信頼できる内部データから）
+            const domainBadgesHTML = renderDomainBadges(href);
 
             return `
                 <li class="roadmap-resource-item ${isCompleted ? 'completed' : ''}">
@@ -173,8 +353,11 @@ function renderWeeklyPlans(containerId) {
                            ${isCompleted ? 'checked' : ''}
                            aria-label="${title}を完了済みとしてマーク"
                            onchange="handleProgressCheckboxClick(event, '${href}')">
-                    <div class="roadmap-resource-title">
-                        <a href="${href}" target="_blank">${title}</a>
+                    <div class="roadmap-resource-info">
+                        <div class="roadmap-resource-title">
+                            <a href="${href}" target="_blank">${title}</a>
+                        </div>
+                        ${domainBadgesHTML}
                     </div>
                     <span class="roadmap-resource-time">${estimatedTime}分</span>
                 </li>
@@ -219,6 +402,8 @@ function renderWeeklyPlans(containerId) {
                     </div>
                 </div>
                 <div class="week-content" id="week-${weekNum}-content">
+                    ${learningObjectivesHTML}
+                    ${domainCoverageHTML}
                     <p class="week-description">${week.description}</p>
                     <ul class="roadmap-resource-list">
                         ${resourcesHTML}
