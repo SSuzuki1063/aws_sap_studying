@@ -71,9 +71,7 @@ uv pip install beautifulsoup4 lxml html5lib requests
 # 2. Start dev server
 python3 server.py  # → http://localhost:8080/
 
-# 3. Make changes, run checks, then deploy
-python3 scripts/ci/check_data_integrity.py    # Verify data.js ⟷ index.js sync
-python3 scripts/ci/validate_html_w3c.py --pr-mode  # W3C validation
+# 3. Make changes, run pre-commit checks (see "Pre-Commit Checklist" below), then deploy
 git add . && git commit -m "feat: description" && git push origin gh-pages
 ```
 
@@ -158,15 +156,8 @@ Validate: `node -c quiz-data-extended.js`
 ### Deploy to GitHub Pages
 
 ```bash
-# 1. Test locally
-python3 server.py
-
-# 2. Run checks
-python3 scripts/ci/check_data_integrity.py
-python3 scripts/ci/validate_html_w3c.py --pr-mode
-node -c quiz-data-extended.js data.js render.js index.js
-
-# 3. Deploy (auto-deploys in 1-2 min)
+# Run pre-commit checks first (see "Pre-Commit Checklist" section)
+# Then deploy (auto-deploys in 1-2 min)
 git add . && git commit -m "feat: description" && git push origin gh-pages
 ```
 
@@ -211,7 +202,8 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Main navigation shell |
+| `index.html` | Main navigation shell (primary entry point) |
+| `knowledge-base.html` | Alternative table-based resource browser |
 | `data.js` | **CRITICAL**: Category/resource data |
 | `render.js` | Template functions |
 | `index.js` | UI handlers + searchData |
@@ -248,15 +240,21 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 ## Pre-Commit Checklist
 
 ```bash
-# Required checks
-python3 server.py                                      # Local test
-python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js
-python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C validation
-python3 scripts/accessibility/check_contrast_ratio.py  # Color contrast
-python3 scripts/accessibility/check_heading_hierarchy.py  # Heading hierarchy
-node -c quiz-data-extended.js data.js render.js index.js  # JS syntax
+# 1. Start local server and test in browser
+python3 server.py  # → http://localhost:8080/
 
-# Verify CSS paths (should return 0 incorrect)
+# 2. Run CI-blocking checks (these fail PR if broken)
+python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js sync
+python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation
+python3 scripts/accessibility/check_contrast_ratio.py  # WCAG color contrast
+node -c quiz-data-extended.js data.js render.js index.js quiz-app.js  # JS syntax
+
+# 3. Run advisory checks (warnings only, but recommended)
+python3 scripts/accessibility/check_heading_hierarchy.py  # h1→h2→h3 order
+python3 scripts/ci/check_internal_links.py                # Broken links
+python3 scripts/ci/check_file_naming.py                   # Naming conventions
+
+# 4. Verify GitHub Pages paths (should return 0)
 grep -r 'href="/css/' --include="*.html" | wc -l
 ```
 
