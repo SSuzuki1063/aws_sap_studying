@@ -166,6 +166,8 @@ const searchData = [
     { title: '開発フローチャート', category: '分析・運用・クイズ', file: 'development-flowchart.html' },
     { title: '開発ユースケース', category: '分析・運用・クイズ', file: 'development-usecase.html' },
     { title: '学習リソース集', category: '分析・運用・クイズ', file: 'learning-resources.html' },
+    { title: '学習ロードマップ', category: '分析・運用・クイズ', file: 'roadmap.html' },
+    { title: 'SAP-C02 試験ガイド', category: '分析・運用・クイズ', file: 'exam_guide.html' },
     { title: 'コストツール', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-cost-tools.html' },
     { title: 'ディスクメトリクス', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-disk-metrics.html' },
     { title: 'エラー インフォグラフィック', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-errors-infographic.html' },
