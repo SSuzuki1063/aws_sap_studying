@@ -19,7 +19,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 ### 1. Always Use Skills for Resource Integration
 
 ```bash
-/skill aws-sap-dev
+/skill integrate
 ```
 
 When integrating new AWS learning resources, **ALWAYS** use the skill. It ensures proper workflow execution (categorization → breadcrumbs → TOC → data updates) and prevents integration errors.
@@ -136,7 +136,7 @@ When adding sidebar TOC to pages, ensure proper z-index layering to avoid header
 
 **Use the skill** (handles steps 1-3 automatically):
 ```bash
-/skill aws-sap-dev
+/skill integrate
 ```
 
 Or manually:
@@ -302,7 +302,7 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 
 | Skill | Usage | Purpose |
 |-------|-------|---------|
-| `aws-sap-dev` | `/skill aws-sap-dev` | HTML resource integration (categorization → breadcrumbs → TOC → data updates) |
+| `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → data updates) |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
 
@@ -331,6 +331,6 @@ GitHub Actions runs on PRs to `gh-pages` and `master` branches (`.github/workflo
 | CI/CD Pipeline | `docs/CI_CD_GUIDE.md` |
 | Accessibility | `docs/WCAG21_GUIDELINES.md` |
 | Development Rules | `.claude/claude_rules.json` |
-| AWS SAP Skill | `.claude/skills/aws-sap-dev/SKILL.md` |
+| AWS SAP Skill | `.claude/skills/integrate/SKILL.md` |
 | WCAG Skill | `.claude/skills/wcag-accessibility/SKILL.md` |
 | Knowledge Organizer Skill | `.claude/skills/aws-knowledge-organizer/SKILL.md` |
