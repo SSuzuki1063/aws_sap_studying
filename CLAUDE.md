@@ -75,6 +75,20 @@ python3 server.py  # → http://localhost:8080/
 git add . && git commit -m "feat: description" && git push origin gh-pages
 ```
 
+## Deployment
+
+After completing code changes, **ALWAYS** commit AND deploy to GitHub Pages in the same session. Do not wait for the user to remind you to push.
+
+```bash
+git add <files> && git commit -m "feat: description" && git push origin gh-pages
+```
+
+## Environment
+
+- Use `uv` instead of `pip` for Python package management
+- Always create/activate a virtual environment before installing packages
+- Never use `pip install` directly — use `uv pip install`
+
 ## Architecture
 
 ### Data-Driven Navigation System
@@ -163,6 +177,27 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 
 **Branches**: `gh-pages` (production), `master` (development/PRs)
 
+## File Integration
+
+When integrating new HTML resource files, always place them in the **correct root-level category directories** (NOT in `scripts/html_management/` or other script directories). Verify file placement before committing.
+
+| Category Directory | Example |
+|-------------------|---------|
+| `networking/` | Transit Gateway, VPN |
+| `security-governance/` | KMS, IAM |
+| `compute-applications/` | Lambda, ECS |
+
+## Bulk File Operations
+
+When modifying large numbers of HTML files (100+), use **Python scripts** rather than shell scripts for parsing and transformation. Shell script regex/parsing is unreliable at scale. Always validate the full count of affected files before and after changes.
+
+```bash
+# Before: count target files
+find . -name "*.html" -path "./networking/*" -o -path "./security-governance/*" | wc -l
+
+# After: verify same count was processed
+```
+
 ## Key Scripts
 
 | Script | Purpose |
@@ -234,6 +269,11 @@ git add . && git commit -m "feat: description" && git push origin gh-pages
 - ❌ 4要素を3+1に分割（下段が「余り」に見える）
 - ✅ 同列要素は均等グリッド（2×2, 3×2 等）で配置
 - ✅ 非対称を使う場合は見出し・ラベルで意味差を明示
+
+⚠️ **CSSカスケード保全ルール**:
+- インラインスタイル削除時は、CSSカスケード順序を維持し、必要な`<link>`タグが全て存在することを確認
+- 白テキストを使用する場合は、背景が暗いことを保証するフォールバック背景を必ず追加
+- 一括修正後は必ず数ファイルを目視確認してリグレッションをチェック
 
 詳細は `.claude/skills/wcag-accessibility/SKILL.md` を参照。
 
