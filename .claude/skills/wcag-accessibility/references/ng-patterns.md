@@ -716,3 +716,145 @@ python3 scripts/accessibility/check_contrast_ratio.py path/to/file.html
 # .git/hooks/pre-commit
 python3 scripts/accessibility/check_contrast_ratio.py
 ```
+
+---
+
+## ダークテーマ固有のNGパターン
+
+ダークテーマ（暗い背景）を採用するページ特有のNGパターン。
+詳細は `dark-theme-color-palette.md` を参照。
+
+---
+
+### NG-DT-001: 本文にアクセントカラーを使用
+
+#### 概要
+
+ダークテーマでアクセントカラー（`#ffc107`, `#ce93d8` 等）を本文テキストに使用するパターン。
+アクセントカラーは見出し・ラベル・アイコン専用であり、本文に使用すると強調の意味が薄れる。
+
+#### Before（NG）
+
+```css
+/* NG: アクセントカラーを本文に使用 */
+.dark-section p {
+    color: #ffc107;  /* ゴールドを本文に */
+}
+```
+
+#### After（OK）
+
+```css
+/* OK: 本文は無彩色トークン、見出しにアクセント */
+.dark-section p {
+    color: var(--dark-text-primary, #e8e8e8);
+}
+.dark-section h2 {
+    color: var(--dark-accent-gold, #ffc107);
+}
+```
+
+---
+
+### NG-DT-002: コントラスト不足のグレー（ダーク背景）
+
+#### 概要
+
+ダーク背景（`#1a1a2e`）に対してコントラスト不足のグレー色を使用するパターン。
+
+#### NG色と代替
+
+| NG色 | コントラスト比 | 問題 | 代替色 | 代替コントラスト比 |
+|------|--------------|------|--------|------------------|
+| `#666666` | 3.4:1 | AA不通過 | `#888888` | 4.8:1 |
+| `#777777` | 3.9:1 | AA境界 | `#999999` | 4.5:1 |
+
+#### Before（NG）
+
+```css
+/* NG: コントラスト不足 */
+.dark-section .footer {
+    color: #666666;  /* 3.4:1 - AA不通過 */
+}
+```
+
+#### After（OK）
+
+```css
+/* OK: AA準拠のグレー */
+.dark-section .footer {
+    color: var(--dark-text-muted, #888888);  /* 4.8:1 */
+}
+```
+
+---
+
+### NG-DT-003: CSS変数を使わずHEXをハードコード
+
+#### 概要
+
+ダークテーマページでCSS変数を使わず、直接HEXコードをハードコードするパターン。
+将来の色変更時にメンテナンス困難になる。
+
+#### Before（NG）
+
+```css
+/* NG: 直接指定 */
+.new-section h2 { color: #81c784; }
+.another-section h2 { color: #81c784; }
+```
+
+#### After（OK）
+
+```css
+/* OK: CSS変数を使用 */
+:root {
+    --dark-success-text: #81c784;
+}
+
+.new-section h2 { color: var(--dark-success-text); }
+.another-section h2 { color: var(--dark-success-text); }
+```
+
+---
+
+### NG-DT-004: ドメインセマンティクスの不整合
+
+#### 概要
+
+ページ内でドメイン固有の色分け（例: KMSキータイプ別）を使用している場合に、
+その色のセマンティクスを崩すパターン。
+
+#### Before（NG）
+
+```css
+/* NG: AWS所有キー（通常は青）にオレンジを使用 */
+.key-owned-card {
+    border-color: #ff9800;  /* オレンジはAWSマネージドキーの色 */
+}
+```
+
+#### After（OK）
+
+```css
+/* OK: 一貫したセマンティクス */
+:root {
+    --kms-key-owned-border: rgba(33,150,243,0.5);  /* 青 */
+    --kms-key-managed-border: rgba(255,152,0,0.5); /* オレンジ */
+}
+
+.key-owned-card {
+    border-color: var(--kms-key-owned-border);
+}
+```
+
+---
+
+### ダークテーマ検出スクリプト
+
+| NGパターン | 自動検出 | 方法 |
+|-----------|---------|------|
+| NG-DT-001 | 部分的 | `p`, `li`, `td` にアクセントカラーがあるか検出 |
+| NG-DT-002 | 可能 | `check_contrast_ratio.py` で背景 `#1a1a2e` に対してチェック |
+| NG-DT-003 | 可能 | grep で未定義HEXを検出 |
+| NG-DT-004 | 不可 | 手動レビュー（ドメイン知識が必要） |

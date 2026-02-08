@@ -19,6 +19,8 @@ AWS SAP学習リソースのアクセシビリティを確保するための検�
 | カテゴリ | 検証内容 |
 |---------|---------|
 | カラーコントラスト | テキスト・UIコンポーネントのコントラスト比 |
+| ライトテーマ | 白/ライトグレー背景のページ（`role-based-colors.md`） |
+| ダークテーマ | 暗い背景のページ（`dark-theme-color-palette.md`） |
 | 見出し階層 | h1→h2→h3の順序（スキップ禁止） |
 | SVGアクセシビリティ | `role="img"` + `aria-label` |
 | セマンティックHTML | `<header>`, `<nav>`, `<main>`, `<article>` |
@@ -264,7 +266,8 @@ python3 scripts/accessibility/extract_colors_from_html.py path/to/file.html
 
 ### references/
 - `color-contrast-rules.md` - コントラスト比計算の詳細
-- `role-based-colors.md` - 役割別カラーパレット
+- `role-based-colors.md` - 役割別カラーパレット（ライトテーマ）
+- `dark-theme-color-palette.md` - ダークテーマ用カラーパレット設計資産
 - `background-context-rules.md` - 背景コンテキスト判定ルール
 - `hue-clash-rules.md` - 色相衝突（Hue Clash）防止ルール
 - `ng-patterns.md` - NGパターン集（実例付き）
@@ -326,3 +329,25 @@ python3 scripts/accessibility/extract_colors_from_html.py path/to/file.html
        color: #374151;                /* 本文は常にニュートラル */
    }
    ```
+
+### Q: ダークテーマのページを作成する場合は？
+
+`references/dark-theme-color-palette.md` を参照。主なポイント：
+
+1. **本文テキストは無彩色トークンのみ**
+   - `--dark-text-primary: #e8e8e8`（メイン本文）
+   - `--dark-text-secondary: #aaaaaa`（補足）
+   - `--dark-text-muted: #888888`（フッター）
+
+2. **見出しにはアクセントカラーを使用可能**
+   - `--dark-accent-gold: #ffc107`（重要な見出し）
+   - `--dark-success-text: #81c784`（成功・完了）
+   - `--dark-info-text: #64b5f6`（情報）
+
+3. **ドメイン固有の色分けが必要な場合**
+   - 専用トークンを定義（例: `--kms-key-owned`, `--kms-key-managed`）
+   - セマンティクスを一貫して維持
+
+4. **コントラスト比の確認**
+   - 背景 `#1a1a2e` に対して 4.5:1 以上
+   - `#666666` は使用禁止（3.4:1 でAA不通過）→ `#888888` を使用

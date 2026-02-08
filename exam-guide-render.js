@@ -36,17 +36,7 @@ function renderExamOverview(examInfo, domains) {
         </div>
     `;
 
-    const domainBarsHtml = domains.map(domain => `
-        <div class="domain-weight-item">
-            <div class="domain-weight-icon" aria-hidden="true">${domain.icon}</div>
-            <div class="domain-weight-label">${domain.title}</div>
-            <div class="domain-weight-bar-track" role="progressbar" aria-valuenow="${domain.weight}" aria-valuemin="0" aria-valuemax="100" aria-label="${domain.title}: ${domain.weight}%">
-                <div class="domain-weight-bar-fill" style="width: ${domain.weight}%; background: ${domain.color};">
-                    <span>${domain.weight}%</span>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    const domainAltText = domains.map(d => `${d.title}: ${d.weight}%`).join('、');
 
     return `
         <section class="exam-overview" aria-labelledby="exam-overview-heading">
@@ -61,8 +51,13 @@ function renderExamOverview(examInfo, domains) {
                 <div class="domain-weight-title">
                     <span aria-hidden="true">📊</span> ドメイン別配点
                 </div>
-                <div class="domain-weight-bars">
-                    ${domainBarsHtml}
+                <div class="domain-weight-image-container">
+                    <img src="output_images/exam-domain-weights.webp"
+                         alt="SAP-C02 ドメイン別配点チャート - ${domainAltText}"
+                         class="domain-weight-image"
+                         loading="lazy"
+                         width="2064"
+                         height="1174" />
                 </div>
             </div>
         </section>
