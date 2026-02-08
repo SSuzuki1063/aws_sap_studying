@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 28,
+    count: 29,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -47,13 +47,14 @@ const categoriesData = [
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 7,
+        count: 8,
         resources: [
           { title: 'AWS ゲートウェイ', href: 'networking/aws-gateways.html' },
           { title: 'Transit Gateway 共有', href: 'organizational-complexity/aws-ram-tgw-sharing.html' },
           { title: 'AWS Transit Gateway Deep Dive 完全ガイド', href: 'networking/transit-gateway-deep-dive.html' },
           { title: 'AWS Transit Gateway ピアリング完全ガイド', href: 'networking/transit-gateway-peering-guide.html' },
-          { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' }
+          { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' },
+          { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' }
         ]
       }
     ]
@@ -477,5 +478,5 @@ const siteStats = {
   totalResources: '207+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
-  lastUpdated: '2026/02/07'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
+  lastUpdated: '2026/02/08'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };
