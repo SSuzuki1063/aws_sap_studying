@@ -230,7 +230,22 @@ const searchData = [
     { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-private-hosted-zone-guide.html' },
     { title: 'Amazon Redshift Data Sharing 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/redshift-data-sharing-guide.html' },
     { title: 'Amazon OpenSearch Service 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/opensearch-guide.html' },
-    { title: 'AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/aws-us-east-1-outage-analysis.html' }
+    { title: 'AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析', category: 'コンピュート・アプリケーション', file: 'continuous-improvement/aws-us-east-1-outage-analysis.html' },
+    { title: 'BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮', category: 'ネットワーキング', file: 'networking/bfd-failover-optimization-guide.html' },
+    { title: 'Direct Connect LAG環境でのMACsec実装ガイド', category: 'ネットワーキング', file: 'networking/macsec-lag-implementation-guide.html' },
+    { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-cloudwatch-metrics-guide.html' },
+    { title: 'AWS プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/aws-prefix-list-guide.html' },
+    { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', category: 'ネットワーキング', file: 'networking/byoip-guide.html' },
+    { title: 'AWS Site-to-Site VPN 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-site-to-site-vpn-guide.html' },
+    { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', category: 'ネットワーキング', file: 'networking/vpn-ike-dpd-recovery-guide.html' },
+    { title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法', category: 'ネットワーキング', file: 'networking/aws-vpn-asymmetric-routing-guide.html' },
+    { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', category: 'ネットワーキング', file: 'networking/site-to-site-vpn-route53-resolver-guide.html' },
+    { title: 'AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション', category: 'ネットワーキング', file: 'networking/vpn-throughput-scaling-guide.html' },
+    { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', category: 'ネットワーキング', file: 'networking/vpn-acceleration-vs-global-accelerator.html' },
+    { title: 'AWS Global Accelerator × VPN パフォーマンス向上ガイド', category: 'ネットワーキング', file: 'networking/global-accelerator-vpn-performance-guide.html' },
+    { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', category: 'ネットワーキング', file: 'networking/hybrid-dns-architecture-guide.html' },
+    { title: 'Transit Gateway アプライアンスモード 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-appliance-mode-guide.html' },
+    { title: 'Gateway Load Balancer (GWLB) 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/gwlb-guide.html' }
 ];
 
 // 検索機能

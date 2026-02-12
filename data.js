@@ -7,25 +7,28 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 29,
+    count: 43,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
-        count: 6,
+        count: 9,
         resources: [
           { title: 'Direct Connect ガイド', href: 'networking/aws-direct-connect-guide.html' },
           { title: 'Direct Connect & VGW', href: 'new-solutions/aws-direct-connect-vgw.html' },
           { title: 'VPN with Direct Connect ガイド', href: 'networking/aws-vpn-with-direct-connect-guide.html' },
           { title: 'Direct Connect 暗号化 VPN', href: 'networking/direct_connect_encryption_vpn.html' },
           { title: 'VPN vs PrivateLink', href: 'new-solutions/vpn-vs-privatelink.html' },
-          { title: 'AWS Direct Connect BGP ルーティング完全ガイド', href: 'networking/direct-connect-bgp-routing-guide.html' }
+          { title: 'AWS Direct Connect BGP ルーティング完全ガイド', href: 'networking/direct-connect-bgp-routing-guide.html' },
+          { title: 'BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮', href: 'networking/bfd-failover-optimization-guide.html' },
+          { title: 'Direct Connect LAG環境でのMACsec実装ガイド', href: 'networking/macsec-lag-implementation-guide.html' },
+          { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', href: 'networking/direct-connect-cloudwatch-metrics-guide.html' }
         ]
       },
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 15,
+        count: 25,
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html' },
@@ -41,20 +44,31 @@ const categoriesData = [
           { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', href: 'networking/vpc-network-access-analyzer-guide.html' },
           { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', href: 'networking/jumbo-frame-mtu-guide.html' },
           { title: 'EC2インスタンスのネットワークMTU完全ガイド', href: 'networking/ec2-mtu-guide.html' },
-          { title: 'CIDRブロック集約と許可プレフィックスリスト完全ガイド', href: 'networking/cidr-aggregation-prefix-list-guide.html' }
+          { title: 'CIDRブロック集約と許可プレフィックスリスト完全ガイド', href: 'networking/cidr-aggregation-prefix-list-guide.html' },
+          { title: 'AWS プレフィックスリスト完全ガイド', href: 'networking/aws-prefix-list-guide.html' },
+          { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', href: 'networking/byoip-guide.html' },
+          { title: 'AWS Site-to-Site VPN 完全ガイド', href: 'networking/aws-site-to-site-vpn-guide.html' },
+          { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', href: 'networking/vpn-ike-dpd-recovery-guide.html' },
+          { title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法', href: 'networking/aws-vpn-asymmetric-routing-guide.html' },
+          { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', href: 'networking/site-to-site-vpn-route53-resolver-guide.html' },
+          { title: 'AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション', href: 'networking/vpn-throughput-scaling-guide.html' },
+          { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', href: 'networking/vpn-acceleration-vs-global-accelerator.html' },
+          { title: 'AWS Global Accelerator × VPN パフォーマンス向上ガイド', href: 'networking/global-accelerator-vpn-performance-guide.html' },
+          { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', href: 'networking/hybrid-dns-architecture-guide.html' }
         ]
       },
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 8,
+        count: 9,
         resources: [
           { title: 'AWS ゲートウェイ', href: 'networking/aws-gateways.html' },
           { title: 'Transit Gateway 共有', href: 'organizational-complexity/aws-ram-tgw-sharing.html' },
           { title: 'AWS Transit Gateway Deep Dive 完全ガイド', href: 'networking/transit-gateway-deep-dive.html' },
           { title: 'AWS Transit Gateway ピアリング完全ガイド', href: 'networking/transit-gateway-peering-guide.html' },
           { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' },
-          { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' }
+          { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' },
+          { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html' }
         ]
       }
     ]
@@ -170,7 +184,7 @@ const categoriesData = [
     id: 'compute-applications',
     title: 'コンピュート・アプリケーション',
     icon: '💻',
-    count: 42,
+    count: 43,
     sections: [
       {
         title: 'EC2 & インスタンス管理',
@@ -188,7 +202,7 @@ const categoriesData = [
       {
         title: 'Auto Scaling & ロードバランシング',
         icon: '⚖️',
-        count: 20,
+        count: 21,
         resources: [
           { title: 'IAM PassRole vs AssumeRole 完全ガイド', href: 'compute-applications/iam-passrole-vs-assumerole-guide.html' },
           { title: 'Auto Scaling安全なOSアップデート戦略完全ガイド', href: 'compute-applications/autoscaling-safe-os-update-guide.html' },
@@ -209,7 +223,8 @@ const categoriesData = [
           { title: 'CodeシリーズでECS Fargateローリングデプロイ完全ガイド', href: 'compute-applications/ecs-fargate-rolling-deploy-complete-guide.html' },
           { title: 'VPC DHCP オプションとカスタム DNS 完全ガイド', href: 'compute-applications/vpc-dhcp-options-guide.html' },
           { title: 'Auto Scaling インスタンスリフレッシュ完全ガイド', href: 'compute-applications/autoscaling-instance-refresh-guide.html' },
-          { title: 'Amazon EventBridge イベントパターン完全図解ガイド', href: 'compute-applications/eventbridge-event-patterns-guide.html' }
+          { title: 'Amazon EventBridge イベントパターン完全図解ガイド', href: 'compute-applications/eventbridge-event-patterns-guide.html' },
+          { title: 'Gateway Load Balancer (GWLB) 完全ガイド', href: 'compute-applications/gwlb-guide.html' }
         ]
       },
       {
@@ -461,9 +476,9 @@ const categoriesData = [
 
 // カテゴリクイックナビゲーション用データ
 const categoryQuickNav = [
-  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 28 },
+  { id: 'networking', icon: '🌐', text: 'ネットワーキング', count: 43 },
   { id: 'security-governance', icon: '🔒', text: 'セキュリティ・ガバナンス', count: 74 },
-  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 42 },
+  { id: 'compute-applications', icon: '💻', text: 'コンピュート・アプリケーション', count: 43 },
   { id: 'content-delivery-dns', icon: '🚀', text: 'コンテンツ配信・DNS', count: 17 },
   { id: 'development-deployment', icon: '🛠️', text: '開発・デプロイメント', count: 15 },
   { id: 'storage-database', icon: '💾', text: 'ストレージ・データベース', count: 13 },
@@ -475,7 +490,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '207+',
+  totalResources: '223+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
   lastUpdated: '2026/02/08'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
