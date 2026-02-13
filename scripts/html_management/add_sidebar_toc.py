@@ -21,6 +21,9 @@ class SidebarTOCGenerator:
     EXCLUDE_FILES = {'index.html', 'table-of-contents.html', 'quiz.html', 'home.html', 'knowledge-base.html'}
 
     # 左サイドバー目次のHTMLテンプレート
+    # 共通CSSリンク（sidebar-toc.cssがない場合に追加する）
+    SIDEBAR_TOC_CSS_LINK = '<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>'
+
     SIDEBAR_TOC_TEMPLATE = '''
 <!-- 左サイドバー目次 -->
 <div id="sidebar-toc" class="sidebar-toc">
@@ -38,214 +41,6 @@ class SidebarTOCGenerator:
 <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
     <span id="sidebar-toc-toggle-icon">◀</span>
 </button>
-
-<style>
-    /* ページ全体のレイアウト調整 */
-    body {{
-        padding-left: 360px;
-        transition: padding-left 0.3s ease;
-    }}
-
-    body.sidebar-collapsed {{
-        padding-left: 0;
-    }}
-
-    /* 左サイドバー目次 */
-    .sidebar-toc {{
-        position: fixed;
-        left: 0;
-        top: 60px;  /* ヘッダーの高さ分下げる */
-        width: 340px;
-        height: calc(100vh - 60px);  /* ヘッダー分を引く */
-        background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-right: 4px solid #3b82f6;
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-    }}
-
-    .sidebar-toc.collapsed {{
-        transform: translateX(-100%);
-    }}
-
-    /* サイドバーヘッダー */
-    .sidebar-toc-header {{
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #3b82f6;
-    }}
-
-    .sidebar-toc-header h2 {{
-        color: #1e40af;
-        margin: 0;
-        font-size: 1.4em;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }}
-
-    /* 目次コンテンツ */
-    .sidebar-toc-content ul {{
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }}
-
-    .sidebar-toc-content a {{
-        color: #1e40af;
-        text-decoration: none;
-        display: block;
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin: 6px 0;
-        transition: all 0.2s ease;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }}
-
-    .sidebar-toc-content a:hover {{
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-        transform: translateX(5px);
-    }}
-
-    /* h2とh3のスタイル */
-    .sidebar-toc-content .toc-h2 {{
-        font-weight: 600;
-        font-size: 1em;
-        margin-top: 12px;
-    }}
-
-    .sidebar-toc-content .toc-h2 a {{
-        font-weight: 600;
-    }}
-
-    .sidebar-toc-content .toc-h3 {{
-        font-size: 0.9em;
-        padding-left: 20px;
-    }}
-
-    .sidebar-toc-content .toc-h3 a {{
-        color: #4b5563;
-        padding: 8px 12px;
-    }}
-
-    /* 折りたたみボタン */
-    .sidebar-toc-toggle {{
-        position: fixed;
-        left: 340px;
-        top: 80px;  /* ヘッダーの下に配置 */
-        background: #3b82f6;
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 0 8px 8px 0;
-        cursor: pointer;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        z-index: 1003;  /* ヘッダー(1002)より上に */
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }}
-
-    .sidebar-toc-toggle:hover {{
-        background: #2563eb;
-        transform: scale(1.05);
-    }}
-
-    body.sidebar-collapsed .sidebar-toc-toggle {{
-        left: 0;
-    }}
-
-    /* スムーズスクロール */
-    html {{
-        scroll-behavior: smooth;
-    }}
-
-    /* スクロールバーのスタイリング */
-    .sidebar-toc::-webkit-scrollbar {{
-        width: 8px;
-    }}
-
-    .sidebar-toc::-webkit-scrollbar-track {{
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-    }}
-
-    .sidebar-toc::-webkit-scrollbar-thumb {{
-        background: #3b82f6;
-        border-radius: 4px;
-    }}
-
-    .sidebar-toc::-webkit-scrollbar-thumb:hover {{
-        background: #2563eb;
-    }}
-
-    /* モバイル対応 */
-    @media (max-width: 768px) {{
-        body {{
-            padding-left: 0 !important;
-        }}
-
-        .sidebar-toc {{
-            width: 280px;
-            top: 60px;  /* ヘッダーの下 */
-            height: calc(100vh - 60px);
-            transform: translateX(-100%);
-        }}
-
-        .sidebar-toc.open {{
-            transform: translateX(0);
-        }}
-
-        .sidebar-toc-toggle {{
-            left: 0;
-            top: 80px;  /* ヘッダーの下に配置 */
-            border-radius: 0 8px 8px 0;
-        }}
-
-        body.sidebar-collapsed .sidebar-toc-toggle {{
-            left: 0;
-        }}
-
-        /* モバイルでは初期状態で折りたたみ */
-        .sidebar-toc-header h2 {{
-            font-size: 1.2em;
-        }}
-
-        .sidebar-toc-content a {{
-            padding: 8px 10px;
-            font-size: 0.9em;
-        }}
-    }}
-
-    /* タブレット対応 */
-    @media (min-width: 769px) and (max-width: 1024px) {{
-        body {{
-            padding-left: 310px;
-        }}
-
-        .sidebar-toc {{
-            width: 290px;
-            top: 60px;  /* ヘッダーの下 */
-            height: calc(100vh - 60px);
-        }}
-
-        .sidebar-toc-toggle {{
-            left: 290px;
-            top: 80px;  /* ヘッダーの下に配置 */
-        }}
-
-        body.sidebar-collapsed .sidebar-toc-toggle {{
-            left: 0;
-        }}
-    }}
-</style>
 
 <script>
     function toggleSidebarTOC() {{
@@ -470,8 +265,24 @@ class SidebarTOCGenerator:
 
         return html_content
 
+    def ensure_css_link(self, html_content: str) -> str:
+        """共通 sidebar-toc.css リンクがなければ追加"""
+        if 'sidebar-toc.css' in html_content:
+            return html_content
+
+        # responsive.css の後に追加
+        pattern = r'(<link[^>]*responsive\.css[^>]*/>)'
+        if re.search(pattern, html_content):
+            return re.sub(pattern, r'\1\n' + self.SIDEBAR_TOC_CSS_LINK, html_content)
+
+        # responsive.css がない場合は </head> の前に追加
+        return html_content.replace('</head>', self.SIDEBAR_TOC_CSS_LINK + '\n</head>')
+
     def insert_toc(self, html_content: str, toc_html: str) -> str:
         """左サイドバー目次をHTMLに挿入（body開始タグの直後）"""
+        # 共通CSSリンクを確認・追加
+        html_content = self.ensure_css_link(html_content)
+
         # 既存の目次を削除
         html_content = self.remove_old_toc(html_content)
 
