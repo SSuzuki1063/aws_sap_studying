@@ -273,6 +273,176 @@ const quizData = {
                     { title: "AWS VPC Documentation", url: "https://docs.aws.amazon.com/vpc/latest/userguide/", type: "external" },
                     { title: "VPN vs PrivateLink", path: "new-solutions/vpn-vs-privatelink.html", type: "internal" }
                 ]
+            },
+            // === AWS ANS (Advanced Networking Specialty) 試験サンプル問題 ===
+            {
+                id: 17,
+                question: "あるゲーム会社が、1つのAWSリージョンでホストされる世界中で利用できるゲームの発売を計画しています。ゲームバックエンドはAuto Scalingグループの一部であるEC2インスタンスでホストされ、gRPCプロトコルを使用します。送信元IPアドレスに基づいて着信トラフィックをフィルタリングする必要があります。これらの要件を満たすソリューションはどれですか。",
+                options: [
+                    "ALBエンドポイントを使用してAWS Global Acceleratorアクセラレーターを設定し、ALBをAuto Scalingグループにアタッチ。AWS WAFのウェブACLをALB用に設定して送信元IPアドレスに基づきフィルタリング",
+                    "NLBエンドポイントを使用してAWS Global Acceleratorアクセラレーターを設定し、NLBをAuto Scalingグループにアタッチ。EC2のセキュリティグループで送信元IPアドレスに基づきフィルタリング",
+                    "ALBエンドポイントを使用してCloudFrontディストリビューションを設定し、ALBをAuto Scalingグループにアタッチ。AWS WAFのウェブACLをALB用に設定して送信元IPアドレスに基づきフィルタリング",
+                    "NLBエンドポイントを使用してCloudFrontディストリビューションを設定し、NLBをAuto Scalingグループにアタッチ。EC2のセキュリティグループで送信元IPアドレスに基づきフィルタリング"
+                ],
+                correct: 0,
+                explanation: "Global AcceleratorはAWSネットワークバックボーン経由で低レイテンシーのグローバルアクセスを提供します。ALBはgRPCプロトコルとクライアントIPアドレスの保存をサポートし、AWS WAFでIPフィルタリングが可能です。NLBはクライアントIP保存をサポートせず、CloudFrontはgRPCをサポートしていません。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "Global Accelerator インフォグラフィック", path: "content-delivery-dns/global_accelerator_infographic.html", type: "internal" },
+                    { title: "Global Accelerator VPN パフォーマンスガイド", path: "networking/global-accelerator-vpn-performance-guide.html", type: "internal" },
+                    { title: "AWS Global Accelerator Documentation", url: "https://docs.aws.amazon.com/global-accelerator/latest/dg/", type: "external" }
+                ]
+            },
+            {
+                id: 18,
+                question: "ある企業がus-east-1に複数のVPCを所有し、VPCの1つにウェブサイトをデプロイしました。スプリットビューDNSを実装して、example.comという同じドメイン名で内部（VPCから）と外部（インターネット経由）の両方からアクセスできるようにしたいと考えています。これらの要件を満たすソリューションはどれですか。",
+                options: [
+                    "オンプレミスDNSサーバーのIPアドレスを使用するようにDHCPオプションを変更し、プライベートホストゾーンとパブリックホストゾーンを作成する",
+                    "Route 53で同じ名前のプライベートホストゾーンとパブリックホストゾーンを作成し、VPCをプライベートホストゾーンに関連付ける。各ホストゾーンにレコードを作成する",
+                    "Route 53 Resolverインバウンドエンドポイントを作成し、パブリックホストゾーンを作成する",
+                    "Route 53 Resolverアウトバウンドエンドポイントを作成し、プライベートホストゾーンを作成する"
+                ],
+                correct: 1,
+                explanation: "Route 53ではスプリットビューDNSを直接サポートしています。同じ名前のパブリックホストゾーンとプライベートホストゾーンを作成し、プライベートホストゾーンをVPCに関連付けると、Route 53 Resolverはプライベートホストゾーンを使用してVPCからのクエリに応答し、パブリックホストゾーンで外部クエリに応答します。ResolverエンドポイントはオンプレミスDNS連携用であり、スプリットビューDNSには不要です。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "Route 53 プライベートホストゾーンガイド", path: "content-delivery-dns/route53-private-hosted-zone-guide.html", type: "internal" },
+                    { title: "ハイブリッドDNSアーキテクチャガイド", path: "networking/hybrid-dns-architecture-guide.html", type: "internal" },
+                    { title: "Amazon Route 53 Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/", type: "external" }
+                ]
+            },
+            {
+                id: 19,
+                question: "機密データを処理するウェブアプリケーションがEC2インスタンスでホストされています。アプリケーションはスケーリングが必要で、クライアント証明書を使用して認証する必要があります。アプリケーションは最初のTLSハンドシェイクの一部としてクライアント証明書を検証します。これらの要件を満たすELBソリューションはどれですか。",
+                options: [
+                    "ポート443のHTTPSリスナーを含むALBを設定し、Auto ScalingグループをALBのターゲットグループとして設定。HTTPSをターゲットグループのプロトコルとして設定",
+                    "ポート443のTLSリスナーを含むNLBを設定し、Auto ScalingグループをNLBのターゲットグループとして設定。TLSを終了するようにNLBを設定",
+                    "ポート443のTCPリスナーを含むNLBを設定し、Auto ScalingグループをNLBのターゲットグループとして設定。TCPをターゲットグループのプロトコルとして設定",
+                    "ポート443のTLSリスナーを含むALBを設定し、Auto ScalingグループをALBのターゲットグループとして設定。TLSをターゲットグループのプロトコルとして設定"
+                ],
+                correct: 2,
+                explanation: "クライアント証明書認証ではTLSセッションがEC2インスタンスまで維持される必要があります。NLBのTCPリスナーはトランスポートレイヤーで動作し、TLS接続を終了せずにそのままEC2インスタンスに転送します。ALBやNLBのTLSリスナーはロードバランサーでTLSを終了するため、クライアント証明書をウェブサーバーから参照できません。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "ACM/ALB/EC2 TLSガイド", path: "content-delivery-dns/acm-alb-ec2-tls-guide.html", type: "internal" },
+                    { title: "ALBセキュリティポリシーガイド", path: "content-delivery-dns/alb-security-policy-guide.html", type: "internal" },
+                    { title: "Elastic Load Balancing Documentation", url: "https://docs.aws.amazon.com/elasticloadbalancing/latest/network/", type: "external" }
+                ]
+            },
+            {
+                id: 20,
+                question: "ある企業がオンプレミスのデータセンターからAmazon S3にプライベートアクセスする必要があります。プライベートVIFとAWS Direct Connect接続がセットアップされています。ソリューションは高可用性が必要です。ネットワークエンジニアは次に何をすべきでしょうか。",
+                options: [
+                    "VPCでS3ゲートウェイエンドポイントを設定し、VPCルートテーブルを更新。オンプレミスアプリケーションでS3ゲートウェイエンドポイントのDNS名を設定",
+                    "VPCでS3インターフェイスエンドポイントを設定し、オンプレミスアプリケーションでS3インターフェイスエンドポイントのDNS名を設定",
+                    "VPCでS3ゲートウェイエンドポイントを設定し、EC2インスタンスでHTTPプロキシを設定。オンプレミスアプリケーションでHTTPプロキシのDNS名を設定",
+                    "VPCでS3インターフェイスエンドポイントを設定し、EC2インスタンスでHTTPプロキシを設定。オンプレミスアプリケーションでHTTPプロキシのDNS名を設定"
+                ],
+                correct: 1,
+                explanation: "S3インターフェイスエンドポイント（PrivateLink）は、VPC内およびDirect Connect経由のオンプレミスからのプライベートアクセスを提供します。ゲートウェイエンドポイントはルートテーブルベースでオンプレミスからのDNSアクセスをサポートしません。HTTPプロキシを使用するオプションは単一障害点となり高可用性要件を満たしません。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "S3バケットポリシー × VPCエンドポイント完全ガイド", path: "networking/s3-vpc-endpoint-policy-guide.html", type: "internal" },
+                    { title: "Direct Connect ガイド", path: "networking/aws-direct-connect-guide.html", type: "internal" },
+                    { title: "AWS PrivateLink for S3 Documentation", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html", type: "external" }
+                ]
+            },
+            {
+                id: 21,
+                question: "3つのVPC（アプリケーション、バックエンド、インスペクション）がトランジットゲートウェイに接続されています。インスペクションVPCにはステートフルレイヤー7ファイアウォールがデプロイされ、すべてのトラフィックはファイアウォールを経由する必要があります。アプリケーションVPCとバックエンドVPC間のトラフィックがファイアウォールを正しく通過するようにするソリューションはどれですか。",
+                options: [
+                    "トランジットゲートウェイと仮想ファイアウォールアプライアンスの間にIPsec VPN接続を作成する",
+                    "仮想ファイアウォールアプライアンスで仮想ルーター冗長プロトコル（VRRP）を設定する",
+                    "トランジットゲートウェイと仮想ファイアウォールアプライアンスの間にBGPをセットアップする",
+                    "インスペクションVPCへのVPCアタッチメントに対してトランジットゲートウェイアプライアンスモードを有効にする"
+                ],
+                correct: 3,
+                explanation: "アプライアンスモードが無効の場合、トランジットゲートウェイは送信元AZ内でルーティングを維持しようとします。これにより、リターントラフィックが異なるAZのファイアウォールにルーティングされ、ステートフルファイアウォールがトラフィックをドロップする非対称ルーティングが発生します。アプライアンスモードを有効にすると、フロー全体が同じAZのファイアウォールを経由するようになります。VRRPはVPC内で未サポート、BGPピアリングはTGWとファイアウォール間で不可です。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "TGW アプライアンスモードガイド", path: "networking/tgw-appliance-mode-guide.html", type: "internal" },
+                    { title: "AWS Transit Gateway Deep Dive 完全ガイド", path: "networking/transit-gateway-deep-dive.html", type: "internal" },
+                    { title: "AWS Transit Gateway Documentation", url: "https://docs.aws.amazon.com/vpc/latest/tgw/", type: "external" }
+                ]
+            },
+            {
+                id: 22,
+                question: "Route 53でパブリックホストゾーンのDNSSEC署名を設定したいと考えています。us-west-2にAWS KMSの対称単一リージョンキーを作成しましたが、キー署名キー（KSK）を作成できません。どのようにしてこの問題を解決できますか。",
+                options: [
+                    "us-east-1にマルチリージョンの対称カスタマーマネージドキーを再作成し、このキーでKSKを作成する",
+                    "us-west-2に単一リージョンの対称カスタマーマネージドキーを再作成し、このキーでKSKを作成する",
+                    "us-east-1にECC_NIST_P256キー仕様を使用した非対称カスタマーマネージドキーを再作成し、このキーでKSKを作成する",
+                    "us-west-2にECC_NIST_P256キー仕様を使用した非対称カスタマーマネージドキーを再作成し、このキーでKSKを作成する"
+                ],
+                correct: 2,
+                explanation: "Route 53でDNSSEC KSKを作成するには、KMSキーが2つの要件を満たす必要があります：(1) us-east-1リージョンに存在すること、(2) ECC_NIST_P256キー仕様の非対称キーであること。対称キーや他のリージョンのキーでは要件を満たしません。Route 53はグローバルサービスですが、DNSSEC署名のKMSキーはus-east-1に限定されます。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "Route 53 DNSSECガイド", path: "content-delivery-dns/route53-dnssec-guide.html", type: "internal" },
+                    { title: "KMS キータイプ", path: "security-governance/kms-key-types.html", type: "internal" },
+                    { title: "Route 53 DNSSEC Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring-dnssec.html", type: "external" }
+                ]
+            },
+            {
+                id: 23,
+                question: "2つのデータセンターからAWSへの移行で、us-east-1とus-west-2の2リージョンを使用しています。2つのDirect Connect接続がそれぞれ異なるロケーションにあり、トランジットVIFを使用して単一のDirect Connectゲートウェイに接続されています。すべてのトラフィックは最初のデータセンターを通過し、障害時に2番目が引き継ぐ必要があります。BGPをどのように設定すべきですか。",
+                options: [
+                    "Direct Connect接続1に接続されたトランジットVIFに対して、ローカルプリファレンスBGPコミュニティタグ 7224:7300 を設定する",
+                    "Direct Connect接続2に接続されたトランジットVIFに対して、ローカルプリファレンスBGPコミュニティタグ 7224:9300 を設定する",
+                    "AS_PATH属性を使用して、Direct Connect接続2のトランジットVIFに追加のホップを付加する",
+                    "AS_PATH属性を使用して、Direct Connect接続1のトランジットVIFに追加のホップを付加する"
+                ],
+                correct: 0,
+                explanation: "Direct Connectでは、ローカルプリファレンスコミュニティタグでVIFの優先度を制御できます。7224:7300は高プリファレンス（優先）を示すタグです。7224:9300はプレフィックスの伝播距離を制御するタグであり、ルーティング優先度には影響しません。AS_PATH属性は単一リージョンでの複数VIF間の制御には有効ですが、マルチリージョン環境では適切ではありません。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "Direct Connect BGP ルーティング完全ガイド", path: "networking/direct-connect-bgp-routing-guide.html", type: "internal" },
+                    { title: "Direct Connect ガイド", path: "networking/aws-direct-connect-guide.html", type: "internal" },
+                    { title: "AWS Direct Connect BGP Documentation", url: "https://docs.aws.amazon.com/directconnect/latest/UserGuide/routing-and-bgp.html", type: "external" }
+                ]
+            },
+            {
+                id: 24,
+                question: "VPC内のEC2インスタンスで実行されるビジネスクリティカルなアプリケーションの新バージョンを、エンドユーザーのエクスペリエンスに影響を与えずに本番トラフィックでテストしたいと考えています。これを満たすソリューションはどれですか。",
+                options: [
+                    "Route 53の加重ルーティングポリシーを設定し、本番とテストインスタンスに重みを割り当てる",
+                    "加重ターゲットグループを持つALBを作成し、リスナールールの転送アクションに複数のターゲットグループを追加する",
+                    "トラフィックミラーリングを実装して、本番リクエストをテストインスタンスにリプレイする。ソースを本番、ターゲットをテストインスタンスとして設定",
+                    "本番サーバーの前にNGINXプロキシを設定し、NGINXのミラーリング機能を使用する"
+                ],
+                correct: 2,
+                explanation: "VPCトラフィックミラーリングはトランスポートレイヤーで動作し、本番トラフィックをキャプチャしてテスト環境にミラーリングします。ユーザーは既存の本番環境にのみ接続するため、新バージョンのエラーやパフォーマンス問題の影響を受けません。加重ルーティングやALBの加重ターゲットグループでは一部のユーザーが新バージョンに誘導されるため、エンドユーザー体験に影響が生じます。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "VPCトラフィックミラーリングガイド", path: "security-governance/vpc-traffic-mirroring-guide.html", type: "internal" },
+                    { title: "AWS VPC Traffic Mirroring Documentation", url: "https://docs.aws.amazon.com/vpc/latest/mirroring/", type: "external" }
+                ]
+            },
+            {
+                id: 25,
+                question: "EC2インスタンス上のeコマースアプリケーションで、第三者監査によりDNS漏洩の脆弱性が特定されました。この脆弱性から保護する高可用性ソリューションを最もコスト効率に優れた方法で実装する必要があります。どのソリューションが最適ですか。",
+                options: [
+                    "DNSフィルタリングを使用してBINDサーバーを設定し、DHCPオプションセットのDNSサーバーを変更する",
+                    "Amazon Route 53 Resolver DNS Firewallを使用し、ルールグループでドメインリストを設定する",
+                    "AWS Network Firewallをドメイン名フィルタリングとともに使用する",
+                    "Route 53 Resolverアウトバウンドエンドポイントに疑わしいトラフィックをフィルタリングするルールを設定する"
+                ],
+                correct: 1,
+                explanation: "Route 53 Resolver DNS Firewallは、VPC内のアプリケーションがアクセスできるドメインの監視と制御を行うマネージドサービスです。許可/拒否リストでドメインをフィルタリングし、DNSクエリによるデータ窃取を防止します。BINDサーバーは単一障害点となり管理コストも高くなります。Network FirewallはRoute 53 Resolverからのクエリを可視化できません。Resolverアウトバウンドエンドポイントはクエリの転送用でありフィルタリング機能はありません。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "ハイブリッドDNSアーキテクチャガイド", path: "networking/hybrid-dns-architecture-guide.html", type: "internal" },
+                    { title: "Site-to-Site VPN Route 53 Resolverガイド", path: "networking/site-to-site-vpn-route53-resolver-guide.html", type: "internal" },
+                    { title: "Route 53 Resolver DNS Firewall Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver-dns-firewall.html", type: "external" }
+                ]
+            },
+            {
+                id: 26,
+                question: "ハイブリッドDNSインフラストラクチャにRoute 53 Resolverを使用し、Site-to-Site VPN接続でハイブリッド接続を実現しています。新しいガバナンスポリシーでAWSクラウドからのDNSトラフィックのログ記録と、送信元IPアドレス・DNS名の特定が求められています。これらの要件を満たすソリューションはどれですか。",
+                options: [
+                    "VPCフローログをすべてのVPCに対して作成し、CloudWatch Logs Insightsで送信元IPアドレスとDNS名をクエリする",
+                    "Route 53 Resolverのクエリログ記録をすべてのVPCに対して設定し、CloudWatch Logs Insightsで送信元IPアドレスとDNS名をクエリする",
+                    "Site-to-Site VPN接続のDNSログ記録を設定し、Amazon AthenaでIPアドレスとDNS名をクエリする",
+                    "Route 53 Resolverの既存ルールを変更してログ記録を設定し、Amazon AthenaでIPアドレスとDNS名をクエリする"
+                ],
+                correct: 1,
+                explanation: "Route 53 Resolverのクエリログ記録は、VPCからのDNSクエリの送信元IPアドレスとリクエストされたDNS名を記録する専用機能です。CloudWatch Logsに送信し、Logs Insightsで分析できます。VPCフローログはAmazon提供DNSサーバーへのトラフィックをキャプチャできません。Site-to-Site VPNにDNSログ記録機能はなく、Resolverのルールでもログ記録設定はできません。（AWS ANS試験サンプル問題）",
+                relatedResources: [
+                    { title: "ハイブリッドDNSアーキテクチャガイド", path: "networking/hybrid-dns-architecture-guide.html", type: "internal" },
+                    { title: "Site-to-Site VPN Route 53 Resolverガイド", path: "networking/site-to-site-vpn-route53-resolver-guide.html", type: "internal" },
+                    { title: "Route 53 Resolver Query Logging Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver-query-logs.html", type: "external" }
+                ]
             }
         ]
     },
