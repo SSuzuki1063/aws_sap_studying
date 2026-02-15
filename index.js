@@ -245,7 +245,15 @@ const searchData = [
     { title: 'AWS Global Accelerator × VPN パフォーマンス向上ガイド', category: 'ネットワーキング', file: 'networking/global-accelerator-vpn-performance-guide.html' },
     { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', category: 'ネットワーキング', file: 'networking/hybrid-dns-architecture-guide.html' },
     { title: 'Transit Gateway アプライアンスモード 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-appliance-mode-guide.html' },
-    { title: 'Gateway Load Balancer (GWLB) 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/gwlb-guide.html' }
+    { title: 'Gateway Load Balancer (GWLB) 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/gwlb-guide.html' },
+    { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html' },
+    { title: 'AWS Direct Connect 接続タイプ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-connection-types-guide.html' },
+    { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-privatelink-vpc-endpoint-service-guide.html' },
+    { title: 'Transit Gateway Connect 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-connect-guide.html' },
+    { title: 'GuardDutyによるトラフィックパターン分析 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/guardduty-traffic-analysis-guide.html' },
+    { title: 'AWS Elastic Load Balancing (ELB) 完全ガイド - ALB vs NLB', category: 'コンピュート・アプリケーション', file: 'compute-applications/elb-types-guide.html' },
+    { title: 'なぜALBはVPCエンドポイントサービスとして使えないのか？', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb-nlb-privatelink-guide.html' },
+    { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-mtls-eks-guide.html' }
 ];
 
 // 検索機能
