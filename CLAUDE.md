@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 196 HTML resources, 194 quiz questions, 8 categories |
+| **Content** | 223+ HTML resources, 219 quiz questions, 8 categories |
 
 ## ⚠️ CRITICAL RULES
 
@@ -34,6 +34,8 @@ When adding HTML resources, you **MUST** update **TWO** files:
 | `index.js` | Add to `searchData` array | Resource won't appear in search |
 
 **Verification:** Run `python3 scripts/ci/check_data_integrity.py` to detect sync issues.
+
+Additionally, update `siteStats.totalResources` in `data.js` when resource counts change.
 
 ### 3. GitHub Pages Path Requirement
 
@@ -217,21 +219,24 @@ find . -name "*.html" -path "./networking/*" -o -path "./security-governance/*" 
 
 ## Directory Structure
 
-**Content Categories** (match AWS SAP exam domains):
+**Content Directories** (11 physical directories, consolidated into 8 logical categories in `data.js`):
 
-| Directory | Content |
-|-----------|---------|
-| `networking/` | Direct Connect, Transit Gateway, VPN, PrivateLink |
-| `security-governance/` | IAM, SCP, WAF, KMS, Cognito |
-| `compute-applications/` | EC2, Lambda, ECS, Auto Scaling |
-| `storage-database/` | S3, EBS, EFS, RDS Aurora, ElastiCache |
-| `migration/` | DMS, Migration Hub, DR strategies |
-| `analytics-bigdata/` | Kinesis, Redshift, Glue, QuickSight |
-| `development-deployment/` | CloudFormation, CDK, SAM, EventBridge |
-| `content-delivery-dns/` | CloudFront, Route53, Global Accelerator |
-| `organizational-complexity/` | Organizations, Control Tower, RAM |
-| `continuous-improvement/` | Systems Manager, CodeDeploy, CloudTrail |
-| `cost-control/` | Savings Plans, storage optimization |
+| Directory | Content | data.js Category |
+|-----------|---------|------------------|
+| `networking/` | Direct Connect, Transit Gateway, VPN, PrivateLink | `networking` |
+| `security-governance/` | IAM, SCP, WAF, KMS, Cognito | `security-governance` |
+| `compute-applications/` | EC2, Lambda, ECS, Auto Scaling | `compute-applications` |
+| `storage-database/` | S3, EBS, EFS, RDS Aurora, ElastiCache | `storage-database` |
+| `migration/` | DMS, Migration Hub, DR strategies | `migration` |
+| `analytics-bigdata/` | Kinesis, Redshift, Glue, QuickSight | `analytics-operations` |
+| `development-deployment/` | CloudFormation, CDK, SAM, EventBridge | `development-deployment` |
+| `content-delivery-dns/` | CloudFront, Route53, Global Accelerator | `content-delivery-dns` |
+| `new-solutions/` | Cross-cutting resources (referenced from multiple categories) | *(various)* |
+| `organizational-complexity/` | Organizations, Control Tower, RAM | *(within other categories)* |
+| `continuous-improvement/` | Systems Manager, CodeDeploy, CloudTrail | *(within other categories)* |
+| `cost-control/` | Savings Plans, storage optimization | *(within other categories)* |
+
+**Note**: `data.js` has 8 categories. Some physical directories (`organizational-complexity/`, `continuous-improvement/`, `cost-control/`) have their resources mapped into other logical categories. The `new-solutions/` directory contains cross-cutting resources referenced from multiple categories.
 
 **Key Files:**
 
@@ -242,7 +247,8 @@ find . -name "*.html" -path "./networking/*" -o -path "./security-governance/*" 
 | `data.js` | **CRITICAL**: Category/resource data |
 | `render.js` | Template functions |
 | `index.js` | UI handlers + searchData |
-| `quiz-data-extended.js` | Quiz questions |
+| `quiz-data-extended.js` | Quiz questions (219 questions) |
+| `quiz-app.js` | Quiz UI logic and state management |
 | `server.py` | Local dev server (port 8080) |
 | `css/*.css` | Shared stylesheets |
 
