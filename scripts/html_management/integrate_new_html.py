@@ -371,8 +371,8 @@ class HTMLIntegrator:
 
         category_display = category_names.get(category, "セキュリティ・ガバナンス")
 
-        # data.js用スニペット
-        data_js_snippet = f"          {{ title: '{title}', href: '{href}' }}"
+        # data.js用スニペット（priority: 'medium' はデフォルト。適宜 'high' / 'low' に変更）
+        data_js_snippet = f"          {{ title: '{title}', href: '{href}', priority: 'medium' }}"
         self.generated_snippets["data_js"].append(data_js_snippet)
 
         # index.js用スニペット
@@ -576,7 +576,15 @@ class HTMLIntegrator:
             print(snippet + ",")
 
         print("\n" + "─" * 80)
-        print("⚠️  重要: 上記スニペットを追加後、カウントも更新してください")
+        print("⚠️  重要: 上記スニペットを追加後、以下も対応してください")
+        print("")
+        print("   🔴🟡🔵 優先度を調整:")
+        print("   • デフォルトは priority: 'medium'（優先度: 中）")
+        print("   • SAP試験で頻出のリソース → priority: 'high'（優先度: 高）")
+        print("   • 補助的・応用的なリソース → priority: 'low'（優先度: 低）")
+        print("   • 未設定の場合も自動的に 'medium' として扱われます")
+        print("")
+        print("   📊 カウントを更新:")
         print("   • data.js: section.count と category.count をインクリメント")
         print("   • data.js: categoryQuickNav の count をインクリメント")
         print("   • data.js: siteStats.totalResources を更新")

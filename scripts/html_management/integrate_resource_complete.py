@@ -79,8 +79,10 @@ class IntegrationOrchestrator:
 1. 📝 data.js を更新
    - 適切なカテゴリとセクションを見つける
    - section.resources 配列にリソースオブジェクトを追加
+   - 🔴🟡🔵 priority フィールドを適切に設定:
+     high = SAP試験頻出 / medium = 標準(デフォルト) / low = 補助的
    - section.count と category.count をインクリメント
-   - 詳細: .claude/skills/aws-sap-dev/references/data_structure_guide.md
+   - 詳細: .claude/skills/integrate/references/data_structure_guide.md
 
 2. 🔍 index.js を更新
    - searchData 配列に新しいエントリを追加

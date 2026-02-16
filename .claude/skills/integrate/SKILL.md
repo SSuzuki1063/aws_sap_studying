@@ -78,6 +78,11 @@ This is the primary workflow for adding new AWS learning content to the reposito
 
    a. **Update data.js:**
    - Copy the generated snippet to the appropriate section's `resources` array
+   - **Adjust `priority` field** for each resource:
+     - `'high'` — SAP試験頻出・必須知識（🔴 赤サブヘッダー表示）
+     - `'medium'` — 標準（🟡 黄サブヘッダー表示）— スニペットのデフォルト
+     - `'low'` — 補助的・応用的（🔵 青サブヘッダー表示）
+     - 未設定の場合は自動的に `'medium'` として扱われる
    - Run: `python3 scripts/html_management/update_counts.py` to auto-update all counts
 
    b. **Update index.js:**
@@ -160,7 +165,7 @@ See [automation_workflow.md](references/automation_workflow.md) for detailed doc
    - Fix all errors before proceeding
 
 4. **CRITICAL: Update data structures** (same as Option A, step 4):
-   - Update `data.js` (add to resources array, increment counts)
+   - Update `data.js` (add to resources array with `priority` field, increment counts)
    - Update `index.js` (add to searchData array)
    - See [data_structure_guide.md](references/data_structure_guide.md)
 
@@ -339,7 +344,7 @@ git push origin gh-pages → GitHub detects changes → Auto-deploy (1-2 min) �
 ## Common Tasks Quick Reference
 
 **Add new HTML resource:**
-1. Place in `new_html/` → 2. Run `integrate_resource_complete.py` → 3. Update data.js AND index.js → 4. W3C validate → 5. Test locally → 6. Commit and push
+1. Place in `new_html/` → 2. Run `integrate_resource_complete.py` → 3. Update data.js (with priority) AND index.js → 4. W3C validate → 5. Test locally → 6. Commit and push
 
 **Add quiz question:**
 1. Choose category → 2. Create question in quiz-data-extended.js → 3. Syntax check → 4. Test → 5. Commit and push

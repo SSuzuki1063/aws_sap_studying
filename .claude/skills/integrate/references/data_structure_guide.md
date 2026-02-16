@@ -36,7 +36,8 @@ sections: [
     resources: [                 // Array of learning resources
       {
         title: 'リソースタイトル',
-        href: 'category/filename.html'
+        href: 'category/filename.html',
+        priority: 'high'          // Optional: 'high' | 'medium' | 'low' (default: 'medium')
       },
       // ... more resources
     ]
@@ -71,13 +72,18 @@ Within the appropriate section's `resources` array, add:
 ```javascript
 {
   title: 'AWS Lambda メトリクスとモニタリング',
-  href: 'compute-applications/aws-lambda-metrics.html'
+  href: 'compute-applications/aws-lambda-metrics.html',
+  priority: 'high'
 }
 ```
 
 **Important:**
 - `title`: Japanese display name (what users see in navigation)
 - `href`: Relative path from index.html to the HTML file
+- `priority`: Learning priority level (optional, defaults to `'medium'` if omitted)
+  - `'high'` — SAP試験頻出・必須知識（🔴 優先度: 高）
+  - `'medium'` — 標準的な学習リソース（🟡 優先度: 中）— デフォルト
+  - `'low'` — 補助的・応用的な内容（🔵 優先度: 低）
 
 ### Step 3: Update Section Count
 
@@ -198,7 +204,8 @@ file: 'security/aws-iam-guide.html'  // Wrong directory!
         // ... existing resources ...
         {
           title: 'AWS Lambda 同時実行数管理',
-          href: 'compute-applications/aws-lambda-concurrency.html'
+          href: 'compute-applications/aws-lambda-concurrency.html',
+          priority: 'high'  // SAP試験頻出のため高優先度
         }
       ]
     }
@@ -222,6 +229,7 @@ const searchData = [
 ### 3. Verification Checklist
 
 - [ ] Resource added to data.js resources array
+- [ ] priority field set appropriately ('high' / 'medium' / 'low')
 - [ ] Section count incremented in data.js
 - [ ] Category count incremented in data.js
 - [ ] Resource added to searchData in index.js
