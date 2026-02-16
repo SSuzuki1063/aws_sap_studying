@@ -46,6 +46,63 @@ function renderResourceList(resources) {
 }
 
 /**
+ * 優先度設定
+ */
+const PRIORITY_CONFIG = {
+  high:   { label: '優先度: 高', icon: '🔴', order: 0 },
+  medium: { label: '優先度: 中', icon: '🟡', order: 1 },
+  low:    { label: '優先度: 低', icon: '🔵', order: 2 }
+};
+
+/**
+ * リソースを優先度別にグループ分けしてレンダリング
+ * - 使われている優先度が1種類のみ → サブヘッダーなしで従来通り表示
+ * - 複数の優先度がある → 各グループに h3 サブヘッダー + リソースリストを描画
+ * @param {Array} resources - リソースデータ配列
+ * @returns {string} HTML文字列
+ */
+function renderPriorityGroupedResources(resources) {
+  // 優先度別にグループ分け（未設定は medium）
+  const groups = { high: [], medium: [], low: [] };
+  resources.forEach(function(r) {
+    var p = r.priority || 'medium';
+    if (groups[p]) {
+      groups[p].push(r);
+    } else {
+      groups.medium.push(r);
+    }
+  });
+
+  // 使われている優先度レベルを収集
+  var usedLevels = Object.keys(groups).filter(function(key) {
+    return groups[key].length > 0;
+  });
+
+  // 1種類のみ → サブヘッダーなしで従来通り表示
+  if (usedLevels.length <= 1) {
+    return renderResourceList(resources);
+  }
+
+  // 複数の優先度 → グループ別に h3 サブヘッダー付きで表示
+  var sortedLevels = usedLevels.sort(function(a, b) {
+    return PRIORITY_CONFIG[a].order - PRIORITY_CONFIG[b].order;
+  });
+
+  return sortedLevels.map(function(level) {
+    var config = PRIORITY_CONFIG[level];
+    var groupResources = groups[level];
+    return '<div class="priority-group">' +
+      '<h3 class="priority-sub-header priority-' + level + '">' +
+        '<span aria-hidden="true">' + config.icon + '</span>' +
+        config.label +
+        '<span class="priority-count">' + groupResources.length + '</span>' +
+      '</h3>' +
+      renderResourceList(groupResources) +
+    '</div>';
+  }).join('');
+}
+
+/**
  * セクション（小カテゴリ）をレンダリング
  * @param {Object} section - セクションデータ
  * @returns {string} HTML文字列
@@ -58,7 +115,7 @@ function renderSection(section) {
         ${section.title}
         <span class="resource-count">${section.count}</span>
       </h2>
-      ${renderResourceList(section.resources)}
+      ${renderPriorityGroupedResources(section.resources)}
     </div>
   `;
 }

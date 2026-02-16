@@ -41,7 +41,7 @@ def extract_resources_from_data_js(file_path):
 
     # resources配列内のオブジェクトを抽出
     # { title: 'タイトル', href: 'パス' } のパターンを検索
-    pattern = r"\{\s*title:\s*['\"]([^'\"]+)['\"]\s*,\s*href:\s*['\"]([^'\"]+)['\"]\s*\}"
+    pattern = r"\{\s*title:\s*['\"]([^'\"]+)['\"]\s*,\s*href:\s*['\"]([^'\"]+)['\"](?:\s*,\s*priority:\s*['\"][^'\"]+['\"])?\s*\}"
     matches = re.findall(pattern, content)
 
     for title, href in matches:
