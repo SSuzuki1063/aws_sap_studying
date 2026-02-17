@@ -13,6 +13,7 @@ const categoriesData = [
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
         count: 11,
+        lastUpdated: '2026-02-15',
         resources: [
           { title: 'Direct Connect ガイド', href: 'networking/aws-direct-connect-guide.html', priority: 'high' },
           { title: 'Direct Connect & VGW', href: 'new-solutions/aws-direct-connect-vgw.html', priority: 'high' },
@@ -31,6 +32,7 @@ const categoriesData = [
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
         count: 26,
+        lastUpdated: '2026-02-15',
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html', priority: 'low' },
           { title: 'EIP & NAT インフォグラフィック', href: 'new-solutions/aws_eip_nat_infographic.html', priority: 'low' },
@@ -64,6 +66,7 @@ const categoriesData = [
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
         count: 10,
+        lastUpdated: '2026-02-12',
         resources: [
           { title: 'AWS ゲートウェイ', href: 'networking/aws-gateways.html', priority: 'high' },
           { title: 'Transit Gateway 共有', href: 'organizational-complexity/aws-ram-tgw-sharing.html', priority: 'high' },
@@ -87,6 +90,7 @@ const categoriesData = [
         title: 'IAM & 認証・認可',
         icon: '👤',
         count: 20,
+        lastUpdated: '2026-01-10',
         resources: [
           { title: 'AWS Cognito インフォグラフィック', href: 'security-governance/aws-cognito-infographic.html' },
           { title: 'IAM フェデレーション', href: 'continuous-improvement/iam_federation_infographic.html', priority: 'high' },
@@ -113,6 +117,7 @@ const categoriesData = [
         title: '暗号化 & 証明書管理',
         icon: '🔐',
         count: 6,
+        lastUpdated: '2026-01-10',
         resources: [
           { title: 'ACM SAN インフォグラフィック', href: 'security-governance/acm-san-infographic.html', priority: 'low' },
           { title: 'CMK インフォグラフィック', href: 'security-governance/aws_cmk_infographic.html' },
@@ -125,6 +130,7 @@ const categoriesData = [
         title: 'Organizations & ガバナンス',
         icon: '🏢',
         count: 38,
+        lastUpdated: '2026-02-15',
         resources: [
           { title: 'AWS CodeArtifact 完全ガイド', href: 'security-governance/codeartifact-guide.html', priority: 'low' },
           { title: 'Cognito IDプールIAMロール完全ガイド', href: 'security-governance/cognito-identity-pool-roles-guide.html' },
@@ -169,6 +175,7 @@ const categoriesData = [
         title: 'セキュリティ監視・脅威検知',
         icon: '🛡️',
         count: 11,
+        lastUpdated: '2026-02-15',
         resources: [
           { title: 'AWS WAF インフォグラフィック', href: 'continuous-improvement/aws_waf_infographic.html', priority: 'high' },
           { title: 'AWS EDR インフォグラフィック', href: 'continuous-improvement/aws_edr_infographic.html' },
@@ -195,6 +202,7 @@ const categoriesData = [
         title: 'EC2 & インスタンス管理',
         icon: '🖥️',
         count: 7,
+        lastUpdated: '2026-01-03',
         resources: [
           { title: 'EC2 キャパシティ インフォグラフィック', href: 'compute-applications/aws-ec2-capacity-infographic.html', priority: 'high' },
           { title: 'EC2 ブートストラップ', href: 'new-solutions/ec2-bootstrap-infographic.html' },
@@ -208,6 +216,7 @@ const categoriesData = [
         title: 'Auto Scaling & ロードバランシング',
         icon: '⚖️',
         count: 24,
+        lastUpdated: '2026-02-15',
         resources: [
           { title: 'IAM PassRole vs AssumeRole 完全ガイド', href: 'compute-applications/iam-passrole-vs-assumerole-guide.html', priority: 'high' },
           { title: 'Auto Scaling安全なOSアップデート戦略完全ガイド', href: 'compute-applications/autoscaling-safe-os-update-guide.html' },
@@ -239,6 +248,7 @@ const categoriesData = [
         title: 'Lambda & サーバーレス',
         icon: 'λ',
         count: 3,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'Lambda メトリクス', href: 'compute-applications/aws-lambda-metrics-perfect.html', priority: 'high' },
           { title: 'Lambda メトリクス (2)', href: 'compute-applications/aws-lambda-metrics.html', priority: 'low' },
@@ -249,6 +259,7 @@ const categoriesData = [
         title: 'コンテナ & アプリケーション統合',
         icon: '📦',
         count: 5,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'ECS インフォグラフィック', href: 'compute-applications/aws_ecs_infographic.html', priority: 'high' },
           { title: 'SQS DLQ インフォグラフィック', href: 'compute-applications/sqs_dlq_infographic.html', priority: 'high' },
@@ -260,6 +271,7 @@ const categoriesData = [
         title: 'システム運用 & パッチ管理',
         icon: '🔧',
         count: 9,
+        lastUpdated: '2026-01-10',
         resources: [
           { title: 'AWS ECR イメージスキャン完全ガイド', href: 'continuous-improvement/ecr-image-scanning-guide.html' },
           { title: 'CloudWatch INSIGHT_RULE_METRIC 完全ガイド', href: 'continuous-improvement/cloudwatch-insight-rule-metric-guide.html', priority: 'low' },
@@ -284,6 +296,7 @@ const categoriesData = [
         title: 'CloudFront & コンテンツ配信',
         icon: '⚡',
         count: 11,
+        lastUpdated: '2026-02-16',
         resources: [
           { title: 'DNSレコード完全ガイド - 住所録で理解するAWS Route 53', href: 'content-delivery-dns/dns-records-guide.html', priority: 'high' },
           { title: 'CloudFront キャッシュ', href: 'content-delivery-dns/cloudfront-cache-infographic.html', priority: 'high' },
@@ -302,6 +315,7 @@ const categoriesData = [
         title: 'Route53 & DNS管理',
         icon: '🌍',
         count: 6,
+        lastUpdated: '2026-01-31',
         resources: [
           { title: 'DNS インフォグラフィック', href: 'content-delivery-dns/aws-dns-infographic.html' },
           { title: 'Route53 ホストゾーン', href: 'new-solutions/route53_hosted_zones_infographic.html', priority: 'high' },
@@ -322,6 +336,7 @@ const categoriesData = [
         title: 'IaC & CloudFormation',
         icon: '📜',
         count: 11,
+        lastUpdated: '2026-01-10',
         resources: [
           { title: 'CloudFormation インフォグラフィック', href: 'development-deployment/aws-cloudformation-infographic.html', priority: 'high' },
           { title: 'CloudFormation 保護ガイド', href: 'development-deployment/cloudformation-protection-guide.html', priority: 'high' },
@@ -340,6 +355,7 @@ const categoriesData = [
         title: 'API & イベント駆動',
         icon: '⚡',
         count: 3,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'API Gateway インフォグラフィック', href: 'development-deployment/api_gateway_infographic.html', priority: 'high' },
           { title: 'EventBridge インフォグラフィック', href: 'development-deployment/aws-eventbridge-infographic.html', priority: 'high' },
@@ -350,6 +366,7 @@ const categoriesData = [
         title: 'CI/CD & デプロイメント',
         icon: '🔄',
         count: 1,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'CodePipeline アクションタイプ図解ガイド', href: 'development-deployment/codepipeline-actions-guide.html' }
         ]
@@ -366,6 +383,7 @@ const categoriesData = [
         title: 'S3 & オブジェクトストレージ',
         icon: '🪣',
         count: 5,
+        lastUpdated: '2026-01-31',
         resources: [
           { title: 'S3 インフォグラフィック', href: 'storage-database/aws_s3_infographic.html', priority: 'high' },
           { title: 'S3 ストレージクラス', href: 'storage-database/s3_storage_classes_infographic.html', priority: 'high' },
@@ -378,6 +396,7 @@ const categoriesData = [
         title: 'ブロック & ファイルストレージ',
         icon: '💿',
         count: 2,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'EBS FSR インフォグラフィック', href: 'storage-database/aws-ebs-fsr-infographic.html', priority: 'high' },
           { title: 'EFS マウントターゲット', href: 'storage-database/aws-efs-mount-target-infographic.html' }
@@ -387,6 +406,7 @@ const categoriesData = [
         title: 'データベース & キャッシング',
         icon: '🗄️',
         count: 6,
+        lastUpdated: '2026-01-31',
         resources: [
           { title: 'Aurora Data API & IAM', href: 'storage-database/aurora_dataapi_iam_infographic.html', priority: 'high' },
           { title: 'ElastiCache インフォグラフィック', href: 'storage-database/elasticache_infographic.html', priority: 'high' },
@@ -408,6 +428,7 @@ const categoriesData = [
         title: 'DMS & データベース移行',
         icon: '🔁',
         count: 3,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'DMS CDC インフォグラフィック', href: 'migration/aws_dms_cdc_infographic.html', priority: 'high' },
           { title: 'DMS 機能インフォグラフィック', href: 'migration/aws_dms_features_infographic.html', priority: 'high' },
@@ -418,6 +439,7 @@ const categoriesData = [
         title: 'Migration Hub & 移行戦略',
         icon: '🚚',
         count: 8,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'ブルー/グリーン vs イミュータブル - 完全図解ガイド', href: 'migration/blue-green-vs-immutable-visual-guide.html', priority: 'high' },
           { title: 'Migration Hub インフォグラフィック', href: 'migration/aws-migration-hub-infographic.html', priority: 'high' },
@@ -430,6 +452,7 @@ const categoriesData = [
         title: 'ディザスタリカバリ (DR)',
         icon: '🆘',
         count: 2,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'DR インフォグラフィック', href: 'migration/aws-dr-infographic.html', priority: 'high' }
         ]
@@ -446,6 +469,7 @@ const categoriesData = [
         title: '分析・運用',
         icon: '📉',
         count: 5,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'コストツール', href: 'analytics-bigdata/aws-cost-tools.html', priority: 'high' },
           { title: 'ディスクメトリクス', href: 'analytics-bigdata/aws-disk-metrics.html', priority: 'low' },
@@ -458,6 +482,7 @@ const categoriesData = [
         title: 'データ分析',
         icon: '📈',
         count: 3,
+        lastUpdated: '2025-12-15',
         resources: [
           { title: 'Kinesis Firehose インフォグラフィック', href: 'analytics-bigdata/kinesis_firehose_infographic.html', priority: 'high' },
           { title: 'Redshift スケーリング インフォグラフィック', href: 'analytics-bigdata/redshift_scaling_infographic.html' },
@@ -468,6 +493,7 @@ const categoriesData = [
         title: '理解度クイズ・用語集',
         icon: '✏️',
         count: 7,
+        lastUpdated: '2026-02-05',
         resources: [
           { title: '🗺️ 開発向けロードマップ', href: 'development-roadmap.html' },
           { title: '📊 開発フローチャート', href: 'development-flowchart.html' },
@@ -501,5 +527,106 @@ const siteStats = {
   totalResources: '231+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
-  lastUpdated: '2026/02/16'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
+  lastUpdated: '2026/02/17'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };
+
+// 更新履歴データ
+// type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
+const updateHistory = [
+  {
+    date: '2026-02-16',
+    type: 'feature',
+    title: '優先度別リソースグルーピング機能を追加',
+    description: 'カテゴリ内リソースを優先度別にグループ分け表示',
+    categories: ['all'],
+    tags: []
+  },
+  {
+    date: '2026-02-16',
+    type: 'fix',
+    title: 'ACM/CloudWAN ガイドの表示修正',
+    description: 'acm-alb-ec2-tls-guide にCSS link追加、cloud-wan-attachment-policy-guide のタイトル色修正',
+    categories: ['content-delivery-dns', 'networking'],
+    tags: []
+  },
+  {
+    date: '2026-02-15',
+    type: 'content',
+    title: 'ネットワーキング・コンピュート・セキュリティ系8リソースを統合',
+    description: 'GuardDutyトラフィック分析、ELBガイド、NLB mTLS、PrivateLinkガイド等を追加',
+    categories: ['networking', 'compute-applications', 'security-governance'],
+    tags: ['新サービス']
+  },
+  {
+    date: '2026-02-14',
+    type: 'content',
+    title: 'AWS ANS試験サンプル問題10問を追加',
+    description: 'ネットワーキングカテゴリにANS試験対策クイズを追加',
+    categories: ['networking'],
+    tags: []
+  },
+  {
+    date: '2026-02-13',
+    type: 'feature',
+    title: 'レスポンシブデザイン改善・ハンバーガーメニュー追加',
+    description: 'モバイル対応のハンバーガーメニュー、WCAG対応、インラインCSS整理',
+    categories: ['all'],
+    tags: []
+  },
+  {
+    date: '2026-02-12',
+    type: 'content',
+    title: 'ネットワーキング・コンピュート系15リソースを統合',
+    description: 'VPN/Direct Connect/GWLB等のネットワーキング系リソースを大量追加',
+    categories: ['networking', 'compute-applications'],
+    tags: ['新サービス']
+  },
+  {
+    date: '2026-02-08',
+    type: 'content',
+    title: 'Black Belt Transit Gateway Deep Dive資料を追加',
+    description: 'ナレッジベースにAWS Black Belt 2025年1月版を追加',
+    categories: ['networking'],
+    tags: []
+  },
+  {
+    date: '2026-02-05',
+    type: 'feature',
+    title: 'SAP-C02試験ガイドページを追加',
+    description: 'ドメイン別タスク・知識・スキル・関連リソースの試験ガイドを新規作成',
+    categories: ['analytics-operations'],
+    tags: ['AWS試験変更対応']
+  },
+  {
+    date: '2026-02-02',
+    type: 'feature',
+    title: '学習ロードマップ・ブックマーク機能を追加',
+    description: '経験レベル別4週間学習ロードマップ、localStorage永続化ブックマーク機能',
+    categories: ['all'],
+    tags: []
+  },
+  {
+    date: '2026-01-31',
+    type: 'content',
+    title: '新規AWS学習リソース11件を統合',
+    description: 'Transit Gateway Deep Dive、Route 53プライベートホストゾーン、Redshift Data Sharing等',
+    categories: ['networking', 'content-delivery-dns', 'storage-database', 'compute-applications'],
+    tags: ['新サービス']
+  },
+  {
+    date: '2026-01-10',
+    type: 'content',
+    title: 'セキュリティ・ネットワーキング系20リソースを追加',
+    description: 'KMS、Well-Architected、Config、CloudTrail、ACM等の完全ガイドを追加',
+    categories: ['security-governance', 'networking', 'content-delivery-dns'],
+    tags: []
+  },
+  {
+    date: '2026-01-03',
+    type: 'content',
+    title: 'セキュリティ・コンピュート系12リソースを追加',
+    description: 'Inspector、CloudTrail、EKS、IAM Identity Center等の完全ガイドを追加',
+    categories: ['security-governance', 'compute-applications', 'networking'],
+    tags: []
+  }
+];

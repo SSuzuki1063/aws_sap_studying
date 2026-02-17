@@ -103,6 +103,127 @@ function renderPriorityGroupedResources(resources) {
 }
 
 /**
+ * 更新日付をフォーマット
+ * 今年なら MM/DD、それ以外は YYYY/MM/DD
+ * @param {string} dateStr - 'YYYY-MM-DD' 形式の日付文字列
+ * @returns {string} フォーマットされた日付文字列
+ */
+function formatUpdateDate(dateStr) {
+  if (!dateStr) return '';
+  var parts = dateStr.split('-');
+  var year = parts[0];
+  var month = parts[1];
+  var day = parts[2];
+  var currentYear = new Date().getFullYear().toString();
+  if (year === currentYear) {
+    return month + '/' + day;
+  }
+  return year + '/' + month + '/' + day;
+}
+
+/**
+ * セクション鮮度バッジをレンダリング
+ * 14日以内: 最近更新（緑）、60日以内: 更新済み（黄）、60日超: 表示なし
+ * @param {string} dateStr - 'YYYY-MM-DD' 形式の日付文字列
+ * @returns {string} HTML文字列（バッジ or 空文字列）
+ */
+function renderFreshnessBadge(dateStr) {
+  if (!dateStr) return '';
+  var now = new Date();
+  var updated = new Date(dateStr + 'T00:00:00');
+  var diffDays = Math.floor((now - updated) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 14) {
+    return '<span class="freshness-badge freshness-recent">最近更新</span>';
+  } else if (diffDays <= 60) {
+    return '<span class="freshness-badge freshness-moderate">更新済み</span>';
+  }
+  return '';
+}
+
+/**
+ * 更新タイプのラベルを返す
+ * @param {string} type - 更新タイプ
+ * @returns {string} 表示ラベル
+ */
+function getUpdateTypeLabel(type) {
+  var labels = {
+    content: 'コンテンツ追加',
+    feature: '機能追加',
+    exam: '試験変更対応',
+    fix: '修正'
+  };
+  return labels[type] || type;
+}
+
+/**
+ * 更新履歴タイムラインHTMLを生成
+ * NOTE: innerHTMLへの代入はrenderUpdateHistoryToDOMで行うが、
+ * データソースはdata.js内部定義のみ（外部入力なし）のため安全。
+ * 既存のrenderCategoriesToDOM等と同一パターン。
+ * @param {Array} history - 更新履歴データ配列
+ * @param {Object} options - オプション（maxItems: 初期表示件数、デフォルト5）
+ * @returns {string} HTML文字列
+ */
+function renderUpdateHistory(history, options) {
+  if (!history || history.length === 0) return '';
+  var maxItems = (options && options.maxItems) || 5;
+  var hasMore = history.length > maxItems;
+
+  var items = history.map(function(entry, index) {
+    var hiddenClass = index >= maxItems ? ' hidden' : '';
+    var tags = '';
+    if (entry.tags && entry.tags.length > 0) {
+      tags = entry.tags.map(function(tag) {
+        return '<span class="update-tag">' + tag + '</span>';
+      }).join(' ');
+    }
+
+    return '<li class="update-timeline-item' + hiddenClass + '" data-index="' + index + '">' +
+      '<div class="update-timeline-dot dot-' + entry.type + '"></div>' +
+      '<div class="update-timeline-content">' +
+        '<div class="update-timeline-header">' +
+          '<span class="update-timeline-date">' + formatUpdateDate(entry.date) + '</span>' +
+          '<span class="update-type-badge update-type-' + entry.type + '">' + getUpdateTypeLabel(entry.type) + '</span>' +
+          tags +
+        '</div>' +
+        '<div class="update-timeline-title">' + entry.title + '</div>' +
+        (entry.description ? '<div class="update-timeline-desc">' + entry.description + '</div>' : '') +
+      '</div>' +
+    '</li>';
+  }).join('');
+
+  var expandBtn = '';
+  if (hasMore) {
+    expandBtn = '<button class="update-expand-btn" aria-expanded="false" data-max-items="' + maxItems + '" data-total-items="' + history.length + '">' +
+      'もっと見る（残り' + (history.length - maxItems) + '件）' +
+    '</button>';
+  }
+
+  return '<h3 style="color: #232F3E; font-size: 1.1em; margin-bottom: 12px;">更新履歴</h3>' +
+    '<ol class="update-timeline" aria-label="サイト更新履歴">' +
+      items +
+    '</ol>' +
+    expandBtn;
+}
+
+/**
+ * 更新履歴タイムラインをDOMに描画
+ * NOTE: データソースはdata.js内部定義のみ（外部入力なし）のため
+ * innerHTML使用は安全。既存のrenderCategoriesToDOM等と同一パターン。
+ * @param {string} containerId - コンテナ要素のID
+ * @param {Array} historyData - 更新履歴データ配列
+ */
+function renderUpdateHistoryToDOM(containerId, historyData) {
+  var container = document.getElementById(containerId);
+  if (!container) {
+    console.error('Container with id "' + containerId + '" not found');
+    return;
+  }
+  container.innerHTML = renderUpdateHistory(historyData, { maxItems: 5 });
+}
+
+/**
  * セクション（小カテゴリ）をレンダリング
  * @param {Object} section - セクションデータ
  * @returns {string} HTML文字列
@@ -114,6 +235,7 @@ function renderSection(section) {
         <span class="section-icon">${section.icon}</span>
         ${section.title}
         <span class="resource-count">${section.count}</span>
+        ${renderFreshnessBadge(section.lastUpdated)}
       </h2>
       ${renderPriorityGroupedResources(section.resources)}
     </div>

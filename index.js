@@ -397,6 +397,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 最終更新日を設定
     updateLastModifiedDate();
+
+    // 更新履歴「もっと見る/折りたたむ」ボタンのdelegated click handler
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.update-expand-btn');
+        if (!btn) return;
+
+        var isExpanded = btn.getAttribute('aria-expanded') === 'true';
+        var container = btn.previousElementSibling;
+        if (!container) return;
+
+        var items = container.querySelectorAll('.update-timeline-item');
+        var maxItems = parseInt(btn.getAttribute('data-max-items'), 10);
+        var totalItems = parseInt(btn.getAttribute('data-total-items'), 10);
+
+        if (isExpanded) {
+            // 折りたたむ
+            items.forEach(function(item, index) {
+                if (index >= maxItems) {
+                    item.classList.add('hidden');
+                }
+            });
+            btn.setAttribute('aria-expanded', 'false');
+            btn.textContent = 'もっと見る（残り' + (totalItems - maxItems) + '件）';
+        } else {
+            // 展開する
+            items.forEach(function(item) {
+                item.classList.remove('hidden');
+            });
+            btn.setAttribute('aria-expanded', 'true');
+            btn.textContent = '折りたたむ';
+        }
+    });
 });
 
 // 最終更新日を表示する関数
