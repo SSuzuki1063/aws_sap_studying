@@ -11,6 +11,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
 | **Content** | 223+ HTML resources, 219 quiz questions, 8 categories |
+| **Branches** | `gh-pages` (production), `master` (development/PRs) |
 
 ## ⚠️ CRITICAL RULES
 
@@ -30,12 +31,12 @@ When adding HTML resources, you **MUST** update **TWO** files:
 
 | File | What to Update | If Missing |
 |------|----------------|------------|
-| `data.js` | Add to `section.resources` array, update counts | Resource won't appear in navigation |
+| `data.js` | Add to `section.resources` array, update section `count` and category `count` | Resource won't appear in navigation |
 | `index.js` | Add to `searchData` array | Resource won't appear in search |
 
-**Verification:** Run `python3 scripts/ci/check_data_integrity.py` to detect sync issues.
+Also update `siteStats.totalResources` in `data.js` when resource counts change.
 
-Additionally, update `siteStats.totalResources` in `data.js` when resource counts change.
+**Verification:** `python3 scripts/ci/check_data_integrity.py`
 
 ### 3. GitHub Pages Path Requirement
 
@@ -49,19 +50,21 @@ All CSS/asset paths **MUST** include `/aws_sap_studying/` prefix:
 <link href="/css/variables.css" rel="stylesheet"/>
 ```
 
+The local dev server (`server.py`) automatically strips this prefix so paths work both locally and on GitHub Pages.
+
 ### 4. W3C Validation Required
 
-All HTML **MUST** pass https://validator.w3.org/ before committing.
+All HTML **MUST** pass W3C validation before committing.
 
 Automated check: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
 
 ### 5. Immediate Push After Commit
 
-```bash
-git add . && git commit -m "feat: description" && git push origin gh-pages
-```
+Always push immediately — commits without push don't deploy:
 
-Always push immediately—commits without push don't deploy. CI runs on PRs to `gh-pages` and `master` branches.
+```bash
+git add <files> && git commit -m "feat: description" && git push origin gh-pages
+```
 
 ## Quick Start
 
@@ -73,23 +76,14 @@ uv pip install beautifulsoup4 lxml html5lib requests
 # 2. Start dev server
 python3 server.py  # → http://localhost:8080/
 
-# 3. Make changes, run pre-commit checks (see "Pre-Commit Checklist" below), then deploy
-git add . && git commit -m "feat: description" && git push origin gh-pages
-```
-
-## Deployment
-
-After completing code changes, **ALWAYS** commit AND deploy to GitHub Pages in the same session. Do not wait for the user to remind you to push.
-
-```bash
+# 3. Make changes, run pre-commit checks, then deploy
 git add <files> && git commit -m "feat: description" && git push origin gh-pages
 ```
 
 ## Environment
 
-- Use `uv` instead of `pip` for Python package management
+- Use `uv` instead of `pip` for Python package management (`uv pip install`)
 - Always create/activate a virtual environment before installing packages
-- Never use `pip install` directly — use `uv pip install`
 
 ## Architecture
 
@@ -103,6 +97,26 @@ index.html          ← Shell page (HTML structure only)
 ```
 
 **Key Principle**: Data in `data.js` contains NO HTML. All HTML generation happens in `render.js`.
+
+### Resource Data Shape (`data.js`)
+
+```javascript
+// categoriesData[].sections[].resources[]
+{ title: 'Resource Name', href: 'category/filename.html', priority: 'high' }
+```
+
+The `priority` field is optional: `'high'` | `'low'` | omitted (normal). Used by render.js for visual priority indicators.
+
+### Search Data Shape (`index.js`)
+
+```javascript
+// searchData[]
+{ title: 'Resource Name', category: 'カテゴリ名', file: 'category/filename.html' }
+```
+
+### Local Dev Server (`server.py`)
+
+The dev server rewrites requests: it strips `/aws_sap_studying/` from URLs so GitHub Pages-style absolute paths resolve correctly on localhost. This is why HTML files use `/aws_sap_studying/css/...` paths — they work on both production and local dev.
 
 ### Static Site Constraints
 
@@ -122,21 +136,19 @@ Located in `css/` directory:
 
 ### Sidebar TOC Z-Index Hierarchy
 
-When adding sidebar TOC to pages, ensure proper z-index layering to avoid header overlap:
-
 | Element | Z-Index | Notes |
 |---------|---------|-------|
 | Header | `1002` (`--z-header`) | Fixed top navigation |
 | Sidebar TOC Toggle | `1003` | Must be above header |
 | Sidebar TOC | `1000` | Below header, uses `top: 60px` |
 
-**Important**: Sidebar TOC must use `top: 60px` (header height) and `height: calc(100vh - 60px)` to avoid overlapping with the fixed header.
+Sidebar TOC must use `top: 60px` (header height) and `height: calc(100vh - 60px)` to avoid overlapping with the fixed header.
 
 ## Common Workflows
 
 ### Add New HTML Learning Resource
 
-**Use the skill** (handles steps 1-3 automatically):
+**Use the skill** (handles categorization, breadcrumbs, TOC, and data updates):
 ```bash
 /skill integrate
 ```
@@ -144,14 +156,11 @@ When adding sidebar TOC to pages, ensure proper z-index layering to avoid header
 Or manually:
 
 1. Place HTML files in `new_html/`
-2. Run integration:
-   ```bash
-   python3 scripts/html_management/integrate_resource_complete.py
-   ```
+2. Run: `python3 scripts/html_management/integrate_resource_complete.py`
 3. Update `data.js` AND `index.js` (see Two-Place Update Rule)
-4. Validate: https://validator.w3.org/
+4. Validate: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
 5. Test: `python3 server.py`
-6. Deploy: `git add . && git commit -m "feat: ..." && git push origin gh-pages`
+6. Deploy: `git add <files> && git commit -m "feat: ..." && git push origin gh-pages`
 
 ### Add Quiz Question
 
@@ -169,36 +178,30 @@ Edit `quiz-data-extended.js`:
 
 Validate: `node -c quiz-data-extended.js`
 
-### Deploy to GitHub Pages
+## File Placement
 
-```bash
-# Run pre-commit checks first (see "Pre-Commit Checklist" section)
-# Then deploy (auto-deploys in 1-2 min)
-git add . && git commit -m "feat: description" && git push origin gh-pages
-```
+HTML resources go in **root-level category directories** (NOT in `scripts/` or other tool directories):
 
-**Branches**: `gh-pages` (production), `master` (development/PRs)
+| Directory | data.js Category |
+|-----------|------------------|
+| `networking/` | `networking` |
+| `security-governance/` | `security-governance` |
+| `compute-applications/` | `compute-applications` |
+| `storage-database/` | `storage-database` |
+| `migration/` | `migration` |
+| `analytics-bigdata/` | `analytics-operations` |
+| `development-deployment/` | `development-deployment` |
+| `content-delivery-dns/` | `content-delivery-dns` |
+| `new-solutions/` | *(various — cross-cutting resources)* |
+| `organizational-complexity/` | *(mapped into other categories)* |
+| `continuous-improvement/` | *(mapped into other categories)* |
+| `cost-control/` | *(mapped into other categories)* |
 
-## File Integration
-
-When integrating new HTML resource files, always place them in the **correct root-level category directories** (NOT in `scripts/html_management/` or other script directories). Verify file placement before committing.
-
-| Category Directory | Example |
-|-------------------|---------|
-| `networking/` | Transit Gateway, VPN |
-| `security-governance/` | KMS, IAM |
-| `compute-applications/` | Lambda, ECS |
+**Note**: `data.js` has 8 logical categories. Some physical directories have resources mapped into other categories. Staging directories: `new_html/` (new resources to integrate), `replace_html/` (replacement files for existing resources).
 
 ## Bulk File Operations
 
-When modifying large numbers of HTML files (100+), use **Python scripts** rather than shell scripts for parsing and transformation. Shell script regex/parsing is unreliable at scale. Always validate the full count of affected files before and after changes.
-
-```bash
-# Before: count target files
-find . -name "*.html" -path "./networking/*" -o -path "./security-governance/*" | wc -l
-
-# After: verify same count was processed
-```
+When modifying 100+ HTML files, use **Python scripts** (not shell script regex). Always validate file counts before and after changes.
 
 ## Key Scripts
 
@@ -209,48 +212,28 @@ find . -name "*.html" -path "./networking/*" -o -path "./security-governance/*" 
 | `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
 | `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC |
 | `scripts/html_management/add_home_button.py` | Add 「リソース集に戻る」button |
-| `scripts/html_management/add_prev_next_nav.py --bottom-nav-only` | Add page bottom navigation (資料幅に揃えたページ下部ナビ) |
+| `scripts/html_management/add_prev_next_nav.py --bottom-nav-only` | Add page bottom navigation |
 | `scripts/html_management/fix_html_issues.py` | Fix HTML entity escaping & sidebar TOC positioning |
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
 | `scripts/ci/validate_html_w3c.py` | W3C HTML validation |
+| `scripts/ci/check_internal_links.py` | Broken link checker |
+| `scripts/ci/check_file_naming.py` | File naming convention check |
 | `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
 | `scripts/accessibility/check_heading_hierarchy.py` | Heading hierarchy (h1→h2→h3) check |
 | `scripts/accessibility/fix_heading_hierarchy.py` | Auto-fix heading hierarchy skips |
 
-## Directory Structure
-
-**Content Directories** (11 physical directories, consolidated into 8 logical categories in `data.js`):
-
-| Directory | Content | data.js Category |
-|-----------|---------|------------------|
-| `networking/` | Direct Connect, Transit Gateway, VPN, PrivateLink | `networking` |
-| `security-governance/` | IAM, SCP, WAF, KMS, Cognito | `security-governance` |
-| `compute-applications/` | EC2, Lambda, ECS, Auto Scaling | `compute-applications` |
-| `storage-database/` | S3, EBS, EFS, RDS Aurora, ElastiCache | `storage-database` |
-| `migration/` | DMS, Migration Hub, DR strategies | `migration` |
-| `analytics-bigdata/` | Kinesis, Redshift, Glue, QuickSight | `analytics-operations` |
-| `development-deployment/` | CloudFormation, CDK, SAM, EventBridge | `development-deployment` |
-| `content-delivery-dns/` | CloudFront, Route53, Global Accelerator | `content-delivery-dns` |
-| `new-solutions/` | Cross-cutting resources (referenced from multiple categories) | *(various)* |
-| `organizational-complexity/` | Organizations, Control Tower, RAM | *(within other categories)* |
-| `continuous-improvement/` | Systems Manager, CodeDeploy, CloudTrail | *(within other categories)* |
-| `cost-control/` | Savings Plans, storage optimization | *(within other categories)* |
-
-**Note**: `data.js` has 8 categories. Some physical directories (`organizational-complexity/`, `continuous-improvement/`, `cost-control/`) have their resources mapped into other logical categories. The `new-solutions/` directory contains cross-cutting resources referenced from multiple categories.
-
-**Key Files:**
+## Key Files
 
 | File | Purpose |
 |------|---------|
 | `index.html` | Main navigation shell (primary entry point) |
 | `knowledge-base.html` | Alternative table-based resource browser |
-| `data.js` | **CRITICAL**: Category/resource data |
-| `render.js` | Template functions |
-| `index.js` | UI handlers + searchData |
+| `data.js` | **CRITICAL**: Category/resource data (pure data, no HTML) |
+| `render.js` | Template functions (data → HTML generation) |
+| `index.js` | UI handlers + searchData array |
 | `quiz-data-extended.js` | Quiz questions (219 questions) |
 | `quiz-app.js` | Quiz UI logic and state management |
-| `server.py` | Local dev server (port 8080) |
-| `css/*.css` | Shared stylesheets |
+| `server.py` | Local dev server (port 8080, rewrites GitHub Pages paths) |
 
 ## WCAG 2.1 AA Color Palette
 
@@ -264,43 +247,28 @@ find . -name "*.html" -path "./networking/*" -o -path "./security-governance/*" 
 
 ### Color Usage Rules
 
-⚠️ **Original AWS Orange `#FF9900`** is NOT accessible for normal text—use `#dc7600` instead.
+- **`#FF9900` (original AWS Orange) is NOT accessible** for normal text — use `#dc7600` instead
+- **同系色背景×同系色文字は禁止** (NG-007): body text must use neutral colors (`#374151`, `#1f2937`); theme colors for backgrounds/borders/icons only
+- **同列情報の非対称レイアウトは禁止** (NG-008): use even grids (2×2, 3×2); if asymmetric, add headings/labels to show intent
+- **CSSカスケード保全ルール**: when removing inline styles, verify CSS cascade order and `<link>` tags remain correct; add fallback backgrounds behind white text
 
-⚠️ **同系色背景×同系色文字は禁止**（NG-007）:
-- ❌ 薄緑背景に緑文字、薄紫背景に紫文字
-- ✅ 本文テキストは常に無彩色（`#374151`, `#1f2937`）を使用
-- ✅ テーマカラーは背景・枠線・アイコンのみに限定
-
-⚠️ **同列情報の非対称レイアウトは禁止**（NG-008）:
-- ❌ 4要素を3+1に分割（下段が「余り」に見える）
-- ✅ 同列要素は均等グリッド（2×2, 3×2 等）で配置
-- ✅ 非対称を使う場合は見出し・ラベルで意味差を明示
-
-⚠️ **CSSカスケード保全ルール**:
-- インラインスタイル削除時は、CSSカスケード順序を維持し、必要な`<link>`タグが全て存在することを確認
-- 白テキストを使用する場合は、背景が暗いことを保証するフォールバック背景を必ず追加
-- 一括修正後は必ず数ファイルを目視確認してリグレッションをチェック
-
-詳細は `.claude/skills/wcag-accessibility/SKILL.md` を参照。
+Full details: `.claude/skills/wcag-accessibility/SKILL.md`
 
 ## Pre-Commit Checklist
 
 ```bash
-# 1. Start local server and test in browser
-python3 server.py  # → http://localhost:8080/
-
-# 2. Run CI-blocking checks (these fail PR if broken)
+# 1. CI-blocking checks (these fail PR if broken)
 python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js sync
 python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation
 python3 scripts/accessibility/check_contrast_ratio.py  # WCAG color contrast
 node -c quiz-data-extended.js data.js render.js index.js quiz-app.js  # JS syntax
 
-# 3. Run advisory checks (warnings only, but recommended)
+# 2. Advisory checks (warnings only, but recommended)
 python3 scripts/accessibility/check_heading_hierarchy.py  # h1→h2→h3 order
 python3 scripts/ci/check_internal_links.py                # Broken links
 python3 scripts/ci/check_file_naming.py                   # Naming conventions
 
-# 4. Verify GitHub Pages paths (should return 0)
+# 3. Verify no bare CSS paths (should return 0)
 grep -r 'href="/css/' --include="*.html" | wc -l
 ```
 
@@ -314,14 +282,14 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 
 ## CI/CD Pipeline
 
-GitHub Actions runs on PRs to `gh-pages` and `master` branches (`.github/workflows/pr-quality-check.yml`):
+GitHub Actions runs on PRs to `gh-pages` and `master` (`.github/workflows/pr-quality-check.yml`). Triggered by changes to `*.html`, `data.js`, `index.js`, `quiz-data-extended.js`, `*.css`, `*.py`.
 
 | Check | Blocking | Command |
 |-------|----------|---------|
 | Data Integrity | ✅ Yes | `python3 scripts/ci/check_data_integrity.py` |
 | W3C HTML Validation | ✅ Yes | `python3 scripts/ci/validate_html_w3c.py --pr-mode` |
 | Color Contrast | ✅ Yes | `python3 scripts/accessibility/check_contrast_ratio.py` |
-| JavaScript Syntax | ✅ Yes | `node -c quiz-data-extended.js data.js render.js index.js` |
+| JavaScript Syntax | ✅ Yes | `node -c quiz-data-extended.js data.js render.js index.js quiz-app.js` |
 | Heading Hierarchy | ⚠️ Warning | `python3 scripts/accessibility/check_heading_hierarchy.py` |
 | Internal Links | ⚠️ Warning | `python3 scripts/ci/check_internal_links.py` |
 | File Naming | ⚠️ Warning | `python3 scripts/ci/check_file_naming.py` |
