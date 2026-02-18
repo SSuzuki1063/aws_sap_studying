@@ -202,6 +202,15 @@ HTML resources go in **root-level category directories** (NOT in `scripts/` or o
 
 **Note**: `data.js` has 8 logical categories. Some physical directories have resources mapped into other categories. Staging directories: `new_html/` (new resources to integrate), `replace_html/` (replacement files for existing resources).
 
+### HTML File Naming Conventions
+
+| Pattern | Example |
+|---------|---------|
+| `aws-[service]-[topic].html` (preferred) | `aws-lambda-metrics.html`, `aws-direct-connect-guide.html` |
+| `[service]_[topic]_infographic.html` (legacy) | `ecs_infographic.html`, `auto_scaling_infographic.html` |
+
+Use lowercase. New files should follow the hyphenated `aws-` prefix pattern.
+
 ## Bulk File Operations
 
 When modifying 100+ HTML files, use **Python scripts** (not shell script regex). Always validate file counts before and after changes.
@@ -247,10 +256,14 @@ When modifying 100+ HTML files, use **Python scripts** (not shell script regex).
 | Primary Text | `#374151` | Body text | 9.86:1 ✅ |
 | Secondary Text | `#6B7280` | Labels, helpers | 4.83:1 ✅ |
 | Border | `#909296` | Borders, UI components | 3.12:1 ✅ |
+| Quiz Good | `#3378be` | Quiz UI only | ✅ |
+| Quiz Excellent | `#008662` | Quiz UI only | ✅ |
+| Quiz Poor | `#c35237` | Quiz UI only | ✅ |
+| Quiz Fair | `#9e6c0f` | Quiz UI only | ✅ |
 
 ### Color Usage Rules
 
-- **`#FF9900` (original AWS Orange) is NOT accessible** for normal text — use `#dc7600` instead
+- **`#FF9900` (original AWS Orange)** is allowed **only for large text** (18pt+ or 14pt bold+) — use `#dc7600` for all other text
 - **同系色背景×同系色文字は禁止** (NG-007): body text must use neutral colors (`#374151`, `#1f2937`); theme colors for backgrounds/borders/icons only
 - **同列情報の非対称レイアウトは禁止** (NG-008): use even grids (2×2, 3×2); if asymmetric, add headings/labels to show intent
 - **CSSカスケード保全ルール**: when removing inline styles, verify CSS cascade order and `<link>` tags remain correct; add fallback backgrounds behind white text
