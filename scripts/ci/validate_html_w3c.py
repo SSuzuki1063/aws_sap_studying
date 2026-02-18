@@ -158,6 +158,8 @@ def main():
     parser = argparse.ArgumentParser(description='W3C HTML Validation')
     parser.add_argument('--pr-mode', action='store_true',
                         help='Validate only modified files (PR mode)')
+    parser.add_argument('--files', nargs='+', metavar='FILE',
+                        help='Validate specific files by path (space-separated)')
     args = parser.parse_args()
 
     # リポジトリルートに移動
@@ -169,7 +171,14 @@ def main():
     print(f"{Colors.BOLD}{'=' * 70}{Colors.END}\n")
 
     # 検証対象ファイルを取得
-    if args.pr_mode:
+    if args.files:
+        print(f"{Colors.BLUE}Mode: Specific files ({len(args.files)} files){Colors.END}")
+        html_files = [f for f in args.files if Path(repo_root / f).exists() or Path(f).exists()]
+        if not html_files:
+            print(f"{Colors.YELLOW}⚠ None of the specified files exist. Skipping validation.{Colors.END}")
+            print(f"{Colors.BOLD}{'=' * 70}{Colors.END}\n")
+            sys.exit(1)
+    elif args.pr_mode:
         print(f"{Colors.BLUE}Mode: PR (modified files only){Colors.END}")
         html_files = get_modified_html_files()
         if not html_files:

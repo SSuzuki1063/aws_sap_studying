@@ -64,6 +64,8 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - `add_sidebar_toc.py` - Adds **left sidebar table of contents** (固定左サイドバー形式)
    - `add_home_button.py` - Adds **「リソース集に戻る」button** (右下固定フローティングボタン)
    - `add_prev_next_nav.py --bottom-nav-only` - Adds **「← 前のページ / 次のページ →」page bottom navigation** (ページ下部ナビゲーション)
+   - **W3C HTML Validation** - Validates all newly integrated files via W3C Validator API (**stops on failure**)
+   - **git stage** - Automatically runs `git add` on validated files (skipped if W3C fails)
 
    **Features:**
    - ✅ **Shared CSS auto-added**: `/aws_sap_studying/css/` links are automatically inserted
@@ -71,6 +73,14 @@ This is the primary workflow for adding new AWS learning content to the reposito
    - ✅ **Code snippets generated**: Copy-paste ready snippets for data.js and index.js are printed at the end
    - ✅ **Return button auto-added**: 「リソース集に戻る」button is automatically added to all resources
    - ✅ **Page bottom navigation**: Full-width navigation bar at page bottom with prev/next buttons and page counter (資料幅に揃えたページ下部ナビ)
+   - ✅ **W3C validation gate**: W3C errors abort the pipeline **before** git staging
+   - ✅ **Auto git staging**: Validated HTML files are automatically staged with `git add`
+
+   **Options:**
+   ```bash
+   # Skip W3C validation (offline / fast iteration)
+   python3 scripts/html_management/integrate_resource_complete.py --skip-validation
+   ```
 
 4. **Update data.js and index.js** (using generated snippets):
 
@@ -90,10 +100,9 @@ This is the primary workflow for adding new AWS learning content to the reposito
 
    See [data_structure_guide.md](references/data_structure_guide.md) for manual updates if needed.
 
-5. **W3C Validation** (REQUIRED):
-   - Visit https://validator.w3.org/
-   - Upload or paste HTML content
-   - Fix ALL errors and warnings
+5. **W3C Validation** — now automatic (step 7 of the script). If errors are found:
+   - The script aborts before git staging and prints per-file error details
+   - Fix errors, then re-run: `python3 scripts/ci/validate_html_w3c.py --files <file>`
    - See [validation_checklist.md](references/validation_checklist.md)
 
 6. **Local testing**:
@@ -103,11 +112,11 @@ This is the primary workflow for adding new AWS learning content to the reposito
    # Verify: navigation shows resource, search finds resource, file loads correctly
    ```
 
-7. **Commit and deploy**:
+7. **Commit and deploy** — HTML files are already staged automatically:
    ```bash
-   git add .
+   git add data.js index.js   # stage the data files you updated manually
    git commit -m "feat: 新規AWS学習リソースを追加"
-   git push origin gh-pages  # GitHub Pages auto-deploys in 1-2 minutes
+   git push origin gh-pages   # GitHub Pages auto-deploys in 1-2 minutes
    ```
 
 8. **Verify deployment**:

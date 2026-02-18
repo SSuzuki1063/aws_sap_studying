@@ -56,7 +56,10 @@ The local dev server (`server.py`) automatically strips this prefix so paths wor
 
 All HTML **MUST** pass W3C validation before committing.
 
-Automated check: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
+- **Integration workflow**: W3C validation runs **automatically** inside `integrate_resource_complete.py` (step 7). If any file fails, the script aborts before git staging.
+- **Manual check**: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
+- **Targeted check**: `python3 scripts/ci/validate_html_w3c.py --files networking/foo.html`
+- **Offline/skip**: `python3 scripts/html_management/integrate_resource_complete.py --skip-validation`
 
 ### 5. Immediate Push After Commit
 
@@ -105,7 +108,7 @@ index.html          ← Shell page (HTML structure only)
 { title: 'Resource Name', href: 'category/filename.html', priority: 'high' }
 ```
 
-The `priority` field is optional: `'high'` | `'low'` | omitted (normal). Used by render.js for visual priority indicators.
+The `priority` field is optional: `'high'` | `'medium'` | `'low'` | omitted (treated as `'medium'`). Used by render.js for visual priority indicators (🔴 high / 🟡 medium / 🔵 low).
 
 ### Search Data Shape (`index.js`)
 
@@ -157,10 +160,10 @@ Or manually:
 
 1. Place HTML files in `new_html/`
 2. Run: `python3 scripts/html_management/integrate_resource_complete.py`
+   - Auto-runs: categorize → breadcrumbs → sidebar TOC → home button → prev/next nav → **W3C validation** → **`git add`** (aborts before staging if W3C fails)
 3. Update `data.js` AND `index.js` (see Two-Place Update Rule)
-4. Validate: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
-5. Test: `python3 server.py`
-6. Deploy: `git add <files> && git commit -m "feat: ..." && git push origin gh-pages`
+4. Test: `python3 server.py`
+5. Deploy: `git add data.js index.js && git commit -m "feat: ..." && git push origin gh-pages`
 
 ### Add Quiz Question
 
@@ -207,7 +210,7 @@ When modifying 100+ HTML files, use **Python scripts** (not shell script regex).
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/html_management/integrate_resource_complete.py` | Full integration workflow (recommended) |
+| `scripts/html_management/integrate_resource_complete.py` | Full integration workflow: categorize → nav → W3C validate → `git add` (use `--skip-validation` to bypass W3C) |
 | `scripts/html_management/integrate_new_html.py` | Categorize and move HTML files |
 | `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
 | `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC |
@@ -215,7 +218,7 @@ When modifying 100+ HTML files, use **Python scripts** (not shell script regex).
 | `scripts/html_management/add_prev_next_nav.py --bottom-nav-only` | Add page bottom navigation |
 | `scripts/html_management/fix_html_issues.py` | Fix HTML entity escaping & sidebar TOC positioning |
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
-| `scripts/ci/validate_html_w3c.py` | W3C HTML validation |
+| `scripts/ci/validate_html_w3c.py` | W3C HTML validation (`--pr-mode` for changed files, `--files f1.html f2.html` for specific files) |
 | `scripts/ci/check_internal_links.py` | Broken link checker |
 | `scripts/ci/check_file_naming.py` | File naming convention check |
 | `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
@@ -259,7 +262,7 @@ Full details: `.claude/skills/wcag-accessibility/SKILL.md`
 ```bash
 # 1. CI-blocking checks (these fail PR if broken)
 python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js sync
-python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation
+python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation (auto-run by integrate script)
 python3 scripts/accessibility/check_contrast_ratio.py  # WCAG color contrast
 node -c quiz-data-extended.js data.js render.js index.js quiz-app.js  # JS syntax
 
@@ -276,7 +279,7 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 
 | Skill | Usage | Purpose |
 |-------|-------|---------|
-| `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → data updates) |
+| `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → W3C validation → git staging → data update guidance) |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
 
