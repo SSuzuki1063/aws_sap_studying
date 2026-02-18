@@ -219,7 +219,7 @@ const searchData = [
     { title: 'Amazon EventBridge イベントパターン完全図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/eventbridge-event-patterns-guide.html' },
 
     // 2026-01-31 追加: 新規リソース11件
-    { title: 'AWS Direct Connect BGP ルーティング完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html' },
+    { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html' },
     { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', category: 'ネットワーキング', file: 'networking/jumbo-frame-mtu-guide.html' },
     { title: 'EC2インスタンスのネットワークMTU完全ガイド', category: 'ネットワーキング', file: 'networking/ec2-mtu-guide.html' },
     { title: 'CIDRブロック集約と許可プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/cidr-aggregation-prefix-list-guide.html' },
@@ -253,7 +253,10 @@ const searchData = [
     { title: 'GuardDutyによるトラフィックパターン分析 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/guardduty-traffic-analysis-guide.html' },
     { title: 'AWS Elastic Load Balancing (ELB) 完全ガイド - ALB vs NLB', category: 'コンピュート・アプリケーション', file: 'compute-applications/elb-types-guide.html' },
     { title: 'なぜALBはVPCエンドポイントサービスとして使えないのか？', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb-nlb-privatelink-guide.html' },
-    { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-mtls-eks-guide.html' }
+    { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-mtls-eks-guide.html' },
+    { title: 'CIDRブロックの重複とVPC接続 完全ガイド', category: 'ネットワーキング', file: 'networking/cidr-vpc-connectivity-guide.html' },
+    { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', category: 'ネットワーキング', file: 'networking/aws-hyperplane-guide.html' },
+    { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html' }
 ];
 
 // 検索機能

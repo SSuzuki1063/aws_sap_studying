@@ -20,7 +20,7 @@ const categoriesData = [
           { title: 'VPN with Direct Connect ガイド', href: 'networking/aws-vpn-with-direct-connect-guide.html', priority: 'high' },
           { title: 'Direct Connect 暗号化 VPN', href: 'networking/direct_connect_encryption_vpn.html' },
           { title: 'VPN vs PrivateLink', href: 'new-solutions/vpn-vs-privatelink.html' },
-          { title: 'AWS Direct Connect BGP ルーティング完全ガイド', href: 'networking/direct-connect-bgp-routing-guide.html' },
+          { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', href: 'networking/direct-connect-bgp-routing-guide.html' },
           { title: 'BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮', href: 'networking/bfd-failover-optimization-guide.html', priority: 'low' },
           { title: 'Direct Connect LAG環境でのMACsec実装ガイド', href: 'networking/macsec-lag-implementation-guide.html', priority: 'low' },
           { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', href: 'networking/direct-connect-cloudwatch-metrics-guide.html', priority: 'low' },
@@ -31,7 +31,7 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 26,
+        count: 28,
         lastUpdated: '2026-02-15',
         resources: [
           { title: 'ENI インフォグラフィック', href: 'networking/aws-eni-infographic.html', priority: 'low' },
@@ -59,7 +59,9 @@ const categoriesData = [
           { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', href: 'networking/vpn-acceleration-vs-global-accelerator.html', priority: 'low' },
           { title: 'AWS Global Accelerator × VPN パフォーマンス向上ガイド', href: 'networking/global-accelerator-vpn-performance-guide.html', priority: 'low' },
           { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', href: 'networking/hybrid-dns-architecture-guide.html', priority: 'high' },
-          { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', href: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', priority: 'high' }
+          { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', href: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', priority: 'high' },
+          { title: 'CIDRブロックの重複とVPC接続 完全ガイド', href: 'networking/cidr-vpc-connectivity-guide.html', priority: 'high' },
+          { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', href: 'networking/aws-hyperplane-guide.html', priority: 'low' }
         ]
       },
       {
@@ -314,14 +316,15 @@ const categoriesData = [
       {
         title: 'Route53 & DNS管理',
         icon: '🌍',
-        count: 6,
+        count: 7,
         lastUpdated: '2026-01-31',
         resources: [
           { title: 'DNS インフォグラフィック', href: 'content-delivery-dns/aws-dns-infographic.html' },
           { title: 'Route53 ホストゾーン', href: 'new-solutions/route53_hosted_zones_infographic.html', priority: 'high' },
           { title: 'Route53 クロスアカウントガイド', href: 'content-delivery-dns/route53_cross_account_guide.html', priority: 'high' },
           { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', href: 'content-delivery-dns/route53-dnssec-guide.html' },
-          { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', href: 'content-delivery-dns/route53-private-hosted-zone-guide.html', priority: 'high' }
+          { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', href: 'content-delivery-dns/route53-private-hosted-zone-guide.html', priority: 'high' },
+          { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', href: 'content-delivery-dns/route53-dns-firewall-guide.html', priority: 'high' }
         ]
       }
     ]
@@ -524,7 +527,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 26,
-  totalResources: '231+',
+  totalResources: '234+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
   lastUpdated: '2026/02/18'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです

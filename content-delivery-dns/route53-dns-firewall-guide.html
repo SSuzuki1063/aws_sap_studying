@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 30%, #fefce8 60%, #fff7ed 100%);
+            padding: 20px;
+            line-height: 1.6;
+            color: #334155;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 40%, #1e40af 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '🛡️';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.08;
+            top: -40px;
+            right: -30px;
+        }
+
+        .header::after {
+            content: '🌐';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.06;
+            bottom: -30px;
+            left: -20px;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.92;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* ===== CONTENT ===== */
+        .content {
+            padding: 50px;
+        }
+
+        /* ===== CONCLUSION FIRST ===== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 2px solid #bfdbfe;
+            position: relative;
+        }
+
+        .conclusion-first h2 {
+            font-size: 1.8em;
+            color: #1e40af;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .takeaway-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .takeaway-card:nth-child(1) { border-left-color: #3b82f6; }
+        .takeaway-card:nth-child(2) { border-left-color: #10b981; }
+        .takeaway-card:nth-child(3) { border-left-color: #f59e0b; }
+
+        .takeaway-card .label {
+            font-size: 0.8em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .takeaway-card:nth-child(1) .label { color: #3b82f6; }
+        .takeaway-card:nth-child(2) .label { color: #10b981; }
+        .takeaway-card:nth-child(3) .label { color: #f59e0b; }
+
+        .takeaway-card p {
+            font-size: 0.95em;
+            color: #475569;
+            line-height: 1.7;
+        }
+
+        /* ===== SECTION COMMON ===== */
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 30px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ===== ANALOGY BOX ===== */
+        .analogy-box {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 40px;
+            border: 2px solid #fde68a;
+            position: relative;
+        }
+
+        .analogy-box h3 {
+            font-size: 1.4em;
+            color: #92400e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .analogy-box p {
+            color: #78350f;
+            font-size: 1em;
+            line-height: 1.8;
+        }
+
+        /* ===== DIAGRAM: DNS Firewall Overview ===== */
+        .diagram-container {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .diagram-title {
+            text-align: center;
+            font-size: 1.4em;
+            color: #1e293b;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            flex-wrap: wrap;
+            padding: 20px 0;
+        }
+
+        .flow-node {
+            text-align: center;
+            padding: 18px 22px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 0.95em;
+            min-width: 150px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .flow-node .node-icon {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .flow-node.source {
+            background: linear-gradient(135deg, #dbeafe, #eff6ff);
+            border: 2px solid #93c5fd;
+            color: #1e40af;
+        }
+
+        .flow-node.firewall {
+            background: linear-gradient(135deg, #fce7f3, #fdf2f8);
+            border: 2px solid #f9a8d4;
+            color: #9d174d;
+            min-width: 180px;
+        }
+
+        .flow-node.resolver {
+            background: linear-gradient(135deg, #e0e7ff, #eef2ff);
+            border: 2px solid #a5b4fc;
+            color: #3730a3;
+        }
+
+        .flow-node.internet {
+            background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+            border: 2px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .flow-arrow {
+            font-size: 1.8em;
+            color: #94a3b8;
+            margin: 0 8px;
+            flex-shrink: 0;
+        }
+
+        .flow-label {
+            font-size: 0.75em;
+            color: #64748b;
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        /* ===== FEATURE GRID ===== */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .feature-card h4 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feature-card p {
+            font-size: 0.92em;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .feature-card.blue h4 { color: #1d4ed8; }
+        .feature-card.green h4 { color: #059669; }
+        .feature-card.purple h4 { color: #7c3aed; }
+        .feature-card.orange h4 { color: #d97706; }
+
+        .feature-card.blue { border-top: 3px solid #3b82f6; }
+        .feature-card.green { border-top: 3px solid #10b981; }
+        .feature-card.purple { border-top: 3px solid #8b5cf6; }
+        .feature-card.orange { border-top: 3px solid #f59e0b; }
+
+        /* ===== FAIL-OPEN / FAIL-CLOSE COMPARISON ===== */
+        .comparison-section {
+            margin: 40px 0;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .comparison-card {
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .comparison-card::before {
+            position: absolute;
+            font-size: 8em;
+            opacity: 0.06;
+            top: -20px;
+            right: -10px;
+        }
+
+        .comparison-card.fail-open {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #86efac;
+        }
+
+        .comparison-card.fail-open::before {
+            content: '🟢';
+        }
+
+        .comparison-card.fail-close {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            border: 2px solid #fca5a5;
+        }
+
+        .comparison-card.fail-close::before {
+            content: '🔴';
+        }
+
+        .comparison-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .comparison-card.fail-open h3 { color: #065f46; }
+        .comparison-card.fail-close h3 { color: #991b1b; }
+
+        .comparison-card .en-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .comparison-card.fail-open .en-label {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .comparison-card.fail-close .en-label {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .comparison-card .desc {
+            font-size: 0.95em;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .comparison-card.fail-open .desc { color: #064e3b; }
+        .comparison-card.fail-close .desc { color: #7f1d1d; }
+
+        .comparison-card .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .comparison-card.fail-open .priority-badge {
+            background: #a7f3d0;
+            color: #065f46;
+        }
+
+        .comparison-card.fail-close .priority-badge {
+            background: #fecaca;
+            color: #991b1b;
+        }
+
+        /* ===== ANALOGY DIAGRAM (Gate Keeper) ===== */
+        .analogy-diagram {
+            background: #fefce8;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 1px solid #fde68a;
+        }
+
+        .gate-scene {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .gate-scenario {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .gate-scenario h4 {
+            font-size: 1.1em;
+            margin-bottom: 12px;
+        }
+
+        .gate-scenario.open-gate h4 { color: #059669; }
+        .gate-scenario.close-gate h4 { color: #dc2626; }
+
+        .gate-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin: 15px 0;
+            font-size: 1.2em;
+        }
+
+        .gate-visual .scene-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1.3em;
+        }
+
+        .gate-visual .caption {
+            font-size: 0.7em;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .gate-scenario p {
+            font-size: 0.88em;
+            color: #64748b;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        /* ===== COMPARISON TABLE ===== */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 30px 0;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92em;
+        }
+
+        thead th {
+            background: #f1f5f9;
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 700;
+            color: #334155;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        thead th:first-child {
+            width: 20%;
+        }
+
+        tbody td {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+
+        tbody tr:hover {
+            background: #fafbfd;
+        }
+
+        .td-open {
+            background: #f0fdf4;
+        }
+
+        .td-close {
+            background: #fef2f2;
+        }
+
+        /* ===== TECHNICAL FLOW DIAGRAMS ===== */
+        .tech-flow-container {
+            margin: 30px 0;
+        }
+
+        .tech-flow-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .tech-flow-panel {
+            background: white;
+            border-radius: 14px;
+            padding: 30px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .tech-flow-panel h4 {
+            font-size: 1.15em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .tech-flow-panel.open-panel {
+            border-top: 4px solid #10b981;
+        }
+        .tech-flow-panel.open-panel h4 { color: #059669; }
+
+        .tech-flow-panel.close-panel {
+            border-top: 4px solid #ef4444;
+        }
+        .tech-flow-panel.close-panel h4 { color: #dc2626; }
+
+        .step-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 12px 0;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85em;
+            flex-shrink: 0;
+            color: white;
+        }
+
+        .open-panel .step-number { background: #10b981; }
+        .close-panel .step-number { background: #ef4444; }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-content .step-title {
+            font-weight: 700;
+            font-size: 0.92em;
+            margin-bottom: 3px;
+        }
+
+        .open-panel .step-title { color: #065f46; }
+        .close-panel .step-title { color: #991b1b; }
+
+        .step-content .step-desc {
+            font-size: 0.85em;
+            color: #64748b;
+        }
+
+        .step-arrow {
+            text-align: center;
+            color: #cbd5e1;
+            font-size: 1.2em;
+            padding: 2px 0;
+            margin-left: 10px;
+        }
+
+        .step-result {
+            text-align: center;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+
+        .open-panel .step-result {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #86efac;
+        }
+
+        .close-panel .step-result {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        /* ===== USE CASE GRID ===== */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .usecase-card {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .usecase-card h4 {
+            font-size: 1.05em;
+            color: #1e293b;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .usecase-card p {
+            font-size: 0.9em;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .usecase-card .recommend-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-size: 0.78em;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .usecase-card .recommend-tag.open-tag {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .usecase-card .recommend-tag.close-tag {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* ===== RULE GROUP DIAGRAM ===== */
+        .rule-group-diagram {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 35px;
+            margin: 30px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .rg-vpc-box {
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border: 2px dashed #93c5fd;
+            border-radius: 14px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .rg-vpc-label {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #1d4ed8;
+            margin-bottom: 15px;
+        }
+
+        .rg-groups {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .rg-group-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            border-left: 4px solid;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .rg-group-card.allow { border-left-color: #10b981; }
+        .rg-group-card.deny { border-left-color: #ef4444; }
+
+        .rg-group-card h5 {
+            font-size: 0.92em;
+            margin-bottom: 8px;
+        }
+
+        .rg-group-card.allow h5 { color: #059669; }
+        .rg-group-card.deny h5 { color: #dc2626; }
+
+        .rg-rule {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82em;
+            padding: 4px 0;
+            color: #475569;
+        }
+
+        .rg-rule .rule-priority {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85em;
+            color: #64748b;
+        }
+
+        /* ===== ARCHITECTURE DIAGRAM ===== */
+        .arch-diagram {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 40px 30px;
+            margin: 30px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .arch-layers {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .arch-layer {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .arch-layer-label {
+            width: 140px;
+            text-align: right;
+            font-size: 0.82em;
+            font-weight: 600;
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        .arch-layer-box {
+            flex: 1;
+            padding: 16px 20px;
+            border-radius: 10px;
+            font-size: 0.92em;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .arch-layer-box.resources {
+            background: linear-gradient(135deg, #dbeafe, #eff6ff);
+            border: 2px solid #93c5fd;
+            color: #1e40af;
+        }
+
+        .arch-layer-box.resolver {
+            background: linear-gradient(135deg, #e0e7ff, #eef2ff);
+            border: 2px solid #a5b4fc;
+            color: #3730a3;
+        }
+
+        .arch-layer-box.firewall {
+            background: linear-gradient(135deg, #fce7f3, #fdf2f8);
+            border: 2px solid #f9a8d4;
+            color: #9d174d;
+        }
+
+        .arch-layer-box.rules {
+            background: linear-gradient(135deg, #fefce8, #fef9c3);
+            border: 2px solid #fde68a;
+            color: #92400e;
+        }
+
+        .arch-layer-box.action {
+            background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+            border: 2px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .arch-arrow {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.3em;
+            margin-left: 156px;
+        }
+
+        /* ===== CONFIG CODE ===== */
+        .config-section {
+            margin: 30px 0;
+        }
+
+        .config-block {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 15px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .config-block .config-label {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            font-size: 0.72em;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .config-block pre {
+            color: #e2e8f0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.7;
+            white-space: pre;
+        }
+
+        .config-block .comment { color: #64748b; }
+        .config-block .key { color: #7dd3fc; }
+        .config-block .value { color: #86efac; }
+        .config-block .string { color: #fde68a; }
+
+        /* ===== FAQ ===== */
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 30px 0;
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            padding: 22px 25px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .faq-item .question {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .faq-item .answer {
+            font-size: 0.92em;
+            color: #64748b;
+            line-height: 1.8;
+            padding-left: 26px;
+        }
+
+        /* ===== BEST PRACTICES ===== */
+        .best-practices-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+            margin: 30px 0;
+        }
+
+        .bp-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .bp-card h4 {
+            font-size: 1em;
+            color: #1e293b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bp-card p {
+            font-size: 0.88em;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        /* ===== DECISION FLOW ===== */
+        .decision-flow {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .decision-nodes {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .decision-node {
+            padding: 16px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .decision-node.question {
+            background: white;
+            border: 2px solid #cbd5e1;
+            color: #334155;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .decision-branch {
+            display: flex;
+            gap: 60px;
+            align-items: flex-start;
+            justify-content: center;
+            margin: 0;
+        }
+
+        .branch-path {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .branch-label {
+            font-size: 0.82em;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+
+        .branch-label.yes {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .branch-label.no {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .branch-arrow {
+            color: #94a3b8;
+            font-size: 1.2em;
+        }
+
+        .decision-node.result-open {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border: 2px solid #86efac;
+            color: #065f46;
+        }
+
+        .decision-node.result-close {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 2px solid #fca5a5;
+            color: #991b1b;
+        }
+
+        .center-arrow {
+            color: #94a3b8;
+            font-size: 1.4em;
+            text-align: center;
+            padding: 6px 0;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: #f8fafc;
+            padding: 30px 50px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .content { padding: 25px; }
+            .header h1 { font-size: 1.8em; }
+            .takeaway-grid,
+            .feature-grid,
+            .comparison-grid,
+            .gate-scene,
+            .tech-flow-grid,
+            .usecase-grid,
+            .rg-groups,
+            .best-practices-grid {
+                grid-template-columns: 1fr;
+            }
+            .flow-diagram {
+                flex-direction: column;
+                gap: 0;
+            }
+            .flow-arrow {
+                transform: rotate(90deg);
+                margin: 4px 0;
+            }
+            .decision-branch {
+                flex-direction: column;
+                gap: 20px;
+                align-items: center;
+            }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+<!-- 左サイドバー目次 -->
+<div class="sidebar-toc" id="sidebar-toc">
+<div class="sidebar-toc-header">
+<h2>📑 目次</h2>
+</div>
+<nav class="sidebar-toc-content">
+<ul>
+<li class="toc-h2"><a href="#まず押さえるべき3つのポイント">📌 まず押さえるべき3つのポイント</a></li>
+<li class="toc-h2"><a href="#セクション1-DNS-Firewallとは？">🌐 セクション1：DNS Firewallとは？</a></li>
+<li class="toc-h3"><a href="#たとえ話-オフィスビルの受付カウンター">🏢 たとえ話：オフィスビルの受付カウンター</a></li>
+<li class="toc-h3"><a href="#DNS-Firewallの主な機能">DNS Firewallの主な機能</a></li>
+<li class="toc-h2"><a href="#セクション2-ルールグループの仕組み">📁 セクション2：ルールグループの仕組み</a></li>
+<li class="toc-h3"><a href="#たとえ話-受付のチェックリストファイル">📖 たとえ話：受付の「チェックリストファイル」</a></li>
+<li class="toc-h2"><a href="#セクション3-フェイルオープン-vs-フェイルクローズ">🔀 セクション3：フェイルオープン vs フェイルクローズ</a></li>
+<li class="toc-h3"><a href="#たとえ話-オフィスの自動ドアが故障したら？">🚪 たとえ話：オフィスの自動ドアが故障したら？</a></li>
+<li class="toc-h3"><a href="#フェイルオープン">🟢 フェイルオープン</a></li>
+<li class="toc-h3"><a href="#フェイルクローズ">🔴 フェイルクローズ</a></li>
+<li class="toc-h2"><a href="#セクション4-ユースケースと選択基準">🎯 セクション4：ユースケースと選択基準</a></li>
+<li class="toc-h3"><a href="#業界別おすすめ設定">業界別おすすめ設定</a></li>
+<li class="toc-h2"><a href="#️-セクション5-アーキテクチャと設定">🏗️ セクション5：アーキテクチャと設定</a></li>
+<li class="toc-h3"><a href="#AWS-CLIでの設定例">AWS CLIでの設定例</a></li>
+<li class="toc-h2"><a href="#✅-セクション6-ベストプラクティス">✅ セクション6：ベストプラクティス</a></li>
+<li class="toc-h2"><a href="#❓-セクション7-よくある質問FAQ">❓ セクション7：よくある質問（FAQ）</a></li>
+</ul>
+</nav>
+</div>
+<!-- サイドバー折りたたみボタン -->
+<button aria-label="目次を開閉" class="sidebar-toc-toggle" id="sidebar-toc-toggle" onclick="toggleSidebarTOC()">
+<span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
+      自己紹介
+     </a>
+<a href="/aws_sap_studying/learning-resources.html">
+      学習リソース集
+     </a>
+<a href="/aws_sap_studying/knowledge-base.html">
+      ナレッジベース
+     </a>
+<a href="/aws_sap_studying/quiz.html">
+      クイズ
+     </a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">🏠 ホーム</a>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-item">コンテンツ配信・DNS</span>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-item">Route53 &amp; DNS管理</span>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-current">Route53 Dns Firewall Guide</span>
+</nav>
+<!-- ===== HEADER ===== -->
+<div class="header">
+<h1>🛡️ Route 53 Resolver DNS Firewall</h1>
+<p class="subtitle">VPC内のDNSクエリを守る門番 — フェイルオープン＆フェイルクローズ徹底解説</p>
+<div class="badge-row">
+<span class="badge">📡 Amazon Route 53</span>
+<span class="badge">🔒 DNS Security</span>
+<span class="badge">🏗️ VPC Networking</span>
+</div>
+</div>
+<div class="content">
+<!-- ===== 結論ファースト ===== -->
+<div class="conclusion-first">
+<h2 id="まず押さえるべき3つのポイント">📌 まず押さえるべき3つのポイント</h2>
+<div class="takeaway-grid">
+<div class="takeaway-card">
+<div class="label">DNS Firewallの役割</div>
+<p>VPC内のリソースが外部ドメインへDNSクエリを行う際、<strong>ルールに基づいて許可・ブロック・アラート</strong>を行う「DNS版セキュリティゲート」です。</p>
+</div>
+<div class="takeaway-card">
+<div class="label">フェイルオープン</div>
+<p>Firewallが障害で応答できないとき、<strong>DNSクエリをそのまま通す</strong>設定。可用性を優先し、サービスを止めない方針です。</p>
+</div>
+<div class="takeaway-card">
+<div class="label">フェイルクローズ</div>
+<p>Firewallが障害で応答できないとき、<strong>DNSクエリをブロックする</strong>設定。セキュリティを優先し、未検査の通信を許さない方針です。</p>
+</div>
+</div>
+</div>
+<!-- ===== SECTION 1: DNS Firewallとは ===== -->
+<div class="section">
+<h2 class="section-title" id="セクション1-DNS-Firewallとは？">🌐 セクション1：DNS Firewallとは？</h2>
+<div class="analogy-box">
+<h3 id="たとえ話-オフィスビルの受付カウンター">🏢 たとえ話：オフィスビルの受付カウンター</h3>
+<p>
+                    あなたのオフィスビル（VPC）の受付カウンター（DNS Firewall）を想像してください。
+                    社員（EC2やLambda）が外部の会社（インターネット上のドメイン）に電話をかけたいとき、
+                    まず受付に「○○社に電話したい」と申し出ます。受付は<strong>許可リスト</strong>を確認し、
+                    許可された相手には電話をつなぎ、<strong>拒否リスト</strong>にある怪しい相手への電話はブロックします。
+                    これがDNS Firewallの仕組みです。
+                </p>
+</div>
+<!-- 処理フロー図 -->
+<div class="diagram-container">
+<div class="diagram-title">DNS Firewallの処理フロー</div>
+<div class="flow-diagram">
+<div class="flow-node source">
+<span class="node-icon">💻</span>
+                        VPCリソース<br/><small>(EC2, Lambda等)</small>
+<span class="flow-label">DNSクエリ送信</span>
+</div>
+<span class="flow-arrow">→</span>
+<div class="flow-node firewall">
+<span class="node-icon">🛡️</span>
+                        DNS Firewall<br/><small>(ルール評価)</small>
+<span class="flow-label">ルールに基づき判定</span>
+</div>
+<span class="flow-arrow">→</span>
+<div class="flow-node resolver">
+<span class="node-icon">🔍</span>
+                        Route 53<br/>Resolver<br/><small>(名前解決)</small>
+<span class="flow-label">許可されたクエリのみ</span>
+</div>
+<span class="flow-arrow">→</span>
+<div class="flow-node internet">
+<span class="node-icon">🌍</span>
+                        外部DNS<br/><small>(インターネット)</small>
+<span class="flow-label">名前解決実行</span>
+</div>
+</div>
+</div>
+<!-- 主な機能 -->
+<h3 id="DNS-Firewallの主な機能" style="font-size:1.3em; color:#1e293b; margin: 30px 0 15px;">DNS Firewallの主な機能</h3>
+<div class="feature-grid">
+<div class="feature-card blue">
+<h4>📋 ドメインフィルタリング</h4>
+<p>特定のドメインに対するDNSクエリを許可またはブロックするルールを作成。悪意あるドメインやデータ流出先へのアクセスを防止します。</p>
+</div>
+<div class="feature-card green">
+<h4>📁 ルールグループ</h4>
+<p>複数のルールをグループ化して一貫したポリシーを適用。ルールグループは複数のVPCに関連付けでき、組織全体で統一したDNSセキュリティポリシーを展開できます。</p>
+</div>
+<div class="feature-card purple">
+<h4>⚡ アクション設定</h4>
+<p>マッチしたクエリに対して「ALLOW（許可）」「BLOCK（ブロック）」「ALERT（アラート）」のアクションを設定。BLOCKではカスタム応答（NODATA/NXDOMAIN/OVERRIDE）も選択可能です。</p>
+</div>
+<div class="feature-card orange">
+<h4>📊 ログ記録と監視</h4>
+<p>DNSクエリのログをCloudWatch Logs、S3、Kinesis Data Firehoseに記録して分析。ブロック・アラートされたクエリを可視化し、セキュリティ運用に活用できます。</p>
+</div>
+</div>
+</div>
+<!-- ===== SECTION 2: ルールグループの構成 ===== -->
+<div class="section">
+<h2 class="section-title" id="セクション2-ルールグループの仕組み">📁 セクション2：ルールグループの仕組み</h2>
+<div class="analogy-box">
+<h3 id="たとえ話-受付のチェックリストファイル">📖 たとえ話：受付の「チェックリストファイル」</h3>
+<p>
+                    ルールグループは、受付カウンターに置かれた<strong>チェックリストファイル</strong>のようなものです。
+                    1つのファイルに「許可する会社リスト」「拒否する会社リスト」が書かれており、
+                    受付はこのファイルを上から順番に確認します。最初にマッチしたルールが適用され、
+                    どのルールにもマッチしなければ、次のファイル（次の優先度のルールグループ）を確認します。
+                </p>
+</div>
+<div class="rule-group-diagram">
+<div class="diagram-title">ルールグループとルール構成の例</div>
+<div class="rg-vpc-box">
+<div class="rg-vpc-label">🔷 VPC に関連付けられたルールグループ</div>
+<div class="rg-groups">
+<div class="rg-group-card deny">
+<h4>🔴 ルールグループ①（優先度: 100）</h4>
+<div class="rg-rule">
+<span class="rule-priority">P:1</span>
+                                ⛔ *.malware-site.com → BLOCK
+                            </div>
+<div class="rg-rule">
+<span class="rule-priority">P:2</span>
+                                ⛔ *.phishing.example → BLOCK
+                            </div>
+<div class="rg-rule">
+<span class="rule-priority">P:3</span>
+                                ⚠️ *.suspicious.net → ALERT
+                            </div>
+</div>
+<div class="rg-group-card allow">
+<h5>🟢 ルールグループ②（優先度: 200）</h5>
+<div class="rg-rule">
+<span class="rule-priority">P:1</span>
+                                ✅ *.amazonaws.com → ALLOW
+                            </div>
+<div class="rg-rule">
+<span class="rule-priority">P:2</span>
+                                ✅ *.mycompany.com → ALLOW
+                            </div>
+<div class="rg-rule">
+<span class="rule-priority">P:3</span>
+                                ⛔ * (すべて) → BLOCK
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== SECTION 3: フェイルオープン & フェイルクローズ ===== -->
+<div class="section">
+<h2 class="section-title" id="セクション3-フェイルオープン-vs-フェイルクローズ">🔀 セクション3：フェイルオープン vs フェイルクローズ</h2>
+<div class="analogy-box">
+<h3 id="たとえ話-オフィスの自動ドアが故障したら？">🚪 たとえ話：オフィスの自動ドアが故障したら？</h3>
+<p>
+                    オフィスの入口にはセキュリティゲート（自動ドア）があります。
+                    このゲートが<strong>停電で動かなくなった</strong>とき、2つの選択肢があります。<br/>
+<strong>フェイルオープン</strong>＝ドアを開けっ放しにして、全員が通れるようにする（業務が止まらない）<br/>
+<strong>フェイルクローズ</strong>＝ドアをロックして、誰も通れないようにする（不審者の侵入を防ぐ）<br/>
+                    どちらが正しいかは、<strong>「可用性」と「セキュリティ」どちらを優先するか</strong>で決まります。
+                </p>
+</div>
+<!-- 比較カード -->
+<div class="comparison-grid">
+<div class="comparison-card fail-open">
+<h3 id="フェイルオープン">🟢 フェイルオープン</h3>
+<span class="en-label">Fail Open</span>
+<p class="desc">
+                        DNS Firewallが応答しない場合、DNSクエリは<strong>フィルタリングなしで通常通り処理</strong>されます。
+                        Firewallの障害によってサービス全体が停止することを防ぎます。
+                    </p>
+<span class="priority-badge">📡 可用性を優先</span>
+</div>
+<div class="comparison-card fail-close">
+<h3 id="フェイルクローズ">🔴 フェイルクローズ</h3>
+<span class="en-label">Fail Close</span>
+<p class="desc">
+                        DNS Firewallが応答しない場合、DNSクエリは<strong>ブロックされ名前解決が失敗</strong>します。
+                        Firewallが未検査のまま通信が行われるリスクを排除します。
+                    </p>
+<span class="priority-badge">🔒 セキュリティを優先</span>
+</div>
+</div>
+<!-- たとえ図解 -->
+<div class="analogy-diagram">
+<div class="diagram-title">🚪 自動ドア故障時の動作イメージ</div>
+<div class="gate-scene">
+<div class="gate-scenario open-gate">
+<h4>🟢 フェイルオープン</h4>
+<div class="gate-visual">
+<div class="scene-row">🧑‍💼 → 🚪💨 → 🏢</div>
+<div class="caption">ドアが開放 → 全員通過OK</div>
+</div>
+<p><strong>メリット：</strong>業務が止まらない<br/><strong>リスク：</strong>セキュリティチェックなしで通過してしまう可能性がある</p>
+</div>
+<div class="gate-scenario close-gate">
+<h4>🔴 フェイルクローズ</h4>
+<div class="gate-visual">
+<div class="scene-row">🧑‍💼 → 🚪🔒 → ❌</div>
+<div class="caption">ドアがロック → 全員通過NG</div>
+</div>
+<p><strong>メリット：</strong>未チェックの人が入れない<br/><strong>リスク：</strong>正規の社員も入れず業務が停止する可能性がある</p>
+</div>
+</div>
+</div>
+<!-- 技術的フロー -->
+<div class="tech-flow-container">
+<div class="diagram-title" style="margin-bottom: 20px;">DNS Firewall障害時の具体的な動作フロー</div>
+<div class="tech-flow-grid">
+<div class="tech-flow-panel open-panel">
+<h4>🟢 フェイルオープンの動作フロー</h4>
+<div class="step-flow">
+<div class="step-item">
+<div class="step-number">1</div>
+<div class="step-content">
+<div class="step-title">DNSクエリ送信</div>
+<div class="step-desc">EC2から example.com へのDNSクエリ</div>
+</div>
+</div>
+<div class="step-arrow">↓</div>
+<div class="step-item">
+<div class="step-number">2</div>
+<div class="step-content">
+<div class="step-title">DNS Firewallに到達</div>
+<div class="step-desc">Firewallがルール評価を試みる</div>
+</div>
+</div>
+<div class="step-arrow">↓</div>
+<div class="step-item">
+<div class="step-number">3</div>
+<div class="step-content">
+<div class="step-title">⚠️ Firewall応答なし</div>
+<div class="step-desc">障害やタイムアウトでルール評価不可</div>
+</div>
+</div>
+<div class="step-arrow">↓</div>
+<div class="step-item">
+<div class="step-number">4</div>
+<div class="step-content">
+<div class="step-title">フィルタリングをスキップ</div>
+<div class="step-desc">Resolverがそのまま名前解決を実行</div>
+</div>
+</div>
+<div class="step-result">✅ DNSクエリ成功（フィルタなし）</div>
+</div>
+</div>
+<div class="tech-flow-panel close-panel">
+<h4>🔴 フェイルクローズの動作フロー</h4>
+<div class="step-flow">
+<div class="step-item">
+<div class="step-number">1</div>
+<div class="step-content">
+<div class="step-title">DNSクエリ送信</div>
+<div class="step-desc">EC2から example.com へのDNSクエリ</div>
+</div>
+</div>
+<div class="step-arrow">↓</div>
+<div class="step-item">
+<div class="step-number">2</div>
+<div class="step-content">
+<div class="step-title">DNS Firewallに到達</div>
+<div class="step-desc">Firewallがルール評価を試みる</div>
+</div>
+</div>
+<div class="step-arrow">↓</div>
+<div class="step-item">
+<div class="step-number">3</div>
+<div class="step-content">
+<div class="step-title">⚠️ Firewall応答なし</div>
+<div class="step-desc">障害やタイムアウトでルール評価不可</div>
+</div>
+</div>
+<div class="step-arrow">↓</div>
+<div class="step-item">
+<div class="step-number">4</div>
+<div class="step-content">
+<div class="step-title">DNSクエリをブロック</div>
+<div class="step-desc">SERVFAIL応答を返しクエリを拒否</div>
+</div>
+</div>
+<div class="step-result">🚫 DNSクエリ失敗（名前解決不可）</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 比較テーブル -->
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+<th>比較項目</th>
+<th>🟢 フェイルオープン</th>
+<th>🔴 フェイルクローズ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>障害時の動作</strong></td>
+<td class="td-open">DNSクエリをそのまま通過させる</td>
+<td class="td-close">DNSクエリをブロック（SERVFAIL）</td>
+</tr>
+<tr>
+<td><strong>優先する価値</strong></td>
+<td class="td-open">可用性（Availability）</td>
+<td class="td-close">セキュリティ（Security）</td>
+</tr>
+<tr>
+<td><strong>サービス影響</strong></td>
+<td class="td-open">なし（通信は継続）</td>
+<td class="td-close">あり（DNS依存のサービスが停止）</td>
+</tr>
+<tr>
+<td><strong>セキュリティリスク</strong></td>
+<td class="td-open">未検査のDNSクエリが通過する可能性</td>
+<td class="td-close">最小（フィルタ未通過の通信なし）</td>
+</tr>
+<tr>
+<td><strong>適切な場面</strong></td>
+<td class="td-open">一般的なWebサービス、可用性重視の環境</td>
+<td class="td-close">金融、医療、政府機関など高セキュリティ環境</td>
+</tr>
+<tr>
+<td><strong>AWSデフォルト</strong></td>
+<td class="td-open">✅ デフォルト設定</td>
+<td class="td-close">明示的に設定が必要</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- ===== SECTION 4: ユースケース ===== -->
+<div class="section">
+<h2 class="section-title" id="セクション4-ユースケースと選択基準">🎯 セクション4：ユースケースと選択基準</h2>
+<!-- 選択フローチャート -->
+<div class="decision-flow">
+<div class="diagram-title">どちらを選ぶべき？ — 意思決定フロー</div>
+<div class="decision-nodes">
+<div class="decision-node question">❓ セキュリティ要件がコンプライアンス（PCI-DSS, HIPAAなど）で厳格に求められているか？</div>
+<div class="center-arrow">↓</div>
+<div class="decision-branch">
+<div class="branch-path">
+<span class="branch-label yes">はい</span>
+<span class="branch-arrow">↓</span>
+<div class="decision-node result-close">🔴 フェイルクローズを推奨<br/><small>未検査トラフィックは許容不可</small></div>
+</div>
+<div class="branch-path">
+<span class="branch-label no">いいえ</span>
+<span class="branch-arrow">↓</span>
+<div class="decision-node question" style="max-width:320px;">❓ サービスのダウンタイムが<br/>ビジネスに重大な影響を与えるか？</div>
+<div class="center-arrow">↓</div>
+<div class="decision-branch" style="gap:30px;">
+<div class="branch-path">
+<span class="branch-label yes">はい</span>
+<span class="branch-arrow">↓</span>
+<div class="decision-node result-open">🟢 フェイルオープンを推奨<br/><small>可用性を確保</small></div>
+</div>
+<div class="branch-path">
+<span class="branch-label no">いいえ</span>
+<span class="branch-arrow">↓</span>
+<div class="decision-node result-close">🔴 フェイルクローズを推奨<br/><small>安全側に倒す</small></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ユースケース -->
+<h3 id="業界別おすすめ設定" style="font-size:1.3em; color:#1e293b; margin: 30px 0 15px;">業界別おすすめ設定</h3>
+<div class="usecase-grid">
+<div class="usecase-card">
+<h4>🛒 ECサイト・一般Webサービス</h4>
+<p>ユーザー体験とサービスの継続性が最優先。DNS障害でカート機能や商品ページが表示されなくなると、直接的な売上損失につながります。</p>
+<span class="recommend-tag open-tag">🟢 フェイルオープン推奨</span>
+</div>
+<div class="usecase-card">
+<h4>🏦 金融サービス・決済システム</h4>
+<p>PCI-DSSなどの厳格なコンプライアンスが求められ、未検査のDNSクエリがデータ漏洩のリスクとなります。セキュリティが可用性に優先します。</p>
+<span class="recommend-tag close-tag">🔴 フェイルクローズ推奨</span>
+</div>
+<div class="usecase-card">
+<h4>🏥 医療・ヘルスケア</h4>
+<p>HIPAA等の規制により患者データの保護が最優先。ただし生命に関わるシステムでは可用性も重要なため、システムごとに使い分けが必要です。</p>
+<span class="recommend-tag close-tag">🔴 フェイルクローズ推奨（要件次第）</span>
+</div>
+<div class="usecase-card">
+<h4>🎮 ゲーム・メディア配信</h4>
+<p>リアルタイム性が求められるサービスでは、DNS障害によるサービス停止がユーザー離脱に直結。可用性を確保しつつ、ログ監視で補完します。</p>
+<span class="recommend-tag open-tag">🟢 フェイルオープン推奨</span>
+</div>
+</div>
+</div>
+<!-- ===== SECTION 5: アーキテクチャ全体像 ===== -->
+<div class="section">
+<h2 class="section-title" id="️-セクション5-アーキテクチャと設定">🏗️ セクション5：アーキテクチャと設定</h2>
+<div class="arch-diagram">
+<div class="diagram-title">DNS Firewall アーキテクチャの全体像</div>
+<div class="arch-layers">
+<div class="arch-layer">
+<div class="arch-layer-label">リソース層</div>
+<div class="arch-layer-box resources">💻 EC2 / Lambda / ECS など VPC内リソース</div>
+</div>
+<div class="arch-arrow">↓ DNSクエリ送信</div>
+<div class="arch-layer">
+<div class="arch-layer-label">Resolver層</div>
+<div class="arch-layer-box resolver">🔍 Route 53 Resolver（VPCのDNSサーバー .2アドレス）</div>
+</div>
+<div class="arch-arrow">↓ Firewallが介入</div>
+<div class="arch-layer">
+<div class="arch-layer-label">フィルタリング層</div>
+<div class="arch-layer-box firewall">🛡️ DNS Firewall（ルールグループで評価）</div>
+</div>
+<div class="arch-arrow">↓ ルール評価</div>
+<div class="arch-layer">
+<div class="arch-layer-label">ルール層</div>
+<div class="arch-layer-box rules">📋 ドメインリスト＋アクション（ALLOW / BLOCK / ALERT）</div>
+</div>
+<div class="arch-arrow">↓ 判定結果</div>
+<div class="arch-layer">
+<div class="arch-layer-label">結果</div>
+<div class="arch-layer-box action">✅ 許可 → 外部DNS解決 ／ 🚫 ブロック → エラー返却 ／ ⚠️ アラート → ログ記録＆通過</div>
+</div>
+</div>
+</div>
+<!-- 設定コード -->
+<h3 id="AWS-CLIでの設定例" style="font-size:1.3em; color:#1e293b; margin: 30px 0 15px;">AWS CLIでの設定例</h3>
+<div class="config-block">
+<span class="config-label">AWS CLI</span>
+<pre><span class="comment"># ドメインリストの作成（ブロック対象ドメイン）</span>
+<span class="key">aws</span> route53resolver create-firewall-domain-list \
+    --name <span class="string">"blocked-domains"</span> \
+    --domains <span class="string">"malware-site.com"</span> <span class="string">"phishing.example.com"</span>
+
+<span class="comment"># ルールグループの作成</span>
+<span class="key">aws</span> route53resolver create-firewall-rule-group \
+    --name <span class="string">"my-security-rules"</span>
+
+<span class="comment"># ルールの追加（ブロックルール）</span>
+<span class="key">aws</span> route53resolver create-firewall-rule \
+    --firewall-rule-group-id <span class="string">"rslvr-frg-xxxxx"</span> \
+    --firewall-domain-list-id <span class="string">"rslvr-fdl-xxxxx"</span> \
+    --priority <span class="value">100</span> \
+    --action <span class="string">"BLOCK"</span> \
+    --block-response <span class="string">"NXDOMAIN"</span> \
+    --name <span class="string">"block-malware"</span></pre>
+</div>
+<div class="config-block">
+<span class="config-label">AWS CLI - フェイルオープン/クローズ設定</span>
+<pre><span class="comment"># VPCとルールグループの関連付け（フェイルオープン）</span>
+<span class="key">aws</span> route53resolver associate-firewall-rule-group \
+    --firewall-rule-group-id <span class="string">"rslvr-frg-xxxxx"</span> \
+    --vpc-id <span class="string">"vpc-xxxxx"</span> \
+    --priority <span class="value">100</span> \
+    --name <span class="string">"my-vpc-association"</span>
+
+<span class="comment"># フェイルオープン設定（デフォルト）</span>
+<span class="key">aws</span> route53resolver update-firewall-config \
+    --resource-id <span class="string">"vpc-xxxxx"</span> \
+    --firewall-fail-open <span class="value">ENABLED</span>
+
+<span class="comment"># フェイルクローズ設定</span>
+<span class="key">aws</span> route53resolver update-firewall-config \
+    --resource-id <span class="string">"vpc-xxxxx"</span> \
+    --firewall-fail-open <span class="value">DISABLED</span></pre>
+</div>
+</div>
+<!-- ===== SECTION 6: ベストプラクティス ===== -->
+<div class="section">
+<h2 class="section-title" id="✅-セクション6-ベストプラクティス">✅ セクション6：ベストプラクティス</h2>
+<div class="best-practices-grid">
+<div class="bp-card">
+<h3>📝 段階的なルール導入</h3>
+<p>最初はALERT（監視のみ）でルールを作成し、ログを分析してから本番BLOCKに切り替えましょう。いきなりブロックすると、正常な通信まで止めてしまうリスクがあります。</p>
+</div>
+<div class="bp-card">
+<h4>🔗 AWSマネージドドメインリスト活用</h4>
+<p>AWSが提供するマネージドドメインリスト（マルウェア、ボットネット C&amp;C など）を活用すると、自分でリストを管理する手間を大幅に削減できます。</p>
+</div>
+<div class="bp-card">
+<h4>📊 CloudWatchアラーム設定</h4>
+<p>ブロックされたDNSクエリのメトリクスを監視し、異常増加を検知するアラームを設定しましょう。攻撃の兆候を早期に発見できます。</p>
+</div>
+<div class="bp-card">
+<h4>🏢 RAM で組織全体に共有</h4>
+<p>AWS RAM（Resource Access Manager）を使って、ルールグループを AWS Organizations 全体で共有できます。セキュリティポリシーの一元管理に有効です。</p>
+</div>
+</div>
+</div>
+<!-- ===== SECTION 7: FAQ ===== -->
+<div class="section">
+<h2 class="section-title" id="❓-セクション7-よくある質問FAQ">❓ セクション7：よくある質問（FAQ）</h2>
+<div class="faq-list">
+<div class="faq-item">
+<div class="question">💬 DNS Firewallと Network Firewall の違いは何ですか？</div>
+<div class="answer">DNS FirewallはDNSクエリ（ドメイン名解決のリクエスト）のみをフィルタリングするサービスです。Network Firewallはネットワークトラフィック全体（HTTP、TCP/UDPなど）をフィルタリングします。DNS Firewallは「どのドメインに聞きに行くか」を制御し、Network Firewallは「実際の通信内容」を制御する違いがあります。</div>
+</div>
+<div class="faq-item">
+<div class="question">💬 DNS Firewallはインバウンドのクエリもフィルタリングできますか？</div>
+<div class="answer">いいえ。DNS Firewallは<strong>VPC内のリソースから外部へのDNSクエリ（アウトバウンド）</strong>のみを対象とします。外部からVPC内へのインバウンドDNSクエリは対象外です。</div>
+</div>
+<div class="faq-item">
+<div class="question">💬 フェイルオープン／フェイルクローズはVPC単位の設定ですか？</div>
+<div class="answer">はい。フェイルオープン／フェイルクローズの設定は<strong>VPC単位</strong>で行います。同一アカウント内でも、VPCごとに異なる設定が可能です。例えば本番VPCはフェイルクローズ、開発VPCはフェイルオープンといった使い分けができます。</div>
+</div>
+<div class="faq-item">
+<div class="question">💬 DNS Firewallの料金はどうなっていますか？</div>
+<div class="answer">DNS Firewallの料金は、処理されたDNSクエリ数に基づきます。ルールグループの作成やVPCへの関連付けには追加料金はかかりません。AWSマネージドドメインリストの使用にも追加料金はありません。</div>
+</div>
+<div class="faq-item">
+<div class="question">💬 ルールにマッチしなかったDNSクエリはどうなりますか？</div>
+<div class="answer">どのルールにもマッチしなかったDNSクエリは、<strong>通常通り処理されます（許可されます）</strong>。明示的にすべてのドメインをブロックしたい場合は、最も低い優先度でワイルドカード（*）のBLOCKルールを追加する必要があります。</div>
+</div>
+</div>
+</div>
+</div><!-- /.content -->
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+<p>📚 Route 53 Resolver DNS Firewall 完全ガイド — フェイルオープン＆フェイルクローズ ｜ AWS学習リソース</p>
+</div>
+</div><!-- /.container -->
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+</body>
+</html>
