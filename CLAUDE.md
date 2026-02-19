@@ -69,6 +69,20 @@ Always push immediately — commits without push don't deploy:
 git add <files> && git commit -m "feat: description" && git push origin gh-pages
 ```
 
+### 6. Use `<h2>` Semantic Tags for Section Headings
+
+`add_sidebar_toc.py` **only recognizes `<h2>` and `<h3>` tags**. Files using `<div>` for section headings will silently skip TOC generation with no error.
+
+```html
+<!-- ✅ CORRECT — sidebar TOC will be generated -->
+<h2 class="section-title">セクション名</h2>
+
+<!-- ❌ WRONG — TOC silently skipped, no error shown -->
+<div class="section-title">セクション名</div>
+```
+
+The integrate script (step 4) prints `⚠️【要対応】` if TOC was skipped for a file. When you see that warning, convert `<div class="section-title">` to `<h2 class="section-title">` and re-run.
+
 ## Quick Start
 
 ```bash
@@ -131,11 +145,26 @@ The dev server rewrites requests: it strips `/aws_sap_studying/` from URLs so Gi
 
 ### Shared CSS Files
 
-Located in `css/` directory:
+`css/` directory (loaded via `<link>` in every HTML page):
 - `variables.css` - CSS custom properties (z-index layers, colors, spacing)
 - `common.css` - Shared UI components (header, breadcrumbs, scroll-to-top)
 - `layout.css` - Layout utilities and grid
 - `responsive.css` - Media queries and mobile styles
+
+`css/components/` directory (added automatically by integration scripts — do not add manually):
+- `sidebar-toc.css` - Left sidebar TOC (added by `add_sidebar_toc.py`)
+- `page-bottom-nav.css` - Bottom prev/next navigation (added by `add_prev_next_nav.py`)
+- Other component CSS files (`priority-group.css`, `roadmap.css`, `bookmark.css`, etc.)
+
+### Sidebar TOC Generation
+
+`add_sidebar_toc.py` adds a collapsible left sidebar TOC to HTML files. It **skips** a file when:
+
+- The file is in `new_html/`, `.git/`, `__pycache__/`, or `.claude/`
+- The filename is `index.html`, `table-of-contents.html`, `quiz.html`, `home.html`, or `knowledge-base.html`
+- The file has **fewer than 2 `<h2>`/`<h3>` tags** → prints `⏭️ スキップ` in output
+
+When a file is silently skipped in the integrate workflow, the step 4 output will show a `⚠️【要対応】` warning block listing the affected files.
 
 ### Sidebar TOC Z-Index Hierarchy
 
@@ -164,6 +193,10 @@ Or manually:
 3. Update `data.js` AND `index.js` (see Two-Place Update Rule)
 4. Test: `python3 server.py`
 5. Deploy: `git add data.js index.js && git commit -m "feat: ..." && git push origin gh-pages`
+
+### Replace/Update an Existing Resource
+
+Place the replacement HTML file in `replace_html/` (same filename as the target), then run the integration script. The script processes `replace_html/` the same way as `new_html/`. After integration, no `data.js`/`index.js` update is needed (the file path doesn't change).
 
 ### Add Quiz Question
 
@@ -200,7 +233,11 @@ HTML resources go in **root-level category directories** (NOT in `scripts/` or o
 | `continuous-improvement/` | *(mapped into other categories)* |
 | `cost-control/` | *(mapped into other categories)* |
 
-**Note**: `data.js` has 8 logical categories. Some physical directories have resources mapped into other categories. Staging directories: `new_html/` (new resources to integrate), `replace_html/` (replacement files for existing resources).
+**Note**: `data.js` has 8 logical categories. Some physical directories have resources mapped into other categories.
+
+**Staging directories** (processed by integrate script, not committed directly):
+- `new_html/` — New HTML files waiting for integration
+- `replace_html/` — Updated versions of existing HTML files
 
 ### HTML File Naming Conventions
 
@@ -222,12 +259,13 @@ When modifying 100+ HTML files, use **Python scripts** (not shell script regex).
 | `scripts/html_management/integrate_resource_complete.py` | Full integration workflow: categorize → nav → W3C validate → `git add` (use `--skip-validation` to bypass W3C) |
 | `scripts/html_management/integrate_new_html.py` | Categorize and move HTML files |
 | `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
-| `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC |
+| `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC (requires 2+ `<h2>`/`<h3>` tags) |
 | `scripts/html_management/add_home_button.py` | Add 「リソース集に戻る」button |
 | `scripts/html_management/add_prev_next_nav.py --bottom-nav-only` | Add page bottom navigation |
 | `scripts/html_management/fix_html_issues.py` | Fix HTML entity escaping & sidebar TOC positioning |
 | `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
 | `scripts/ci/validate_html_w3c.py` | W3C HTML validation (`--pr-mode` for changed files, `--files f1.html f2.html` for specific files) |
+| `scripts/ci/post_integration_check.py` | Verify integrated files have all required components (CSS links, breadcrumbs, TOC, nav) |
 | `scripts/ci/check_internal_links.py` | Broken link checker |
 | `scripts/ci/check_file_naming.py` | File naming convention check |
 | `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
