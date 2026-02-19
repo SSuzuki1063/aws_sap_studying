@@ -193,9 +193,38 @@ class IntegrationOrchestrator:
 
         # ステップ4: 左サイドバーTOC追加
         print("\n📋 ステップ4: 左サイドバー目次を追加中...")
-        args = ["--dir", str(self.repo_root)]
-        if not self.run_script("add_sidebar_toc.py", args):
+        toc_script = self.scripts_dir / "add_sidebar_toc.py"
+        toc_cmd = [sys.executable, str(toc_script), "--dir", str(self.repo_root)]
+        try:
+            toc_result = subprocess.run(toc_cmd, capture_output=True)
+            toc_stdout = toc_result.stdout.decode("utf-8") if toc_result.stdout else ""
+            if toc_stdout:
+                print(toc_stdout)
+            if toc_result.returncode != 0:
+                print("⚠️  左サイドバー目次の追加に失敗しました（続行します）")
+            else:
+                # スキップされたファイル（見出し不足）を検出して目立つ警告を表示
+                heading_skipped = [
+                    line.split(": ", 1)[1].split(" (")[0]
+                    for line in toc_stdout.splitlines()
+                    if "スキップ" in line and "見出しが少ない" in line
+                ]
+                if heading_skipped:
+                    print("\n" + "=" * 62)
+                    print("⚠️  【要対応】サイドバーTOCが追加されなかったファイルがあります！")
+                    print("=" * 62)
+                    for f in heading_skipped:
+                        print(f"   • {f}")
+                    print()
+                    print("   原因: <h2>/<h3> の見出しタグが2個未満です")
+                    print("   修正方法:")
+                    print('     <div class="section-title"> の代わりに')
+                    print('     <h2 class="section-title"> を使用してください')
+                    print("=" * 62 + "\n")
+        except subprocess.CalledProcessError as e:
             print("⚠️  左サイドバー目次の追加に失敗しました（続行します）")
+            if e.stderr:
+                print(e.stderr.decode("utf-8"))
 
         # ステップ5: リソース集に戻るボタン追加
         print("\n📋 ステップ5: リソース集に戻るボタンを追加中...")
