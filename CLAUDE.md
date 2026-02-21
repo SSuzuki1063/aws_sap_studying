@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 223+ HTML resources, 219 quiz questions, 8 categories |
+| **Content** | 259+ HTML resources, 219 quiz questions, 8 categories |
 | **Branches** | `gh-pages` (production), `master` (development/PRs) |
 
 ## ⚠️ CRITICAL RULES
@@ -25,17 +25,23 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 
 When integrating new AWS learning resources, **ALWAYS** use the skill. It ensures proper workflow execution (categorization → breadcrumbs → TOC → data updates) and prevents integration errors.
 
-### 2. Two-Place Update Rule
+### 2. Three-Place Update Rule
 
-When adding HTML resources, you **MUST** update **TWO** files:
+When adding HTML resources, you **MUST** update **THREE** places in two files:
 
 | File | What to Update | If Missing |
 |------|----------------|------------|
 | `data.js` | Add to `section.resources` array, update section `count` and category `count` | Resource won't appear in navigation |
+| `data.js` | Add entry to `updateHistory[]` array (prepend to top) | index.html timeline stays stale |
 | `index.js` | Add to `searchData` array | Resource won't appear in search |
 
-Also update `siteStats.totalResources` in `data.js` when resource counts change.
+`updateHistory` entry format:
+```javascript
+{ date: 'YYYY-MM-DD', type: 'content', title: '概要', description: '詳細', categories: ['networking'], tags: [] }
+```
+`type`: `'content'` = リソース追加 / `'feature'` = UI機能 / `'fix'` = バグ修正
 
+**Count sync:** `python3 scripts/html_management/update_counts.py`
 **Verification:** `python3 scripts/ci/check_data_integrity.py`
 
 ### 3. GitHub Pages Path Requirement
@@ -96,6 +102,15 @@ python3 server.py  # → http://localhost:8080/
 # 3. Make changes, run pre-commit checks, then deploy
 git add <files> && git commit -m "feat: description" && git push origin gh-pages
 ```
+
+**Replace an existing resource:** Place the updated file in `replace_html/` (same filename), then run `integrate_resource_complete.py`. No `data.js`/`index.js` update needed since the file path doesn't change.
+
+**HTML authoring requirements:** Every new HTML file must start with:
+```html
+<!DOCTYPE html>
+<html lang="ja">
+```
+SVG diagrams must be **inline** (not external files). Every SVG needs `role="img"` and `aria-label`.
 
 ## Environment
 
