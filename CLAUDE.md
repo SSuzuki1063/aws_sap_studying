@@ -179,6 +179,7 @@ Speckit artifacts are stored in `specs/[###-feature-name]/` directories.
 ## Active Technologies
 - Vanilla JavaScript (ES6+), Python 3.11（スクリプト層） + なし（外部ライブラリ・CDN・npmパッケージ一切不使用） (001-aws-concept-hierarchy)
 - JSON静的ファイル（`concepts/` ディレクトリ）。データベース不使用 (001-aws-concept-hierarchy)
+- `js/concept-engine/DiagramRenderer.js` — ネイティブ SVG 描画エンジン（IIFE, `ConceptEngine.diagram`）。decision_tree / flow（BFS レイアウト）/ comparison（表形式）の 3 テンプレート対応。Mermaid・D3 等外部ライブラリ不使用。📊 トグル初回展開時に動的遅延ロード (001-aws-concept-hierarchy)
 
 ## Recent Changes
 - 001-aws-concept-hierarchy: Added Vanilla JavaScript (ES6+), Python 3.11（スクリプト層） + なし（外部ライブラリ・CDN・npmパッケージ一切不使用）

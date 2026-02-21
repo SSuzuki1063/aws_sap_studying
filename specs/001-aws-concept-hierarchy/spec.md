@@ -253,18 +253,64 @@ SPARQL:      ?s ?p <https://aws-concepts.example/svc-route53>
       "items": { "description": "Layer3重要概念をインライン埋め込み" }
     },
     "crosslinks":      { "type": "array" },
-    "_meta":           { "description": "作成日・バージョン・deprecated_idを管理" },
-    "_future": {
-      "type": "object",
-      "description": "将来拡張用フィールド（現在は無視）",
-      "properties": {
-        "mermaid_diagram": { "type": "string", "description": "Mermaid記法のグラフ定義" },
-        "d3_nodes":        { "type": "array", "description": "D3.js用ノード定義" },
-        "graph_position":  { "type": "object", "description": "グラフ上の初期座標 {x, y}" }
-      }
-    }
+    "_meta":           { "description": "作成日・バージョン・deprecated_idを管理" }
   }
 }
+```
+
+#### Layer3 KeyConcept / Layer4 Keyword 拡張フィールド（すべて optional）
+
+```json
+{
+  "explanation_basic": "初心者向け説明（比喩・日常語）",
+  "explanation_arch":  "設計観点での説明（SAP 試験視点）",
+  "concept_diagram": {
+    "type":    "decision_tree | comparison | flow",
+    "title":   "図タイトル",
+    "nodes":   [...],
+    "edges":   [...],
+    "columns": [...],
+    "rows":    [...]
+  }
+}
+```
+
+`concept_diagram` が省略された場合 → 📊 トグルを非表示にする（後方互換）。
+
+##### concept_diagram ノード定義（decision_tree / flow 共通）
+
+```json
+{
+  "id":              "文字列（図内ユニーク）",
+  "label":           "表示テキスト（\\n で改行）",
+  "shape":           "rect | diamond | pill",
+  "style":           "default | highlight | muted",
+  "link_service_id": "svc-xxx（任意、クリック遷移用）"
+}
+```
+
+##### エッジ定義
+
+```json
+{ "from": "node-id", "to": "node-id", "label": "ラベル（任意）" }
+```
+
+##### comparison 型（nodes/edges 不要）
+
+```json
+{
+  "type":    "comparison",
+  "title":   "購入オプション比較",
+  "columns": ["購入タイプ", "割引率", "柔軟性", "適用範囲"],
+  "rows": [
+    { "cells": ["Reserved Instances", "最大72%", "低", "EC2 特化"],  "style": "highlight" },
+    { "cells": ["Savings Plans",       "最大66%", "中", "EC2+Lambda+Fargate"], "style": "default" }
+  ]
+}
+```
+
+```json
+// 旧 _future フィールド（削除済み — concept_diagram に統合）
 ```
 
 **具体例 (Route53)**:

@@ -354,6 +354,106 @@
     });
   }
 
+  /* ============================================================
+   * 詳細トグルパネル（説明・設計視点・図）
+   * ============================================================ */
+
+  /* テキストのみのトグルパネル */
+  function _makeDetailToggle(icon, label, bodyText, uid) {
+    var wrapper = _el('div', { cls: 'detail-toggle' });
+    var btnId   = 'dtbtn-' + uid;
+    var panId   = 'dtpan-' + uid;
+
+    var btn = _el('button', { cls: 'detail-toggle-btn' });
+    btn.type = 'button';
+    btn.id   = btnId;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', panId);
+    btn.textContent = icon + ' ' + label + ' ▼';
+
+    var panel = _el('div', { cls: 'detail-toggle-panel', hidden: true });
+    panel.id = panId;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-labelledby', btnId);
+
+    var body = _el('p', { cls: 'detail-body' });
+    body.textContent = bodyText;
+    panel.appendChild(body);
+
+    btn.addEventListener('click', function () {
+      var nowOpen = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(nowOpen));
+      btn.textContent = icon + ' ' + label + (nowOpen ? ' ▲' : ' ▼');
+      panel.hidden = !nowOpen;
+    });
+
+    wrapper.appendChild(btn);
+    wrapper.appendChild(panel);
+    return wrapper;
+  }
+
+  /* DiagramRenderer を遅延ロード（初回 📊 展開時のみ取得）*/
+  var _diagramRendererLoaded = false;
+  function _lazyLoadDiagramRenderer(cb) {
+    if (_diagramRendererLoaded ||
+        (window.ConceptEngine && window.ConceptEngine.diagram)) {
+      _diagramRendererLoaded = true;
+      cb();
+      return;
+    }
+    var s    = document.createElement('script');
+    s.src    = '/aws_sap_studying/js/concept-engine/DiagramRenderer.js';
+    s.onload = function () { _diagramRendererLoaded = true; cb(); };
+    s.onerror = function () { cb(); };  /* エラー時もコールバック呼出 */
+    document.head.appendChild(s);
+  }
+
+  /* SVG 図トグルパネル */
+  function _makeDiagramToggle(diagramData, uid) {
+    var wrapper = _el('div', { cls: 'detail-toggle' });
+    var btnId   = 'dgbtn-' + uid;
+    var panId   = 'dgpan-' + uid;
+
+    var btn = _el('button', { cls: 'detail-toggle-btn' });
+    btn.type = 'button';
+    btn.id   = btnId;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', panId);
+    btn.textContent = '📊 概念図 ▼';
+
+    var panel = _el('div', { cls: 'detail-toggle-panel diagram-panel', hidden: true });
+    panel.id = panId;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-labelledby', btnId);
+
+    var rendered = false;
+    btn.addEventListener('click', function () {
+      var nowOpen = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(nowOpen));
+      btn.textContent = '📊 概念図' + (nowOpen ? ' ▲' : ' ▼');
+      panel.hidden = !nowOpen;
+      if (nowOpen && !rendered) {
+        rendered = true;
+        _lazyLoadDiagramRenderer(function () {
+          if (window.ConceptEngine && window.ConceptEngine.diagram) {
+            var svgEl = ConceptEngine.diagram.render(diagramData);
+            if (svgEl) {
+              panel.appendChild(svgEl);
+            } else {
+              panel.appendChild(_el('p', { text: '図データの読み込みに失敗しました' }));
+            }
+          } else {
+            panel.appendChild(_el('p', { text: '図データの読み込みに失敗しました' }));
+          }
+        });
+      }
+    });
+
+    wrapper.appendChild(btn);
+    wrapper.appendChild(panel);
+    return wrapper;
+  }
+
   /* Layer3 概念アイテム */
   function _makeConceptItem(concept) {
     var item = _el('div', { cls: 'tree-item concept-item layer3-item' });
@@ -383,6 +483,15 @@
       tip.appendChild(document.createTextNode(' ' + concept.sap_tip));
       children.appendChild(tip);
     }
+    if (concept.explanation_basic) {
+      children.appendChild(_makeDetailToggle('📘', 'わかりやすい説明', concept.explanation_basic, concept.id + '-basic'));
+    }
+    if (concept.explanation_arch) {
+      children.appendChild(_makeDetailToggle('🧠', '設計視点', concept.explanation_arch, concept.id + '-arch'));
+    }
+    if (concept.concept_diagram) {
+      children.appendChild(_makeDiagramToggle(concept.concept_diagram, concept.id));
+    }
     (concept.keywords || []).forEach(function (kw) {
       children.appendChild(_makeKeywordItem(kw));
     });
@@ -402,19 +511,67 @@
 
   /* Layer4 キーワードアイテム */
   function _makeKeywordItem(kw) {
+    var hasExtended = kw.explanation_basic || kw.explanation_arch || kw.concept_diagram;
     var item = _el('div', { cls: 'tree-item keyword-item layer4-item' });
     item.dataset.id = kw.id;
     item.setAttribute('role', 'treeitem');
 
-    var content = _el('div', { cls: 'keyword-content' });
-    content.appendChild(_badge(4));
-    content.appendChild(_el('span', { cls: 'node-name-ja', text: kw.name_ja }));
-    content.appendChild(_el('span', { cls: 'node-name-en', text: kw.name_en }));
-    if (kw.description_ja) {
-      content.appendChild(_el('p', { cls: 'keyword-desc', text: kw.description_ja }));
+    if (hasExtended) {
+      /* 展開可能版 */
+      item.classList.add('keyword-expandable');
+      item.setAttribute('aria-expanded', 'false');
+
+      var header = _el('div', { cls: 'keyword-header' });
+      header.appendChild(_badge(4));
+      header.appendChild(_el('span', { cls: 'node-name-ja', text: kw.name_ja }));
+      header.appendChild(_el('span', { cls: 'node-name-en', text: kw.name_en }));
+      var indicator = _el('span', { cls: 'kw-expand-indicator', text: '▶' });
+      indicator.setAttribute('aria-hidden', 'true');
+      header.appendChild(indicator);
+
+      var children = _el('div', { cls: 'tree-children', hidden: true });
+      if (kw.description_ja) {
+        children.appendChild(_el('p', { cls: 'keyword-desc', text: kw.description_ja }));
+      }
+      if (kw.explanation_basic) {
+        children.appendChild(_makeDetailToggle('📘', 'わかりやすい説明', kw.explanation_basic, kw.id + '-basic'));
+      }
+      if (kw.explanation_arch) {
+        children.appendChild(_makeDetailToggle('🧠', '設計視点', kw.explanation_arch, kw.id + '-arch'));
+      }
+      if (kw.concept_diagram) {
+        children.appendChild(_makeDiagramToggle(kw.concept_diagram, kw.id));
+      }
+
+      header.addEventListener('click', function () {
+        var nowOpen = item.getAttribute('aria-expanded') !== 'true';
+        item.setAttribute('aria-expanded', String(nowOpen));
+        indicator.textContent = nowOpen ? '▼' : '▶';
+        children.hidden = !nowOpen;
+      });
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('role', 'button');
+      header.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          header.click();
+        }
+      });
+
+      item.appendChild(header);
+      item.appendChild(children);
+    } else {
+      /* 従来のフラット表示（後方互換）*/
+      var content = _el('div', { cls: 'keyword-content' });
+      content.appendChild(_badge(4));
+      content.appendChild(_el('span', { cls: 'node-name-ja', text: kw.name_ja }));
+      content.appendChild(_el('span', { cls: 'node-name-en', text: kw.name_en }));
+      if (kw.description_ja) {
+        content.appendChild(_el('p', { cls: 'keyword-desc', text: kw.description_ja }));
+      }
+      item.appendChild(content);
     }
 
-    item.appendChild(content);
     return item;
   }
 
