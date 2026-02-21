@@ -307,8 +307,11 @@ class SidebarTOCGenerator:
             with open(file_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
 
-            # 見出しを抽出
-            headings = self.extract_headings(html_content)
+            # 既存のサイドバー目次を除外した上で見出しを抽出する
+            # （サイドバーヘッダーの <h2>📑 目次</h2> を誤認識して
+            #   href="#目次" という無効なエントリを生成しないための対策）
+            html_for_extraction = self.remove_old_toc(html_content)
+            headings = self.extract_headings(html_for_extraction)
 
             # 見出しが2つ未満の場合はスキップ
             if len(headings) < 2:
