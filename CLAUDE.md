@@ -175,3 +175,10 @@ Speckit artifacts are stored in `specs/[###-feature-name]/` directories.
 | AWS SAP Skill | `.claude/skills/integrate/SKILL.md` |
 | WCAG Skill | `.claude/skills/wcag-accessibility/SKILL.md` |
 | Knowledge Organizer Skill | `.claude/skills/aws-knowledge-organizer/SKILL.md` |
+
+## Active Technologies
+- Vanilla JavaScript (ES6+), Python 3.11（スクリプト層） + なし（外部ライブラリ・CDN・npmパッケージ一切不使用） (001-aws-concept-hierarchy)
+- JSON静的ファイル（`concepts/` ディレクトリ）。データベース不使用 (001-aws-concept-hierarchy)
+
+## Recent Changes
+- 001-aws-concept-hierarchy: Added Vanilla JavaScript (ES6+), Python 3.11（スクリプト層） + なし（外部ライブラリ・CDN・npmパッケージ一切不使用）

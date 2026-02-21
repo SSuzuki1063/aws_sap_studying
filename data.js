@@ -543,6 +543,14 @@ const siteStats = {
 const updateHistory = [
   {
     date: '2026-02-21',
+    type: 'feature',
+    title: 'AWS概念マップ エンジン 初期リリース',
+    description: '5階層知識エンジン（設計軸→ドメイン→サービス→概念→キーワード）・設計軸タグフィルタ・横断検索・クロスリンクバッジを追加。Route53・VPC・EC2・S3・RDS・Lambda・ELB・CloudFront・IAM・CloudWatch 10サービスを収録。',
+    categories: ['networking', 'new-solutions', 'cost-optimization', 'organizational-complexity'],
+    tags: ['新機能', '概念マップ', 'SAP対策']
+  },
+  {
+    date: '2026-02-21',
     type: 'content',
     title: 'ネットワーキング・DNS・セキュリティ系5リソースを統合',
     description: 'VPC CNI・BGPルート選択（networking）、Route53 DNSSEC・DNS Firewallボットネット対策（content-delivery-dns）、ボットネットC2保護ガイド（security-governance）を追加。BlackBelt VPC PDF資料も追加。',
