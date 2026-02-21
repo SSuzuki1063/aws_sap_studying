@@ -530,12 +530,52 @@ const siteStats = {
   totalResources: '234+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
-  lastUpdated: '2026/02/19'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
+  lastUpdated: '2026/02/20'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };
 
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-19',
+    type: 'fix',
+    title: 'サイドバーTOC欠落バグを修正',
+    description: 'div.section-titleをh2タグに変換してTOC生成が正常動作するよう修正、integrateスクリプトに警告を追加',
+    categories: ['all'],
+    tags: []
+  },
+  {
+    date: '2026-02-18',
+    type: 'feature',
+    title: 'W3C自動検証・git自動ステージング機能を追加',
+    description: 'integrate_resource_complete.py にW3C Validator API連携とgit addの自動実行を統合',
+    categories: ['all'],
+    tags: []
+  },
+  {
+    date: '2026-02-18',
+    type: 'content',
+    title: 'ネットワーキング・DNS系リソースを統合',
+    description: 'CIDRブロック・VPC接続ガイド、AWS Hyperplaneガイド、Route 53 Resolver DNS Firewallガイドを追加',
+    categories: ['networking', 'content-delivery-dns'],
+    tags: ['新サービス']
+  },
+  {
+    date: '2026-02-18',
+    type: 'feature',
+    title: '既存リソースにパンくずリスト・サイドバーTOC・ナビゲーションを追加',
+    description: 'compute-applications/networking/security-governance の8ファイルに共通ナビゲーション要素を付与',
+    categories: ['networking', 'compute-applications', 'security-governance'],
+    tags: []
+  },
+  {
+    date: '2026-02-17',
+    type: 'feature',
+    title: '更新履歴タイムライン・コンテンツ鮮度バッジ機能を追加',
+    description: 'index.htmlに更新履歴タイムラインとリソースカードへの鮮度バッジ表示機能を追加',
+    categories: ['all'],
+    tags: []
+  },
   {
     date: '2026-02-16',
     type: 'feature',

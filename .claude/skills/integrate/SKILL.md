@@ -98,6 +98,20 @@ This is the primary workflow for adding new AWS learning content to the reposito
    b. **Update index.js:**
    - Copy the generated snippet to the end of the `searchData` array
 
+   c. **Update `updateHistory` in data.js:** ⚠️ この手順を忘れると index.html の更新履歴タイムラインが古くなります
+   - `data.js` の `updateHistory` 配列の**先頭**に今回の変更エントリを追加してください:
+   ```javascript
+   {
+     date: 'YYYY-MM-DD',        // 今日の日付
+     type: 'content',           // 'content' | 'feature' | 'fix'
+     title: '追加したリソースの概要',
+     description: '追加したリソースの詳細説明',
+     categories: ['networking'], // 該当カテゴリ（複数可）
+     tags: ['新サービス']         // オプション: '新サービス' | 'AWS試験変更対応' | []
+   },
+   ```
+   - `type` の選び方: `'content'` = リソース追加、`'feature'` = UI機能追加、`'fix'` = バグ修正
+
    See [data_structure_guide.md](references/data_structure_guide.md) for manual updates if needed.
 
 5. **W3C Validation** — now automatic (step 7 of the script). If errors are found:
