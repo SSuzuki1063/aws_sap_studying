@@ -1,5 +1,7 @@
 // 全リソースデータ
 const searchData = [
+    // 概念マップ・学習ツール
+    { title: 'AWS概念マップ（5階層知識エンジン）', category: 'AWS概念マップ', file: 'concept-map.html' },
     // ネットワーキング
     { title: 'Direct Connect ガイド', category: 'ネットワーキング', file: 'networking/aws-direct-connect-guide.html' },
     { title: 'Direct Connect & VGW', category: 'ネットワーキング', file: 'new-solutions/aws-direct-connect-vgw.html' },
