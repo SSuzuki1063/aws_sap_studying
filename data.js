@@ -61,7 +61,9 @@ const categoriesData = [
           { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', href: 'networking/hybrid-dns-architecture-guide.html', priority: 'high' },
           { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', href: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', priority: 'high' },
           { title: 'CIDRブロックの重複とVPC接続 完全ガイド', href: 'networking/cidr-vpc-connectivity-guide.html', priority: 'high' },
-          { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', href: 'networking/aws-hyperplane-guide.html', priority: 'low' }
+          { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', href: 'networking/aws-hyperplane-guide.html', priority: 'low' },
+          { title: 'Amazon VPC CNI 完全ガイド', href: 'networking/vpc-cni-guide.html', priority: 'medium' },
+          { title: 'BGPルート選択アルゴリズム完全ガイド', href: 'networking/bgp-route-selection-guide.html', priority: 'high' }
         ]
       },
       {
@@ -189,7 +191,8 @@ const categoriesData = [
           { title: 'Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館', href: 'security-governance/security-lake-guide.html' },
           { title: 'GuardDuty EKS/RDS Protection 完全ガイド', href: 'security-governance/guardduty-eks-rds-protection-guide.html', priority: 'low' },
           { title: 'ECS Exec 完全ガイド - コンテナモニタリングの決定版', href: 'security-governance/ecs-exec-monitoring-guide.html', priority: 'low' },
-          { title: 'GuardDutyによるトラフィックパターン分析 完全ガイド', href: 'security-governance/guardduty-traffic-analysis-guide.html', priority: 'low' }
+          { title: 'GuardDutyによるトラフィックパターン分析 完全ガイド', href: 'security-governance/guardduty-traffic-analysis-guide.html', priority: 'low' },
+          { title: 'EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall', href: 'security-governance/botnet-c2-protection-guide.html', priority: 'medium' }
         ]
       }
     ]
@@ -324,7 +327,9 @@ const categoriesData = [
           { title: 'Route53 クロスアカウントガイド', href: 'content-delivery-dns/route53_cross_account_guide.html', priority: 'high' },
           { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', href: 'content-delivery-dns/route53-dnssec-guide.html' },
           { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', href: 'content-delivery-dns/route53-private-hosted-zone-guide.html', priority: 'high' },
-          { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', href: 'content-delivery-dns/route53-dns-firewall-guide.html', priority: 'high' }
+          { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', href: 'content-delivery-dns/route53-dns-firewall-guide.html', priority: 'high' },
+          { title: 'Route 53 DNSSEC 完全ガイド（100問演習）', href: 'content-delivery-dns/route53-dnssec-100.html', priority: 'medium' },
+          { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&C対策完全ガイド', href: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html', priority: 'medium' }
         ]
       }
     ]
@@ -536,6 +541,14 @@ const siteStats = {
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-21',
+    type: 'content',
+    title: 'ネットワーキング・DNS・セキュリティ系5リソースを統合',
+    description: 'VPC CNI・BGPルート選択（networking）、Route53 DNSSEC・DNS Firewallボットネット対策（content-delivery-dns）、ボットネットC2保護ガイド（security-governance）を追加。BlackBelt VPC PDF資料も追加。',
+    categories: ['networking', 'content-delivery-dns', 'security-governance'],
+    tags: ['新サービス']
+  },
   {
     date: '2026-02-19',
     type: 'fix',

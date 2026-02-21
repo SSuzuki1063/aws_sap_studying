@@ -256,7 +256,12 @@ const searchData = [
     { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-mtls-eks-guide.html' },
     { title: 'CIDRブロックの重複とVPC接続 完全ガイド', category: 'ネットワーキング', file: 'networking/cidr-vpc-connectivity-guide.html' },
     { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', category: 'ネットワーキング', file: 'networking/aws-hyperplane-guide.html' },
-    { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html' }
+    { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html' },
+    { title: 'Amazon VPC CNI 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-cni-guide.html' },
+    { title: 'BGPルート選択アルゴリズム完全ガイド', category: 'ネットワーキング', file: 'networking/bgp-route-selection-guide.html' },
+    { title: 'EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall', category: 'セキュリティ・ガバナンス', file: 'security-governance/botnet-c2-protection-guide.html' },
+    { title: 'Route 53 DNSSEC 完全ガイド（100問演習）', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-100.html' },
+    { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html' }
 ];
 
 // 検索機能
