@@ -405,7 +405,7 @@
     }
   }
 
-  /** L3 概念詳細（説明・説明トグル×2・図・SAPTip・L4キーワード） */
+  /** L3 概念詳細（ヘッダー・説明・SAPTip・説明トグル×2・Visual Language 3セクション・L4キーワード） */
   function _renderDetailL3(concept) {
     var panel = _clearDetailPanel();
     if (!panel) { return; }
@@ -418,11 +418,6 @@
       header.appendChild(_el('p', { cls: 'mm-detail-name-en', text: concept.name_en }));
     }
     panel.appendChild(header);
-
-    /* 設計軸タグ */
-    if (concept.axis_tags && concept.axis_tags.length) {
-      panel.appendChild(_makeAxisTags(concept.axis_tags));
-    }
 
     /* 説明文 */
     if (concept.description_ja) {
@@ -447,9 +442,19 @@
       panel.appendChild(_makeDetailToggle('🧠', '設計視点', concept.explanation_arch, concept.id + '-arch'));
     }
 
-    /* 概念図トグル */
-    if (concept.concept_diagram) {
-      panel.appendChild(_makeDiagramToggle(concept.concept_diagram, concept.id));
+    /* 🏷️ 設計軸チップ（Visual Language） */
+    if (concept.axis_tags && concept.axis_tags.length) {
+      panel.appendChild(_makeVisToggle('🏷️', '設計軸', _makeAxisChipsContent(concept.axis_tags), concept.id + '-axis'));
+    }
+
+    /* 🧭 判断ステップ（Visual Language） */
+    if (concept.decision_steps && concept.decision_steps.length) {
+      panel.appendChild(_makeVisToggle('🧭', '判断ステップ', _makeDecisionStepsContent(concept.decision_steps), concept.id + '-steps'));
+    }
+
+    /* ⚖️ トレードオフカード（Visual Language） */
+    if (concept.options && concept.options.length) {
+      panel.appendChild(_makeVisToggle('⚖️', 'トレードオフ', _makeTradeoffCardsContent(concept.options), concept.id + '-tradeoff'));
     }
 
     /* L4 キーワード */
@@ -472,6 +477,130 @@
     axisTags.forEach(function (t) {
       var label = t.replace('axis-', '');
       wrap.appendChild(_el('span', { cls: 'mm-axis-tag', text: label }));
+    });
+    return wrap;
+  }
+
+  /* ============================================================
+   * Visual Language System（Section 7: 絵文字 + CSS ビジュアル）
+   * ============================================================ */
+
+  var AXIS_META = {
+    'security':     { emoji: '🔒', cls: 'mm-vis-axis-chip--security' },
+    'cost':         { emoji: '💰', cls: 'mm-vis-axis-chip--cost' },
+    'availability': { emoji: '♻️', cls: 'mm-vis-axis-chip--availability' },
+    'performance':  { emoji: '⚡', cls: 'mm-vis-axis-chip--performance' },
+    'governance':   { emoji: '🏛️', cls: 'mm-vis-axis-chip--governance' },
+    'scalability':  { emoji: '📈', cls: 'mm-vis-axis-chip--scalability' },
+  };
+
+  /** default-open トグルラッパー */
+  function _makeVisToggle(icon, label, contentEl, uid) {
+    var wrapper = _el('div', { cls: 'mm-vis-section' });
+    var btnId = 'vsbtn-' + uid;
+    var panId = 'vspan-' + uid;
+
+    var btn = _el('button', { cls: 'mm-vis-toggle-btn' });
+    btn.type = 'button';
+    btn.id = btnId;
+    btn.setAttribute('aria-expanded', 'true');
+    btn.setAttribute('aria-controls', panId);
+    btn.textContent = icon + ' ' + label + ' ▲';
+
+    var panel = _el('div', { cls: 'mm-vis-toggle-panel' });
+    panel.id = panId;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-labelledby', btnId);
+    panel.appendChild(contentEl);
+
+    btn.addEventListener('click', function () {
+      var nowOpen = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(nowOpen));
+      btn.textContent = icon + ' ' + label + (nowOpen ? ' ▲' : ' ▼');
+      panel.hidden = !nowOpen;
+    });
+
+    wrapper.appendChild(btn);
+    wrapper.appendChild(panel);
+    return wrapper;
+  }
+
+  /** 設計軸チップコンテンツ（AXIS_META参照） */
+  function _makeAxisChipsContent(axisTags) {
+    var wrap = _el('div', { cls: 'mm-vis-axis-chips' });
+    (axisTags || []).forEach(function (t) {
+      var label = t.replace('axis-', '');
+      var meta = AXIS_META[label] || { emoji: '', cls: 'mm-vis-axis-chip--default' };
+      var chip = _el('span', { cls: 'mm-vis-axis-chip ' + meta.cls });
+      chip.textContent = meta.emoji + ' ' + label;
+      wrap.appendChild(chip);
+    });
+    return wrap;
+  }
+
+  /** 判断ステップコンテンツ（text / branch の2形式） */
+  function _makeDecisionStepsContent(steps) {
+    var ol = _el('ol', { cls: 'mm-vis-steps' });
+    (steps || []).forEach(function (step, i) {
+      var li = _el('li', { cls: 'mm-vis-step-item' });
+      li.appendChild(_el('span', { cls: 'mm-vis-step-num', text: String(i + 1) }));
+      if (step.text) {
+        li.appendChild(_el('span', { cls: 'mm-vis-step-text', text: step.text }));
+      } else if (step.q) {
+        var branch = _el('div', { cls: 'mm-vis-step-branch' });
+        branch.appendChild(_el('p', { cls: 'mm-vis-step-q', text: '❓ ' + step.q }));
+        var branches = _el('div', { cls: 'mm-vis-step-branches' });
+        if (step.yes) {
+          branches.appendChild(_el('span', { cls: 'mm-vis-branch-yes', text: '✅ Yes → ' + step.yes }));
+        }
+        if (step.no) {
+          branches.appendChild(_el('span', { cls: 'mm-vis-branch-no', text: '❌ No → ' + step.no }));
+        }
+        branch.appendChild(branches);
+        li.appendChild(branch);
+      }
+      ol.appendChild(li);
+    });
+    return ol;
+  }
+
+  /** トレードオフカードコンテンツ */
+  function _makeTradeoffCardsContent(options) {
+    var wrap = _el('div', { cls: 'mm-vis-options' });
+    (options || []).forEach(function (opt) {
+      var card = _el('div', { cls: 'mm-vis-option-card' });
+
+      var nameDiv = _el('div', { cls: 'mm-vis-option-name' });
+      if (opt.emoji) {
+        nameDiv.appendChild(_el('span', { cls: 'mm-vis-option-emoji', text: opt.emoji }));
+      }
+      var strong = document.createElement('strong');
+      strong.textContent = opt.name || '';
+      nameDiv.appendChild(strong);
+      card.appendChild(nameDiv);
+
+      var proscons = _el('div', { cls: 'mm-vis-pros-cons' });
+      var prosList = _el('ul', { cls: 'mm-vis-pros' });
+      (opt.pros || []).forEach(function (p) {
+        prosList.appendChild(_el('li', { text: p }));
+      });
+      var consList = _el('ul', { cls: 'mm-vis-cons' });
+      (opt.cons || []).forEach(function (c) {
+        consList.appendChild(_el('li', { text: c }));
+      });
+      proscons.appendChild(prosList);
+      proscons.appendChild(consList);
+      card.appendChild(proscons);
+
+      if (opt.tags && opt.tags.length) {
+        var tagsDiv = _el('div', { cls: 'mm-vis-option-tags' });
+        opt.tags.forEach(function (t) {
+          tagsDiv.appendChild(_el('span', { cls: 'mm-vis-option-tag', text: t }));
+        });
+        card.appendChild(tagsDiv);
+      }
+
+      wrap.appendChild(card);
     });
     return wrap;
   }
