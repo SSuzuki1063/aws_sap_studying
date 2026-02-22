@@ -261,6 +261,9 @@ const searchData = [
     { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html' },
     { title: 'Amazon VPC CNI 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-cni-guide.html' },
     { title: 'BGPルート選択アルゴリズム完全ガイド', category: 'ネットワーキング', file: 'networking/bgp-route-selection-guide.html' },
+    { title: 'VPCフローログ フィールド完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-flow-log-fields-guide.html' },
+    { title: 'Gateway Load Balancer によるディープパケットインスペクション', category: 'ネットワーキング', file: 'networking/gwlb-deep-packet-inspection-guide.html' },
+    { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-dual-stack-networking-guide.html' },
     { title: 'EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall', category: 'セキュリティ・ガバナンス', file: 'security-governance/botnet-c2-protection-guide.html' },
     { title: 'Route 53 DNSSEC 完全ガイド（100問演習）', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-100.html' },
     { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html' }

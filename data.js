@@ -63,7 +63,10 @@ const categoriesData = [
           { title: 'CIDRブロックの重複とVPC接続 完全ガイド', href: 'networking/cidr-vpc-connectivity-guide.html', priority: 'high' },
           { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', href: 'networking/aws-hyperplane-guide.html', priority: 'low' },
           { title: 'Amazon VPC CNI 完全ガイド', href: 'networking/vpc-cni-guide.html', priority: 'medium' },
-          { title: 'BGPルート選択アルゴリズム完全ガイド', href: 'networking/bgp-route-selection-guide.html', priority: 'high' }
+          { title: 'BGPルート選択アルゴリズム完全ガイド', href: 'networking/bgp-route-selection-guide.html', priority: 'high' },
+          { title: 'VPCフローログ フィールド完全ガイド', href: 'networking/vpc-flow-log-fields-guide.html', priority: 'medium' },
+          { title: 'Gateway Load Balancer によるディープパケットインスペクション', href: 'networking/gwlb-deep-packet-inspection-guide.html', priority: 'high' },
+          { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', href: 'networking/vpc-dual-stack-networking-guide.html', priority: 'medium' }
         ]
       },
       {
@@ -541,6 +544,14 @@ const siteStats = {
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-22',
+    type: 'content',
+    title: 'ネットワーキング系4リソースを統合',
+    description: 'VPCフローログフィールドガイド・GWLB DPI・VPCデュアルスタック（networking新規3本）、BGPルート選択ガイド更新（networking既存1本）を統合。',
+    categories: ['networking'],
+    tags: ['新リソース']
+  },
   {
     date: '2026-02-21',
     type: 'feature',
