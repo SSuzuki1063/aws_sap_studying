@@ -160,6 +160,7 @@
     btn.setAttribute('aria-controls', childrenId);
 
     var l3ul = document.createElement('ul');
+    l3ul.className = 'mm-l3-list';
     /* ローディングプレースホルダー */
     var loadingLi = _el('li', { cls: 'mm-l3-loading', text: '読み込み中…' });
     l3ul.appendChild(loadingLi);
