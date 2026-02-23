@@ -15,6 +15,14 @@
   var _activeTab   = 'map'; // 'map' | 'detail'
   var _diagLoaded  = false; // DiagramRenderer.js 遅延ロード済みフラグ
 
+  /* ── プログレス・フィルタ・パンくず用 ── */
+  var _visitedSvcs      = {};   // { [svcId]: true } 訪問済みL2サービス
+  var _totalSvcCount    = 0;    // L2サービス総数
+  var _activeAxisTags   = {};   // 有効な設計軸フィルタ
+  var _activeSapDomains = {};   // 有効なSAPドメインフィルタ
+  var _currentDomain    = null; // パンくず用: 現在のL1ドメイン IndexEntry
+  var _currentService   = null; // パンくず用: 現在のL2サービス IndexEntry
+
   /* DiagramRenderer.js が生成する SVGノードのクリックから呼ばれる */
   window._scrollToNode = navigateToNode;
 
@@ -44,6 +52,8 @@
    * エントリポイント
    * ============================================================ */
   document.addEventListener('DOMContentLoaded', function () {
+    _initProgress(); /* localStorage から進捗復元 */
+
     ConceptEngine.loader.loadConceptIndex().then(function (manifest) {
       if (!manifest) {
         var msg = document.getElementById('loading-msg');
@@ -56,9 +66,13 @@
       if (msg) { msg.remove(); }
 
       _renderMindmap();
+      _totalSvcCount = ConceptEngine.index.getByLayer(2).length;
+      _updateProgress();  /* 総数確定後に再計算 */
       _initSearch();
       _initMobileTabs();
       _initResizeWatcher();
+      _initFilters();     /* タグフィルタ初期化 */
+      _updateBreadcrumb(0, null); /* 初期パンくず（ルートのみ） */
     });
   });
 
@@ -136,6 +150,9 @@
   /** L2 li 要素（デフォルト折りたたみ・L3は遅延ロード） */
   function _makeL2Item(svc) {
     var li = document.createElement('li');
+    li.className = 'mm-l2-item'; /* フィルタリング対象クラス */
+    li.dataset.axisTags   = (svc.axis_tags    || []).join(',');
+    li.dataset.sapDomains = (svc.sap_domains  || []).join(',');
 
     /* L2 ボタン */
     var btn = _el('button', { cls: 'mm-node-btn mm-l2-btn' });
@@ -268,6 +285,24 @@
     /* 新しい選択をハイライト */
     var btn = document.querySelector('[data-node-id="' + id + '"]');
     if (btn) { btn.classList.add('mm-selected'); }
+
+    /* パンくず・進捗用の状態更新 */
+    if (layer === 1) {
+      _currentDomain  = data;
+      _currentService = null;
+    } else if (layer === 2) {
+      _currentService = data;
+      /* parent_domain_id から L1 エントリを取得 */
+      if (data.parent_domain_id) {
+        _currentDomain = ConceptEngine.index.getById(data.parent_domain_id) || _currentDomain;
+      }
+      _markVisited(id);
+    }
+    /* L3 の場合は _currentDomain / _currentService は変更しない（L2展開済み） */
+
+    /* パンくず更新・アナウンス */
+    _updateBreadcrumb(layer, data);
+    _announce((data.name_ja || id) + 'を選択しました');
 
     /* 詳細パネル更新 */
     if (layer === 1) {
@@ -494,6 +529,23 @@
     'governance':   { emoji: '🏛️', cls: 'mm-vis-axis-chip--governance' },
     'scalability':  { emoji: '📈', cls: 'mm-vis-axis-chip--scalability' },
   };
+
+  /* フィルタUIに表示するタグ一覧（JS定数） */
+  var AXIS_TAG_LIST = [
+    { id: 'axis-security',     label: '🔒 Security' },
+    { id: 'axis-cost',         label: '💰 Cost' },
+    { id: 'axis-availability', label: '♻️ Availability' },
+    { id: 'axis-performance',  label: '⚡ Performance' },
+    { id: 'axis-governance',   label: '🏛️ Governance' },
+    { id: 'axis-scalability',  label: '📈 Scalability' },
+  ];
+
+  var SAP_DOMAIN_LIST = [
+    { id: 'sap-design',    label: '設計' },
+    { id: 'sap-migration', label: '移行' },
+    { id: 'sap-cost',      label: 'コスト' },
+    { id: 'sap-ci',        label: '継続的改善' },
+  ];
 
   /** default-open トグルラッパー */
   function _makeVisToggle(icon, label, contentEl, uid) {
@@ -1075,6 +1127,193 @@
       }
     });
     ro.observe(document.body);
+  }
+
+  /* ============================================================
+   * スクリーンリーダー向けアナウンス
+   * ============================================================ */
+  function _announce(msg) {
+    var el = document.getElementById('mm-sr-announce');
+    if (!el) { return; }
+    el.textContent = '';
+    requestAnimationFrame(function () { el.textContent = msg; });
+  }
+
+  /* ============================================================
+   * 学習進捗トラッキング
+   * ============================================================ */
+  function _initProgress() {
+    try {
+      var stored = localStorage.getItem('mm-visited-svcs');
+      if (stored) { _visitedSvcs = JSON.parse(stored); }
+    } catch (e) {}
+  }
+
+  function _markVisited(id) {
+    if (_visitedSvcs[id]) { return; }
+    _visitedSvcs[id] = true;
+    try { localStorage.setItem('mm-visited-svcs', JSON.stringify(_visitedSvcs)); } catch (e) {}
+    _updateProgress();
+  }
+
+  function _updateProgress() {
+    if (!_totalSvcCount) { return; }
+    var pct = Math.min(Math.round(Object.keys(_visitedSvcs).length / _totalSvcCount * 100), 100);
+    var label = document.getElementById('mm-progress-pct');
+    var fill  = document.getElementById('mm-progress-fill');
+    if (label) { label.textContent = pct + '%'; }
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.setAttribute('aria-valuenow', String(pct));
+    }
+  }
+
+  /* ============================================================
+   * パンくずナビゲーション
+   * layer: 0=ルートのみ, 1=Domain, 2=Service, 3=Concept
+   * ============================================================ */
+  function _updateBreadcrumb(layer, data) {
+    var ol = document.getElementById('mm-breadcrumb');
+    if (!ol) { return; }
+    while (ol.firstChild) { ol.removeChild(ol.firstChild); }
+
+    /* ルート */
+    ol.appendChild(_makeBreadcrumbItem('概念マップ', layer === 0, _clearSelection));
+
+    /* L1 ドメイン */
+    if (layer >= 1 && _currentDomain) {
+      var domain = _currentDomain;
+      ol.appendChild(_makeBreadcrumbItem(
+        domain.name_ja,
+        layer === 1,
+        function () { _selectNode(domain.id, 1, domain); }
+      ));
+    }
+
+    /* L2 サービス */
+    if (layer >= 2 && _currentService) {
+      var svc = _currentService;
+      ol.appendChild(_makeBreadcrumbItem(
+        svc.name_ja,
+        layer === 2,
+        function () { navigateToNode(svc.id); }
+      ));
+    }
+
+    /* L3 概念（現在地: クリック不可） */
+    if (layer === 3 && data) {
+      ol.appendChild(_makeBreadcrumbItem(data.name_ja, true, null));
+    }
+  }
+
+  function _makeBreadcrumbItem(label, isCurrent, onclick) {
+    var li  = document.createElement('li');
+    li.className = 'mm-breadcrumb-item';
+    var btn = document.createElement('button');
+    btn.type      = 'button';
+    btn.className = 'mm-breadcrumb-btn';
+    btn.textContent = label;
+    if (isCurrent) {
+      btn.setAttribute('aria-current', 'page');
+    } else if (onclick) {
+      btn.addEventListener('click', onclick);
+    }
+    li.appendChild(btn);
+    return li;
+  }
+
+  function _clearSelection() {
+    document.querySelectorAll('.mm-node-btn.mm-selected').forEach(function (el) {
+      el.classList.remove('mm-selected');
+    });
+    _selectedId     = null;
+    _currentDomain  = null;
+    _currentService = null;
+    var panel = document.getElementById('mm-detail-panel');
+    if (panel) {
+      while (panel.firstChild) { panel.removeChild(panel.firstChild); }
+      var wrap = _el('div', { cls: 'mm-detail-placeholder-wrap' });
+      var icon = _el('div', { cls: 'mm-detail-placeholder-icon' });
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '←';
+      var text = _el('p', { cls: 'mm-detail-placeholder', text: '左からノードを選択してください' });
+      var hint = _el('p', { cls: 'mm-detail-placeholder-hint', text: 'ドメイン → サービス → 概念の順に選択できます' });
+      wrap.appendChild(icon);
+      wrap.appendChild(text);
+      wrap.appendChild(hint);
+      panel.appendChild(wrap);
+    }
+    _updateBreadcrumb(0, null);
+  }
+
+  /* ============================================================
+   * タグフィルタ
+   * ============================================================ */
+  function _initFilters() {
+    var axisContainer = document.getElementById('mm-axis-filter-tags');
+    var sapContainer  = document.getElementById('mm-sap-filter-tags');
+    var clearBtn      = document.getElementById('mm-filter-clear');
+    var statusEl      = document.getElementById('mm-filter-status');
+    if (!axisContainer || !sapContainer) { return; }
+
+    AXIS_TAG_LIST.forEach(function (t) {
+      var btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.className   = 'mm-tag-btn';
+      btn.textContent = t.label;
+      btn.dataset.tagId = t.id;
+      btn.addEventListener('click', function () {
+        if (_activeAxisTags[t.id]) { delete _activeAxisTags[t.id]; btn.classList.remove('mm-tag-active'); }
+        else { _activeAxisTags[t.id] = true; btn.classList.add('mm-tag-active'); }
+        _applyFilters(clearBtn, statusEl);
+      });
+      axisContainer.appendChild(btn);
+    });
+
+    SAP_DOMAIN_LIST.forEach(function (t) {
+      var btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.className   = 'mm-tag-btn';
+      btn.textContent = t.label;
+      btn.dataset.tagId = t.id;
+      btn.addEventListener('click', function () {
+        if (_activeSapDomains[t.id]) { delete _activeSapDomains[t.id]; btn.classList.remove('mm-tag-active'); }
+        else { _activeSapDomains[t.id] = true; btn.classList.add('mm-tag-active'); }
+        _applyFilters(clearBtn, statusEl);
+      });
+      sapContainer.appendChild(btn);
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        _activeAxisTags   = {};
+        _activeSapDomains = {};
+        document.querySelectorAll('.mm-tag-btn.mm-tag-active').forEach(function (b) {
+          b.classList.remove('mm-tag-active');
+        });
+        _applyFilters(clearBtn, statusEl);
+      });
+    }
+  }
+
+  function _applyFilters(clearBtn, statusEl) {
+    var axisKeys = Object.keys(_activeAxisTags);
+    var sapKeys  = Object.keys(_activeSapDomains);
+    var count    = axisKeys.length + sapKeys.length;
+
+    if (clearBtn) { clearBtn.hidden = count === 0; }
+    if (statusEl) { statusEl.textContent = count > 0 ? (count + '個のフィルタ適用中') : ''; }
+
+    document.querySelectorAll('.mm-l2-item').forEach(function (li) {
+      if (count === 0) { li.classList.remove('mm-filtered'); return; }
+      var itemAxis = (li.dataset.axisTags   || '').split(',').filter(Boolean);
+      var itemSap  = (li.dataset.sapDomains || '').split(',').filter(Boolean);
+      var axisMatch = axisKeys.length === 0 || axisKeys.some(function (k) { return itemAxis.indexOf(k) !== -1; });
+      var sapMatch  = sapKeys.length === 0  || sapKeys.some(function (k) { return itemSap.indexOf(k) !== -1; });
+      li.classList.toggle('mm-filtered', !(axisMatch && sapMatch));
+    });
+
+    _announce(count > 0 ? count + '個のフィルタを適用中' : 'フィルタをクリアしました');
   }
 
 }());
