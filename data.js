@@ -538,7 +538,7 @@ const siteStats = {
   totalResources: '234+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
-  lastUpdated: '2026/02/22'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
+  lastUpdated: '2026/02/23'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };
 
 // 更新履歴データ
