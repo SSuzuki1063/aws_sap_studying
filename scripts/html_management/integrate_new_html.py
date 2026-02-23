@@ -142,19 +142,15 @@ class HTMLIntegrator:
 <a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
      📚 AWS SAP
     </a>
-<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
-<a href="/aws_sap_studying/profile.html">
-      自己紹介
-     </a>
-<a href="/aws_sap_studying/learning-resources.html">
-      学習リソース集
-     </a>
-<a href="/aws_sap_studying/knowledge-base.html">
-      ナレッジベース
-     </a>
-<a href="/aws_sap_studying/quiz.html">
-      クイズ
-     </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
 </nav>
 </div>
 </div>
@@ -208,7 +204,8 @@ class HTMLIntegrator:
             });
         });
     }
-</script>'''
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>'''
 
     def __init__(self, source_dir: str = "new_html", dry_run: bool = False):
         self.source_dir = Path(source_dir)

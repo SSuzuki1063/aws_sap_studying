@@ -140,6 +140,7 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 | Skill | Usage | Purpose |
 |-------|-------|---------|
 | `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → W3C validation → git staging → data update guidance) |
+| `replace` | `/skill replace` | 既存HTMLリソースを replace_html/ の新バージョンで置換（data.js/index.js 更新不要） |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
 | `concept-map-manager` | `/skill concept-map-manager` | AWS概念マップ JSONデータ管理: L2サービス追加・L3/L4編集・クロスリンク設定・インデックス再生成 |
