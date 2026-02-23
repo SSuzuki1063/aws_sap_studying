@@ -142,6 +142,7 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 | `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → W3C validation → git staging → data update guidance) |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
+| `concept-map-manager` | `/skill concept-map-manager` | AWS概念マップ JSONデータ管理: L2サービス追加・L3/L4編集・クロスリンク設定・インデックス再生成 |
 
 ### Speckit Feature Development Commands
 
@@ -175,11 +176,41 @@ Speckit artifacts are stored in `specs/[###-feature-name]/` directories.
 | AWS SAP Skill | `.claude/skills/integrate/SKILL.md` |
 | WCAG Skill | `.claude/skills/wcag-accessibility/SKILL.md` |
 | Knowledge Organizer Skill | `.claude/skills/aws-knowledge-organizer/SKILL.md` |
+| Concept Map Manager Skill | `.claude/skills/concept-map-manager/SKILL.md` |
 
-## Active Technologies
-- Vanilla JavaScript (ES6+), Python 3.11（スクリプト層） + なし（外部ライブラリ・CDN・npmパッケージ一切不使用） (001-aws-concept-hierarchy)
-- JSON静的ファイル（`concepts/` ディレクトリ）。データベース不使用 (001-aws-concept-hierarchy)
-- `js/concept-engine/DiagramRenderer.js` — ネイティブ SVG 描画エンジン（IIFE, `ConceptEngine.diagram`）。decision_tree / flow（BFS レイアウト）/ comparison（表形式）の 3 テンプレート対応。Mermaid・D3 等外部ライブラリ不使用。📊 トグル初回展開時に動的遅延ロード (001-aws-concept-hierarchy)
+## Concept Map System (`concept-map.html`)
 
-## Recent Changes
-- 001-aws-concept-hierarchy: Added Vanilla JavaScript (ES6+), Python 3.11（スクリプト層） + なし（外部ライブラリ・CDN・npmパッケージ一切不使用）
+A second data-driven feature with its own architecture separate from the main navigation system.
+
+```
+concepts/
+├── axes/        # L0: 8 design axes (change rarely)
+├── domains/     # L1: 8 AWS domains (change rarely)
+├── services/    # L2 svc-*.json files — L3 concepts and L4 keywords are NESTED inside these
+├── concept-index.json   ← AUTO-GENERATED — never hand-edit
+└── search-index.json    ← AUTO-GENERATED — never hand-edit
+```
+
+**4-layer ID prefix convention:** `axis-` / `dom-` / `svc-` / `con-` / `kw-`
+
+**L3 and L4 have no standalone files** — they are nested inside their parent `svc-*.json`.
+
+After any edit to `concepts/services/`:
+
+```bash
+python3 scripts/concept_management/generate_concept_index.py --validate  # validate
+python3 scripts/concept_management/generate_concept_index.py              # regenerate indexes
+```
+
+**JS engine:** `js/concept-engine/DiagramRenderer.js` — native SVG rendering (IIFE, `ConceptEngine.diagram`). Supports `decision_tree` / `flow` (BFS layout) / `comparison` (table). No Mermaid, D3, or external libraries. Lazy-loaded on first toggle expand.
+
+Full schema and valid values: `.claude/skills/concept-map-manager/references/`
+
+## Branch Sync Workflow
+
+| Scenario | Command |
+|----------|---------|
+| After hotfix directly on `gh-pages` | `git checkout master && git merge gh-pages && git push origin master` |
+| After merging PR into `master` | `git checkout gh-pages && git merge master && git push origin gh-pages` |
+
+Feature branch naming: `feature/[service-name]`, `fix/[issue]`, `refactor/[component]`
