@@ -103,7 +103,7 @@ python3 server.py  # → http://localhost:8080/
 git add <files> && git commit -m "feat: description" && git push origin gh-pages
 ```
 
-**Replace an existing resource:** Place the updated file in `replace_html/` (same filename), then run `integrate_resource_complete.py`. No `data.js`/`index.js` update needed since the file path doesn't change.
+**Replace an existing resource:** Place the updated file in `replace_html/` (same filename), then use `/skill replace`. No `data.js`/`index.js` update needed since the file path doesn't change.
 
 **HTML authoring requirements:** Every new HTML file must start with:
 ```html
@@ -123,6 +123,7 @@ SVG diagrams must be **inline** (not external files). Every SVG needs `role="img
 # 1. CI-blocking checks (these fail PR if broken)
 python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js sync
 python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation (auto-run by integrate script)
+python3 scripts/ci/check_css_quality.py --pr-mode      # CSS quality: !important / ID selectors / nesting / global tags
 python3 scripts/accessibility/check_contrast_ratio.py  # WCAG color contrast
 node -c quiz-data-extended.js data.js render.js index.js quiz-app.js  # JS syntax
 
@@ -178,6 +179,7 @@ Speckit artifacts are stored in `specs/[###-feature-name]/` directories.
 | WCAG Skill | `.claude/skills/wcag-accessibility/SKILL.md` |
 | Knowledge Organizer Skill | `.claude/skills/aws-knowledge-organizer/SKILL.md` |
 | Concept Map Manager Skill | `.claude/skills/concept-map-manager/SKILL.md` |
+| Replace Skill | `.claude/skills/replace/SKILL.md` |
 
 ## Concept Map System (`concept-map.html`)
 
@@ -215,3 +217,9 @@ Full schema and valid values: `.claude/skills/concept-map-manager/references/`
 | After merging PR into `master` | `git checkout gh-pages && git merge master && git push origin gh-pages` |
 
 Feature branch naming: `feature/[service-name]`, `fix/[issue]`, `refactor/[component]`
+
+## Active Technologies
+- HTML5 / CSS3 (plain CSS, no preprocessors) + なし（no build tools — 静的HTMLサイト） (002-css-conflict-refactor)
+
+## Recent Changes
+- 002-css-conflict-refactor: Added HTML5 / CSS3 (plain CSS, no preprocessors) + なし（no build tools — 静的HTMLサイト）
