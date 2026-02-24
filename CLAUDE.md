@@ -35,6 +35,19 @@ When adding HTML resources, you **MUST** update **THREE** places in two files:
 | `data.js` | Add entry to `updateHistory[]` array (prepend to top) | index.html timeline stays stale |
 | `index.js` | Add to `searchData` array | Resource won't appear in search |
 
+**data.js resource shape:**
+```javascript
+// categoriesData[].sections[].resources[]
+{ title: 'Resource Name', href: 'category/filename.html', priority: 'high' }
+// priority: 'high' | 'medium' | 'low' | omitted → defaults to 'medium'
+// render.js maps: high=🔴 medium=🟡 low=🔵
+```
+
+**index.js searchData shape:**
+```javascript
+{ title: 'Resource Name', category: 'カテゴリ名', file: 'category/filename.html' }
+```
+
 `updateHistory` entry format:
 ```javascript
 { date: 'YYYY-MM-DD', type: 'content', title: '概要', description: '詳細', categories: ['networking'], tags: [] }
@@ -89,6 +102,8 @@ git add <files> && git commit -m "feat: description" && git push origin gh-pages
 
 The integrate script (step 4) prints `⚠️【要対応】` if TOC was skipped. Convert `<div class="section-title">` to `<h2 class="section-title">` and re-run.
 
+**Sidebar TOC is also skipped when** the file has fewer than 2 `<h2>`/`<h3>` tags, or the file is `index.html`, `table-of-contents.html`, `quiz.html`, `home.html`, or `knowledge-base.html`.
+
 ## Quick Start
 
 ```bash
@@ -123,6 +138,69 @@ When integrating new HTML files:
 4. Ensure sidebar TOC is properly generated
 5. Add navigation links from index.html
 
+### Directory → data.js Category Mapping
+
+| Directory | data.js category key |
+|-----------|----------------------|
+| `networking/` | `networking` |
+| `security-governance/` | `security-governance` |
+| `compute-applications/` | `compute-applications` |
+| `storage-database/` | `storage-database` |
+| `migration/` | `migration` |
+| `analytics-bigdata/` | `analytics-operations` |
+| `development-deployment/` | `development-deployment` |
+| `content-delivery-dns/` | `content-delivery-dns` |
+
+**Staging directories** (not committed directly): `new_html/` (new files awaiting integration), `replace_html/` (updated versions of existing files).
+
+## Architecture
+
+### Data-Driven Navigation
+
+```
+index.html          ← Shell page (HTML structure only)
+├── data.js         ← Pure data (NO HTML tags — text/numbers/objects only)
+├── render.js       ← Template functions (data → HTML generation)
+└── index.js        ← UI handlers + searchData array
+```
+
+`table-of-contents.html` is a **legacy** static secondary nav — NOT the primary entry point.
+
+**`render.js` template functions:**
+
+| Function | Purpose |
+|----------|---------|
+| `renderCategoryQuickNav(navData)` | Quick-nav cards at top of page |
+| `renderResourceList(resources)` | Resource `<li>` items in a section |
+| `renderSection(section)` | Subcategory block with resource list |
+| `renderMajorCategory(category)` | Full category accordion panel |
+| `renderAllCategories(categoriesData)` | Renders all 8 categories |
+
+Sidebar accordion state and desktop collapse are persisted via `localStorage`.
+
+### Shared CSS Load Order
+
+Every content HTML page must load CSS in this exact order:
+
+```html
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+```
+
+`css/components/` files (e.g. `sidebar-toc.css`, `page-bottom-nav.css`) are **added automatically** by integration scripts — do not add manually.
+
+### Z-Index Hierarchy
+
+| Element | Z-Index | Variable |
+|---------|---------|----------|
+| Fixed header | `1002` | `--z-header` |
+| Sidebar TOC toggle button | `1003` | — |
+| Sidebar TOC panel | `1000` | — |
+
+Sidebar TOC must use `top: 60px` and `height: calc(100vh - 60px)`.
+
 ## Environment
 
 - Use `uv` instead of `pip` for Python package management (`uv pip install`)
@@ -136,6 +214,7 @@ python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js sy
 python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation (auto-run by integrate script)
 python3 scripts/ci/check_css_quality.py --pr-mode      # CSS quality: !important / ID selectors / nesting / global tags
 python3 scripts/accessibility/check_contrast_ratio.py  # WCAG color contrast
+python3 scripts/check_fixed_headers.py                 # Fixed header present in all content HTML
 node -c quiz-data-extended.js data.js render.js index.js quiz-app.js  # JS syntax
 
 # 2. Advisory checks (warnings only, but recommended)
@@ -147,12 +226,18 @@ python3 scripts/ci/check_file_naming.py                   # Naming conventions
 grep -r 'href="/css/' --include="*.html" | wc -l
 ```
 
+**Pre-commit hook** (runs automatically on every `git commit`):
+1. `scripts/git_hooks/update_last_modified.py` — updates `data.js` lastUpdated date
+2. `scripts/accessibility/check_contrast_ratio.py` — WCAG AA contrast check
+3. `scripts/check_fixed_headers.py` — fixed header presence check (261 files)
+
 ## Available Skills
 
 | Skill | Usage | Purpose |
 |-------|-------|---------|
 | `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → W3C validation → git staging → data update guidance) |
 | `replace` | `/skill replace` | 既存HTMLリソースを replace_html/ の新バージョンで置換（data.js/index.js 更新不要） |
+| `ship` | `/skill ship` | Stage → commit → push → deploy to gh-pages |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
 | `concept-map-manager` | `/skill concept-map-manager` | AWS概念マップ JSONデータ管理: L2サービス追加・L3/L4編集・クロスリンク設定・インデックス再生成 |
