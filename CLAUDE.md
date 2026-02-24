@@ -112,6 +112,17 @@ git add <files> && git commit -m "feat: description" && git push origin gh-pages
 ```
 SVG diagrams must be **inline** (not external files). Every SVG needs `role="img"` and `aria-label`.
 
+## Resource Integration
+
+### Integration Workflow for New HTML Resources
+
+When integrating new HTML files:
+1. Validate W3C compliance BEFORE git add/commit (not after)
+2. Verify auto-categorization is correct (especially networking vs compute-applications)
+3. Ensure fixed header template is applied
+4. Ensure sidebar TOC is properly generated
+5. Add navigation links from index.html
+
 ## Environment
 
 - Use `uv` instead of `pip` for Python package management (`uv pip install`)
