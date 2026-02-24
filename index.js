@@ -266,7 +266,13 @@ const searchData = [
     { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-dual-stack-networking-guide.html' },
     { title: 'EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall', category: 'セキュリティ・ガバナンス', file: 'security-governance/botnet-c2-protection-guide.html' },
     { title: 'Route 53 DNSSEC 完全ガイド（100問演習）', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-100.html' },
-    { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html' }
+    { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html' },
+    { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', category: 'ネットワーキング', file: 'networking/aws-ipv6-support-guide-v2.html' },
+    { title: 'DNS64 & NAT64 完全図解ガイド', category: 'ネットワーキング', file: 'networking/dns64-nat64-guide.html' },
+    { title: 'Cloud WAN / TGW ルート分離設計の極意', category: 'ネットワーキング', file: 'networking/cloud-wan-tgw-route-isolation-guide.html' },
+    { title: 'AWS Firewall Manager セキュリティグループポリシー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/firewall-manager-sg-policy-guide.html' },
+    { title: 'CloudFront オリジンフェイルオーバー完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/cloudfront-origin-failover-guide.html' },
+    { title: 'NLB ターゲットタイプ 完全解説', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-target-types.html' }
 ];
 
 // 検索機能

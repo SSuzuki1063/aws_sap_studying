@@ -66,7 +66,9 @@ const categoriesData = [
           { title: 'BGPルート選択アルゴリズム完全ガイド', href: 'networking/bgp-route-selection-guide.html', priority: 'high' },
           { title: 'VPCフローログ フィールド完全ガイド', href: 'networking/vpc-flow-log-fields-guide.html', priority: 'medium' },
           { title: 'Gateway Load Balancer によるディープパケットインスペクション', href: 'networking/gwlb-deep-packet-inspection-guide.html', priority: 'high' },
-          { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', href: 'networking/vpc-dual-stack-networking-guide.html', priority: 'medium' }
+          { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', href: 'networking/vpc-dual-stack-networking-guide.html', priority: 'medium' },
+          { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', href: 'networking/aws-ipv6-support-guide-v2.html', priority: 'medium' },
+          { title: 'DNS64 & NAT64 完全図解ガイド', href: 'networking/dns64-nat64-guide.html', priority: 'medium' }
         ]
       },
       {
@@ -82,7 +84,8 @@ const categoriesData = [
           { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' },
           { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' },
           { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html' },
-          { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html' }
+          { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html' },
+          { title: 'Cloud WAN / TGW ルート分離設計の極意', href: 'networking/cloud-wan-tgw-route-isolation-guide.html', priority: 'high' }
         ]
       }
     ]
@@ -175,7 +178,8 @@ const categoriesData = [
           { title: 'AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド', href: 'security-governance/iam-resource-policy-deny-guide.html', priority: 'high' },
           { title: 'Amazon Inspector Lambda関数スキャン 完全図解ガイド', href: 'security-governance/inspector-lambda-scan-guide.html', priority: 'low' },
           { title: 'AWS Security Hub 設定ポリシー完全図解ガイド', href: 'security-governance/securityhub-configuration-policies-guide.html' },
-          { title: 'OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド', href: 'organizational-complexity/log-rotation-cloudwatch-guide.html', priority: 'low' }
+          { title: 'OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド', href: 'organizational-complexity/log-rotation-cloudwatch-guide.html', priority: 'low' },
+          { title: 'AWS Firewall Manager セキュリティグループポリシー 完全ガイド', href: 'security-governance/firewall-manager-sg-policy-guide.html', priority: 'high' }
         ]
       },
       {
@@ -249,7 +253,8 @@ const categoriesData = [
           { title: 'Gateway Load Balancer (GWLB) 完全ガイド', href: 'compute-applications/gwlb-guide.html', priority: 'high' },
           { title: 'AWS Elastic Load Balancing (ELB) 完全ガイド - ALB vs NLB', href: 'compute-applications/elb-types-guide.html', priority: 'high' },
           { title: 'なぜALBはVPCエンドポイントサービスとして使えないのか？', href: 'compute-applications/alb-nlb-privatelink-guide.html', priority: 'high' },
-          { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', href: 'compute-applications/nlb-mtls-eks-guide.html', priority: 'low' }
+          { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', href: 'compute-applications/nlb-mtls-eks-guide.html', priority: 'low' },
+          { title: 'NLB ターゲットタイプ 完全解説', href: 'compute-applications/nlb-target-types.html', priority: 'high' }
         ]
       },
       {
@@ -316,7 +321,8 @@ const categoriesData = [
           { title: 'ALB × PFS 暗号スイート完全ガイド', href: 'content-delivery-dns/alb-pfs-cipher-suites-guide.html', priority: 'low' },
           { title: 'ALB セキュリティポリシー完全ガイド', href: 'content-delivery-dns/alb-security-policy-guide.html', priority: 'low' },
           { title: 'ACM + ALB + EC2 TLS証明書設定 完全ガイド', href: 'content-delivery-dns/acm-alb-ec2-tls-guide.html' },
-          { title: 'Lambda@Edge Origin Response X-Frame-Options完全ガイド', href: 'content-delivery-dns/lambda-edge-x-frame-options-guide.html' }
+          { title: 'Lambda@Edge Origin Response X-Frame-Options完全ガイド', href: 'content-delivery-dns/lambda-edge-x-frame-options-guide.html' },
+          { title: 'CloudFront オリジンフェイルオーバー完全ガイド', href: 'content-delivery-dns/cloudfront-origin-failover-guide.html', priority: 'high' }
         ]
       },
       {
@@ -538,12 +544,20 @@ const siteStats = {
   totalResources: '234+',
   offlineSupport: '100%',
   // メタデータ（自動更新スクリプトで管理）
-  lastUpdated: '2026/02/23'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
+  lastUpdated: '2026/02/24'  // GIT_LAST_COMMIT_DATE - このコメントは自動更新スクリプトのマーカーです
 };
 
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-24',
+    type: 'content',
+    title: '6リソースを統合（ネットワーキング・セキュリティ・コンテンツ配信・コンピュート）',
+    description: 'AWS IPv6サポート完全ガイド・DNS64/NAT64・Cloud WAN/TGWルート分離（networking）、Firewall Manager SGポリシー（security-governance）、CloudFrontオリジンフェイルオーバー（content-delivery-dns）、NLBターゲットタイプ（compute-applications）を統合。',
+    categories: ['networking', 'security-governance', 'content-delivery-dns', 'compute-applications'],
+    tags: ['新リソース']
+  },
   {
     date: '2026-02-22',
     type: 'content',
