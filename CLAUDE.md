@@ -209,16 +209,16 @@ Sidebar TOC must use `top: 60px` and `height: calc(100vh - 60px)`.
 ## Pre-Commit Checklist
 
 ```bash
-# 1. CI-blocking checks (these fail PR if broken)
-python3 scripts/ci/check_data_integrity.py             # data.js ⟷ index.js sync
-python3 scripts/ci/validate_html_w3c.py --pr-mode      # W3C HTML validation (auto-run by integrate script)
-python3 scripts/ci/check_css_quality.py --pr-mode      # CSS quality: !important / ID selectors / nesting / global tags
-python3 scripts/accessibility/check_contrast_ratio.py  # WCAG color contrast
-python3 scripts/check_fixed_headers.py                 # Fixed header present in all content HTML
+# 1. CI-blocking checks (exit 1 = must fix before commit)
+python3 scripts/ci/check_data_integrity.py               # data.js ⟷ index.js sync
+python3 scripts/ci/validate_html_w3c.py --pr-mode        # W3C HTML validation (auto-run by integrate script)
+python3 scripts/ci/check_css_quality.py --pr-mode        # CSS quality: !important / ID selectors / nesting / global tags
+python3 scripts/accessibility/check_contrast_ratio.py    # WCAG color contrast
+python3 scripts/accessibility/check_heading_hierarchy.py # h1→h2→h3 order (exit 1 if violations)
+python3 scripts/check_fixed_headers.py                   # Fixed header present in all content HTML
 node -c quiz-data-extended.js data.js render.js index.js quiz-app.js  # JS syntax
 
-# 2. Advisory checks (warnings only, but recommended)
-python3 scripts/accessibility/check_heading_hierarchy.py  # h1→h2→h3 order
+# 2. Advisory checks (warnings only)
 python3 scripts/ci/check_internal_links.py                # Broken links
 python3 scripts/ci/check_file_naming.py                   # Naming conventions
 
@@ -305,17 +305,15 @@ python3 scripts/concept_management/generate_concept_index.py              # rege
 
 Full schema and valid values: `.claude/skills/concept-map-manager/references/`
 
-## Branch Sync Workflow
+## Branch Workflow
+
+**Daily work (resource integration, W3C fixes, bug fixes, WCAG) → commit directly to `gh-pages`.**
+
+Feature branches only for large refactors or major new features.
 
 | Scenario | Command |
 |----------|---------|
-| After hotfix directly on `gh-pages` | `git checkout master && git merge gh-pages && git push origin master` |
-| After merging PR into `master` | `git checkout gh-pages && git merge master && git push origin gh-pages` |
+| Sync `master` after hotfix on `gh-pages` | `git checkout master && git merge gh-pages && git push origin master` |
+| Deploy feature branch after merging PR to `master` | `git checkout gh-pages && git merge master && git push origin gh-pages` |
 
 Feature branch naming: `feature/[service-name]`, `fix/[issue]`, `refactor/[component]`
-
-## Active Technologies
-- HTML5 / CSS3 (plain CSS, no preprocessors) + なし（no build tools — 静的HTMLサイト） (002-css-conflict-refactor)
-
-## Recent Changes
-- 002-css-conflict-refactor: Added HTML5 / CSS3 (plain CSS, no preprocessors) + なし（no build tools — 静的HTMLサイト）
