@@ -416,6 +416,12 @@
       panel.appendChild(_makeCrossLinks(outbound));
     }
 
+    /* 関連HTMLリソース（L2レベル） */
+    var svcHtmlRes = svcNode.html_resources;
+    if (svcHtmlRes && svcHtmlRes.length) {
+      panel.appendChild(_makeHtmlResources(svcHtmlRes));
+    }
+
     /* key_concepts リスト（概念名のみ） */
     if (svcNode.key_concepts && svcNode.key_concepts.length) {
       var khEl = _el('h3', { cls: 'mm-keywords-heading', text: '主要概念' });
@@ -500,6 +506,11 @@
       concept.keywords.forEach(function (kw) {
         panel.appendChild(_makeKeywordItem(kw));
       });
+    }
+
+    /* 関連HTMLリソース（L3レベル） */
+    if (concept.html_resources && concept.html_resources.length) {
+      panel.appendChild(_makeHtmlResources(concept.html_resources));
     }
   }
 
@@ -672,6 +683,27 @@
       badges.appendChild(badge);
     });
     section.appendChild(badges);
+    return section;
+  }
+
+  /** HTMLリソースリンクセクション（L2/L3共用） */
+  function _makeHtmlResources(resources) {
+    var section = _el('div', { cls: 'mm-html-resources' });
+    var label = _el('p', { cls: 'mm-html-resources-label', text: '関連リソース' });
+    section.appendChild(label);
+    var list = _el('ul', { cls: 'mm-html-resources-list' });
+    resources.forEach(function (res) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.setAttribute('href', '/aws_sap_studying/' + res.href);
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+      a.className = 'mm-html-resource-link';
+      a.textContent = res.title;
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+    section.appendChild(list);
     return section;
   }
 
