@@ -237,6 +237,7 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 |-------|-------|---------|
 | `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → W3C validation → git staging → data update guidance) |
 | `replace` | `/skill replace` | 既存HTMLリソースを replace_html/ の新バージョンで置換（data.js/index.js 更新不要） |
+| `delete` | `/skill delete` | HTMLリソースをサイトから完全削除（data.js・index.js・HTMLファイル・概念マップ参照・隣接ページナビを整合） |
 | `ship` | `/skill ship` | Stage → commit → push → deploy to gh-pages |
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
@@ -276,6 +277,7 @@ Speckit artifacts are stored in `specs/[###-feature-name]/` directories.
 | Knowledge Organizer Skill | `.claude/skills/aws-knowledge-organizer/SKILL.md` |
 | Concept Map Manager Skill | `.claude/skills/concept-map-manager/SKILL.md` |
 | Replace Skill | `.claude/skills/replace/SKILL.md` |
+| Delete Skill | `.claude/skills/delete/SKILL.md` |
 
 ## Concept Map System (`concept-map.html`)
 
