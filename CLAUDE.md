@@ -20,10 +20,17 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 ### 1. Always Use Skills for Resource Integration
 
 ```bash
-/skill integrate
+/skill resource   # ← unified entry point; auto-routes to integrate / replace / delete
 ```
 
-When integrating new AWS learning resources, **ALWAYS** use the skill. It ensures proper workflow execution (categorization → breadcrumbs → TOC → data updates) and prevents integration errors.
+When managing HTML resources, **ALWAYS** use `/skill resource` (or a specific sub-skill). It ensures proper workflow execution (categorization → breadcrumbs → TOC → data updates) and prevents integration errors.
+
+| Intent | Skill |
+|--------|-------|
+| Add new HTML resource | `/skill integrate` |
+| Update existing resource | `/skill replace` |
+| Remove a resource | `/skill delete` |
+| Unsure / batch operation | `/skill resource` (auto-diagnoses) |
 
 ### 2. Three-Place Update Rule
 
@@ -231,10 +238,14 @@ grep -r 'href="/css/' --include="*.html" | wc -l
 2. `scripts/accessibility/check_contrast_ratio.py` — WCAG AA contrast check
 3. `scripts/check_fixed_headers.py` — fixed header presence check (261 files)
 
+> ⚠️ `data.js` の `lastUpdated` 行末の `// GIT_LAST_COMMIT_DATE` コメントは **削除禁止**。
+> pre-commit hook がこのマーカーを正規表現で検索して日付を書き換える。消すと自動更新が止まる。
+
 ## Available Skills
 
 | Skill | Usage | Purpose |
 |-------|-------|---------|
+| `resource` | `/skill resource` | HTMLリソース統合管理オーケストレーター（integrate/replace/delete を自動ルーティング） |
 | `integrate` | `/skill integrate` | HTML resource integration (categorization → breadcrumbs → TOC → W3C validation → git staging → data update guidance) |
 | `replace` | `/skill replace` | 既存HTMLリソースを replace_html/ の新バージョンで置換（data.js/index.js 更新不要） |
 | `delete` | `/skill delete` | HTMLリソースをサイトから完全削除（data.js・index.js・HTMLファイル・概念マップ参照・隣接ページナビを整合） |
@@ -280,6 +291,7 @@ Speckit artifacts are stored in `specs/[###-feature-name]/` directories.
 | Replace Skill | `.claude/skills/replace/SKILL.md` |
 | Delete Skill | `.claude/skills/delete/SKILL.md` |
 | Black Belt Skill | `.claude/skills/blackbelt/SKILL.md` |
+| Resource Orchestrator Skill | `.claude/skills/resource/SKILL.md` |
 
 ## Concept Map System (`concept-map.html`)
 
