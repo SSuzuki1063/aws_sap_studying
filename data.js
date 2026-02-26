@@ -25,7 +25,8 @@ const categoriesData = [
           { title: 'Direct Connect LAG環境でのMACsec実装ガイド', href: 'networking/macsec-lag-implementation-guide.html', priority: 'low' },
           { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', href: 'networking/direct-connect-cloudwatch-metrics-guide.html', priority: 'low' },
           { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', href: 'networking/direct-connect-route-summarization-guide.html' },
-          { title: 'AWS Direct Connect 接続タイプ完全ガイド', href: 'networking/direct-connect-connection-types-guide.html', priority: 'high' }
+          { title: 'AWS Direct Connect 接続タイプ完全ガイド', href: 'networking/direct-connect-connection-types-guide.html', priority: 'high' },
+          { title: '【Black Belt】AWS Site-to-Site VPN (2021年10月)', href: 'BlackBelt/202110_AWS_Black_Belt_Site-to-Site_VPN.pdf', priority: 'high' }
         ]
       },
       {
@@ -68,7 +69,9 @@ const categoriesData = [
           { title: 'Gateway Load Balancer によるディープパケットインスペクション', href: 'networking/gwlb-deep-packet-inspection-guide.html', priority: 'high' },
           { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', href: 'networking/vpc-dual-stack-networking-guide.html', priority: 'medium' },
           { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', href: 'networking/aws-ipv6-support-guide-v2.html', priority: 'medium' },
-          { title: 'DNS64 & NAT64 完全図解ガイド', href: 'networking/dns64-nat64-guide.html', priority: 'medium' }
+          { title: 'DNS64 & NAT64 完全図解ガイド', href: 'networking/dns64-nat64-guide.html', priority: 'medium' },
+          { title: '【Black Belt】AWS VPC (2020年10月)', href: 'BlackBelt/20201021_AWS-BlackBelt-VPC.pdf', priority: 'high' },
+          { title: '【Black Belt】AWS Networking Fundamentals', href: 'BlackBelt/AWS-54_AWS_networking_Fundamentals_KMD41.pdf', priority: 'high' }
         ]
       },
       {
@@ -199,7 +202,8 @@ const categoriesData = [
           { title: 'GuardDuty EKS/RDS Protection 完全ガイド', href: 'security-governance/guardduty-eks-rds-protection-guide.html', priority: 'low' },
           { title: 'ECS Exec 完全ガイド - コンテナモニタリングの決定版', href: 'security-governance/ecs-exec-monitoring-guide.html', priority: 'low' },
           { title: 'GuardDutyによるトラフィックパターン分析 完全ガイド', href: 'security-governance/guardduty-traffic-analysis-guide.html', priority: 'low' },
-          { title: 'EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall', href: 'security-governance/botnet-c2-protection-guide.html', priority: 'medium' }
+          { title: 'EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall', href: 'security-governance/botnet-c2-protection-guide.html', priority: 'medium' },
+          { title: '【Black Belt】AWS Network Firewall Basic (2021年6月)', href: 'BlackBelt/BlackBelt202106_AWS_Network_Firewall_Basic.pdf', priority: 'high' }
         ]
       }
     ]
@@ -550,6 +554,14 @@ const siteStats = {
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-26',
+    type: 'content',
+    title: 'Black Belt PDF 4件を追加 — VPC, Site-to-Site VPN, Networking Fundamentals, Network Firewall',
+    description: 'AWS Black Belt Online Seminar PDF資料をナレッジベースに追加。VPC (2020年10月)、Site-to-Site VPN (2021年10月)、Networking Fundamentals、Network Firewall Basic (2021年6月)。',
+    categories: ['networking', 'security-governance'],
+    tags: ['Black Belt', 'PDF']
+  },
   {
     date: '2026-02-24',
     type: 'content',
