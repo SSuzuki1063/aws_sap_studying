@@ -71,6 +71,7 @@
       _initSearch();
       _initMobileTabs();
       _initResizeWatcher();
+      _initResizableHandle();
       _initFilters();     /* タグフィルタ初期化 */
       _updateBreadcrumb(0, null); /* 初期パンくず（ルートのみ） */
     });
@@ -1143,22 +1144,82 @@
       var wasMobile = _isMobile;
       _isMobile = width <= 900;
       if (!wasMobile && _isMobile) {
-        /* デスクトップ→モバイル: 両列を表示状態にリセット */
+        /* デスクトップ→モバイル: 両列を表示状態にリセット、インライン幅をクリア */
         var navCol    = document.getElementById('mm-nav-col');
         var detailCol = document.getElementById('mm-detail-col');
-        if (navCol)    { navCol.classList.remove('mm-col--hidden'); }
+        if (navCol)    { navCol.classList.remove('mm-col--hidden'); navCol.style.width = ''; }
         if (detailCol) { detailCol.classList.remove('mm-col--hidden'); }
         _activeTab = 'map';
         _switchTab('map');
       } else if (wasMobile && !_isMobile) {
-        /* モバイル→デスクトップ: hidden クラスを除去 */
+        /* モバイル→デスクトップ: hidden クラスを除去、保存済み幅を復元 */
         var navCol    = document.getElementById('mm-nav-col');
         var detailCol = document.getElementById('mm-detail-col');
         if (navCol)    { navCol.classList.remove('mm-col--hidden'); }
         if (detailCol) { detailCol.classList.remove('mm-col--hidden'); }
+        if (navCol) {
+          var saved = localStorage.getItem('mm-nav-col-width');
+          if (saved) { navCol.style.width = parseFloat(saved) + 'px'; }
+        }
       }
     });
     ro.observe(document.body);
+  }
+
+  /* ============================================================
+   * リサイズハンドル（左右カラム幅の手動調整）
+   * ============================================================ */
+  function _initResizableHandle() {
+    var handle = document.getElementById('mm-resize-handle');
+    var navCol = document.getElementById('mm-nav-col');
+    var layout = document.querySelector('.mm-layout');
+    if (!handle || !navCol || !layout) { return; }
+
+    var LS_KEY = 'mm-nav-col-width';
+
+    /* 保存済み幅を復元（デスクトップのみ） */
+    if (!_isMobile) {
+      var saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        var px = parseFloat(saved);
+        var layoutW = layout.getBoundingClientRect().width;
+        if (px >= 280 && px <= layoutW * 0.80) {
+          navCol.style.width = px + 'px';
+        }
+      }
+    }
+
+    var startX, startWidth;
+
+    handle.addEventListener('mousedown', function (e) {
+      if (_isMobile) { return; }
+      e.preventDefault();
+      startX     = e.clientX;
+      startWidth = navCol.getBoundingClientRect().width;
+      handle.classList.add('mm-resize-handle--dragging');
+      document.body.style.cursor     = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
+    });
+
+    function onMove(e) {
+      var dx      = e.clientX - startX;
+      var newW    = startWidth + dx;
+      var layoutW = layout.getBoundingClientRect().width;
+      newW = Math.max(280, Math.min(newW, layoutW * 0.75));
+      navCol.style.width = newW + 'px';
+    }
+
+    function onUp() {
+      handle.classList.remove('mm-resize-handle--dragging');
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      /* 幅を px で保存 */
+      localStorage.setItem(LS_KEY, navCol.getBoundingClientRect().width.toFixed(0));
+    }
   }
 
   /* ============================================================
