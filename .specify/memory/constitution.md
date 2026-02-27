@@ -207,6 +207,7 @@ this constitution via `.github/workflows/pr-quality-check.yml`. Reviewers MUST
 verify that the Constitution Check in `plan.md` is satisfied for any feature work.
 
 For runtime development guidance, refer to `CLAUDE.md` (the authoritative
-operational reference) and `.claude/claude_rules.json`.
+operational reference) and `.claude/rules/` (path-conditional rules loaded
+automatically when editing matching file types).
 
 **Version**: 1.0.0 | **Ratified**: 2026-02-20 | **Last Amended**: 2026-02-20
