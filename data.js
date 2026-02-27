@@ -224,6 +224,7 @@ const categoriesData = [
           { title: 'EC2 ブートストラップ', href: 'new-solutions/ec2-bootstrap-infographic.html' },
           { title: 'EFA インフォグラフィック', href: 'new-solutions/efa_infographic.html', priority: 'low' },
           { title: 'クラスタプレイスメントグループ + EFA', href: 'compute-applications/aws_cluster_pg_efa_infographic.html' },
+          { title: 'EC2 プレイスメントグループ 完全インフォグラフィック', href: 'compute-applications/placement-group-infographic.html', priority: 'high' },
           { title: 'EC2 Auto Recovery 完全ガイド', href: 'compute-applications/ec2-auto-recovery-guide.html', priority: 'high' },
           { title: 'EC2 ステータスチェック図解ガイド', href: 'compute-applications/ec2-status-check-guide.html' }
         ]
@@ -554,6 +555,14 @@ const siteStats = {
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-27',
+    type: 'content',
+    title: 'EC2 プレイスメントグループ 完全インフォグラフィック追加',
+    description: 'EC2の3種プレイスメントグループ（Cluster・Spread・Partition）を網羅したインフォグラフィックを追加。概念マップにも比較表ダイアグラムとPartitionキーワードを追加。',
+    categories: ['compute-applications'],
+    tags: ['EC2', 'プレイスメントグループ', 'HPC', 'EFA']
+  },
   {
     date: '2026-02-26',
     type: 'content',

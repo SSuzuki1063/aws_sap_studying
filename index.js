@@ -77,6 +77,7 @@ const searchData = [
     { title: 'EC2 ブートストラップ', category: 'コンピュート・アプリケーション', file: 'new-solutions/ec2-bootstrap-infographic.html' },
     { title: 'EFA インフォグラフィック', category: 'コンピュート・アプリケーション', file: 'new-solutions/efa_infographic.html' },
     { title: 'クラスタプレイスメントグループ + EFA', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws_cluster_pg_efa_infographic.html' },
+    { title: 'EC2 プレイスメントグループ 完全インフォグラフィック', category: 'コンピュート・アプリケーション', file: 'compute-applications/placement-group-infographic.html' },
     { title: 'EC2 Auto Recovery 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-auto-recovery-guide.html' },
     { title: 'EC2 ステータスチェック図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-status-check-guide.html' },
     { title: 'Auto Scaling安全なOSアップデート戦略完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/autoscaling-safe-os-update-guide.html' },
