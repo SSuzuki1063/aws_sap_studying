@@ -277,7 +277,15 @@ const searchData = [
     { title: 'Cloud WAN / TGW ルート分離設計の極意', category: 'ネットワーキング', file: 'networking/cloud-wan-tgw-route-isolation-guide.html' },
     { title: 'AWS Firewall Manager セキュリティグループポリシー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/firewall-manager-sg-policy-guide.html' },
     { title: 'CloudFront オリジンフェイルオーバー完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/cloudfront-origin-failover-guide.html' },
-    { title: 'NLB ターゲットタイプ 完全解説', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-target-types.html' }
+    { title: 'NLB ターゲットタイプ 完全解説', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-target-types.html' },
+    { title: 'Direct Connect Gateway・VGW・VIF 完全ガイド', category: 'ネットワーキング', file: 'networking/dx-gateway-vgw-vif-guide.html' },
+    { title: 'Direct Connect BGP コミュニティ図解ガイド', category: 'ネットワーキング', file: 'networking/dx-routing-bgp-community-guide.html' },
+    { title: 'AWSグローバルインフラストラクチャ完全ガイド', category: 'ネットワーキング', file: 'networking/aws-global-infrastructure-guide.html' },
+    { title: 'プレフィックスリスト × AWS RAM 完全ガイド', category: 'ネットワーキング', file: 'networking/prefix-list-ram-guide.html' },
+    { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN', category: 'ネットワーキング', file: 'networking/split-vs-full-tunnel-vpn.html' },
+    { title: 'パケットの気持ちになって辿る Amazon VPC のルーティング', category: 'ネットワーキング', file: 'networking/vpc-routing-packet-journey.html' },
+    { title: 'VPCトラフィックミラーリング vs VPC Flow Logs 使い分けガイド', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-vs-flow-logs.html' },
+    { title: 'Transit Gateway Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html' }
 ];
 
 // 検索機能

@@ -26,6 +26,8 @@ const categoriesData = [
           { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', href: 'networking/direct-connect-cloudwatch-metrics-guide.html', priority: 'low' },
           { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', href: 'networking/direct-connect-route-summarization-guide.html' },
           { title: 'AWS Direct Connect 接続タイプ完全ガイド', href: 'networking/direct-connect-connection-types-guide.html', priority: 'high' },
+          { title: 'Direct Connect Gateway・VGW・VIF 完全ガイド', href: 'networking/dx-gateway-vgw-vif-guide.html', priority: 'high' },
+          { title: 'Direct Connect BGP コミュニティ図解ガイド', href: 'networking/dx-routing-bgp-community-guide.html', priority: 'high' },
           { title: '【Black Belt】AWS Site-to-Site VPN (2021年10月)', href: 'BlackBelt/202110_AWS_Black_Belt_Site-to-Site_VPN.pdf', priority: 'high' }
         ]
       },
@@ -70,6 +72,11 @@ const categoriesData = [
           { title: 'VPCとデュアルスタック ネットワーキング 完全ガイド', href: 'networking/vpc-dual-stack-networking-guide.html', priority: 'medium' },
           { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', href: 'networking/aws-ipv6-support-guide-v2.html', priority: 'medium' },
           { title: 'DNS64 & NAT64 完全図解ガイド', href: 'networking/dns64-nat64-guide.html', priority: 'medium' },
+          { title: 'AWSグローバルインフラストラクチャ完全ガイド', href: 'networking/aws-global-infrastructure-guide.html', priority: 'high' },
+          { title: 'プレフィックスリスト × AWS RAM 完全ガイド', href: 'networking/prefix-list-ram-guide.html', priority: 'medium' },
+          { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN', href: 'networking/split-vs-full-tunnel-vpn.html', priority: 'high' },
+          { title: 'パケットの気持ちになって辿る Amazon VPC のルーティング', href: 'networking/vpc-routing-packet-journey.html', priority: 'high' },
+          { title: 'VPCトラフィックミラーリング vs VPC Flow Logs 使い分けガイド', href: 'networking/vpc-traffic-mirroring-vs-flow-logs.html', priority: 'high' },
           { title: '【Black Belt】AWS VPC (2020年10月)', href: 'BlackBelt/20201021_AWS-BlackBelt-VPC.pdf', priority: 'high' },
           { title: '【Black Belt】AWS Networking Fundamentals', href: 'BlackBelt/AWS-54_AWS_networking_Fundamentals_KMD41.pdf', priority: 'high' }
         ]
@@ -88,7 +95,8 @@ const categoriesData = [
           { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' },
           { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html' },
           { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html' },
-          { title: 'Cloud WAN / TGW ルート分離設計の極意', href: 'networking/cloud-wan-tgw-route-isolation-guide.html', priority: 'high' }
+          { title: 'Cloud WAN / TGW ルート分離設計の極意', href: 'networking/cloud-wan-tgw-route-isolation-guide.html', priority: 'high' },
+          { title: 'Transit Gateway Route Analyzer 完全ガイド', href: 'networking/route-analyzer-guide.html', priority: 'high' }
         ]
       }
     ]
@@ -555,6 +563,14 @@ const siteStats = {
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-02-28',
+    type: 'content',
+    title: 'ネットワーキング 8リソース追加 — DX, VPC, TGW ガイド群',
+    description: 'Direct Connect Gateway/VGW/VIF, BGPコミュニティ, グローバルインフラ, プレフィックスリスト×RAM, スプリット/フルトンネルVPN, VPCパケットルーティング, トラフィックミラーリング vs Flow Logs, Route Analyzerの8件を追加。',
+    categories: ['networking'],
+    tags: ['Direct Connect', 'VGW', 'BGP', 'VPN', 'VPC', 'Transit Gateway', 'Route Analyzer', 'RAM']
+  },
   {
     date: '2026-02-27',
     type: 'content',
