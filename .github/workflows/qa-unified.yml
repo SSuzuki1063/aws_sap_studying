@@ -1,0 +1,170 @@
+name: QA — Unified CSS & Runtime Validation
+
+on:
+  pull_request:
+    branches:
+      - gh-pages
+      - master
+    paths:
+      - '**.css'
+      - '**.html'
+      - 'tests/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+
+jobs:
+  # ── Job 1: Static validation (no browser, fast) ─────────────────────────────
+  static-validation:
+    name: Static Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: pip install requests beautifulsoup4 lxml html5lib
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: W3C HTML Validation (changed files only)
+        id: html-validate
+        run: |
+          mkdir -p qa-reports
+          if python3 scripts/ci/validate_html_w3c.py --pr-mode; then
+            echo '{"passed":true,"fileCount":0,"errorCount":0}' > qa-reports/html-validation-result.json
+          else
+            echo '{"passed":false,"fileCount":0,"errorCount":1}' > qa-reports/html-validation-result.json
+            exit 1
+          fi
+
+      - name: W3C CSS Validation (changed files only)
+        run: npm run qa:css-validate:pr
+
+      - name: CSS Quality Check
+        run: python3 scripts/ci/check_css_quality.py --pr-mode || true
+        continue-on-error: true
+
+      - name: Upload static validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports-static
+          path: qa-reports/
+          retention-days: 7
+
+  # ── Job 2: Runtime validation (Playwright + browser) ─────────────────────────
+  runtime-validation:
+    name: Runtime Validation
+    runs-on: ubuntu-latest
+    needs: static-validation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Download static validation reports
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-reports-static
+          path: qa-reports/
+
+      - name: CSS Runtime Check
+        run: npm run qa:css-runtime
+
+      - name: CSS Validation Assertion (reads static report)
+        run: npx playwright test --project=qa tests/e2e/qa/css-validation.spec.ts
+
+      - name: Set up Python for server
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Accessibility Tests (concept-map specs)
+        run: npx playwright test --project=chromium tests/e2e/concept-map/accessibility.spec.ts
+        continue-on-error: true
+
+      - name: Generate unified QA report
+        if: always()
+        run: npm run qa:report
+
+      - name: Write GitHub Step Summary
+        if: always()
+        run: |
+          node -e "
+            try {
+              const s = require('./qa-reports/summary.json');
+              const rows = Object.values(s.sections)
+                .map(sec => '| ' + sec.name + ' | ' + sec.status.toUpperCase() + ' | ' + sec.passedChecks + ' | ' + sec.failedChecks + ' |')
+                .join('\n');
+              const md = '## QA Report\n\n**Overall: ' + s.overallStatus.toUpperCase() + '**\n\n| Check | Status | Passed | Failed |\n|-------|--------|--------|--------|\n' + rows + '\n';
+              require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
+            } catch(e) { console.error(e.message); }
+          "
+
+      - name: Upload unified QA reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-unified
+          path: qa-reports/
+          retention-days: 14
+
+  # ── Job 3: Visual regression (disabled until baselines are established) ───────
+  visual-regression:
+    name: Visual Regression
+    runs-on: ubuntu-latest
+    needs: runtime-validation
+    # Intentionally disabled until baseline management task is complete
+    if: false
+
+    steps:
+      - name: Placeholder
+        run: echo "Visual regression skipped — baseline management pending"
+
+  # ── Job 4: Publish report (always runs) ──────────────────────────────────────
+  publish-report:
+    name: Publish Report
+    runs-on: ubuntu-latest
+    needs: [static-validation, runtime-validation]
+    if: always()
+
+    steps:
+      - name: Download unified QA reports
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-report-unified
+          path: qa-reports/
+        continue-on-error: true
+
+      - name: Report available
+        run: |
+          echo "## QA Report Artifact" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the \`qa-report-unified\` artifact to view \`qa-reports/index.html\`." >> "$GITHUB_STEP_SUMMARY"

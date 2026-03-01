@@ -23,6 +23,12 @@ export default defineConfig({
     { name: 'firefox',  use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
+    {
+      name: 'qa',
+      use: { ...devices['Desktop Chrome'] },
+      testDir: './tests/e2e/qa',
+      retries: 0,  // QA report specs should not be retried
+    },
   ],
   webServer: {
     command: 'python3 server.py',
