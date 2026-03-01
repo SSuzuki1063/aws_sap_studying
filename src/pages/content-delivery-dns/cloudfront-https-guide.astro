@@ -1,0 +1,990 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Cloudfront Https Guide',
+  pageTitle: 'CloudFront HTTPSハンドシェイク完全ガイド',
+  category: 'content-delivery-dns',
+  categoryLabel: 'コンテンツ配信・DNS',
+  subcategory: 'CloudFront & コンテンツ配信',
+  slug: 'cloudfront-https-guide',
+  pageCss: '/aws_sap_studying/css/pages/cloudfront-https-guide.css',
+  tocItems: [
+    { level: 'h2', id: '高級レストランの入店プロセスで例えると超わかりやすい！', text: '🏢 高級レストランの入店プロセスで例えると超わかりやすい！' },
+    { level: 'h2', id: '️-レストランのたとえで全体像を理解', text: '🍽️ レストランのたとえで全体像を理解' },
+    { level: 'h3', id: '‍-CloudFront-=-レストラン', text: '👨‍🍳 CloudFront = レストラン' },
+    { level: 'h3', id: 'オリジンサーバー-=-キッチン', text: '🔪 オリジンサーバー = キッチン' },
+    { level: 'h3', id: 'SSL-TLS証明書-=-身分証明書', text: '🎫 SSL/TLS証明書 = 身分証明書' },
+    { level: 'h2', id: 'HTTPSハンドシェイクの7ステップ', text: '🤝 HTTPSハンドシェイクの7ステップ' },
+    { level: 'h2', id: '証明書チェーンの検証プロセス', text: '🔗 証明書チェーンの検証プロセス' },
+    { level: 'h3', id: '️-レベル1-ルート認証局Root-CA-最高の信頼', text: '🏛️ レベル1: ルート認証局（Root CA） 最高の信頼' },
+    { level: 'h3', id: 'レベル2-中間認証局Intermediate-CA-信頼', text: '🏢 レベル2: 中間認証局（Intermediate CA） 信頼' },
+    { level: 'h3', id: '️-レベル3-サーバー証明書End-Entity-Certificate-検証対象', text: '🖥️ レベル3: サーバー証明書（End Entity Certificate） 検証対象' },
+    { level: 'h2', id: '⚠️-502-Bad-Gateway-vs-504-Gateway-Timeout', text: '⚠️ 502 Bad Gateway vs 504 Gateway Timeout' },
+    { level: 'h3', id: '何が起きている？', text: '🔍 何が起きている？' },
+    { level: 'h2', id: 'シーン別トラブルシューティング', text: '🔧 シーン別トラブルシューティング' },
+    { level: 'h3', id: '証明書エラーの対処', text: '📜 証明書エラーの対処' },
+    { level: 'h2', id: 'まとめ-CloudFront-HTTPS通信の全体像', text: '🎓 まとめ：CloudFront HTTPS通信の全体像' },
+    { level: 'h3', id: 'ハンドシェイク', text: '🤝 ハンドシェイク' },
+    { level: 'h3', id: '証明書チェーン', text: '🔗 証明書チェーン' },
+    { level: 'h3', id: '⚠️-502エラー', text: '⚠️ 502エラー' },
+    { level: 'h3', id: '⏱️-504エラー', text: '⏱️ 504エラー' }
+  ],
+  prevPage: '../new-solutions/cloudfront-origin-groups.html',
+  nextPage: 'global_accelerator_infographic.html',
+  pageNum: 4,
+  pageTotal: 15,
+};
+
+const rawContent = `<div class="header">
+<h1>
+     🔒 CloudFront HTTPSハンドシェイク完全ガイド
+    </h1>
+<p>
+     レストランの入店セキュリティチェックで理解する！証明書検証と502/504エラーの違い
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="高級レストランの入店プロセスで例えると超わかりやすい！">
+      🏢 高級レストランの入店プロセスで例えると超わかりやすい！
+     </h2>
+<p class="intro-text">
+<strong>
+       CloudFrontとオリジン間のHTTPS通信は「高級レストランの入店セキュリティチェック」と同じ！
+      </strong>
+<br/>
+<br/>
+      お客様（ユーザー）がレストラン（CloudFront）に来店し、レストランがキッチン（オリジンサーバー）に注文を確認する際、
+      <br/>
+      厳格な本人確認と身分証明書のチェックが行われます。
+      <br/>
+<br/>
+      この
+      <strong>
+       セキュリティチェックの流れ
+      </strong>
+      と
+      <strong>
+       エラーの違い
+      </strong>
+      を完全マスターしましょう✨
+     </p>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="️-レストランのたとえで全体像を理解">
+<span>
+       🍽️
+      </span>
+<span>
+       レストランのたとえで全体像を理解
+      </span>
+</h2>
+<div class="analogy-content">
+<div class="analogy-card">
+<h3 id="‍-CloudFront-=-レストラン">
+        👨‍🍳 CloudFront = レストラン
+       </h3>
+<p>
+        お客様（ユーザー）の注文を受け付ける場所。
+        <br/>
+        キッチン（オリジン）に料理を作るよう依頼します。
+        <br/>
+<br/>
+<strong>
+         役割：
+        </strong>
+        お客様とキッチンの仲介役として、安全に通信できるかを確認する
+       </p>
+</div>
+<div class="analogy-card">
+<h3 id="オリジンサーバー-=-キッチン">
+        🔪 オリジンサーバー = キッチン
+       </h3>
+<p>
+        実際に料理（コンテンツ）を作る場所。
+        <br/>
+        EC2、ALB、S3などの実体があるサーバー。
+        <br/>
+<br/>
+<strong>
+         役割：
+        </strong>
+        正しい身分証明書を持って、安全に料理を提供できることを証明する
+       </p>
+</div>
+<div class="analogy-card">
+<h3 id="SSL-TLS証明書-=-身分証明書">
+        🎫 SSL/TLS証明書 = 身分証明書
+       </h3>
+<p>
+        キッチン（オリジン）が本物であることを証明する書類。
+        <br/>
+        運転免許証のように、信頼できる機関が発行。
+        <br/>
+<br/>
+<strong>
+         役割：
+        </strong>
+        「私は本物のキッチンです」という証明
+       </p>
+</div>
+</div>
+</div>
+<!-- HTTPSハンドシェイクの流れ -->
+<div class="handshake-flow">
+<h2 class="flow-title" id="HTTPSハンドシェイクの7ステップ">
+      🤝 HTTPSハンドシェイクの7ステップ
+     </h2>
+<div class="flow-diagram">
+<div class="flow-step">
+<div class="flow-icon">
+        📞
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 1
+        </div>
+<div class="step-title">
+         CloudFrontからオリジンへ接続開始
+        </div>
+<div class="step-description">
+         CloudFront（レストラン）がオリジン（キッチン）に接続を開始します。
+         <br/>
+         「こんにちは、注文を受け付けたいのですが、そちらは本物のキッチンですか？」
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：レストランのスタッフが内線電話でキッチンに呼びかける
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon">
+        📜
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 2
+        </div>
+<div class="step-title">
+         オリジンがSSL証明書を提示
+        </div>
+<div class="step-description">
+         オリジン（キッチン）がSSL/TLS証明書をCloudFrontに提示します。
+         <br/>
+         「はい、こちらが私の身分証明書（証明書）です。信頼できる機関が発行したものです」
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：キッチンスタッフが運転免許証や社員証を見せる
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon">
+        🔍
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 3
+        </div>
+<div class="step-title">
+         CloudFrontが証明書チェーンを検証
+        </div>
+<div class="step-description">
+         CloudFrontは受け取った証明書が本物かどうか、証明書チェーンを辿って確認します。
+         <br/>
+<strong>
+          確認内容：
+         </strong>
+<br/>
+         • 証明書が信頼できる認証局（CA）から発行されているか
+         <br/>
+         • 証明書の有効期限が切れていないか
+         <br/>
+         • ドメイン名が一致しているか
+         <br/>
+         • 証明書が取り消されていないか
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：レストランが免許証の発行元、有効期限、写真を確認する
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon">
+        ✅
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 4
+        </div>
+<div class="step-title">
+         証明書検証が成功
+        </div>
+<div class="step-description">
+         すべての検証項目をクリアすると、CloudFrontはオリジンを信頼します。
+         <br/>
+         「確認できました。あなたは本物のキッチンですね。では安全に通信しましょう」
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：身分証明書が本物だと確認できて、信頼関係が成立
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon">
+        🔑
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 5
+        </div>
+<div class="step-title">
+         暗号化キーの交換
+        </div>
+<div class="step-description">
+         CloudFrontとオリジンの間で、通信を暗号化するための秘密の鍵を交換します。
+         <br/>
+         「これからは、この秘密の暗号を使って会話しましょう」
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：レストランとキッチンだけが分かる暗号言語を決める
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon">
+        🔐
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 6
+        </div>
+<div class="step-title">
+         暗号化通信の開始
+        </div>
+<div class="step-description">
+         ハンドシェイクが完了し、すべての通信が暗号化されます。
+         <br/>
+         これ以降、CloudFrontとオリジン間のデータは第三者に読み取られません。
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：レストランとキッチンが秘密の暗号で会話を開始
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon">
+        🍽️
+       </div>
+<div class="flow-content">
+<div class="step-number">
+         STEP 7
+        </div>
+<div class="step-title">
+         安全なコンテンツ配信
+        </div>
+<div class="step-description">
+         CloudFrontはオリジンから安全にコンテンツを取得し、ユーザーに配信します。
+         <br/>
+         すべての通信が暗号化されているため、盗聴や改ざんの心配はありません。
+        </div>
+<div class="step-analogy">
+         🍽️ たとえ：キッチンから料理が安全に届き、お客様に提供される
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- 証明書チェーンの詳細 -->
+<div class="certificate-chain">
+<h2 class="chain-title" id="証明書チェーンの検証プロセス">
+      🔗 証明書チェーンの検証プロセス
+     </h2>
+<p class="certificate-intro-text">
+      証明書の信頼性を確認するために、CloudFrontは「信頼の連鎖」を辿ります
+     </p>
+<div class="chain-diagram">
+<div class="chain-level">
+<h3 id="️-レベル1-ルート認証局Root-CA-最高の信頼">
+<span>
+         🏛️
+        </span>
+<span>
+         レベル1: ルート認証局（Root CA）
+        </span>
+<span class="trust-badge">
+         最高の信頼
+        </span>
+</h3>
+<p>
+<strong>
+         役割：
+        </strong>
+        信頼の最上位。政府が発行するパスポートのようなもの。
+        <br/>
+<strong>
+         例：
+        </strong>
+        DigiCert、GlobalSign、Let's Encryptなど
+        <br/>
+<strong>
+         特徴：
+        </strong>
+        ブラウザやOSに最初から組み込まれている信頼されたCA
+       </p>
+<div class="analogy-box">
+<strong>
+         🍽️ レストランのたとえ
+        </strong>
+<p>
+         国が認定した最高権威の調理師免許センター。ここが認めれば誰もが信頼する
+        </p>
+</div>
+</div>
+<div class="chain-level">
+<h3 id="レベル2-中間認証局Intermediate-CA-信頼">
+<span>
+         🏢
+        </span>
+<span>
+         レベル2: 中間認証局（Intermediate CA）
+        </span>
+<span class="trust-badge">
+         信頼
+        </span>
+</h3>
+<p>
+<strong>
+         役割：
+        </strong>
+        ルートCAから権限を委譲された認証局。
+        <br/>
+<strong>
+         例：
+        </strong>
+        実際にサーバー証明書を発行する組織
+        <br/>
+<strong>
+         特徴：
+        </strong>
+        ルートCAの秘密鍵を守るため、実際の発行作業を担当
+       </p>
+<div class="analogy-box">
+<strong>
+         🍽️ レストランのたとえ
+        </strong>
+<p>
+         最高権威から認定を受けた地域の調理師免許センター
+        </p>
+</div>
+</div>
+<div class="chain-level">
+<h3 id="️-レベル3-サーバー証明書End-Entity-Certificate-検証対象">
+<span>
+         🖥️
+        </span>
+<span>
+         レベル3: サーバー証明書（End Entity Certificate）
+        </span>
+<span class="trust-badge">
+         検証対象
+        </span>
+</h3>
+<p>
+<strong>
+         役割：
+        </strong>
+        実際のウェブサーバーに設置される証明書。
+        <br/>
+<strong>
+         例：
+        </strong>
+        example.comのための証明書
+        <br/>
+<strong>
+         特徴：
+        </strong>
+        ドメイン名、有効期限、公開鍵などの情報を含む
+        <br/>
+<br/>
+<strong>
+         CloudFrontの検証：
+        </strong>
+<br/>
+        1️⃣ このサーバー証明書を確認
+        <br/>
+        2️⃣ 中間CA証明書で署名を検証
+        <br/>
+        3️⃣ ルートCAまで辿って最終的な信頼を確認
+        <br/>
+        4️⃣ すべての証明書が有効期限内か、失効していないかをチェック
+       </p>
+<div class="analogy-box">
+<strong>
+         🍽️ レストランのたとえ
+        </strong>
+<p>
+         キッチンスタッフが持っている調理師免許証。この免許証が本物かを、発行元を辿って確認する
+        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- 502 vs 504 エラー比較 -->
+<div class="error-comparison">
+<h2 class="error-title" id="⚠️-502-Bad-Gateway-vs-504-Gateway-Timeout">
+      ⚠️ 502 Bad Gateway vs 504 Gateway Timeout
+     </h2>
+<div class="error-grid">
+<div class="error-card">
+<div class="error-code">
+        502
+       </div>
+<div class="error-name">
+        Bad Gateway
+       </div>
+<div class="error-section">
+<h3 id="何が起きている？">
+         🔍 何が起きている？
+        </h3>
+<p>
+         CloudFrontがオリジンから
+         <strong>
+          無効な応答
+         </strong>
+         を受け取った、
+         <br/>
+         またはオリジンが
+         <strong>
+          正しく応答できない
+         </strong>
+         状態です。
+        </p>
+</div>
+<div class="error-section">
+<h4>
+         ❌ 主な原因
+        </h4>
+<ul>
+<li>
+<strong>
+           SSL/TLS証明書の問題
+          </strong>
+<ul>
+<li>
+            証明書の期限切れ
+           </li>
+<li>
+            証明書チェーンが不完全
+           </li>
+<li>
+            ドメイン名の不一致
+           </li>
+<li>
+            自己署名証明書を使用
+           </li>
+</ul>
+</li>
+<li>
+<strong>
+           オリジンサーバーの問題
+          </strong>
+<ul>
+<li>
+            HTTPステータスコードが異常
+           </li>
+<li>
+            アプリケーションエラー
+           </li>
+<li>
+            不正なレスポンスヘッダー
+           </li>
+</ul>
+</li>
+<li>
+<strong>
+           ネットワーク設定
+          </strong>
+<ul>
+<li>
+            セキュリティグループでブロック
+           </li>
+<li>
+            オリジンのポートが閉じている
+           </li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="analogy-box">
+<strong>
+         🍽️ レストランのたとえ
+        </strong>
+<p>
+         キッチンに内線電話をかけたら、
+         <strong>
+          身分証明書が偽造されていた
+         </strong>
+         、
+         <br/>
+         または
+         <strong>
+          有効期限が切れていた
+         </strong>
+         ため、注文を受け付けられない状態。
+         <br/>
+<br/>
+         「あなたの身分証明書は無効です。料理は提供できません」
+        </p>
+</div>
+<div class="error-section">
+<h4>
+         🔧 解決方法
+        </h4>
+<ul>
+<li>
+          SSL証明書の有効期限を確認
+         </li>
+<li>
+          証明書チェーンが正しく設定されているか確認
+         </li>
+<li>
+          ドメイン名が証明書と一致しているか確認
+         </li>
+<li>
+          オリジンサーバーのログを確認
+         </li>
+<li>
+          セキュリティグループの設定を確認
+         </li>
+</ul>
+</div>
+</div>
+<div class="error-card">
+<div class="error-code">
+        504
+       </div>
+<div class="error-name">
+        Gateway Timeout
+       </div>
+<div class="error-section">
+<h4>
+         🔍 何が起きている？
+        </h4>
+<p>
+         CloudFrontがオリジンに接続を試みたが、
+         <br/>
+<strong>
+          制限時間内に応答が返ってこなかった
+         </strong>
+         状態です。
+        </p>
+</div>
+<div class="error-section">
+<h4>
+         ❌ 主な原因
+        </h4>
+<ul>
+<li>
+<strong>
+           オリジンサーバーの過負荷
+          </strong>
+<ul>
+<li>
+            CPUやメモリが100%に到達
+           </li>
+<li>
+            同時接続数が上限に達した
+           </li>
+<li>
+            データベースクエリが遅い
+           </li>
+</ul>
+</li>
+<li>
+<strong>
+           ネットワークの問題
+          </strong>
+<ul>
+<li>
+            オリジンへの経路が不安定
+           </li>
+<li>
+            ファイアウォールがパケットを破棄
+           </li>
+<li>
+            帯域幅不足
+           </li>
+</ul>
+</li>
+<li>
+<strong>
+           アプリケーションの遅延
+          </strong>
+<ul>
+<li>
+            重い処理が完了しない
+           </li>
+<li>
+            外部APIの応答待ち
+           </li>
+<li>
+            無限ループやデッドロック
+           </li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="analogy-box">
+<strong>
+         🍽️ レストランのたとえ
+        </strong>
+<p>
+         キッチンに内線電話をかけたが、
+         <strong>
+          いつまで待っても応答がない
+         </strong>
+         状態。
+         <br/>
+         キッチンが忙しすぎて電話に出られない、または電話線が切れている。
+         <br/>
+<br/>
+         「もしもし？…もしもし？…応答がありません。時間切れです」
+        </p>
+</div>
+<div class="error-section">
+<h4>
+         🔧 解決方法
+        </h4>
+<ul>
+<li>
+          オリジンサーバーのリソース使用状況を確認
+         </li>
+<li>
+          Auto Scalingで容量を増やす
+         </li>
+<li>
+          CloudFrontのタイムアウト設定を調整
+         </li>
+<li>
+          遅いクエリやプロセスを特定して最適化
+         </li>
+<li>
+          ネットワーク接続性を確認
+         </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- トラブルシューティング -->
+<div class="troubleshooting">
+<h2 class="troubleshooting-title" id="シーン別トラブルシューティング">
+      🔧 シーン別トラブルシューティング
+     </h2>
+<div class="troubleshooting-grid">
+<div class="troubleshooting-card">
+<h3 id="証明書エラーの対処">
+<span>
+         📜
+        </span>
+<span>
+         証明書エラーの対処
+        </span>
+</h3>
+<ul>
+<li>
+<strong>
+          期限切れ：
+         </strong>
+         証明書を更新してオリジンに再デプロイ
+        </li>
+<li>
+<strong>
+          ドメイン不一致：
+         </strong>
+         証明書のCNやSANにドメインを追加
+        </li>
+<li>
+<strong>
+          チェーン不完全：
+         </strong>
+         中間証明書を正しく設置
+        </li>
+<li>
+<strong>
+          自己署名：
+         </strong>
+         信頼されたCAから証明書を取得
+        </li>
+</ul>
+</div>
+<div class="troubleshooting-card">
+<h4>
+<span>
+         ⏱️
+        </span>
+<span>
+         タイムアウトの対処
+        </span>
+</h4>
+<ul>
+<li>
+<strong>
+          オリジン側：
+         </strong>
+         サーバーのスケールアップ/アウト
+        </li>
+<li>
+<strong>
+          CloudFront側：
+         </strong>
+         Origin Response Timeoutを延長（最大60秒）
+        </li>
+<li>
+<strong>
+          アプリ側：
+         </strong>
+         遅いクエリを最適化、キャッシュを活用
+        </li>
+<li>
+<strong>
+          モニタリング：
+         </strong>
+         CloudWatch Logsで応答時間を監視
+        </li>
+</ul>
+</div>
+<div class="troubleshooting-card">
+<h4>
+<span>
+         🔍
+        </span>
+<span>
+         デバッグの方法
+        </span>
+</h4>
+<ul>
+<li>
+<strong>
+          証明書確認：
+         </strong>
+         openssl s_clientコマンドで検証
+        </li>
+<li>
+<strong>
+          ログ確認：
+         </strong>
+         CloudFront/ALB/EC2のログを調査
+        </li>
+<li>
+<strong>
+          メトリクス確認：
+         </strong>
+         Origin Latency、Error Rateを監視
+        </li>
+<li>
+<strong>
+          直接テスト：
+         </strong>
+         オリジンに直接アクセスして問題を切り分け
+        </li>
+</ul>
+</div>
+<div class="troubleshooting-card">
+<h4>
+<span>
+         🛡️
+        </span>
+<span>
+         予防策
+        </span>
+</h4>
+<ul>
+<li>
+<strong>
+          証明書の自動更新：
+         </strong>
+         AWS Certificate Manager（ACM）を使用
+        </li>
+<li>
+<strong>
+          ヘルスチェック：
+         </strong>
+         ALBやRoute 53でオリジンを監視
+        </li>
+<li>
+<strong>
+          アラート設定：
+         </strong>
+         エラー率が上昇したら通知
+        </li>
+<li>
+<strong>
+          負荷テスト：
+         </strong>
+         定期的にピーク時の負荷をシミュレーション
+        </li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       502と504を見分けるコツ
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       🔴 502 = 「応答が間違っている」「身分証明書が無効」
+      </strong>
+<br/>
+      オリジンは何か返してきたが、その内容が不正または無効。証明書エラー、アプリケーションエラーなど。
+      <br/>
+      →
+      <em>
+       レストランがキッチンスタッフの身分を確認できない状態
+      </em>
+<br/>
+<br/>
+<strong>
+       🟠 504 = 「応答が遅すぎる」「電話に出ない」
+      </strong>
+<br/>
+      オリジンが何も返してこない、または時間がかかりすぎる。タイムアウト、サーバー過負荷など。
+      <br/>
+      →
+      <em>
+       レストランがキッチンに電話しても誰も出ない状態
+      </em>
+<br/>
+<br/>
+<strong>
+       📊 統計から見分けるヒント：
+      </strong>
+<br/>
+      • 502が
+      <strong>
+       突然
+      </strong>
+      発生 → 証明書更新忘れ、設定変更ミスの可能性
+      <br/>
+      • 504が
+      <strong>
+       徐々に増加
+      </strong>
+      → サーバー負荷上昇、リソース不足の可能性
+      <br/>
+      • 504が
+      <strong>
+       特定の時間帯
+      </strong>
+      に集中 → ピークタイムの容量不足
+     </div>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ-CloudFront-HTTPS通信の全体像">
+      🎓 まとめ：CloudFront HTTPS通信の全体像
+     </h2>
+<div class="summary-grid">
+<div class="summary-card">
+<h3 id="ハンドシェイク">
+        🤝 ハンドシェイク
+       </h3>
+<p>
+        CloudFrontとオリジンが安全に通信するための
+        <strong>
+         7ステップの儀式
+        </strong>
+        。
+        <br/>
+        身分証明書の確認と暗号化キーの交換を行う。
+       </p>
+</div>
+<div class="summary-card">
+<h3 id="証明書チェーン">
+        🔗 証明書チェーン
+       </h3>
+<p>
+<strong>
+         信頼の連鎖
+        </strong>
+        を辿って証明書を検証。
+        <br/>
+        ルートCA → 中間CA → サーバー証明書の順に確認する。
+       </p>
+</div>
+<div class="summary-card">
+<h3 id="⚠️-502エラー">
+        ⚠️ 502エラー
+       </h3>
+<p>
+<strong>
+         無効な応答
+        </strong>
+        や
+        <strong>
+         証明書エラー
+        </strong>
+        。
+        <br/>
+        身分証明書が偽物、期限切れ、ドメイン不一致など。
+       </p>
+</div>
+<div class="summary-card">
+<h3 id="⏱️-504エラー">
+        ⏱️ 504エラー
+       </h3>
+<p>
+<strong>
+         タイムアウト
+        </strong>
+        や
+        <strong>
+         応答なし
+        </strong>
+        。
+        <br/>
+        サーバー過負荷、ネットワーク問題、処理の遅延など。
+       </p>
+</div>
+</div>
+<div class="summary-footer-box">
+<p>
+       🍽️
+       <strong>
+        レストランの入店セキュリティチェック = CloudFront HTTPS通信
+       </strong>
+<br/>
+<br/>
+       この
+       <strong>
+        たとえ
+       </strong>
+       を覚えておけば、複雑な証明書検証プロセスも理解しやすい！
+       <br/>
+<strong>
+        502と504の違い
+       </strong>
+       も、「身分証明書の問題」か「応答の問題」かで判断できます✨
+      </p>
+</div>
+</div>
+</div>
+
+
+</div>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

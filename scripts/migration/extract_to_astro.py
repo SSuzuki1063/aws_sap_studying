@@ -137,7 +137,7 @@ def extract_content(src: str) -> str:
         else:
             start = body_start + bc.end()
     else:
-        cont = re.search(r'<div\s+class="container">', body)
+        cont = re.search(r'<(?:div|main)\s+class="container">', body)
         if cont:
             start = body_start + cont.end()
         else:

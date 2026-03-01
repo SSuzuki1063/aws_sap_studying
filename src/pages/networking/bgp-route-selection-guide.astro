@@ -1,0 +1,828 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'BGPルート選択アルゴリズム完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: '',
+  slug: 'bgp-route-selection-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: 'たとえ話-全国に支店を持つ宅配便会社', text: 'たとえ話：全国に支店を持つ宅配便会社' },
+    { level: 'h2', id: 'Local-Preferenceローカルプリファレンス', text: 'Local Preference（ローカルプリファレンス）' },
+    { level: 'h3', id: 'たとえ-社内の指定業者', text: 'たとえ：社内の指定業者' },
+    { level: 'h2', id: 'AS_PATHエーエスパスが短い', text: 'AS_PATH（エーエスパス）が短い' },
+    { level: 'h3', id: 'たとえ-乗り換え回数', text: 'たとえ：乗り換え回数' },
+    { level: 'h2', id: 'MEDMultiple-Exit-Discriminatorが低い', text: 'MED（Multiple Exit Discriminator）が低い' },
+    { level: 'h3', id: 'たとえ-工場の搬入口', text: 'たとえ：工場の搬入口' },
+    { level: 'h2', id: 'eBGP-が-iBGP-より優先', text: 'eBGP が iBGP より優先' },
+    { level: 'h3', id: 'たとえ-外注-vs-社内伝言', text: 'たとえ：外注 vs 社内伝言' },
+    { level: 'h2', id: 'Next-Hop-への-IGP-コストが低い', text: 'Next-Hop への IGP コストが低い' },
+    { level: 'h3', id: 'たとえ-最寄りの集配センター', text: 'たとえ：最寄りの集配センター' },
+    { level: 'h2', id: 'その他のタイブレークRouter-ID-など', text: 'その他のタイブレーク（Router ID など）' },
+    { level: 'h3', id: 'たとえ-くじ引き-早い者勝ち', text: 'たとえ：くじ引き・早い者勝ち' },
+    { level: 'h2', id: 'Direct-Connect-を優先させる方法', text: 'Direct Connect を優先させる方法' },
+    { level: 'h2', id: 'VPN-をフェイルオーバーとして使う', text: 'VPN をフェイルオーバーとして使う' },
+    { level: 'h2', id: 'AWS-試験対策-よく出るポイント', text: '🎯 AWS 試験対策：よく出るポイント' },
+    { level: 'h3', id: '❓-Local-Preference-vs-MED-の違い', text: '❓ Local Preference vs MED の違い' },
+    { level: 'h3', id: '❓-AS_PATH-Prepend-とは？', text: '❓ AS_PATH Prepend とは？' },
+    { level: 'h3', id: '❓-eBGP-が-iBGP-に勝る理由', text: '❓ eBGP が iBGP に勝る理由' },
+    { level: 'h3', id: '❓-Direct-Connect-と-VPN-が共存する場合', text: '❓ Direct Connect と VPN が共存する場合' }
+  ],
+  prevPage: 'vpc-cni-guide.html',
+  nextPage: 'vpc-flow-log-fields-guide.html',
+  pageNum: 41,
+  pageTotal: 51,
+};
+
+const rawContent = `<style>*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange:    #FF9900;
+    --orange-dk: #dc7600;
+    --navy:      #232F3E;
+    --navy-lt:   #374151;
+    --bg:        #F9FAFB;
+    --white:     #FFFFFF;
+    --border:    #E5E7EB;
+    --text:      #1F2937;
+    --text-s:    #6B7280;
+
+    /* step colors */
+    --c1: #6366F1; /* Local Preference – 紫 */
+    --c2: #3B82F6; /* AS_PATH        – 青 */
+    --c3: #10B981; /* MED             – 緑 */
+    --c4: #F59E0B; /* eBGP > iBGP    – 黄 */
+    --c5: #EF4444; /* Next-Hop       – 赤 */
+    --c6: #8B5CF6; /* Tiebreak       – 紫系 */
+
+    --radius: 16px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --shadow-h: 0 8px 30px rgba(0,0,0,0.14);
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 20px;
+    line-height: 1.6;
+            padding-top: 70px;}
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--navy) 0%, #1a3a5c 50%, #0d2137 100%);
+    color: #fff;
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 30%, rgba(255,153,0,0.15) 0%, transparent 60%);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,153,0,0.2);
+    border: 1px solid rgba(255,153,0,0.5);
+    color: var(--orange);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 6px 20px;
+    border-radius: 40px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .hero h1 span { color: var(--orange); }
+  .hero p {
+    font-size: 20px;
+    opacity: 0.85;
+    max-width: 700px;
+    margin: 0 auto 30px;
+  }
+  .hero-conclusion {
+    display: inline-block;
+    background: rgba(255,153,0,0.15);
+    border: 2px solid var(--orange);
+    border-radius: 12px;
+    padding: 16px 32px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #FFD580;
+    max-width: 760px;
+  }
+  .hero-conclusion strong { color: var(--orange); font-size: 22px; }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 50px 30px; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 32px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid var(--orange);
+  }
+  .section-title .icon { font-size: 32px; }
+
+  /* ── ANALOGY BANNER ── */
+  .analogy-banner {
+    background: linear-gradient(135deg, #FFF8E7 0%, #FFF3CD 100%);
+    border: 2px solid #FFD700;
+    border-radius: var(--radius);
+    padding: 30px 36px;
+    margin-bottom: 50px;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .analogy-icon { font-size: 56px; flex-shrink: 0; }
+  .analogy-body h2 { font-size: 24px; font-weight: 700; color: #92400E; margin-bottom: 10px; }
+  .analogy-body p  { font-size: 20px; color: #78350F; line-height: 1.7; }
+  .analogy-body strong { color: #B45309; }
+
+  /* ── ALGORITHM FLOW ── */
+  .algo-flow { display: flex; flex-direction: column; gap: 0; }
+
+  .step-card {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr;
+    gap: 0;
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 20px;
+    transition: transform 0.25s, box-shadow 0.25s;
+    position: relative;
+  }
+  .step-card:hover {
+    transform: translateX(6px);
+    box-shadow: var(--shadow-h);
+  }
+
+  /* priority indicator bar */
+  .step-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+  }
+  .step-card[data-step="1"]::before { background: var(--c1); }
+  .step-card[data-step="2"]::before { background: var(--c2); }
+  .step-card[data-step="3"]::before { background: var(--c3); }
+  .step-card[data-step="4"]::before { background: var(--c4); }
+  .step-card[data-step="5"]::before { background: var(--c5); }
+  .step-card[data-step="6"]::before { background: var(--c6); }
+
+  .step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--white);
+    padding: 28px 10px;
+  }
+  .step-card[data-step="1"] .step-num { background: var(--c1); }
+  .step-card[data-step="2"] .step-num { background: var(--c2); }
+  .step-card[data-step="3"] .step-num { background: var(--c3); }
+  .step-card[data-step="4"] .step-num { background: var(--c4); }
+  .step-card[data-step="5"] .step-num { background: var(--c5); }
+  .step-card[data-step="6"] .step-num { background: var(--c6); }
+
+  .step-num .num-label { font-size: 12px; font-weight: 600; opacity: 0.85; letter-spacing: 1px; }
+
+  .step-tech {
+    padding: 24px 28px;
+    border-right: 1px solid var(--border);
+  }
+  .step-tech h2 {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .step-card[data-step="1"] .step-tech h2 { color: var(--c1); }
+  .step-card[data-step="2"] .step-tech h2 { color: var(--c2); }
+  .step-card[data-step="3"] .step-tech h2 { color: var(--c3); }
+  .step-card[data-step="4"] .step-tech h2 { color: var(--c4); }
+  .step-card[data-step="5"] .step-tech h2 { color: var(--c5); }
+  .step-card[data-step="6"] .step-tech h2 { color: var(--c6); }
+
+  .step-tech .rule {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    color: white;
+  }
+  .step-card[data-step="1"] .rule { background: var(--c1); }
+  .step-card[data-step="2"] .rule { background: var(--c2); }
+  .step-card[data-step="3"] .rule { background: var(--c3); }
+  .step-card[data-step="4"] .rule { background: var(--c4); }
+  .step-card[data-step="5"] .rule { background: var(--c5); }
+  .step-card[data-step="6"] .rule { background: var(--c6); }
+
+  .step-tech p { font-size: 19px; color: var(--text-s); line-height: 1.6; }
+  .step-tech code {
+    background: #F3F4F6;
+    color: #7C3AED;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .step-analogy {
+    padding: 24px 28px;
+    background: #FAFAFA;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .step-analogy .emoji { font-size: 32px; margin-bottom: 8px; }
+  .step-analogy h3 { font-size: 18px; font-weight: 700; color: var(--navy-lt); margin-bottom: 6px; }
+  .step-analogy p  { font-size: 19px; color: var(--text-s); line-height: 1.6; }
+  .step-analogy strong { color: var(--text); }
+
+  /* connector arrow between cards */
+  .step-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    margin: -4px 0;
+    color: var(--text-s);
+    font-size: 22px;
+    position: relative;
+    z-index: 2;
+  }
+  .step-connector span {
+    background: var(--bg);
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-s);
+    border: 1px dashed var(--border);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── QUICK REF TABLE ── */
+  .quick-ref {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 50px;
+  }
+  .quick-ref table { width: 100%; border-collapse: collapse; }
+  .quick-ref thead th {
+    background: var(--navy);
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 16px 20px;
+    text-align: left;
+  }
+  .quick-ref thead th:first-child { width: 60px; text-align: center; }
+  .quick-ref tbody tr { border-bottom: 1px solid var(--border); transition: background 0.2s; }
+  .quick-ref tbody tr:hover { background: #F0F4FF; }
+  .quick-ref tbody td { padding: 16px 20px; font-size: 20px; vertical-align: middle; }
+  .quick-ref tbody td:first-child { text-align: center; font-size: 22px; font-weight: 900; }
+  .quick-ref .win-rule { font-size: 16px; font-weight: 700; padding: 4px 12px; border-radius: 20px; color: white; display: inline-block; }
+  .r1 { background: var(--c1); }
+  .r2 { background: var(--c2); }
+  .r3 { background: var(--c3); }
+  .r4 { background: var(--c4); }
+  .r5 { background: var(--c5); }
+  .r6 { background: var(--c6); }
+  .step-num-cell { color: var(--white) !important; border-radius: 50%; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* ── DECISION TREE ── */
+  .decision-tree {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px;
+    margin-bottom: 50px;
+  }
+  .tree-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .tree-start {
+    background: var(--navy);
+    color: white;
+    border-radius: 50px;
+    padding: 14px 40px;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 0;
+  }
+  .tree-arrow {
+    width: 2px;
+    height: 30px;
+    background: var(--border);
+    margin: 0 auto;
+    position: relative;
+  }
+  .tree-arrow::after {
+    content: '▼';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-s);
+    font-size: 12px;
+  }
+  .tree-question {
+    background: #EFF6FF;
+    border: 2px solid #BFDBFE;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1E40AF;
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+  }
+  .tree-row {
+    display: flex;
+    gap: 60px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+  }
+  .tree-branch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .tree-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-s);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 12px;
+  }
+  .tree-answer {
+    background: var(--white);
+    border: 2px solid;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 19px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 160px;
+  }
+  .tree-win { border-color: var(--c3); color: var(--c3); }
+  .tree-next { border-color: var(--border); color: var(--text-s); }
+  .tree-connector-h {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    position: relative;
+    height: 40px;
+    margin: 8px 0;
+  }
+
+  /* ── AWS CONTEXT ── */
+  .aws-context {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 50px;
+  }
+  .context-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 30px;
+    border-top: 4px solid;
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .context-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-h); }
+  .context-card.direct   { border-color: var(--c2); }
+  .context-card.vpn      { border-color: var(--c1); }
+  .context-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .context-card.direct h2 { color: var(--c2); }
+  .context-card.vpn    h3 { color: var(--c1); }
+  .context-card .context-icon { font-size: 40px; margin-bottom: 12px; }
+  .context-card p { font-size: 19px; color: var(--text-s); margin-bottom: 14px; }
+  .context-card ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .context-card li {
+    font-size: 19px;
+    padding-left: 24px;
+    position: relative;
+    color: var(--text);
+  }
+  .context-card li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+  .context-card.direct li::before { color: var(--c2); }
+  .context-card.vpn    li::before { color: var(--c1); }
+
+  /* ── EXAM TIPS ── */
+  .exam-tips {
+    background: linear-gradient(135deg, #1E3A5F 0%, #2D5985 100%);
+    border-radius: var(--radius);
+    padding: 40px;
+    color: white;
+    margin-bottom: 50px;
+  }
+  .exam-tips h2 { color: var(--orange); border-color: rgba(255,153,0,0.4); font-size: 26px; font-weight: 800; margin-bottom: 28px; padding-bottom: 14px; border-bottom: 2px solid rgba(255,153,0,0.4); }
+  .tips-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .tip-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .tip-card h3 { font-size: 20px; font-weight: 700; color: var(--orange); margin-bottom: 10px; }
+  .tip-card p  { font-size: 19px; color: rgba(255,255,255,0.85); line-height: 1.6; }
+  .tip-card code { background: rgba(255,255,255,0.15); color: #FFD580; padding: 2px 8px; border-radius: 4px; font-size: 17px; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--navy);
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    padding: 30px;
+    font-size: 16px;
+  }
+  .footer strong { color: var(--orange); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 800px) {
+    .step-card { grid-template-columns: 60px 1fr; }
+    .step-analogy { display: none; }
+    .aws-context, .tips-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 30px; }
+    .tree-row { flex-direction: column; align-items: center; gap: 20px; }
+  }</style>
+<!-- ANALOGY -->
+  <div class="analogy-banner">
+    <div class="analogy-icon">✉️</div>
+    <div class="analogy-body">
+      <h2 id="たとえ話-全国に支店を持つ宅配便会社">たとえ話：全国に支店を持つ宅配便会社</h2>
+      <p>
+        荷物（パケット）を届けるとき、配達員は「<strong>どのルートで運ぶか</strong>」を決める必要があります。<br>
+        BGPルーター = 配送センターの司令官。複数の候補ルートを比べて、決まったルールで<strong>一番良い道</strong>を選びます。<br>
+        ルール①で決まらなければルール②、それでも決まらなければルール③…と順番に判定します。
+      </p>
+    </div>
+  </div>
+
+  <!-- SECTION: ALGORITHM STEPS -->
+  <div class="section-title"><span class="icon">📋</span>6ステップ判定フロー — 上から順に評価し、最初に決着したルールで確定</div>
+
+  <div class="algo-flow">
+
+    <!-- STEP 1 -->
+    <div class="step-card" data-step="1">
+      <div class="step-num">1<div class="num-label">STEP</div></div>
+      <div class="step-tech">
+        <span class="rule">🏆 最優先</span>
+        <h2 id="Local-Preferenceローカルプリファレンス">Local Preference（ローカルプリファレンス）</h2>
+        <p>同じ AS（自律システム）内で管理者が手動で設定する「<code>好みのスコア</code>」。<br>
+        値が<strong>高い</strong>ほど優先される（デフォルト 100）。</p>
+      </div>
+      <div class="step-analogy">
+        <div class="emoji">⭐</div>
+        <h3 id="たとえ-社内の指定業者">たとえ：社内の指定業者</h3>
+        <p>「うちの会社は<strong>ヤマト運輸を優先して使う</strong>と決めている」というルール。<br>
+        他に安い選択肢があっても、社内ポリシーが最優先。</p>
+      </div>
+    </div>
+
+    <div class="step-connector"><span>↓ 同スコアなら次のルールへ</span></div>
+
+    <!-- STEP 2 -->
+    <div class="step-card" data-step="2">
+      <div class="step-num">2<div class="num-label">STEP</div></div>
+      <div class="step-tech">
+        <span class="rule">📏 経路の短さ</span>
+        <h2 id="AS_PATHエーエスパスが短い">AS_PATH（エーエスパス）が短い</h2>
+        <p>通過する AS（ネットワーク組織）の数。<br>
+        通過 AS が<strong>少ない</strong>ほど優先される。</p>
+      </div>
+      <div class="step-analogy">
+        <div class="emoji">🚂</div>
+        <h3 id="たとえ-乗り換え回数">たとえ：乗り換え回数</h3>
+        <p>電車で目的地に行くとき「<strong>乗り換え0回の直通</strong>」を「3回乗り換え」より好む。<br>
+        中継点（AS）が少ない = より直接的なルート。</p>
+      </div>
+    </div>
+
+    <div class="step-connector"><span>↓ 同AS数なら次のルールへ</span></div>
+
+    <!-- STEP 3 -->
+    <div class="step-card" data-step="3">
+      <div class="step-num">3<div class="num-label">STEP</div></div>
+      <div class="step-tech">
+        <span class="rule">💰 コスト調整</span>
+        <h2 id="MEDMultiple-Exit-Discriminatorが低い">MED（Multiple Exit Discriminator）が低い</h2>
+        <p>隣の AS から「こっちの出口から入ってほしい」と伝えるヒント値。<br>
+        値が<strong>低い</strong>ほど優先される（デフォルト 0）。</p>
+      </div>
+      <div class="step-analogy">
+        <div class="emoji">🚪</div>
+        <h3 id="たとえ-工場の搬入口">たとえ：工場の搬入口</h3>
+        <p>工場（隣AS）が「<strong>北門より南門の方が空いてます</strong>」と案内する札。<br>
+        MED は相手から見た「推奨入口」の案内板。</p>
+      </div>
+    </div>
+
+    <div class="step-connector"><span>↓ 同MEDなら次のルールへ</span></div>
+
+    <!-- STEP 4 -->
+    <div class="step-card" data-step="4">
+      <div class="step-num">4<div class="num-label">STEP</div></div>
+      <div class="step-tech">
+        <span class="rule">🌐 外部 vs 内部</span>
+        <h2 id="eBGP-が-iBGP-より優先">eBGP が iBGP より優先</h2>
+        <p>外部 BGP（eBGP = 別の AS からの経路）は<br>
+        内部 BGP（iBGP = 自 AS 内の経路）より<strong>常に優先</strong>される。</p>
+      </div>
+      <div class="step-analogy">
+        <div class="emoji">🏢</div>
+        <h3 id="たとえ-外注-vs-社内伝言">たとえ：外注 vs 社内伝言</h3>
+        <p>「<strong>直接お客様（外部）から受け取った情報</strong>」を<br>「社内の噂話（内部転送）」より信頼する。<br>
+        外部からの生の情報を優先するイメージ。</p>
+      </div>
+    </div>
+
+    <div class="step-connector"><span>↓ 同種別なら次のルールへ</span></div>
+
+    <!-- STEP 5 -->
+    <div class="step-card" data-step="5">
+      <div class="step-num">5<div class="num-label">STEP</div></div>
+      <div class="step-tech">
+        <span class="rule">📍 物理的距離</span>
+        <h2 id="Next-Hop-への-IGP-コストが低い">Next-Hop への IGP コストが低い</h2>
+        <p>BGP の次の中継点（Next-Hop）まで、OSPF や EIGRP などの<br>
+        <strong>内部ルーティングコストが小さい</strong>ほど優先される。</p>
+      </div>
+      <div class="step-analogy">
+        <div class="emoji">📍</div>
+        <h3 id="たとえ-最寄りの集配センター">たとえ：最寄りの集配センター</h3>
+        <p>同じ宅配会社でも「<strong>自分の家から近い集配センター</strong>」を<br>
+        まず選ぶ。物理的な近さ＝低コスト。</p>
+      </div>
+    </div>
+
+    <div class="step-connector"><span>↓ まだ同じなら最終タイブレークへ</span></div>
+
+    <!-- STEP 6 -->
+    <div class="step-card" data-step="6">
+      <div class="step-num">6<div class="num-label">STEP</div></div>
+      <div class="step-tech">
+        <span class="rule">🎯 最終決着</span>
+        <h2 id="その他のタイブレークRouter-ID-など">その他のタイブレーク（Router ID など）</h2>
+        <p>ここまで同条件なら、<code>Router ID</code>（BGP識別番号）の<br>
+        <strong>数値が小さい</strong>方を選択。完全なタイブレーク。</p>
+      </div>
+      <div class="step-analogy">
+        <div class="emoji">🎲</div>
+        <h3 id="たとえ-くじ引き-早い者勝ち">たとえ：くじ引き・早い者勝ち</h3>
+        <p>すべての条件が同じなら、最後は「<strong>番号が若い</strong>」ルーターを選ぶ。<br>
+        ルールで決まらなければ機器の固有番号で決定。</p>
+      </div>
+    </div>
+
+  </div><!-- /algo-flow -->
+
+  <!-- QUICK REF TABLE -->
+  <div class="section-title" style="margin-top:60px;"><span class="icon">📊</span>早見表：ルール一覧</div>
+  <div class="quick-ref" style="margin-bottom:50px;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>判定基準</th>
+          <th>勝者のルール</th>
+          <th>AWS での典型例</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="step-num-cell r1">1</span></td>
+          <td><strong>Local Preference</strong></td>
+          <td><span class="win-rule r1">値が高い方</span></td>
+          <td>Direct Connect ルートに 200 を設定して優先化</td>
+        </tr>
+        <tr>
+          <td><span class="step-num-cell r2">2</span></td>
+          <td><strong>AS_PATH 長</strong></td>
+          <td><span class="win-rule r2">短い方（少ない AS 数）</span></td>
+          <td>AS_PATH prepend でわざとパスを長くしてルートを下げる</td>
+        </tr>
+        <tr>
+          <td><span class="step-num-cell r3">3</span></td>
+          <td><strong>MED</strong></td>
+          <td><span class="win-rule r3">値が低い方</span></td>
+          <td>同一 AS の複数 Direct Connect 間の出口制御</td>
+        </tr>
+        <tr>
+          <td><span class="step-num-cell r4">4</span></td>
+          <td><strong>BGP タイプ</strong></td>
+          <td><span class="win-rule r4">eBGP &gt; iBGP</span></td>
+          <td>Direct Connect（eBGP）が VPN（iBGP）より優先</td>
+        </tr>
+        <tr>
+          <td><span class="step-num-cell r5">5</span></td>
+          <td><strong>Next-Hop コスト</strong></td>
+          <td><span class="win-rule r5">IGP コストが低い方</span></td>
+          <td>複数拠点からの同条件ルートで近い側を選択</td>
+        </tr>
+        <tr>
+          <td><span class="step-num-cell r6">6</span></td>
+          <td><strong>タイブレーク</strong></td>
+          <td><span class="win-rule r6">Router ID が小さい方</span></td>
+          <td>完全同条件のバックアップ切り分け</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- AWS CONTEXT -->
+  <div class="section-title"><span class="icon">☁️</span>AWS での実践：Direct Connect × Site-to-Site VPN</div>
+  <div class="aws-context">
+    <div class="context-card direct">
+      <div class="context-icon">⚡</div>
+      <h2 id="Direct-Connect-を優先させる方法">Direct Connect を優先させる方法</h2>
+      <p>Direct Connect（専用線）を VPN より優先する 2 つの主なアプローチ</p>
+      <ul>
+        <li><strong>Local Preference を上げる</strong>（例: 200 に設定）→ ルール① で即決勝</li>
+        <li><strong>AS_PATH を短くする</strong>（VPN 側に prepend 追加）→ ルール② で勝利</li>
+        <li>Direct Connect は eBGP なので VPN（iBGP）より ルール④ でも優位</li>
+        <li>帯域が広く低遅延のため、Next-Hop コストでも有利になりやすい</li>
+      </ul>
+    </div>
+    <div class="context-card vpn">
+      <div class="context-icon">🔒</div>
+      <h2 id="VPN-をフェイルオーバーとして使う">VPN をフェイルオーバーとして使う</h2>
+      <p>Direct Connect 障害時のみ VPN を使うバックアップ設計のポイント</p>
+      <ul>
+        <li>VPN 側の <strong>Local Preference を低く設定</strong>（例: 100）</li>
+        <li>VPN 側に <strong>AS_PATH prepend</strong> を追加してパス長を延ばす</li>
+        <li>MED を高く設定して Direct Connect の出口を優先させる</li>
+        <li>Direct Connect が落ちた瞬間、自動で VPN ルートが浮上する</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- EXAM TIPS -->
+  <div class="exam-tips">
+    <h2 id="AWS-試験対策-よく出るポイント">🎯 AWS 試験対策：よく出るポイント</h2>
+    <div class="tips-grid">
+      <div class="tip-card">
+        <h3 id="❓-Local-Preference-vs-MED-の違い">❓ Local Preference vs MED の違い</h3>
+        <p><code>Local Preference</code> は「自分の AS 内」で適用されるアウトバウンド制御。<br>
+        <code>MED</code> は「隣の AS に伝える」インバウンドのヒント。<br>
+        スコープが逆なので混同注意！</p>
+      </div>
+      <div class="tip-card">
+        <h3 id="❓-AS_PATH-Prepend-とは？">❓ AS_PATH Prepend とは？</h3>
+        <p>自分の AS 番号を <code>BGP アップデート</code> に意図的に複数回追記してパス長を長くするテクニック。<br>
+        ルール② で相手に「遠回りだ」と認識させてトラフィックを誘導できる。</p>
+      </div>
+      <div class="tip-card">
+        <h3 id="❓-eBGP-が-iBGP-に勝る理由">❓ eBGP が iBGP に勝る理由</h3>
+        <p>eBGP は直接隣接 AS から受け取った「<strong>一次情報</strong>」。<br>
+        iBGP は AS 内で転送された情報のため、ループ防止ルールで信頼性が低く扱われる。</p>
+      </div>
+      <div class="tip-card">
+        <h3 id="❓-Direct-Connect-と-VPN-が共存する場合">❓ Direct Connect と VPN が共存する場合</h3>
+        <p>同じプレフィックスを広報する場合、デフォルトでは <code>eBGP</code> の Direct Connect が優先。<br>
+        VPN を優先させたいなら Local Preference または AS_PATH で明示的に制御する必要がある。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MNEMONICS -->
+  <div class="section-title"><span class="icon">🧠</span>覚え方：語呂合わせ</div>
+  <div style="background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); padding:36px; margin-bottom:50px; text-align:center;">
+    <p style="font-size:28px; font-weight:800; color:var(--navy); letter-spacing:2px; margin-bottom:20px;">
+      「<span style="color:var(--c1)">ロー</span>カルで <span style="color:var(--c2)">パス</span>を <span style="color:var(--c3)">メッド</span>に渡し、<span style="color:var(--c4)">外</span>から <span style="color:var(--c5)">近い</span>方へ、<span style="color:var(--c6)">ID</span>で決まる」
+    </p>
+    <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; max-width:960px; margin:0 auto;">
+      <div style="background:#EDE9FE; border-radius:10px; padding:16px 8px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:var(--c1);">ロー</div>
+        <div style="font-size:15px; color:var(--text-s); margin-top:4px;">Local<br>Preference</div>
+      </div>
+      <div style="background:#DBEAFE; border-radius:10px; padding:16px 8px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:var(--c2);">パス</div>
+        <div style="font-size:15px; color:var(--text-s); margin-top:4px;">AS_PATH</div>
+      </div>
+      <div style="background:#D1FAE5; border-radius:10px; padding:16px 8px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:var(--c3);">メッド</div>
+        <div style="font-size:15px; color:var(--text-s); margin-top:4px;">MED</div>
+      </div>
+      <div style="background:#FEF3C7; border-radius:10px; padding:16px 8px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:var(--c4);">外</div>
+        <div style="font-size:15px; color:var(--text-s); margin-top:4px;">eBGP &gt; iBGP</div>
+      </div>
+      <div style="background:#FEE2E2; border-radius:10px; padding:16px 8px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:var(--c5);">近い</div>
+        <div style="font-size:15px; color:var(--text-s); margin-top:4px;">Next-Hop<br>Cost</div>
+      </div>
+      <div style="background:#EDE9FE; border-radius:10px; padding:16px 8px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:var(--c6);">ID</div>
+        <div style="font-size:15px; color:var(--text-s); margin-top:4px;">Router ID<br>Tiebreak</div>
+      </div>
+    </div>
+  </div>
+
+
+
+</div><!-- /container -->
+
+<footer class="footer">
+  <p>🌐 <strong>BGP Route Selection Algorithm</strong> — AWS Networking Education Resource</p>
+  <p style="margin-top:8px;">Direct Connect / Site-to-Site VPN / Transit Gateway 設計の基礎知識</p>
+</footer>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script is:inline>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

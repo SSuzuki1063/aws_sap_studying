@@ -1,0 +1,714 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'AWS GuardDuty 抑制ルール（Suppression Rule）完全ガイド',
+  category: 'development-deployment',
+  categoryLabel: '開発・デプロイメント',
+  subcategory: '',
+  slug: 'guardduty-suppression-rules',
+  pageCss: '/aws_sap_studying/css/pages/guardduty-suppression-rules.css',
+  tocItems: [
+    { level: 'h2', id: 'たとえ話で理解しよう', text: '💡 たとえ話で理解しよう' },
+    { level: 'h2', id: '抑制ルールの仕組み', text: '📊 抑制ルールの仕組み' },
+    { level: 'h2', id: '⚙️-抑制ルールの動作ステップ', text: '⚙️ 抑制ルールの動作ステップ' },
+    { level: 'h3', id: 'ルールを作成', text: 'ルールを作成' },
+    { level: 'h3', id: 'Finding生成時に照合', text: 'Finding生成時に照合' },
+    { level: 'h3', id: 'マッチしたら自動アーカイブ', text: 'マッチしたら自動アーカイブ' },
+    { level: 'h3', id: 'いつでも確認可能', text: 'いつでも確認可能' },
+    { level: 'h2', id: 'フィルタリングできる条件', text: '🎯 フィルタリングできる条件' },
+    { level: 'h3', id: 'Finding-Type', text: 'Finding Type' },
+    { level: 'h3', id: 'Severity', text: 'Severity' },
+    { level: 'h3', id: 'Resource-Type', text: 'Resource Type' },
+    { level: 'h3', id: 'Resource-Tags', text: 'Resource Tags' },
+    { level: 'h3', id: 'IP-Address', text: 'IP Address' },
+    { level: 'h3', id: 'Account-ID', text: 'Account ID' },
+    { level: 'h2', id: 'よくある使用シーン', text: '💼 よくある使用シーン' },
+    { level: 'h3', id: '開発環境のテスト活動', text: '🧪 開発環境のテスト活動' },
+    { level: 'h3', id: '自動化ツールの正常動作', text: '🤖 自動化ツールの正常動作' },
+    { level: 'h3', id: '既知の社内IPアドレス', text: '🏢 既知の社内IPアドレス' },
+    { level: 'h3', id: '低重大度の大量アラート', text: '📊 低重大度の大量アラート' },
+    { level: 'h2', id: '⚠️-注意すべきポイント', text: '⚠️ 注意すべきポイント' },
+    { level: 'h3', id: '過剰な抑制は危険', text: '🙈 過剰な抑制は危険' },
+    { level: 'h3', id: '定期的なレビュー', text: '📝 定期的なレビュー' },
+    { level: 'h3', id: '️-アーカイブは削除ではない', text: '🗂️ アーカイブは削除ではない' },
+    { level: 'h3', id: 'EventBridgeとの関係', text: '🔄 EventBridgeとの関係' },
+    { level: 'h2', id: '✨-ベストプラクティス', text: '✨ ベストプラクティス' },
+    { level: 'h3', id: '具体的な条件を設定', text: '具体的な条件を設定' },
+    { level: 'h3', id: '理由を説明に記載', text: '理由を説明に記載' },
+    { level: 'h3', id: 'タグを活用', text: 'タグを活用' },
+    { level: 'h3', id: 'アーカイブを定期確認', text: 'アーカイブを定期確認' },
+    { level: 'h2', id: '抑制ルールの作成例', text: '💻 抑制ルールの作成例' },
+    { level: 'h2', id: 'まとめ', text: '📌 まとめ' },
+    { level: 'h3', id: '目的', text: '目的' },
+    { level: 'h3', id: '仕組み', text: '仕組み' },
+    { level: 'h3', id: 'ポイント', text: 'ポイント' },
+    { level: 'h3', id: '活用シーン', text: '活用シーン' }
+  ],
+  prevPage: 'codepipeline_infographic_v2.html',
+  nextPage: 'cloudwatch-logs-retention-guide.html',
+  pageNum: 10,
+  pageTotal: 15,
+};
+
+const rawContent = `<!-- ヘッダー -->
+<div class="header">
+<h1>
+     🛡️ GuardDuty 抑制ルール
+    </h1>
+
+<p class="subtitle">
+     Suppression Rule で「オオカミ少年」問題を解決！
+    </p>
+<span class="service-badge">
+     AWS Security Services
+    </span>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-section">
+<h2 id="たとえ話で理解しよう">
+     💡 たとえ話で理解しよう
+    </h2>
+<div class="analogy-box">
+<div class="analogy-title">
+      🏢 ビルの警備員さんに例えると...
+     </div>
+<div class="analogy-content">
+<p>
+       GuardDutyは
+       <strong>
+        24時間体制のセキュリティ警備員
+       </strong>
+       のようなものです。
+                        不審な人物を見つけると、すぐに報告してくれます。
+      </p>
+<p>
+       しかし、毎日来る
+       <strong>
+        清掃業者さん
+       </strong>
+       や
+       <strong>
+        定期便の配達員さん
+       </strong>
+       まで
+                        「不審者発見！」と報告されたら、本当に危険な時に気づけなくなりますよね？🤔
+      </p>
+<p>
+       そこで登場するのが
+       <strong style="color: #f39c12;">
+        抑制ルール（Suppression Rule）
+       </strong>
+       ！
+                        これは警備員さんに渡す
+       <strong>
+        「顔パスリスト」
+       </strong>
+       のようなものです。
+      </p>
+<p>
+       「この人は毎日来る清掃業者さんだから、いちいち報告しなくていいよ」と
+                        事前に教えておくことで、
+       <strong>
+        本当に重要なアラートだけに集中
+       </strong>
+       できるようになります！✨
+      </p>
+</div>
+</div>
+</div>
+<!-- 図解セクション -->
+<div class="diagram-section">
+<h2 id="抑制ルールの仕組み">
+     📊 抑制ルールの仕組み
+    </h2>
+<div class="flow-diagram">
+<div class="flow-row">
+<div class="flow-box">
+<div class="icon">
+        🔍
+       </div>
+<div class="label">
+        GuardDuty
+        <br/>
+        脅威を検出
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-box alert">
+<div class="icon">
+        🚨
+       </div>
+<div class="label">
+        Finding
+        <br/>
+        （検出結果）生成
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-box suppression">
+<div class="icon">
+        📋
+       </div>
+<div class="label">
+        抑制ルールで
+        <br/>
+        フィルタリング
+       </div>
+</div>
+</div>
+<div class="flow-arrow vertical">
+      ↓
+     </div>
+<div class="flow-row">
+<div class="flow-box archive">
+<div class="icon">
+        📦
+       </div>
+<div class="label">
+        マッチ → 自動アーカイブ
+        <br/>
+        （非表示）
+       </div>
+</div>
+<div style="padding: 20px; font-size: 1.5em;">
+       または
+      </div>
+<div class="flow-box pass">
+<div class="icon">
+        🔔
+       </div>
+<div class="label">
+        マッチしない → 通常表示
+        <br/>
+        （要対応）
+       </div>
+</div>
+</div>
+</div>
+<!-- 比較図 -->
+<div class="comparison-container">
+<div class="comparison-box without">
+<div class="comparison-title">
+       ❌ 抑制ルールなし
+      </div>
+<ul class="alert-list">
+<li class="noise">
+        🔔 ポートスキャン検出（開発テスト）
+       </li>
+<li class="noise">
+        🔔 異常なAPIコール（自動化ツール）
+       </li>
+<li class="real">
+        🔔 不正ログイン試行 ⚠️ 重要！
+       </li>
+<li class="noise">
+        🔔 DNS異常（内部DNS）
+       </li>
+<li class="noise">
+        🔔 EC2外部通信（正規バックアップ）
+       </li>
+</ul>
+<p style="color: #e74c3c; margin-top: 15px; text-align: center;">
+       😵 ノイズが多くて重要なアラートを見逃す！
+      </p>
+</div>
+<div class="comparison-box with">
+<div class="comparison-title">
+       ✅ 抑制ルールあり
+      </div>
+<ul class="alert-list">
+<li class="suppressed">
+        📦 ポートスキャン → 自動アーカイブ
+       </li>
+<li class="suppressed">
+        📦 異常なAPIコール → 自動アーカイブ
+       </li>
+<li class="real">
+        🔔 不正ログイン試行 ⚠️ すぐ対応！
+       </li>
+<li class="suppressed">
+        📦 DNS異常 → 自動アーカイブ
+       </li>
+<li class="suppressed">
+        📦 EC2外部通信 → 自動アーカイブ
+       </li>
+</ul>
+<p style="color: #27ae60; margin-top: 15px; text-align: center;">
+       😊 本当に重要なアラートに集中できる！
+      </p>
+</div>
+</div>
+</div>
+<!-- 仕組み説明 -->
+<div class="how-it-works">
+<h2 id="⚙️-抑制ルールの動作ステップ">
+     ⚙️ 抑制ルールの動作ステップ
+    </h2>
+<div class="mechanism-grid">
+<div class="mechanism-card">
+<span class="step-num">
+       1
+      </span>
+<h3 id="ルールを作成">
+       ルールを作成
+      </h3>
+<p>
+       「この条件に合うFindingは重要じゃない」というフィルター条件を設定します。検出タイプ、重大度、リソースなどで指定可能。
+      </p>
+</div>
+<div class="mechanism-card">
+<span class="step-num">
+       2
+      </span>
+<h3 id="Finding生成時に照合">
+       Finding生成時に照合
+      </h3>
+<p>
+       GuardDutyが新しい脅威を検出してFindingを生成すると、自動的に抑制ルールと照合されます。
+      </p>
+</div>
+<div class="mechanism-card">
+<span class="step-num">
+       3
+      </span>
+<h3 id="マッチしたら自動アーカイブ">
+       マッチしたら自動アーカイブ
+      </h3>
+<p>
+       ルールにマッチしたFindingは自動的にアーカイブ状態に。コンソールのデフォルト表示から除外されます。
+      </p>
+</div>
+<div class="mechanism-card">
+<span class="step-num">
+       4
+      </span>
+<h3 id="いつでも確認可能">
+       いつでも確認可能
+      </h3>
+<p>
+       アーカイブされたFindingは削除されません。フィルターを変更すればいつでも確認できます。
+      </p>
+</div>
+</div>
+</div>
+<!-- フィルター条件 -->
+<div class="filter-section">
+<h2 id="フィルタリングできる条件">
+     🎯 フィルタリングできる条件
+    </h2>
+<div class="filter-grid">
+<div class="filter-card">
+<div class="icon">
+       📝
+      </div>
+<h3 id="Finding-Type">
+       Finding Type
+      </h3>
+<p>
+       検出タイプで絞り込み
+       <br/>
+       例: Recon:EC2/PortProbeUnprotectedPort
+      </p>
+</div>
+<div class="filter-card">
+<div class="icon">
+       ⚠️
+      </div>
+<h3 id="Severity">
+       Severity
+      </h3>
+<p>
+       重大度で絞り込み
+       <br/>
+       Low / Medium / High
+      </p>
+</div>
+<div class="filter-card">
+<div class="icon">
+       🖥️
+      </div>
+<h3 id="Resource-Type">
+       Resource Type
+      </h3>
+<p>
+       リソース種類で絞り込み
+       <br/>
+       EC2 / S3 / IAM など
+      </p>
+</div>
+<div class="filter-card">
+<div class="icon">
+       🏷️
+      </div>
+<h3 id="Resource-Tags">
+       Resource Tags
+      </h3>
+<p>
+       タグで絞り込み
+       <br/>
+       Environment: dev など
+      </p>
+</div>
+<div class="filter-card">
+<div class="icon">
+       🌐
+      </div>
+<h3 id="IP-Address">
+       IP Address
+      </h3>
+<p>
+       送信元/宛先IPで絞り込み
+       <br/>
+       特定のIPを除外
+      </p>
+</div>
+<div class="filter-card">
+<div class="icon">
+       🔑
+      </div>
+<h3 id="Account-ID">
+       Account ID
+      </h3>
+<p>
+       AWSアカウントで絞り込み
+       <br/>
+       マルチアカウント環境向け
+      </p>
+</div>
+</div>
+</div>
+<!-- ユースケース -->
+<div class="usecase-section">
+<h2 id="よくある使用シーン">
+     💼 よくある使用シーン
+    </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<h3 id="開発環境のテスト活動">
+       🧪 開発環境のテスト活動
+      </h3>
+<div class="scenario">
+<div class="scenario-label">
+        シナリオ
+       </div>
+       開発チームがペネトレーションテストを実施。大量のポートスキャン検出が発生。
+      </div>
+<div class="rule-example">
+       Finding Type: Recon:EC2/*
+       <br/>
+       Resource Tag: Environment = dev
+      </div>
+</div>
+<div class="usecase-card">
+<h3 id="自動化ツールの正常動作">
+       🤖 自動化ツールの正常動作
+      </h3>
+<div class="scenario">
+<div class="scenario-label">
+        シナリオ
+       </div>
+       CI/CDパイプラインやバックアップツールによるAPI呼び出しが異常検出される。
+      </div>
+<div class="rule-example">
+       Finding Type: UnauthorizedAccess:IAMUser/*
+       <br/>
+       Principal: automation-role
+      </div>
+</div>
+<div class="usecase-card">
+<h3 id="既知の社内IPアドレス">
+       🏢 既知の社内IPアドレス
+      </h3>
+<div class="scenario">
+<div class="scenario-label">
+        シナリオ
+       </div>
+       オフィスのNAT GatewayからのアクセスがTor/VPNとして誤検出される。
+      </div>
+<div class="rule-example">
+       Finding Type: UnauthorizedAccess:*
+       <br/>
+       Service.Action.NetworkConnectionAction
+       <br/>
+       .RemoteIpDetails.IpAddressV4 = 203.0.113.10
+      </div>
+</div>
+<div class="usecase-card">
+<h3 id="低重大度の大量アラート">
+       📊 低重大度の大量アラート
+      </h3>
+<div class="scenario">
+<div class="scenario-label">
+        シナリオ
+       </div>
+       Lowレベルの検出結果が大量に発生し、重要なアラートが埋もれる。
+      </div>
+<div class="rule-example">
+       Severity: Low
+       <br/>
+       ※ 慎重に使用すること！
+      </div>
+</div>
+</div>
+</div>
+<!-- 注意点 -->
+<div class="warning-section">
+<h2 id="⚠️-注意すべきポイント">
+     ⚠️ 注意すべきポイント
+    </h2>
+<div class="warning-grid">
+<div class="warning-card">
+<h3 id="過剰な抑制は危険">
+       🙈 過剰な抑制は危険
+      </h3>
+<p>
+       抑制ルールを広く設定しすぎると、本当の脅威も見逃す可能性があります。最小限の範囲で、具体的な条件を設定しましょう。
+      </p>
+</div>
+<div class="warning-card">
+<h3 id="定期的なレビュー">
+       📝 定期的なレビュー
+      </h3>
+<p>
+       環境は変化します。設定した抑制ルールが今でも適切か、定期的に見直しましょう。不要になったルールは削除を。
+      </p>
+</div>
+<div class="warning-card">
+<h3 id="️-アーカイブは削除ではない">
+       🗂️ アーカイブは削除ではない
+      </h3>
+<p>
+       抑制されたFindingは削除されず、アーカイブに残ります。必要に応じてフィルターを変更して確認できることを覚えておきましょう。
+      </p>
+</div>
+<div class="warning-card">
+<h3 id="EventBridgeとの関係">
+       🔄 EventBridgeとの関係
+      </h3>
+<p>
+       抑制されたFindingも、EventBridgeには送信されます。EventBridge側でも同様のフィルタリングが必要な場合があります。
+      </p>
+</div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<div class="bestpractice-section">
+<h2 id="✨-ベストプラクティス">
+     ✨ ベストプラクティス
+    </h2>
+<div class="practice-list">
+<div class="practice-item">
+<span class="check-icon">
+       ✅
+      </span>
+<div>
+<h3 id="具体的な条件を設定">
+        具体的な条件を設定
+       </h3>
+<p>
+        「すべてのLow重大度を抑制」ではなく、「特定のFinding Typeで、特定のリソースに対するものだけ」のように具体的に指定しましょう。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="check-icon">
+       ✅
+      </span>
+<div>
+<h3 id="理由を説明に記載">
+        理由を説明に記載
+       </h3>
+<p>
+        抑制ルールには説明（Description）を必ず追加。なぜこのルールが必要なのか、誰が承認したのかを記録しておきましょう。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="check-icon">
+       ✅
+      </span>
+<div>
+<h3 id="タグを活用">
+        タグを活用
+       </h3>
+<p>
+        リソースに適切なタグを付けておくことで、環境（dev/prod）や用途に基づいた柔軟な抑制ルールが作成できます。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="check-icon">
+       ✅
+      </span>
+<div>
+<h3 id="アーカイブを定期確認">
+        アーカイブを定期確認
+       </h3>
+<p>
+        月に一度など、アーカイブされたFindingを確認する運用を入れましょう。想定外のものが抑制されていないかチェック。
+       </p>
+</div>
+</div>
+</div>
+</div>
+<!-- コード例 -->
+<div class="code-section">
+<h2 id="抑制ルールの作成例">
+     💻 抑制ルールの作成例
+    </h2>
+<span class="code-label">
+     AWS CLI
+    </span>
+<div class="code-block">
+<pre><span class="comment"># 開発環境のポートスキャン検出を抑制</span>
+aws guardduty create-filter \\
+    --detector-id <span class="string">12abc34d567e8fa901bc2d34e56789f0</span> \\
+    --name <span class="string">"SuppressDevPortScan"</span> \\
+    --description <span class="string">"開発環境のペネトレーションテストによる検出を除外"</span> \\
+    --action <span class="keyword">ARCHIVE</span> \\
+    --finding-criteria '{
+        <span class="property">"Criterion"</span>: {
+            <span class="property">"type"</span>: {
+                <span class="property">"Eq"</span>: [<span class="string">"Recon:EC2/PortProbeUnprotectedPort"</span>]
+            },
+            <span class="property">"resource.tags.value"</span>: {
+                <span class="property">"Eq"</span>: [<span class="string">"development"</span>]
+            }
+        }
+    }'</pre>
+</div>
+<span class="code-label">
+     CloudFormation
+    </span>
+<div class="code-block">
+<pre><span class="keyword">AWSTemplateFormatVersion</span>: <span class="string">'2010-09-09'</span>
+<span class="keyword">Resources</span>:
+  <span class="property">DevSuppressionRule</span>:
+    <span class="keyword">Type</span>: AWS::GuardDuty::Filter
+    <span class="keyword">Properties</span>:
+      <span class="property">DetectorId</span>: !Ref GuardDutyDetector
+      <span class="property">Name</span>: <span class="string">SuppressDevEnvironment</span>
+      <span class="property">Description</span>: <span class="string">開発環境の低重大度アラートを抑制</span>
+      <span class="property">Action</span>: <span class="keyword">ARCHIVE</span>
+      <span class="property">Rank</span>: <span class="value">1</span>
+      <span class="property">FindingCriteria</span>:
+        <span class="property">Criterion</span>:
+          <span class="property">severity</span>:
+            <span class="property">Lt</span>:
+              - <span class="value">4</span>  <span class="comment"># Low severity (1-3)</span>
+          <span class="property">resource.resourceType</span>:
+            <span class="property">Eq</span>:
+              - <span class="string">Instance</span>
+          <span class="property">resource.tags.value</span>:
+            <span class="property">Eq</span>:
+              - <span class="string">dev</span></pre>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary-section">
+<h2 id="まとめ">
+     📌 まとめ
+    </h2>
+<div class="summary-points">
+<div class="summary-point">
+<div class="icon">
+       🎯
+      </div>
+<h3 id="目的">
+       目的
+      </h3>
+<p>
+       既知の誤検知や許容されているアクティビティをフィルタリングし、重要なアラートに集中
+      </p>
+</div>
+<div class="summary-point">
+<div class="icon">
+       ⚙️
+      </div>
+<h3 id="仕組み">
+       仕組み
+      </h3>
+<p>
+       条件にマッチしたFindingを自動的にアーカイブ状態にする（削除はしない）
+      </p>
+</div>
+<div class="summary-point">
+<div class="icon">
+       🔑
+      </div>
+<h3 id="ポイント">
+       ポイント
+      </h3>
+<p>
+       具体的な条件設定・定期的なレビュー・理由の記録を忘れずに
+      </p>
+</div>
+<div class="summary-point">
+<div class="icon">
+       💼
+      </div>
+<h3 id="活用シーン">
+       活用シーン
+      </h3>
+<p>
+       開発テスト・自動化ツール・既知IPアドレスなど、正当なアクティビティの除外に最適
+      </p>
+</div>
+</div>
+</div>
+<div class="footer">
+<p>
+     AWS GuardDuty Suppression Rules Guide | Created for AWS Beginners 🚀
+    </p>
+</div>
+
+
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script is:inline>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

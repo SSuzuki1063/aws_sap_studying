@@ -1,0 +1,1397 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド',
+  category: 'security-governance',
+  categoryLabel: 'セキュリティ・ガバナンス',
+  subcategory: '',
+  slug: 'aws-monitoring-guide',
+  pageCss: '/aws_sap_studying/css/pages/aws-monitoring-guide.css',
+  tocItems: [
+    { level: 'h2', id: 'ビルのセキュリティシステムで例えると超わかりやすい！', text: '🏢 ビルのセキュリティシステムで例えると超わかりやすい！' },
+    { level: 'h2', id: 'ビルのセキュリティシステムで理解しよう！', text: '🏢 ビルのセキュリティシステムで理解しよう！' },
+    { level: 'h3', id: '監視カメラ', text: '監視カメラ' },
+    { level: 'h3', id: '映像保管庫', text: '映像保管庫' },
+    { level: 'h3', id: '異常検知センサー', text: '異常検知センサー' },
+    { level: 'h3', id: '通報システム', text: '通報システム' },
+    { level: 'h2', id: '監視の流れを視覚化', text: '📊 監視の流れを視覚化' },
+    { level: 'h3', id: '誰かがAWSで操作', text: '誰かがAWSで操作' },
+    { level: 'h3', id: 'AWS-CloudTrail', text: 'AWS CloudTrail' },
+    { level: 'h3', id: 'CloudWatch-Logs', text: 'CloudWatch Logs' },
+    { level: 'h3', id: 'CloudWatch-Alarms', text: 'CloudWatch Alarms' },
+    { level: 'h3', id: 'Amazon-SNS', text: 'Amazon SNS' },
+    { level: 'h2', id: '️-完成形アーキテクチャ', text: '🏗️ 完成形アーキテクチャ' },
+    { level: 'h3', id: 'AWSユーザー', text: 'AWSユーザー' },
+    { level: 'h2', id: 'よくある監視ユースケース', text: '🔍 よくある監視ユースケース' },
+    { level: 'h3', id: 'rootユーザーログイン検知', text: 'rootユーザーログイン検知' },
+    { level: 'h2', id: '5ステップで構築完了！', text: '🚀 5ステップで構築完了！' },
+    { level: 'h3', id: 'SNSトピックを作成', text: 'SNSトピックを作成' },
+    { level: 'h2', id: '気になるコストは？', text: '💰 気になるコストは？' },
+    { level: 'h3', id: 'CloudTrail', text: '📹 CloudTrail' },
+    { level: 'h2', id: 'まとめ', text: '🎓 まとめ' },
+    { level: 'h3', id: 'ビルのセキュリティ-=-AWS監視', text: '🏢 ビルのセキュリティ = AWS監視' }
+  ],
+  prevPage: 'aws-managed-vs-customer-managed-policies.html',
+  nextPage: 'nitro-enclaves-guide.html',
+  pageNum: 42,
+  pageTotal: 71,
+};
+
+const rawContent = `<div class="header">
+<h1>
+     🔔 AWS 運用監視の最小構成
+    </h1>
+<p>
+     CloudTrail + CloudWatch Logs/Alarms + SNS で実現する
+     <br/>
+     運用負荷ゼロの自動監視システム
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="ビルのセキュリティシステムで例えると超わかりやすい！">
+      🏢 ビルのセキュリティシステムで例えると超わかりやすい！
+     </h2>
+<p class="intro-text">
+<strong>
+       この3つのサービスを組み合わせると「全自動監視システム」が完成！
+      </strong>
+<br/>
+<br/>
+      「誰かがAWSで何かした」→「ログに記録」→「怪しい動きを検知」→「即座に通知」
+      <br/>
+<br/>
+      一度設定すれば
+      <strong>
+       運用負荷ほぼゼロ
+      </strong>
+      で、24時間365日監視してくれます。
+      <br/>
+      まさに
+      <strong>
+       「寝ている間も働いてくれるセキュリティガード」
+      </strong>
+      です🛡️
+     </p>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-hero">
+<h2 class="analogy-title" id="ビルのセキュリティシステムで理解しよう！">
+      🏢 ビルのセキュリティシステムで理解しよう！
+     </h2>
+<div class="analogy-building">
+<div class="analogy-card">
+<div class="analogy-icon">
+        📹
+       </div>
+<h3 id="監視カメラ">
+        監視カメラ
+       </h3>
+<div class="aws-service">
+        CloudTrail
+       </div>
+<p>
+        ビル内のすべての出入りや行動を24時間録画。「誰が」「いつ」「何をしたか」を漏れなく記録。
+       </p>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        💾
+       </div>
+<h3 id="映像保管庫">
+        映像保管庫
+       </h3>
+<div class="aws-service">
+        CloudWatch Logs
+       </div>
+<p>
+        監視カメラの映像を整理して保管。検索・分析ができる形で長期保存。
+       </p>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        🚨
+       </div>
+<h3 id="異常検知センサー">
+        異常検知センサー
+       </h3>
+<div class="aws-service">
+        CloudWatch Alarms
+       </div>
+<p>
+        「深夜に金庫室に入った」など怪しい動きを自動検知。条件に合致したら即アラート。
+       </p>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        📱
+       </div>
+<h3 id="通報システム">
+        通報システム
+       </h3>
+<div class="aws-service">
+        Amazon SNS
+       </div>
+<p>
+        異常を検知したら警備員のスマホに即通知。メール・SMS・Slackなど複数手段で通報。
+       </p>
+</div>
+</div>
+</div>
+<!-- フロー図 -->
+<div class="flow-section">
+<h2 class="flow-title" id="監視の流れを視覚化">
+      📊 監視の流れを視覚化
+     </h2>
+<div class="flow-diagram">
+<div class="flow-step flow-step-1">
+<div class="flow-step-icon">
+        👤
+       </div>
+<h3 id="誰かがAWSで操作">
+        誰かがAWSで操作
+       </h3>
+<p>
+        コンソール/CLI/API
+       </p>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step flow-step-2">
+<div class="flow-step-icon">
+        📹
+       </div>
+<h4>
+        CloudTrail
+       </h4>
+<p>
+        全API操作を記録
+       </p>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step flow-step-3">
+<div class="flow-step-icon">
+        💾
+       </div>
+<h4>
+        CloudWatch Logs
+       </h4>
+<p>
+        ログを保管・検索可能に
+       </p>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step flow-step-4">
+<div class="flow-step-icon">
+        🚨
+       </div>
+<h4>
+        CloudWatch Alarms
+       </h4>
+<p>
+        条件に合致したら発火
+       </p>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step flow-step-5">
+<div class="flow-step-icon">
+        📱
+       </div>
+<h4>
+        SNS通知
+       </h4>
+<p>
+        メール/Slack/SMSで通知
+       </p>
+</div>
+</div>
+</div>
+<!-- 各サービス詳細 -->
+<div class="service-detail cloudtrail-section">
+<div class="service-header">
+<div class="service-icon">
+       📹
+      </div>
+<div class="service-title-block">
+<h3 id="AWS-CloudTrail">
+        AWS CloudTrail
+       </h3>
+<div class="subtitle">
+        すべてのAPI操作を記録する「監視カメラ」
+       </div>
+</div>
+</div>
+<div class="service-grid">
+<div class="service-box service-box-blue">
+<h4>
+        🎯 何を記録するの？
+       </h4>
+<p>
+        AWSで行われた
+        <strong>
+         すべてのAPI操作
+        </strong>
+        を記録します。
+       </p>
+<ul>
+<li>
+         EC2インスタンスの起動・停止
+        </li>
+<li>
+         S3バケットへのアクセス
+        </li>
+<li>
+         IAMユーザーの作成・削除
+        </li>
+<li>
+         セキュリティグループの変更
+        </li>
+<li>
+         コンソールへのログイン
+        </li>
+</ul>
+</div>
+<div class="service-box service-box-green">
+<h4>
+        📝 記録される情報
+       </h4>
+<p>
+        各操作について以下の情報が記録されます：
+       </p>
+<ul>
+<li>
+<strong>
+          誰が：
+         </strong>
+         IAMユーザー/ロール名
+        </li>
+<li>
+<strong>
+          いつ：
+         </strong>
+         タイムスタンプ（UTC）
+        </li>
+<li>
+<strong>
+          何を：
+         </strong>
+         API名（RunInstances等）
+        </li>
+<li>
+<strong>
+          どこから：
+         </strong>
+         送信元IPアドレス
+        </li>
+<li>
+<strong>
+          結果：
+         </strong>
+         成功/失敗
+        </li>
+</ul>
+</div>
+<div class="service-box service-box-purple">
+<h4>
+        💡 たとえ話で理解
+       </h4>
+<p>
+        ビルの監視カメラと同じです。
+       </p>
+<ul>
+<li>
+         誰がいつビルに入ったか
+        </li>
+<li>
+         どの部屋に入ったか
+        </li>
+<li>
+         何をしたか
+        </li>
+<li>
+         いつ出ていったか
+        </li>
+</ul>
+<p>
+        すべて録画されているので、後から確認できます。
+       </p>
+</div>
+<div class="service-box service-box-orange">
+<h4>
+        ⚙️ 設定のポイント
+       </h4>
+<ul>
+<li>
+<strong>
+          証跡の作成：
+         </strong>
+         1リージョンまたは全リージョン
+        </li>
+<li>
+<strong>
+          S3保存：
+         </strong>
+         長期保存用（デフォルト90日）
+        </li>
+<li>
+<strong>
+          CloudWatch連携：
+         </strong>
+         リアルタイム監視に必須
+        </li>
+<li>
+<strong>
+          データイベント：
+         </strong>
+         S3/Lambda操作も記録可能
+        </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="service-detail cloudwatch-logs-section">
+<div class="service-header">
+<div class="service-icon">
+       💾
+      </div>
+<div class="service-title-block">
+<h3 id="CloudWatch-Logs">
+        CloudWatch Logs
+       </h3>
+<div class="subtitle">
+        ログを保管・検索・フィルタリングする「映像保管庫」
+       </div>
+</div>
+</div>
+<div class="service-grid">
+<div class="service-box service-box-blue">
+<h4>
+        🎯 何ができるの？
+       </h4>
+<p>
+        CloudTrailのログを
+        <strong>
+         検索・分析可能な形
+        </strong>
+        で保管します。
+       </p>
+<ul>
+<li>
+         リアルタイムでログを受信
+        </li>
+<li>
+         キーワード検索が可能
+        </li>
+<li>
+         メトリクスフィルターで条件検知
+        </li>
+<li>
+         長期間の保存（1日〜無期限）
+        </li>
+</ul>
+</div>
+<div class="service-box service-box-green">
+<h4>
+        📊 メトリクスフィルターとは
+       </h4>
+<p>
+<strong>
+         特定のパターンを検知してカウント
+        </strong>
+        する機能です。
+       </p>
+<ul>
+<li>
+         「rootユーザーログイン」を検知
+        </li>
+<li>
+         「IAM変更」をカウント
+        </li>
+<li>
+         「特定IPからのアクセス」を監視
+        </li>
+</ul>
+<p>
+        これがCloudWatch Alarmsと連携します。
+       </p>
+</div>
+<div class="service-box service-box-purple">
+<h4>
+        💡 たとえ話で理解
+       </h4>
+<p>
+        映像保管庫 + AI解析システムのようなもの。
+       </p>
+<ul>
+<li>
+         監視カメラの映像を整理して保管
+        </li>
+<li>
+         「金庫室」と言えばその映像を検索
+        </li>
+<li>
+         「不審な動き」を自動で検出
+        </li>
+<li>
+         検出したらカウンターが増える
+        </li>
+</ul>
+</div>
+<div class="service-box service-box-orange">
+<h4>
+        ⚙️ ロググループの構成
+       </h4>
+<ul>
+<li>
+<strong>
+          ロググループ：
+         </strong>
+         ログの入れ物（フォルダ）
+        </li>
+<li>
+<strong>
+          ログストリーム：
+         </strong>
+         ログの流れ（ファイル）
+        </li>
+<li>
+<strong>
+          保持期間：
+         </strong>
+         1日〜10年or無期限
+        </li>
+<li>
+<strong>
+          暗号化：
+         </strong>
+         KMSで暗号化推奨
+        </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="service-detail cloudwatch-alarm-section">
+<div class="service-header">
+<div class="service-icon">
+       🚨
+      </div>
+<div class="service-title-block">
+<h3 id="CloudWatch-Alarms">
+        CloudWatch Alarms
+       </h3>
+<div class="subtitle">
+        条件に合致したらアラートを発火する「異常検知センサー」
+       </div>
+</div>
+</div>
+<div class="service-grid">
+<div class="service-box service-box-blue">
+<h4>
+        🎯 何ができるの？
+       </h4>
+<p>
+        メトリクスが
+        <strong>
+         閾値を超えたら自動でアクション
+        </strong>
+        を実行します。
+       </p>
+<ul>
+<li>
+         rootログインが1回以上 → アラート
+        </li>
+<li>
+         IAM変更が5回以上 → アラート
+        </li>
+<li>
+         特定エラーが10回以上 → アラート
+        </li>
+</ul>
+</div>
+<div class="service-box service-box-green">
+<h4>
+        📊 アラームの状態
+       </h4>
+<ul>
+<li>
+<strong style="color: #22c55e;">
+          OK：
+         </strong>
+         閾値以下、問題なし
+        </li>
+<li>
+<strong style="color: #ef4444;">
+          ALARM：
+         </strong>
+         閾値超過、アクション実行
+        </li>
+<li>
+<strong style="color: #94a3b8;">
+          INSUFFICIENT_DATA：
+         </strong>
+         データ不足
+        </li>
+</ul>
+<p>
+        状態が変わるとSNSに通知が送られます。
+       </p>
+</div>
+<div class="service-box service-box-purple">
+<h4>
+        💡 たとえ話で理解
+       </h4>
+<p>
+        ビルの異常検知センサーです。
+       </p>
+<ul>
+<li>
+         「深夜0時以降に金庫室に入った」
+        </li>
+<li>
+         「1時間に5回以上失敗したログイン」
+        </li>
+<li>
+         「許可されていないドア開閉」
+        </li>
+</ul>
+<p>
+        条件に合致したら即座にアラーム発報！
+       </p>
+</div>
+<div class="service-box service-box-orange">
+<h4>
+        ⚙️ 設定のポイント
+       </h4>
+<ul>
+<li>
+<strong>
+          期間：
+         </strong>
+         5分/1分などの評価間隔
+        </li>
+<li>
+<strong>
+          統計：
+         </strong>
+         合計/平均/最大/最小
+        </li>
+<li>
+<strong>
+          閾値：
+         </strong>
+         何回以上でアラート
+        </li>
+<li>
+<strong>
+          評価期間：
+         </strong>
+         何回連続で条件を満たすか
+        </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="service-detail sns-section">
+<div class="service-header">
+<div class="service-icon">
+       📱
+      </div>
+<div class="service-title-block">
+<h3 id="Amazon-SNS">
+        Amazon SNS
+       </h3>
+<div class="subtitle">
+        複数の宛先に通知を配信する「通報システム」
+       </div>
+</div>
+</div>
+<div class="service-grid">
+<div class="service-box service-box-blue">
+<h4>
+        🎯 何ができるの？
+       </h4>
+<p>
+        アラームが発火したら
+        <strong>
+         様々な方法で通知
+        </strong>
+        を送ります。
+       </p>
+<ul>
+<li>
+         📧 メール送信
+        </li>
+<li>
+         📱 SMS送信
+        </li>
+<li>
+         💬 Slack/Teams連携
+        </li>
+<li>
+         🔧 Lambda起動
+        </li>
+<li>
+         📨 SQSキューへ送信
+        </li>
+</ul>
+</div>
+<div class="service-box service-box-green">
+<h4>
+        📊 トピックとサブスクリプション
+       </h4>
+<ul>
+<li>
+<strong>
+          トピック：
+         </strong>
+         通知の「チャンネル」
+        </li>
+<li>
+<strong>
+          サブスクリプション：
+         </strong>
+         通知先の登録
+        </li>
+</ul>
+<p>
+        1つのトピックに複数の通知先を登録できるので、メールとSlack両方に通知することも可能。
+       </p>
+</div>
+<div class="service-box service-box-purple">
+<h4>
+        💡 たとえ話で理解
+       </h4>
+<p>
+        ビルの通報システムです。
+       </p>
+<ul>
+<li>
+         異常を検知したら警備員に電話
+        </li>
+<li>
+         同時にビル管理会社にメール
+        </li>
+<li>
+         必要なら警察にも通報
+        </li>
+</ul>
+<p>
+        1つの異常を複数の関係者に同時通知！
+       </p>
+</div>
+<div class="service-box service-box-orange">
+<h4>
+        ⚙️ Slack連携の方法
+       </h4>
+<ul>
+<li>
+<strong>
+          方法1：
+         </strong>
+         AWS Chatbot（推奨）
+        </li>
+<li>
+<strong>
+          方法2：
+         </strong>
+         Lambda + Webhook
+        </li>
+<li>
+<strong>
+          方法3：
+         </strong>
+         メール転送
+        </li>
+</ul>
+<p>
+        AWS ChatbotならSNS→Slack連携が超簡単！
+       </p>
+</div>
+</div>
+</div>
+<!-- アーキテクチャ図 -->
+<div class="architecture-diagram">
+<h2 class="architecture-title" id="️-完成形アーキテクチャ">
+      🏗️ 完成形アーキテクチャ
+     </h2>
+<div class="architecture-visual">
+<div class="arch-row">
+<div class="arch-box arch-box-blue">
+<div class="arch-box-icon">
+         👤
+        </div>
+<h3 id="AWSユーザー">
+         AWSユーザー
+        </h3>
+<p>
+         コンソール/CLI/API操作
+        </p>
+</div>
+</div>
+<div class="arch-arrow-down">
+       ⬇️
+      </div>
+<div class="arch-row">
+<div class="arch-box arch-box-red">
+<div class="arch-box-icon">
+         📹
+        </div>
+<h4>
+         CloudTrail
+        </h4>
+<p>
+         全API操作を記録
+        </p>
+</div>
+<div class="arch-arrow">
+        →
+       </div>
+<div class="arch-box arch-box-orange">
+<div class="arch-box-icon">
+         🪣
+        </div>
+<h4>
+         S3バケット
+        </h4>
+<p>
+         長期保存（90日〜）
+        </p>
+</div>
+</div>
+<div class="arch-arrow-down">
+       ⬇️
+      </div>
+<div class="arch-row">
+<div class="arch-box arch-box-yellow">
+<div class="arch-box-icon">
+         💾
+        </div>
+<h4>
+         CloudWatch Logs
+        </h4>
+<p>
+         リアルタイム取り込み
+        </p>
+</div>
+</div>
+<div class="arch-arrow-down">
+       ⬇️
+      </div>
+<div class="arch-row">
+<div class="arch-box arch-box-yellow">
+<div class="arch-box-icon">
+         🔍
+        </div>
+<h4>
+         メトリクスフィルター
+        </h4>
+<p>
+         パターン検知・カウント
+        </p>
+</div>
+<div class="arch-arrow">
+        →
+       </div>
+<div class="arch-box arch-box-red">
+<div class="arch-box-icon">
+         🚨
+        </div>
+<h4>
+         CloudWatch Alarm
+        </h4>
+<p>
+         閾値超過で発火
+        </p>
+</div>
+</div>
+<div class="arch-arrow-down">
+       ⬇️
+      </div>
+<div class="arch-row">
+<div class="arch-box arch-box-green">
+<div class="arch-box-icon">
+         📢
+        </div>
+<h4>
+         SNS Topic
+        </h4>
+<p>
+         通知を配信
+        </p>
+</div>
+</div>
+<div class="arch-arrow-down">
+       ⬇️
+      </div>
+<div class="arch-row">
+<div class="arch-box arch-box-blue">
+<div class="arch-box-icon">
+         📧
+        </div>
+<h4>
+         Email
+        </h4>
+<p>
+         担当者へ通知
+        </p>
+</div>
+<div class="arch-box arch-box-blue">
+<div class="arch-box-icon">
+         💬
+        </div>
+<h4>
+         Slack
+        </h4>
+<p>
+         チームへ通知
+        </p>
+</div>
+<div class="arch-box arch-box-blue">
+<div class="arch-box-icon">
+         📱
+        </div>
+<h4>
+         SMS
+        </h4>
+<p>
+         緊急時の通知
+        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- 監視ユースケース -->
+<div style="margin: 50px 0;">
+<h2 id="よくある監視ユースケース" style="text-align: center; font-size: 2.5em; color: #1e293b; margin-bottom: 40px;">
+      🔍 よくある監視ユースケース
+     </h2>
+<div class="use-cases">
+<div class="use-case-card">
+<div class="use-case-icon">
+        🔐
+       </div>
+<h3 id="rootユーザーログイン検知">
+        rootユーザーログイン検知
+       </h3>
+<p>
+        rootアカウントの使用は緊急時のみ。ログインしたら即座に通知して不正利用を防止。
+       </p>
+<div class="use-case-filter">
+        { $.userIdentity.type = "Root" &amp;&amp; $.userIdentity.invokedBy NOT EXISTS &amp;&amp; $.eventType != "AwsServiceEvent" }
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🛡️
+       </div>
+<h4>
+        IAMポリシー変更検知
+       </h4>
+<p>
+        権限の不正変更を検知。管理者以外がIAMを変更したらアラート。
+       </p>
+<div class="use-case-filter">
+        { ($.eventName = "CreatePolicy") || ($.eventName = "DeletePolicy") || ($.eventName = "PutUserPolicy") }
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🚪
+       </div>
+<h4>
+        セキュリティグループ変更
+       </h4>
+<p>
+        ファイアウォールルールの変更を検知。意図しないポート開放を防止。
+       </p>
+<div class="use-case-filter">
+        { ($.eventName = "AuthorizeSecurityGroupIngress") || ($.eventName = "RevokeSecurityGroupIngress") }
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🔑
+       </div>
+<h4>
+        コンソールログイン失敗
+       </h4>
+<p>
+        ブルートフォース攻撃の検知。連続失敗でアラート。
+       </p>
+<div class="use-case-filter">
+        { ($.eventName = "ConsoleLogin") &amp;&amp; ($.errorMessage = "Failed authentication") }
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🗑️
+       </div>
+<h4>
+        S3バケット削除検知
+       </h4>
+<p>
+        重要データの誤削除・不正削除を防止。バケット操作を監視。
+       </p>
+<div class="use-case-filter">
+        { ($.eventSource = "s3.amazonaws.com") &amp;&amp; ($.eventName = "DeleteBucket") }
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🌐
+       </div>
+<h4>
+        VPC変更検知
+       </h4>
+<p>
+        ネットワーク構成の変更を検知。意図しないルート変更を防止。
+       </p>
+<div class="use-case-filter">
+        { ($.eventName = "CreateVpc") || ($.eventName = "DeleteVpc") || ($.eventName = "ModifyVpcAttribute") }
+       </div>
+</div>
+</div>
+</div>
+<!-- セットアップ手順 -->
+<div class="setup-section">
+<h2 class="setup-title" id="5ステップで構築完了！">
+      🚀 5ステップで構築完了！
+     </h2>
+<div class="setup-steps">
+<div class="setup-step">
+<div class="setup-step-number">
+        1
+       </div>
+<h3 id="SNSトピックを作成">
+        SNSトピックを作成
+       </h3>
+<p>
+        まず通知先を作成します。トピック名を決めて、メールアドレスをサブスクライブ。確認メールが届いたら承認をクリック。
+       </p>
+<span class="time-badge">
+        ⏱️ 所要時間：約3分
+       </span>
+</div>
+<div class="setup-step">
+<div class="setup-step-number">
+        2
+       </div>
+<h4>
+        CloudTrail証跡を作成
+       </h4>
+<p>
+        マネジメントコンソールからCloudTrailを開き、「証跡の作成」。S3バケット（自動作成）と「CloudWatch Logsへの送信」を有効化。
+       </p>
+<span class="time-badge">
+        ⏱️ 所要時間：約5分
+       </span>
+</div>
+<div class="setup-step">
+<div class="setup-step-number">
+        3
+       </div>
+<h4>
+        メトリクスフィルターを作成
+       </h4>
+<p>
+        CloudWatch Logsのロググループを開き、「メトリクスフィルターの作成」。監視したいパターン（rootログインなど）を設定。
+       </p>
+<span class="time-badge">
+        ⏱️ 所要時間：約5分/フィルター
+       </span>
+</div>
+<div class="setup-step">
+<div class="setup-step-number">
+        4
+       </div>
+<h4>
+        CloudWatch Alarmを作成
+       </h4>
+<p>
+        メトリクスフィルターから「アラームの作成」。閾値（1回以上など）を設定し、SNSトピックをアクションに指定。
+       </p>
+<span class="time-badge">
+        ⏱️ 所要時間：約3分/アラーム
+       </span>
+</div>
+<div class="setup-step">
+<div class="setup-step-number">
+        5
+       </div>
+<h4>
+        テスト実行
+       </h4>
+<p>
+        実際にrootでログインしてみるなど、アラームが発火することを確認。通知が届いたら設定完了！
+       </p>
+<span class="time-badge">
+        ⏱️ 所要時間：約5分
+       </span>
+</div>
+</div>
+</div>
+<!-- コスト情報 -->
+<div class="cost-section">
+<h2 class="cost-title" id="気になるコストは？">
+      💰 気になるコストは？
+     </h2>
+<div class="cost-grid">
+<div class="cost-card">
+<h3 id="CloudTrail">
+        📹 CloudTrail
+       </h3>
+<div class="price">
+        無料〜
+       </div>
+<p>
+        管理イベントは1証跡まで無料。データイベントは$2/10万イベント
+       </p>
+</div>
+<div class="cost-card">
+<h4>
+        💾 CloudWatch Logs
+       </h4>
+<div class="price">
+        $0.50〜
+       </div>
+<p>
+        取り込み$0.50/GB、保存$0.03/GB/月。小規模なら月数百円程度
+       </p>
+</div>
+<div class="cost-card">
+<h4>
+        🚨 CloudWatch Alarms
+       </h4>
+<div class="price">
+        $0.10〜
+       </div>
+<p>
+        標準アラーム$0.10/月/アラーム。10個でも$1/月
+       </p>
+</div>
+<div class="cost-card">
+<h4>
+        📱 Amazon SNS
+       </h4>
+<div class="price">
+        ほぼ無料
+       </div>
+<p>
+        最初の100万リクエスト無料。メール送信も無料枠あり
+       </p>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 12px; margin-top: 25px; text-align: center;">
+<p style="font-size: 1.3em; color: #065f46;">
+<strong>
+        💡 小規模環境なら月額 $5〜10 程度で24時間365日監視が可能！
+       </strong>
+</p>
+</div>
+</div>
+<!-- CloudFormationテンプレート例 -->
+<div class="code-example">
+<div class="code-title">
+      📝 CloudFormationテンプレート例（rootログイン検知）
+     </div>
+<pre><span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Description:</span> <span class="code-string">'Root Login Monitoring Stack'</span>
+
+<span class="code-keyword">Parameters:</span>
+  <span class="code-keyword">NotificationEmail:</span>
+    <span class="code-keyword">Type:</span> String
+    <span class="code-keyword">Description:</span> <span class="code-string">'通知先メールアドレス'</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-comment"># SNSトピック</span>
+  <span class="code-keyword">AlertTopic:</span>
+    <span class="code-keyword">Type:</span> AWS::SNS::Topic
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">TopicName:</span> <span class="code-string">'security-alerts'</span>
+      <span class="code-keyword">Subscription:</span>
+        - <span class="code-keyword">Endpoint:</span> <span class="code-string">!Ref NotificationEmail</span>
+          <span class="code-keyword">Protocol:</span> <span class="code-string">'email'</span>
+
+  <span class="code-comment"># メトリクスフィルター（rootログイン検知）</span>
+  <span class="code-keyword">RootLoginMetricFilter:</span>
+    <span class="code-keyword">Type:</span> AWS::Logs::MetricFilter
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">LogGroupName:</span> <span class="code-string">'/aws/cloudtrail/logs'</span>  <span class="code-comment"># CloudTrailのロググループ名</span>
+      <span class="code-keyword">FilterPattern:</span> <span class="code-string">'{ $.userIdentity.type = "Root" &amp;&amp; $.userIdentity.invokedBy NOT EXISTS }'</span>
+      <span class="code-keyword">MetricTransformations:</span>
+        - <span class="code-keyword">MetricName:</span> <span class="code-string">'RootLoginCount'</span>
+          <span class="code-keyword">MetricNamespace:</span> <span class="code-string">'SecurityMetrics'</span>
+          <span class="code-keyword">MetricValue:</span> <span class="code-string">'1'</span>
+          <span class="code-keyword">DefaultValue:</span> <span class="code-number">0</span>
+
+  <span class="code-comment"># CloudWatch Alarm</span>
+  <span class="code-keyword">RootLoginAlarm:</span>
+    <span class="code-keyword">Type:</span> AWS::CloudWatch::Alarm
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">AlarmName:</span> <span class="code-string">'RootLogin-Alert'</span>
+      <span class="code-keyword">AlarmDescription:</span> <span class="code-string">'rootユーザーがログインしました'</span>
+      <span class="code-keyword">MetricName:</span> <span class="code-string">'RootLoginCount'</span>
+      <span class="code-keyword">Namespace:</span> <span class="code-string">'SecurityMetrics'</span>
+      <span class="code-keyword">Statistic:</span> <span class="code-string">'Sum'</span>
+      <span class="code-keyword">Period:</span> <span class="code-number">300</span>  <span class="code-comment"># 5分</span>
+      <span class="code-keyword">EvaluationPeriods:</span> <span class="code-number">1</span>
+      <span class="code-keyword">Threshold:</span> <span class="code-number">1</span>
+      <span class="code-keyword">ComparisonOperator:</span> <span class="code-string">'GreaterThanOrEqualToThreshold'</span>
+      <span class="code-keyword">TreatMissingData:</span> <span class="code-string">'notBreaching'</span>
+      <span class="code-keyword">AlarmActions:</span>
+        - <span class="code-string">!Ref AlertTopic</span></pre>
+</div>
+<!-- 注意事項 -->
+<div class="warning-box">
+<div class="warning-title">
+<span>
+       ⚠️
+      </span>
+<span>
+       設定時の注意点
+      </span>
+</div>
+<div class="warning-content">
+<strong>
+       1. CloudTrailのCloudWatch連携を忘れずに：
+      </strong>
+<br/>
+      CloudTrailを作成するだけではリアルタイム監視ができません。必ず「CloudWatch Logsへの送信」を有効にしてください。
+      <br/>
+<br/>
+<strong>
+       2. SNSサブスクリプションの確認メール：
+      </strong>
+<br/>
+      メール通知を設定すると確認メールが届きます。リンクをクリックして承認しないと通知が届きません。
+      <br/>
+<br/>
+<strong>
+       3. アラームのテストを忘れずに：
+      </strong>
+<br/>
+      設定後は必ず動作確認をしましょう。実際にrootでログインしてアラームが発火するか確認してください。
+      <br/>
+<br/>
+<strong>
+       4. コスト監視も設定推奨：
+      </strong>
+<br/>
+      CloudWatch Logsの取り込み量が多いとコストが増加します。予算アラームも併せて設定しましょう。
+     </div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       運用負荷をさらに下げるコツ
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. AWS Chatbotを使おう：
+      </strong>
+<br/>
+      SNS→Slack連携がGUI操作だけで完了。Lambdaを書く必要なし！チームのSlackチャンネルに直接通知が届く。
+      <br/>
+<br/>
+<strong>
+       2. CloudFormationで管理：
+      </strong>
+<br/>
+      すべての設定をコード化しておけば、他アカウントへの展開も一瞬。上記テンプレートを参考に。
+      <br/>
+<br/>
+<strong>
+       3. AWS Config Rulesも併用：
+      </strong>
+<br/>
+      CloudTrailが「誰が何をしたか」を記録するなら、Configは「今どういう状態か」を監視。両方使うと最強。
+      <br/>
+<br/>
+<strong>
+       4. Security Hubの活用：
+      </strong>
+<br/>
+      複数のセキュリティサービスを一元管理。ベストプラクティスに沿っているか自動チェックしてくれる。
+      <br/>
+<br/>
+<strong>
+       5. 定期的なレビュー：
+      </strong>
+<br/>
+      月に1回は「アラームが多すぎないか」「本当に必要な監視か」を見直そう。アラーム疲れを防ぐ。
+     </div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #0f3460 0%, #533483 50%, #e94560 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="ビルのセキュリティ-=-AWS監視" style="font-size: 1.8em; margin-bottom: 15px;">
+        🏢 ビルのセキュリティ = AWS監視
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        一度設定すれば
+        <strong>
+         24時間365日、自動で監視
+        </strong>
+        してくれる
+        <br/>
+        「寝ている間も働くセキュリティガード」の完成！
+       </p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         📹
+        </div>
+<strong>
+         CloudTrail
+        </strong>
+<br/>
+        全操作を記録
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         💾
+        </div>
+<strong>
+         CW Logs
+        </strong>
+<br/>
+        保管・フィルター
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         🚨
+        </div>
+<strong>
+         CW Alarms
+        </strong>
+<br/>
+        異常を検知
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         📱
+        </div>
+<strong>
+         SNS
+        </strong>
+<br/>
+        即座に通知
+       </div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.2); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         ⏱️
+        </div>
+<strong style="font-size: 1.2em;">
+         構築時間
+        </strong>
+<br/>
+<br/>
+        約30分で
+        <br/>
+        構築完了！
+       </div>
+<div style="background: rgba(255,255,255,0.2); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         💰
+        </div>
+<strong style="font-size: 1.2em;">
+         月額コスト
+        </strong>
+<br/>
+<br/>
+        小規模なら
+        <br/>
+        $5〜10程度
+       </div>
+<div style="background: rgba(255,255,255,0.2); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         🛡️
+        </div>
+<strong style="font-size: 1.2em;">
+         運用負荷
+        </strong>
+<br/>
+<br/>
+        ほぼゼロ！
+        <br/>
+        全自動監視
+       </div>
+</div>
+<p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+       🎯
+       <strong>
+        まずはrootログイン検知から始めよう！
+       </strong>
+<br/>
+       最小構成から始めて、必要に応じて監視項目を追加していくのがオススメ🚀
+      </p>
+</div>
+</div>
+</div>
+
+
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script is:inline>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

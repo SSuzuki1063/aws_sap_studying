@@ -1,0 +1,1488 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Cloudfront Origin Failover Guide',
+  pageTitle: 'CloudFront オリジンフェイルオーバー完全ガイド | AWS学習リソース',
+  category: 'content-delivery-dns',
+  categoryLabel: 'コンテンツ配信・DNS',
+  subcategory: 'CloudFront & コンテンツ配信',
+  slug: 'cloudfront-origin-failover-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: 'まず結論-30秒で分かるオリジンフェイルオーバー', text: 'まず結論：30秒で分かるオリジンフェイルオーバー' },
+    { level: 'h2', id: 'たとえ話-2つの倉庫を持つネットショップ', text: 'たとえ話：2つの倉庫を持つネットショップ' },
+    { level: 'h2', id: 'オリジングループの構造', text: 'オリジングループの構造' },
+    { level: 'h2', id: 'フェイルオーバーの仕組みステップ解説', text: 'フェイルオーバーの仕組み（ステップ解説）' },
+    { level: 'h2', id: 'フェイルオーバーを発動するHTTPステータスコード', text: 'フェイルオーバーを発動するHTTPステータスコード' },
+    { level: 'h2', id: 'オリジンフェイルオーバーが活きる場面', text: 'オリジンフェイルオーバーが活きる場面' },
+    { level: 'h2', id: '通常オリジン-vs-オリジンフェイルオーバー', text: '通常オリジン vs オリジンフェイルオーバー' },
+    { level: 'h2', id: '設定例CloudFormation', text: '設定例（CloudFormation）' },
+    { level: 'h2', id: 'まとめ', text: 'まとめ' }
+  ],
+  prevPage: 'lambda-edge-x-frame-options-guide.html',
+  nextPage: 'aws-dns-infographic.html',
+  pageNum: 12,
+  pageTotal: 20,
+};
+
+const rawContent = `<style>/* ========== Foundation ========== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cf-primary: #8B5CF6;
+            --cf-primary-light: #EDE9FE;
+            --cf-primary-dark: #6D28D9;
+            --cf-accent: #F59E0B;
+            --cf-accent-light: #FEF3C7;
+            --cf-success: #10B981;
+            --cf-success-light: #D1FAE5;
+            --cf-error: #EF4444;
+            --cf-error-light: #FEE2E2;
+            --cf-info: #3B82F6;
+            --cf-info-light: #DBEAFE;
+            --cf-text: #1F2937;
+            --cf-text-secondary: #4B5563;
+            --cf-text-tertiary: #6B7280;
+            --cf-bg: #FFFFFF;
+            --cf-bg-soft: #F8FAFC;
+            --cf-bg-muted: #F1F5F9;
+            --cf-border: #E2E8F0;
+            --cf-shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --cf-shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --cf-shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+            --cf-radius: 12px;
+            --cf-radius-lg: 16px;
+            --cf-radius-xl: 20px;
+        }
+
+        body {
+            font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+            background: var(--cf-bg-soft);
+            color: var(--cf-text);
+            line-height: 1.8;
+            font-size: 20px;
+            -webkit-font-smoothing: antialiased;
+            padding-top: 70px;}
+
+        .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        /* ========== Header ========== */
+        .hero {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius-xl);
+            padding: 56px 48px;
+            text-align: center;
+            box-shadow: var(--cf-shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--cf-primary), var(--cf-accent), var(--cf-success));
+        }
+
+        .hero-icon {
+            width: 80px; height: 80px;
+            background: var(--cf-primary-light);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 36px;
+        }
+
+        .hero h1 {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--cf-text);
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+
+        .hero-sub {
+            font-size: 22px;
+            color: var(--cf-text-secondary);
+            font-weight: 500;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 8px 20px;
+            background: var(--cf-primary-light);
+            color: var(--cf-primary-dark);
+            border-radius: 100px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* ========== Section Base ========== */
+        .section {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius-xl);
+            padding: 48px;
+            margin-top: 32px;
+            box-shadow: var(--cf-shadow-sm);
+        }
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--cf-text);
+            margin-bottom: 20px;
+        }
+
+        .section-desc {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            line-height: 1.9;
+            max-width: 900px;
+        }
+
+        /* ========== Conclusion First ========== */
+        .conclusion-box {
+            background: linear-gradient(135deg, #FEFCE8, #FEF9C3);
+            border: 2px solid #FACC15;
+            border-radius: var(--cf-radius-lg);
+            padding: 36px 40px;
+            margin-top: 32px;
+        }
+
+        .conclusion-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 800;
+            color: #92400E;
+            margin-bottom: 16px;
+        }
+
+        .conclusion-points {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .conclusion-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 20px;
+            color: var(--cf-text);
+            line-height: 1.7;
+        }
+
+        .conclusion-point .point-icon {
+            flex-shrink: 0;
+            width: 28px; height: 28px;
+            background: #FDE68A;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* ========== Analogy ========== */
+        .analogy-banner {
+            background: var(--cf-bg-muted);
+            border: 2px dashed var(--cf-border);
+            border-radius: var(--cf-radius-lg);
+            padding: 36px 40px;
+            margin-top: 32px;
+        }
+
+        .analogy-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cf-text);
+            margin-bottom: 16px;
+        }
+
+        .analogy-text {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            line-height: 1.9;
+        }
+
+        .analogy-mapping {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .mapping-item {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .mapping-real {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--cf-primary-dark);
+            white-space: nowrap;
+        }
+
+        .mapping-arrow {
+            color: var(--cf-text-tertiary);
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+
+        .mapping-aws {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+        }
+
+        /* ========== Diagram: Origin Group ========== */
+        .diagram-area {
+            margin-top: 32px;
+        }
+
+        .diagram-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cf-text);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 40px 20px;
+            background: var(--cf-bg-muted);
+            border-radius: var(--cf-radius-lg);
+            overflow-x: auto;
+        }
+
+        .flow-node {
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .flow-node-box {
+            border-radius: var(--cf-radius);
+            padding: 20px 28px;
+            font-weight: 700;
+            font-size: 20px;
+            border: 2px solid;
+            min-width: 160px;
+            background: var(--cf-bg);
+        }
+
+        .flow-node-box.user {
+            border-color: var(--cf-info);
+            color: var(--cf-info);
+        }
+
+        .flow-node-box.cloudfront {
+            border-color: var(--cf-primary);
+            color: var(--cf-primary-dark);
+            background: var(--cf-primary-light);
+        }
+
+        .flow-node-box.origin-group {
+            border-color: var(--cf-accent);
+            color: #92400E;
+            background: var(--cf-accent-light);
+            min-width: 200px;
+        }
+
+        .flow-node-box.origin-primary {
+            border-color: var(--cf-success);
+            color: #065F46;
+            background: var(--cf-success-light);
+        }
+
+        .flow-node-box.origin-secondary {
+            border-color: var(--cf-error);
+            color: #991B1B;
+            background: var(--cf-error-light);
+        }
+
+        .flow-node-sub {
+            font-size: 20px;
+            color: var(--cf-text-tertiary);
+            margin-top: 8px;
+            font-weight: 400;
+        }
+
+        .flow-arrow-right {
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            flex-shrink: 0;
+        }
+
+        .flow-arrow-right svg {
+            width: 48px;
+            height: 24px;
+        }
+
+        /* Origin Group Structure */
+        .origin-group-diagram {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 32px;
+            padding: 40px 20px;
+            background: var(--cf-bg-muted);
+            border-radius: var(--cf-radius-lg);
+        }
+
+        .og-cloudfront-box {
+            background: var(--cf-primary-light);
+            border: 2px solid var(--cf-primary);
+            border-radius: var(--cf-radius-lg);
+            padding: 32px 36px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-width: 200px;
+        }
+
+        .og-cloudfront-box .og-icon { font-size: 40px; margin-bottom: 12px; }
+        .og-cloudfront-box .og-label {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--cf-primary-dark);
+        }
+
+        .og-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 4px;
+        }
+
+        .og-connector svg { width: 60px; height: 24px; }
+        .og-connector-label {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--cf-text-tertiary);
+            writing-mode: horizontal-tb;
+        }
+
+        .og-group-wrapper {
+            border: 3px dashed var(--cf-accent);
+            border-radius: var(--cf-radius-xl);
+            padding: 28px 32px;
+            background: rgba(245, 158, 11, 0.04);
+        }
+
+        .og-group-label {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #92400E;
+            margin-bottom: 20px;
+            padding: 6px 20px;
+            background: var(--cf-accent-light);
+            border-radius: 100px;
+            display: inline-block;
+        }
+
+        .og-group-label-wrapper { text-align: center; margin-bottom: 16px; }
+
+        .og-origins {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .og-origin-card {
+            border-radius: var(--cf-radius);
+            padding: 24px 28px;
+            border: 2px solid;
+            background: var(--cf-bg);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 280px;
+        }
+
+        .og-origin-card.primary {
+            border-color: var(--cf-success);
+        }
+
+        .og-origin-card.secondary {
+            border-color: var(--cf-error);
+        }
+
+        .og-origin-badge {
+            padding: 4px 14px;
+            border-radius: 100px;
+            font-size: 20px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .og-origin-badge.primary {
+            background: var(--cf-success-light);
+            color: #065F46;
+        }
+
+        .og-origin-badge.secondary {
+            background: var(--cf-error-light);
+            color: #991B1B;
+        }
+
+        .og-origin-info .og-origin-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--cf-text);
+        }
+
+        .og-origin-info .og-origin-desc {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+        }
+
+        /* ========== Failover Flow (Vertical) ========== */
+        .failover-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            padding: 40px 32px;
+            background: var(--cf-bg-muted);
+            border-radius: var(--cf-radius-lg);
+        }
+
+        .ff-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+        }
+
+        .ff-step-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+            width: 52px;
+        }
+
+        .ff-step-num {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--cf-bg);
+            flex-shrink: 0;
+        }
+
+        .ff-step-num.step-normal { background: var(--cf-info); }
+        .ff-step-num.step-check { background: var(--cf-accent); }
+        .ff-step-num.step-fail { background: var(--cf-error); }
+        .ff-step-num.step-recover { background: var(--cf-success); }
+
+        .ff-step-line {
+            width: 3px;
+            height: 32px;
+            background: var(--cf-border);
+            flex-shrink: 0;
+        }
+
+        .ff-step-content {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius);
+            padding: 24px 28px;
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .ff-step-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cf-text);
+            margin-bottom: 8px;
+        }
+
+        .ff-step-desc {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            line-height: 1.8;
+        }
+
+        .ff-step-tag {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 14px;
+            border-radius: 100px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .ff-step-tag.tag-blue { background: var(--cf-info-light); color: #1E40AF; }
+        .ff-step-tag.tag-amber { background: var(--cf-accent-light); color: #92400E; }
+        .ff-step-tag.tag-red { background: var(--cf-error-light); color: #991B1B; }
+        .ff-step-tag.tag-green { background: var(--cf-success-light); color: #065F46; }
+
+        .ff-arrow-segment {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding-left: 0;
+        }
+
+        .ff-arrow-segment .ff-step-indicator {
+            height: 32px;
+        }
+
+        /* ========== Error Code Grid ========== */
+        .code-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .code-card {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius);
+            padding: 24px;
+        }
+
+        .code-number {
+            font-size: 28px;
+            font-weight: 800;
+            font-family: "Consolas", "Monaco", monospace;
+        }
+
+        .code-number.c-5xx { color: var(--cf-error); }
+        .code-number.c-4xx { color: var(--cf-accent); }
+
+        .code-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--cf-text);
+            margin-top: 4px;
+        }
+
+        .code-desc {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ========== Comparison Table ========== */
+        .comp-table-wrapper {
+            overflow-x: auto;
+            margin-top: 24px;
+        }
+
+        .comp-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius);
+            overflow: hidden;
+            font-size: 20px;
+        }
+
+        .comp-table th {
+            background: var(--cf-bg-muted);
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--cf-text);
+            border-bottom: 2px solid var(--cf-border);
+        }
+
+        .comp-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--cf-border);
+            color: var(--cf-text-secondary);
+            vertical-align: top;
+        }
+
+        .comp-table tr:last-child td { border-bottom: none; }
+
+        .comp-table td:first-child {
+            font-weight: 600;
+            color: var(--cf-text);
+            white-space: nowrap;
+        }
+
+        /* ========== Use Case Cards ========== */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .usecase-card {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius);
+            padding: 28px;
+        }
+
+        .usecase-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .usecase-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cf-text);
+            margin-bottom: 8px;
+        }
+
+        .usecase-desc {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            line-height: 1.8;
+        }
+
+        /* ========== Config Example ========== */
+        .config-block {
+            margin-top: 24px;
+            background: #1E293B;
+            border-radius: var(--cf-radius);
+            overflow: hidden;
+        }
+
+        .config-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            background: #0F172A;
+            font-size: 20px;
+            font-weight: 600;
+            color: #94A3B8;
+        }
+
+        .config-code {
+            padding: 24px;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            font-size: 20px;
+            line-height: 1.7;
+            color: #E2E8F0;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .config-code .ck { color: #7DD3FC; }
+        .config-code .cv { color: #FCD34D; }
+        .config-code .cs { color: #86EFAC; }
+        .config-code .cc { color: #64748B; }
+
+        /* ========== Tip / Warning Boxes ========== */
+        .tip-box {
+            display: flex;
+            gap: 16px;
+            padding: 24px 28px;
+            border-radius: var(--cf-radius);
+            margin-top: 20px;
+            font-size: 20px;
+            line-height: 1.8;
+            align-items: flex-start;
+        }
+
+        .tip-box.tip-info {
+            background: var(--cf-info-light);
+            border: 1px solid #93C5FD;
+            color: #1E3A5F;
+        }
+
+        .tip-box.tip-warn {
+            background: var(--cf-accent-light);
+            border: 1px solid #FCD34D;
+            color: #78350F;
+        }
+
+        .tip-box.tip-good {
+            background: var(--cf-success-light);
+            border: 1px solid #6EE7B7;
+            color: #064E3B;
+        }
+
+        .tip-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .tip-text strong { font-weight: 700; }
+
+        /* ========== Analogy Detail ========== */
+        .analogy-scene {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 28px;
+        }
+
+        .scene-card {
+            border-radius: var(--cf-radius-lg);
+            padding: 32px;
+            border: 2px solid;
+        }
+
+        .scene-card.scene-normal {
+            border-color: var(--cf-success);
+            background: linear-gradient(to bottom, var(--cf-success-light), var(--cf-bg));
+        }
+
+        .scene-card.scene-failover {
+            border-color: var(--cf-error);
+            background: linear-gradient(to bottom, var(--cf-error-light), var(--cf-bg));
+        }
+
+        .scene-label {
+            display: inline-block;
+            padding: 4px 16px;
+            border-radius: 100px;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .scene-label.label-normal {
+            background: var(--cf-success);
+            color: white;
+        }
+
+        .scene-label.label-failover {
+            background: var(--cf-error);
+            color: white;
+        }
+
+        .scene-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cf-text);
+            margin-bottom: 12px;
+        }
+
+        .scene-desc {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            line-height: 1.9;
+        }
+
+        .scene-visual {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--cf-bg-muted);
+            border-radius: var(--cf-radius);
+            text-align: center;
+            font-size: 28px;
+            letter-spacing: 8px;
+        }
+
+        /* ========== Summary ========== */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .summary-card {
+            background: var(--cf-bg);
+            border: 1px solid var(--cf-border);
+            border-radius: var(--cf-radius);
+            padding: 28px;
+            text-align: center;
+        }
+
+        .summary-card-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .summary-card-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--cf-text);
+            margin-bottom: 8px;
+        }
+
+        .summary-card-value {
+            font-size: 20px;
+            color: var(--cf-text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ========== Footer ========== */
+        .page-footer {
+            text-align: center;
+            padding: 40px 0 0;
+            font-size: 20px;
+            color: var(--cf-text-tertiary);
+        }
+
+        /* ========== Responsive ========== */
+        @media (max-width: 768px) {
+            body { font-size: 18px;
+            padding-top: 70px;}
+            .page-container { padding: 20px 12px 40px; }
+            .hero { padding: 36px 24px; }
+            .hero h1 { font-size: 28px; }
+            .section { padding: 32px 20px; }
+            .conclusion-points,
+            .analogy-mapping,
+            .code-grid,
+            .usecase-grid,
+            .analogy-scene { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .flow-diagram { flex-direction: column; gap: 0; padding: 32px 16px; }
+            .flow-arrow-right { transform: rotate(90deg); padding: 8px 0; }
+            .origin-group-diagram { flex-direction: column; align-items: center; }
+            .og-connector { flex-direction: row; }
+            .og-connector svg { transform: rotate(90deg); }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }</style>
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="page-container">
+
+    <!-- ============ HERO ============ -->
+    <header class="hero">
+        <div class="hero-icon">🔄</div>
+        <h1>CloudFront オリジンフェイルオーバー</h1>
+        <p class="hero-sub">配信元が壊れても自動で切り替わる「保険」の仕組み</p>
+        <span class="hero-tag">Amazon CloudFront ネイティブ機能</span>
+    </header>
+
+    <!-- ============ 結論ファースト ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-accent);">⚡ CONCLUSION FIRST</div>
+        <h2 id="まず結論-30秒で分かるオリジンフェイルオーバー" class="section-title">まず結論：30秒で分かるオリジンフェイルオーバー</h2>
+        <p class="section-desc">
+            CloudFront のオリジンフェイルオーバーとは、<strong>配信元（オリジン）が障害を起こした際に、自動的にバックアップのオリジンへ切り替える</strong>仕組みです。ユーザーは障害に気づかずにコンテンツを受け取り続けることができます。
+        </p>
+
+        <div class="conclusion-box">
+            <div class="conclusion-header">🎯 覚えるべき4つのポイント</div>
+            <div class="conclusion-points">
+                <div class="conclusion-point">
+                    <span class="point-icon">1</span>
+                    <span><strong>オリジングループ</strong>＝ メインとバックアップの2つのオリジンをセットにしたもの</span>
+                </div>
+                <div class="conclusion-point">
+                    <span class="point-icon">2</span>
+                    <span><strong>自動切り替え</strong>＝ 特定のHTTPエラー（5xx/4xx）を検知すると自動でバックアップに転送</span>
+                </div>
+                <div class="conclusion-point">
+                    <span class="point-icon">3</span>
+                    <span><strong>設定のみ</strong>＝ コードの変更不要、CloudFront の設定だけで有効化できる</span>
+                </div>
+                <div class="conclusion-point">
+                    <span class="point-icon">4</span>
+                    <span><strong>高可用性</strong>＝ ダウンタイムなしでユーザー体験を維持できる</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ たとえ話 ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-primary);">🏪 ANALOGY</div>
+        <h2 id="たとえ話-2つの倉庫を持つネットショップ" class="section-title">たとえ話：2つの倉庫を持つネットショップ</h2>
+
+        <div class="analogy-banner">
+            <div class="analogy-header">💡 身近な例で理解しよう</div>
+            <p class="analogy-text">
+                あなたが運営するネットショップを想像してください。メイン倉庫（東京）から商品を出荷していますが、<strong>もしメイン倉庫が火災や停電で使えなくなったら？</strong>注文した全てのお客様に「発送できません」と連絡するのは大損害です。そこで、バックアップ倉庫（大阪）を用意しておき、メインが使えない時は自動的にバックアップから出荷する仕組みを作ります。これが CloudFront のオリジンフェイルオーバーです。
+            </p>
+        </div>
+
+        <div class="analogy-mapping">
+            <div class="mapping-item">
+                <span class="mapping-real">📦 ネットショップ</span>
+                <span class="mapping-arrow">→</span>
+                <span class="mapping-aws">CloudFront ディストリビューション</span>
+            </div>
+            <div class="mapping-item">
+                <span class="mapping-real">🏭 メイン倉庫</span>
+                <span class="mapping-arrow">→</span>
+                <span class="mapping-aws">プライマリオリジン（S3 / ALBなど）</span>
+            </div>
+            <div class="mapping-item">
+                <span class="mapping-real">🏭 バックアップ倉庫</span>
+                <span class="mapping-arrow">→</span>
+                <span class="mapping-aws">セカンダリオリジン（別リージョンS3など）</span>
+            </div>
+            <div class="mapping-item">
+                <span class="mapping-real">📋 出荷管理システム</span>
+                <span class="mapping-arrow">→</span>
+                <span class="mapping-aws">オリジングループ（自動切替ルール）</span>
+            </div>
+        </div>
+
+        <!-- 通常時 vs フェイルオーバー時 -->
+        <div class="analogy-scene">
+            <div class="scene-card scene-normal">
+                <span class="scene-label label-normal">通常時</span>
+                <div class="scene-title">メイン倉庫から出荷 ✅</div>
+                <p class="scene-desc">
+                    注文が入ると、出荷管理システムはまずメイン倉庫（東京）に指示を出します。メイン倉庫が正常に稼働していれば、そのまま出荷完了です。
+                </p>
+                <div class="scene-visual">
+                    👤 → 📋 → 🏭✅ → 📦
+                </div>
+            </div>
+            <div class="scene-card scene-failover">
+                <span class="scene-label label-failover">障害発生時</span>
+                <div class="scene-title">バックアップ倉庫に自動切替 🔄</div>
+                <p class="scene-desc">
+                    メイン倉庫がダウン（停電・火災）した場合、出荷管理システムが自動的にバックアップ倉庫（大阪）へ出荷指示を切り替えます。お客様は遅延に気づきません。
+                </p>
+                <div class="scene-visual">
+                    👤 → 📋 → 🏭❌ → 🏭✅ → 📦
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ オリジングループの構造 ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-success);">🏗️ STRUCTURE</div>
+        <h2 id="オリジングループの構造" class="section-title">オリジングループの構造</h2>
+        <p class="section-desc">
+            オリジングループは、<strong>プライマリオリジン</strong>と<strong>セカンダリオリジン</strong>の2つをセットにして、CloudFront のキャッシュビヘイビアに紐づけます。リクエストは常にプライマリに送られ、失敗した場合のみセカンダリに転送されます。
+        </p>
+
+        <div class="diagram-area">
+            <div class="diagram-title">📐 構造図：オリジングループの全体像</div>
+            <div class="origin-group-diagram">
+                <!-- CloudFront -->
+                <div class="og-cloudfront-box">
+                    <div class="og-icon">🌐</div>
+                    <div class="og-label">CloudFront</div>
+                    <div style="font-size:20px; color:var(--cf-text-secondary); margin-top:8px;">エッジロケーション</div>
+                </div>
+
+                <!-- Connector -->
+                <div class="og-connector">
+                    <svg role="img" viewBox="0 0 60 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="0" y1="12" x2="50" y2="12" stroke="#94A3B8" stroke-width="2.5" stroke-dasharray="6 4"/>
+                        <polygon points="48,6 60,12 48,18" fill="#94A3B8"/>
+                    </svg>
+                    <div class="og-connector-label">リクエスト転送</div>
+                </div>
+
+                <!-- Origin Group -->
+                <div class="og-group-wrapper">
+                    <div class="og-group-label-wrapper">
+                        <span class="og-group-label">📦 オリジングループ</span>
+                    </div>
+                    <div class="og-origins">
+                        <div class="og-origin-card primary">
+                            <span class="og-origin-badge primary">優先</span>
+                            <div class="og-origin-info">
+                                <div class="og-origin-name">プライマリオリジン</div>
+                                <div class="og-origin-desc">例：S3バケット（東京リージョン）</div>
+                            </div>
+                        </div>
+                        <div style="text-align:center; font-size:20px; color:var(--cf-text-tertiary); padding: 4px 0;">
+                            ↕ フェイルオーバー時に自動切替
+                        </div>
+                        <div class="og-origin-card secondary">
+                            <span class="og-origin-badge secondary">予備</span>
+                            <div class="og-origin-info">
+                                <div class="og-origin-name">セカンダリオリジン</div>
+                                <div class="og-origin-desc">例：S3バケット（大阪リージョン）</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tip-box tip-info">
+            <span class="tip-icon">ℹ️</span>
+            <div class="tip-text">
+                <strong>ポイント：</strong>オリジングループ内のプライマリとセカンダリは、S3、ALB、カスタムオリジン、MediaStore など異なる種類のオリジンを自由に組み合わせ可能です。同じ種類である必要はありません。
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ フェイルオーバーの流れ ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-info);">🔄 FAILOVER FLOW</div>
+        <h2 id="フェイルオーバーの仕組みステップ解説" class="section-title">フェイルオーバーの仕組み（ステップ解説）</h2>
+        <p class="section-desc">
+            CloudFront がどのようにオリジンの障害を検知し、セカンダリに切り替えるのか、4つのステップで見ていきましょう。
+        </p>
+
+        <div class="diagram-area">
+            <div class="diagram-title">📐 フロー図：フェイルオーバーの流れ</div>
+            <div class="failover-flow">
+                <!-- Step 1 -->
+                <div class="ff-step">
+                    <div class="ff-step-indicator">
+                        <div class="ff-step-num step-normal">1</div>
+                    </div>
+                    <div class="ff-step-content">
+                        <div class="ff-step-title">ユーザーがリクエスト送信</div>
+                        <div class="ff-step-desc">
+                            ユーザーが画像やページなどのコンテンツをリクエストすると、最寄りの CloudFront エッジロケーションが受け取ります。キャッシュにない場合、オリジンへ転送します。
+                        </div>
+                        <span class="ff-step-tag tag-blue">👤 → CloudFront エッジ</span>
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ff-arrow-segment">
+                    <div class="ff-step-indicator"><div class="ff-step-line"></div></div>
+                    <div></div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="ff-step">
+                    <div class="ff-step-indicator">
+                        <div class="ff-step-num step-check">2</div>
+                    </div>
+                    <div class="ff-step-content">
+                        <div class="ff-step-title">プライマリオリジンへリクエスト転送</div>
+                        <div class="ff-step-desc">
+                            CloudFront はまずプライマリオリジンにリクエストを送ります。プライマリが正常に応答（200 OK）すれば、ユーザーにコンテンツが配信されて完了です。
+                        </div>
+                        <span class="ff-step-tag tag-amber">エッジ → プライマリオリジン</span>
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ff-arrow-segment">
+                    <div class="ff-step-indicator"><div class="ff-step-line"></div></div>
+                    <div></div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="ff-step">
+                    <div class="ff-step-indicator">
+                        <div class="ff-step-num step-fail">3</div>
+                    </div>
+                    <div class="ff-step-content">
+                        <div class="ff-step-title">プライマリが失敗 → フェイルオーバー条件を判定</div>
+                        <div class="ff-step-desc">
+                            プライマリから設定済みのHTTPステータスコード（例: 500, 502, 503, 504, 403, 404）が返された場合、CloudFront はフェイルオーバー条件に該当すると判断します。接続タイムアウトの場合もフェイルオーバーが発生します。
+                        </div>
+                        <span class="ff-step-tag tag-red">⚠️ エラーステータス検知</span>
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ff-arrow-segment">
+                    <div class="ff-step-indicator"><div class="ff-step-line"></div></div>
+                    <div></div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="ff-step">
+                    <div class="ff-step-indicator">
+                        <div class="ff-step-num step-recover">4</div>
+                    </div>
+                    <div class="ff-step-content">
+                        <div class="ff-step-title">セカンダリオリジンから配信</div>
+                        <div class="ff-step-desc">
+                            CloudFront は同じリクエストをセカンダリオリジンに自動的に再送します。セカンダリが正常応答すれば、ユーザーはコンテンツを受け取れます。この切り替えはユーザーには見えず、シームレスに行われます。
+                        </div>
+                        <span class="ff-step-tag tag-green">✅ セカンダリから配信完了</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tip-box tip-warn">
+            <span class="tip-icon">⚠️</span>
+            <div class="tip-text">
+                <strong>注意：</strong>セカンダリオリジンも失敗した場合は、セカンダリのエラーレスポンスがそのままユーザーに返されます。セカンダリからさらに別のオリジンへの「二段階フェイルオーバー」はできません。
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ フェイルオーバー対象コード ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-error);">🚨 TRIGGER CODES</div>
+        <h2 id="フェイルオーバーを発動するHTTPステータスコード" class="section-title">フェイルオーバーを発動するHTTPステータスコード</h2>
+        <p class="section-desc">
+            以下のHTTPステータスコードをフェイルオーバー条件として設定できます。どのコードを対象にするかはカスタマイズ可能です。
+        </p>
+
+        <div class="code-grid">
+            <div class="code-card">
+                <div class="code-number c-5xx">500</div>
+                <div class="code-name">Internal Server Error</div>
+                <div class="code-desc">サーバー内部エラー。アプリがクラッシュした状態。</div>
+            </div>
+            <div class="code-card">
+                <div class="code-number c-5xx">502</div>
+                <div class="code-name">Bad Gateway</div>
+                <div class="code-desc">上流サーバーから無効な応答を受信。</div>
+            </div>
+            <div class="code-card">
+                <div class="code-number c-5xx">503</div>
+                <div class="code-name">Service Unavailable</div>
+                <div class="code-desc">サービス過負荷またはメンテナンス中。</div>
+            </div>
+            <div class="code-card">
+                <div class="code-number c-5xx">504</div>
+                <div class="code-name">Gateway Timeout</div>
+                <div class="code-desc">上流サーバーが応答しない（タイムアウト）。</div>
+            </div>
+            <div class="code-card">
+                <div class="code-number c-4xx">403</div>
+                <div class="code-name">Forbidden</div>
+                <div class="code-desc">アクセス拒否。権限の問題。</div>
+            </div>
+            <div class="code-card">
+                <div class="code-number c-4xx">404</div>
+                <div class="code-name">Not Found</div>
+                <div class="code-desc">リソースが存在しない。</div>
+            </div>
+        </div>
+
+        <div class="tip-box tip-good">
+            <span class="tip-icon">✅</span>
+            <div class="tip-text">
+                <strong>ベストプラクティス：</strong>一般的には 500, 502, 503, 504 の4つのサーバーエラーを対象にします。403/404 は意図的なレスポンスの場合もあるため、用途に応じて含めるか判断しましょう。
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ ユースケース ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-success);">🎯 USE CASES</div>
+        <h2 id="オリジンフェイルオーバーが活きる場面" class="section-title">オリジンフェイルオーバーが活きる場面</h2>
+
+        <div class="usecase-grid">
+            <div class="usecase-card">
+                <div class="usecase-icon">🌏</div>
+                <div class="usecase-title">マルチリージョン冗長化</div>
+                <div class="usecase-desc">
+                    S3バケットを東京と大阪にレプリケーションし、東京がダウンしても大阪から配信を継続。リージョン障害に対応した静的コンテンツ配信の基本パターンです。
+                </div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon">🖥️</div>
+                <div class="usecase-title">静的サイトフォールバック</div>
+                <div class="usecase-desc">
+                    プライマリにALB（動的サーバー）、セカンダリにS3（静的HTML）を設定。サーバーダウン時は「メンテナンス中」ページやキャッシュ済みの静的版を配信します。
+                </div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon">🎬</div>
+                <div class="usecase-title">メディア配信の安定化</div>
+                <div class="usecase-desc">
+                    動画・画像配信でプライマリの MediaStore がダウンした場合、S3にバックアップしたメディアファイルからシームレスに配信を継続します。
+                </div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon">🛒</div>
+                <div class="usecase-title">ECサイトの可用性確保</div>
+                <div class="usecase-desc">
+                    商品画像やCSSなどの静的アセットをフェイルオーバー構成にし、オリジン障害時もサイトの見た目を維持。売上損失を最小限に抑えます。
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 通常のオリジン vs フェイルオーバー ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-primary);">📊 COMPARISON</div>
+        <h2 id="通常オリジン-vs-オリジンフェイルオーバー" class="section-title">通常オリジン vs オリジンフェイルオーバー</h2>
+
+        <div class="comp-table-wrapper">
+            <table class="comp-table">
+                <thead>
+                    <tr>
+                        <th>比較項目</th>
+                        <th>通常（単一オリジン）</th>
+                        <th>オリジンフェイルオーバー</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>可用性</td>
+                        <td>オリジン障害 ＝ 配信停止</td>
+                        <td>自動で予備に切替、配信継続</td>
+                    </tr>
+                    <tr>
+                        <td>設定の手軽さ</td>
+                        <td>オリジン1つ設定するだけ</td>
+                        <td>オリジングループの追加設定が必要</td>
+                    </tr>
+                    <tr>
+                        <td>コスト</td>
+                        <td>オリジン1つ分</td>
+                        <td>予備オリジンの維持費が追加</td>
+                    </tr>
+                    <tr>
+                        <td>ユーザー影響</td>
+                        <td>障害時にエラーページが表示される</td>
+                        <td>障害を意識させない透過的な切替</td>
+                    </tr>
+                    <tr>
+                        <td>適用シーン</td>
+                        <td>開発環境、影響の小さいサイト</td>
+                        <td>本番環境、ビジネスクリティカルな配信</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ============ 設定例 ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-accent);">⚙️ CONFIGURATION</div>
+        <h2 id="設定例CloudFormation" class="section-title">設定例（CloudFormation）</h2>
+        <p class="section-desc">
+            CloudFormation テンプレートでオリジンフェイルオーバーを設定する例です。OriginGroups にプライマリとセカンダリを定義し、フェイルオーバー条件のステータスコードを指定します。
+        </p>
+
+        <div class="config-block">
+            <div class="config-header">
+                <span>📄 cloudfront-failover.yaml（抜粋）</span>
+                <span>CloudFormation</span>
+            </div>
+            <code class="config-code"><span class="cc"># CloudFront Distribution 設定</span>
+<span class="ck">DistributionConfig</span>:
+  <span class="ck">Origins</span>:
+    - <span class="ck">Id</span>: <span class="cv">PrimaryOrigin</span>
+      <span class="ck">DomainName</span>: <span class="cv">my-bucket-tokyo.s3.amazonaws.com</span>
+      <span class="ck">S3OriginConfig</span>:
+        <span class="ck">OriginAccessIdentity</span>: <span class="cs">""</span>
+
+    - <span class="ck">Id</span>: <span class="cv">SecondaryOrigin</span>
+      <span class="ck">DomainName</span>: <span class="cv">my-bucket-osaka.s3.amazonaws.com</span>
+      <span class="ck">S3OriginConfig</span>:
+        <span class="ck">OriginAccessIdentity</span>: <span class="cs">""</span>
+
+  <span class="cc"># オリジングループの定義</span>
+  <span class="ck">OriginGroups</span>:
+    <span class="ck">Quantity</span>: <span class="cv">1</span>
+    <span class="ck">Items</span>:
+      - <span class="ck">Id</span>: <span class="cv">MyOriginGroup</span>
+        <span class="ck">FailoverCriteria</span>:
+          <span class="ck">StatusCodes</span>:
+            <span class="ck">Quantity</span>: <span class="cv">4</span>
+            <span class="ck">Items</span>:
+              - <span class="cv">500</span>
+              - <span class="cv">502</span>
+              - <span class="cv">503</span>
+              - <span class="cv">504</span>
+        <span class="ck">Members</span>:
+          <span class="ck">Quantity</span>: <span class="cv">2</span>
+          <span class="ck">Items</span>:
+            - <span class="ck">OriginId</span>: <span class="cv">PrimaryOrigin</span>    <span class="cc"># 1番目 = プライマリ</span>
+            - <span class="ck">OriginId</span>: <span class="cv">SecondaryOrigin</span>  <span class="cc"># 2番目 = セカンダリ</span>
+
+  <span class="cc"># ビヘイビアでオリジングループを指定</span>
+  <span class="ck">DefaultCacheBehavior</span>:
+    <span class="ck">TargetOriginId</span>: <span class="cv">MyOriginGroup</span>  <span class="cc"># ← オリジングループを指定</span>
+    <span class="ck">ViewerProtocolPolicy</span>: <span class="cv">redirect-to-https</span></code>
+        </div>
+
+        <div class="tip-box tip-info" style="margin-top: 24px;">
+            <span class="tip-icon">ℹ️</span>
+            <div class="tip-text">
+                <strong>設定のポイント：</strong>DefaultCacheBehavior の TargetOriginId には、個別のオリジンIDではなく<strong>オリジングループのID</strong>を指定します。Members の Items は記述順が重要で、<strong>1番目がプライマリ、2番目がセカンダリ</strong>になります。
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ まとめ ============ -->
+    <section class="section">
+        <div class="section-label" style="color: var(--cf-success);">✅ SUMMARY</div>
+        <h2 id="まとめ" class="section-title">まとめ</h2>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-card-icon">🏗️</div>
+                <div class="summary-card-label">何を作る？</div>
+                <div class="summary-card-value">プライマリ＋セカンダリの2つのオリジンを束ねたオリジングループ</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon">🔄</div>
+                <div class="summary-card-label">いつ発動？</div>
+                <div class="summary-card-value">設定したHTTPエラーコード（500〜504等）をプライマリが返した時</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon">🎯</div>
+                <div class="summary-card-label">なぜ使う？</div>
+                <div class="summary-card-value">ユーザーに障害を見せず、ダウンタイムゼロを実現するため</div>
+            </div>
+        </div>
+
+        <div class="tip-box tip-good" style="margin-top: 24px;">
+            <span class="tip-icon">💡</span>
+            <div class="tip-text">
+                <strong>試験対策のキーフレーズ：</strong>CloudFront のオリジンフェイルオーバーは「オリジングループ」を使って設定する。オリジングループには「プライマリ」と「セカンダリ」の2つのオリジンを含める。フェイルオーバー条件はHTTPステータスコードで指定する。CloudFront ネイティブの機能であり、Route 53 や Lambda@Edge は不要。
+            </div>
+        </div>
+    </section>
+
+    <footer class="page-footer">
+        CloudFront オリジンフェイルオーバー完全ガイド ｜ AWS学習リソース
+    </footer>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script is:inline>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script is:inline src="/aws_sap_studying/js/mobile-nav.js"></script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

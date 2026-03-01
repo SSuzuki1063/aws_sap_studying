@@ -1,0 +1,919 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み',
+  category: 'security-governance',
+  categoryLabel: 'セキュリティ・ガバナンス',
+  subcategory: '',
+  slug: 'kms-grants-guide',
+  pageCss: '/aws_sap_studying/css/pages/kms-grants-guide.css',
+  tocItems: [
+    { level: 'h2', id: '結論-グラントとは？', text: '🎯 結論：グラントとは？' },
+    { level: 'h2', id: 'たとえ話で理解するグラント', text: '📖 たとえ話で理解するグラント' },
+    { level: 'h3', id: '金庫室-=-KMSキー', text: '金庫室 = KMSキー' },
+    { level: 'h2', id: 'グラントの仕組みを図解', text: '📊 グラントの仕組みを図解' },
+    { level: 'h3', id: 'KMS-キー', text: 'KMS キー' },
+    { level: 'h2', id: '⚖️-IAMポリシー-vs-グラント', text: '⚖️ IAMポリシー vs グラント' },
+    { level: 'h3', id: 'IAMポリシー', text: '📋 IAMポリシー' },
+    { level: 'h2', id: 'グラントで許可できる操作', text: '🔧 グラントで許可できる操作' },
+    { level: 'h3', id: 'Encrypt', text: 'Encrypt' },
+    { level: 'h2', id: 'グラントの構成要素', text: '📦 グラントの構成要素' },
+    { level: 'h2', id: 'グラントが使われる主なシーン', text: '🎯 グラントが使われる主なシーン' },
+    { level: 'h3', id: 'EBSボリュームの暗号化', text: '💾 EBSボリュームの暗号化' },
+    { level: 'h2', id: '⚙️-グラントの動作フロー', text: '⚙️ グラントの動作フロー' },
+    { level: 'h3', id: 'グラントの作成', text: 'グラントの作成' },
+    { level: 'h2', id: 'AWS-CLIでのグラント操作', text: '💻 AWS CLIでのグラント操作' },
+    { level: 'h2', id: '⚠️-グラント利用時の注意点', text: '⚠️ グラント利用時の注意点' },
+    { level: 'h3', id: '⚡-知っておくべきポイント', text: '⚡ 知っておくべきポイント' },
+    { level: 'h2', id: 'まとめ', text: '📝 まとめ' }
+  ],
+  prevPage: 'aws_cmk_infographic.html',
+  nextPage: 'kms-key-types.html',
+  pageNum: 22,
+  pageTotal: 71,
+};
+
+const rawContent = `<!-- ヘッダー -->
+<header class="header">
+<div class="header-content">
+<span class="service-icon">
+      🎫
+     </span>
+<h1>
+      AWS KMS グラント（Grants）
+     </h1>
+<p class="subtitle">
+      暗号キーへの「一時入室許可証」を理解しよう
+     </p>
+<span class="badge">
+      動的なアクセス許可の仕組み
+     </span>
+</div>
+</header>
+<!-- 結論ファースト -->
+<section class="section">
+<div class="conclusion-box">
+<h2 id="結論-グラントとは？">
+      🎯 結論：グラントとは？
+     </h2>
+<p>
+      KMSキーへの
+      <strong style="color: #ffd700;">
+       「一時的なアクセス許可証」
+      </strong>
+      のこと。
+      <br/>
+      IAMポリシーを変更せずに、プログラムから動的に権限を付与・取り消しできる仕組みです。
+     </p>
+</div>
+<div style="background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(83, 52, 131, 0.15)); padding: 25px; border-radius: 16px;">
+<p style="font-size: 1.1em; text-align: center; color: #e2e8f0;">
+      AWSサービス（EBS、RDS、Lambdaなど）がKMSキーを使うとき、
+      <br/>
+<strong style="color: #ff6b6b;">
+       自動的にグラントが発行
+      </strong>
+      されて一時的に暗号化・復号の権限が与えられます
+     </p>
+</div>
+</section>
+<!-- たとえ話セクション -->
+<section class="section analogy-section">
+<h2 class="section-title" id="たとえ話で理解するグラント">
+<span class="icon">
+      📖
+     </span>
+     たとえ話で理解するグラント
+    </h2>
+<div class="analogy-box">
+<div class="analogy-title">
+<span>
+       🏨
+      </span>
+      グラント = ホテルの「一時入室カード」
+     </div>
+<p>
+      高級ホテルの金庫室を想像してください。通常、金庫室に入れるのは正規スタッフ（IAMポリシーで許可された人）だけです。
+                    でも、ルームサービスのスタッフが一時的に金庫室の物を取り出す必要があるとき...
+      <strong style="color: #ff6b6b;">
+       「一時入室カード」（グラント）
+      </strong>
+      を発行して、限られた操作だけを許可します。
+     </p>
+<div class="analogy-grid">
+<div class="analogy-card">
+<span class="emoji">
+        🔐
+       </span>
+<h3 id="金庫室-=-KMSキー">
+        金庫室 = KMSキー
+       </h3>
+<p>
+        大切なデータを暗号化・復号する「秘密の鍵」が保管されている場所
+       </p>
+</div>
+<div class="analogy-card">
+<span class="emoji">
+        👔
+       </span>
+<h4>
+        正規スタッフ = IAMポリシー
+       </h4>
+<p>
+        事前に登録された人だけが入れる。変更には人事部（管理者）の承認が必要
+       </p>
+</div>
+<div class="analogy-card">
+<span class="emoji">
+        🎫
+       </span>
+<h4>
+        一時入室カード = グラント
+       </h4>
+<p>
+        必要なときだけ発行。「取り出し」だけ許可など、操作を限定できる
+       </p>
+</div>
+<div class="analogy-card">
+<span class="emoji">
+        🍽️
+       </span>
+<h4>
+        ルームサービス = AWSサービス
+       </h4>
+<p>
+        EBS、RDS、Lambdaなど。一時的にキーを使う必要があるサービス
+       </p>
+</div>
+</div>
+</div>
+</section>
+<!-- 図解セクション -->
+<section class="section">
+<h2 class="section-title" id="グラントの仕組みを図解">
+<span class="icon">
+      📊
+     </span>
+     グラントの仕組みを図解
+    </h2>
+<div class="diagram-container">
+<div class="diagram-title">
+      🔄 グラントによるアクセス許可の流れ
+     </div>
+<div class="grant-flow">
+<!-- 登場人物 -->
+<div class="flow-row">
+<div class="entity-box">
+<span class="icon">
+         👤
+        </span>
+<span>
+         グラント発行者
+         <br/>
+<small>
+          （管理者・サービス）
+         </small>
+</span>
+</div>
+<div class="arrow-right">
+        ➡️
+       </div>
+<div class="grant-card">
+<span class="icon">
+         📝
+        </span>
+<span>
+         グラント作成
+         <br/>
+<small>
+          CreateGrant
+         </small>
+</span>
+</div>
+<div class="arrow-right">
+        ➡️
+       </div>
+<div class="entity-box">
+<span class="icon">
+         🤖
+        </span>
+<span>
+         グラント受領者
+         <br/>
+<small>
+          （Grantee Principal）
+         </small>
+</span>
+</div>
+</div>
+<div class="arrow-down">
+       ⬇️
+       <span class="arrow-label">
+        グラントで許可された操作のみ実行可能
+       </span>
+</div>
+<!-- KMSキー -->
+<div class="key-box">
+<span class="key-icon">
+        🔑
+       </span>
+<h3 id="KMS-キー">
+        KMS キー
+       </h3>
+<p>
+        暗号化・復号の実行
+       </p>
+</div>
+<div class="arrow-down">
+       ⬇️
+       <span class="arrow-label">
+        暗号化されたデータ
+       </span>
+</div>
+<!-- データ -->
+<div class="flow-row">
+<div class="entity-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+<span class="icon">
+         💾
+        </span>
+<span>
+         EBSボリューム
+        </span>
+</div>
+<div class="entity-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+<span class="icon">
+         🗄️
+        </span>
+<span>
+         RDSデータベース
+        </span>
+</div>
+<div class="entity-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+<span class="icon">
+         📦
+        </span>
+<span>
+         S3オブジェクト
+        </span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- IAMポリシーとの比較 -->
+<section class="section">
+<h2 class="section-title" id="⚖️-IAMポリシー-vs-グラント">
+<span class="icon">
+      ⚖️
+     </span>
+     IAMポリシー vs グラント
+    </h2>
+<div class="comparison-section">
+<div class="compare-card iam">
+<h3 id="IAMポリシー">
+       📋 IAMポリシー
+      </h3>
+<ul class="compare-list">
+<li>
+<strong>
+         静的な権限管理
+        </strong>
+<br/>
+        事前に設定、変更には管理者の操作が必要
+       </li>
+<li>
+<strong>
+         永続的
+        </strong>
+<br/>
+        削除するまで有効
+       </li>
+<li>
+<strong>
+         管理が必要
+        </strong>
+<br/>
+        ポリシーの作成・変更・削除は管理者が行う
+       </li>
+<li>
+<strong>
+         ユーザー/ロール向け
+        </strong>
+<br/>
+        人やアプリケーションに直接付与
+       </li>
+<li>
+<strong>
+         広範な権限
+        </strong>
+<br/>
+        複数のキーや操作をまとめて許可できる
+       </li>
+</ul>
+</div>
+<div class="compare-card grant">
+<h4>
+       🎫 グラント
+      </h4>
+<ul class="compare-list">
+<li>
+<strong>
+         動的な権限管理
+        </strong>
+<br/>
+        プログラムから即座に作成・取り消し可能
+       </li>
+<li>
+<strong>
+         一時的
+        </strong>
+<br/>
+        使い終わったら取り消すのがベストプラクティス
+       </li>
+<li>
+<strong>
+         自動化向き
+        </strong>
+<br/>
+        AWSサービスが自動で作成・管理
+       </li>
+<li>
+<strong>
+         サービス向け
+        </strong>
+<br/>
+        EBS、RDSなどが一時的に使用
+       </li>
+<li>
+<strong>
+         特定の操作のみ
+        </strong>
+<br/>
+        必要最小限の権限だけを付与
+       </li>
+</ul>
+</div>
+</div>
+<div class="tip-box">
+<h4>
+      💡 使い分けのポイント
+     </h4>
+<p>
+<strong>
+       IAMポリシー
+      </strong>
+      ：ユーザーやアプリケーションが継続的にキーを使う場合
+      <br/>
+<strong>
+       グラント
+      </strong>
+      ：AWSサービスが一時的にキーを使う場合、または動的に権限を付与したい場合
+     </p>
+</div>
+</section>
+<!-- グラントで許可できる操作 -->
+<section class="section">
+<h2 class="section-title" id="グラントで許可できる操作">
+<span class="icon">
+      🔧
+     </span>
+     グラントで許可できる操作
+    </h2>
+<div class="operations-grid">
+<div class="operation-card">
+<span class="op-icon">
+       🔒
+      </span>
+<h3 id="Encrypt">
+       Encrypt
+      </h3>
+<p>
+       データを暗号化
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       🔓
+      </span>
+<h4>
+       Decrypt
+      </h4>
+<p>
+       データを復号
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       🔑
+      </span>
+<h4>
+       GenerateDataKey
+      </h4>
+<p>
+       データキーを生成
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       🔄
+      </span>
+<h4>
+       ReEncryptFrom/To
+      </h4>
+<p>
+       別のキーで再暗号化
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       🎫
+      </span>
+<h4>
+       CreateGrant
+      </h4>
+<p>
+       さらにグラントを作成
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       📋
+      </span>
+<h4>
+       DescribeKey
+      </h4>
+<p>
+       キー情報を取得
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       🗑️
+      </span>
+<h4>
+       RetireGrant
+      </h4>
+<p>
+       グラントを無効化
+      </p>
+</div>
+<div class="operation-card">
+<span class="op-icon">
+       ✅
+      </span>
+<h4>
+       GenerateDataKeyWithoutPlaintext
+      </h4>
+<p>
+       暗号化済みキーのみ生成
+      </p>
+</div>
+</div>
+</section>
+<!-- グラントの構成要素 -->
+<section class="section">
+<h2 class="section-title" id="グラントの構成要素">
+<span class="icon">
+      📦
+     </span>
+     グラントの構成要素
+    </h2>
+<table class="info-table">
+<thead>
+<tr>
+<th>
+        要素
+       </th>
+<th>
+        説明
+       </th>
+<th>
+        例
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+        Key ID
+       </td>
+<td>
+        対象となるKMSキーのID
+       </td>
+<td>
+        arn:aws:kms:ap-northeast-1:123456789012:key/xxxx
+       </td>
+</tr>
+<tr>
+<td>
+        Grantee Principal
+       </td>
+<td>
+        権限を受け取るプリンシパル
+       </td>
+<td>
+        IAMロール、AWSサービス
+       </td>
+</tr>
+<tr>
+<td>
+        Operations
+       </td>
+<td>
+        許可する操作のリスト
+       </td>
+<td>
+        Decrypt, Encrypt
+       </td>
+</tr>
+<tr>
+<td>
+        Retiring Principal
+       </td>
+<td>
+        グラントを無効化できるプリンシパル
+       </td>
+<td>
+        IAMユーザー、ロール
+       </td>
+</tr>
+<tr>
+<td>
+        Constraints
+       </td>
+<td>
+        追加の制約条件
+       </td>
+<td>
+        暗号化コンテキストの制限
+       </td>
+</tr>
+<tr>
+<td>
+        Grant Token
+       </td>
+<td>
+        グラント作成直後に使用するトークン
+       </td>
+<td>
+        即時利用時に必要
+       </td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- ユースケース -->
+<section class="section">
+<h2 class="section-title" id="グラントが使われる主なシーン">
+<span class="icon">
+      🎯
+     </span>
+     グラントが使われる主なシーン
+    </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<h3 id="EBSボリュームの暗号化">
+       💾 EBSボリュームの暗号化
+      </h3>
+<p>
+       EC2インスタンスがEBSボリュームをアタッチするとき、EC2サービスがKMSキーへのグラントを自動作成。ボリュームのデータを復号できるようになります。
+      </p>
+</div>
+<div class="usecase-card">
+<h4>
+       🗄️ RDSデータベースの暗号化
+      </h4>
+<p>
+       RDSインスタンスが暗号化されたデータベースを起動するとき、RDSサービスがグラントを取得。データの読み書き時に自動で暗号化・復号が行われます。
+      </p>
+</div>
+<div class="usecase-card">
+<h4>
+       ⚡ Lambda関数の実行
+      </h4>
+<p>
+       Lambda関数が暗号化された環境変数や、KMSで暗号化されたS3オブジェクトにアクセスするとき、一時的なグラントで復号権限を取得します。
+      </p>
+</div>
+<div class="usecase-card">
+<h4>
+       🔄 クロスアカウントアクセス
+      </h4>
+<p>
+       別のAWSアカウントのサービスがKMSキーを使う必要があるとき、グラントで一時的なアクセス権を付与できます。
+      </p>
+</div>
+</div>
+</section>
+<!-- 実際の動作 -->
+<section class="section">
+<h2 class="section-title" id="⚙️-グラントの動作フロー">
+<span class="icon">
+      ⚙️
+     </span>
+     グラントの動作フロー
+    </h2>
+<div class="steps-container">
+<div class="step-item">
+<div class="step-number">
+       1
+      </div>
+<div class="step-content">
+<h3 id="グラントの作成">
+        グラントの作成
+       </h3>
+<p>
+        CreateGrant APIでグラントを作成。誰が（Grantee）、どのキーで、何の操作ができるかを指定します。AWSサービスの場合は自動で作成されます。
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       2
+      </div>
+<div class="step-content">
+<h4>
+        グラントトークンの発行
+       </h4>
+<p>
+        グラント作成直後は反映に数分かかる場合があります。即座に使いたい場合は「グラントトークン」を使って操作を実行します。
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       3
+      </div>
+<div class="step-content">
+<h4>
+        操作の実行
+       </h4>
+<p>
+        Granteeがグラントで許可された操作（Encrypt、Decryptなど）をKMSキーに対して実行できるようになります。
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       4
+      </div>
+<div class="step-content">
+<h4>
+        グラントの無効化（Retire）
+       </h4>
+<p>
+        使い終わったらRetireGrant APIでグラントを無効化。セキュリティのベストプラクティスとして、不要になったグラントは速やかに削除しましょう。
+       </p>
+</div>
+</div>
+</div>
+</section>
+<!-- コード例 -->
+<section class="section">
+<h2 class="section-title" id="AWS-CLIでのグラント操作">
+<span class="icon">
+      💻
+     </span>
+     AWS CLIでのグラント操作
+    </h2>
+<div class="code-example">
+<div class="code-title">
+      📝 グラントの作成
+     </div>
+<div class="code-block">
+<span class="code-comment">
+       # グラントを作成（Decrypt操作を許可）
+      </span>
+<span class="code-keyword">
+       aws kms
+      </span>
+      create-grant \\
+      <span class="code-param">
+       --key-id
+      </span>
+<span class="code-string">
+       "arn:aws:kms:ap-northeast-1:123456789012:key/xxxx"
+      </span>
+      \\
+      <span class="code-param">
+       --grantee-principal
+      </span>
+<span class="code-string">
+       "arn:aws:iam::123456789012:role/MyAppRole"
+      </span>
+      \\
+      <span class="code-param">
+       --operations
+      </span>
+<span class="code-string">
+       "Decrypt"
+      </span>
+<span class="code-string">
+       "GenerateDataKey"
+      </span>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
+      📋 グラントの一覧表示
+     </div>
+<div class="code-block">
+<span class="code-comment">
+       # キーに関連付けられたグラントを表示
+      </span>
+<span class="code-keyword">
+       aws kms
+      </span>
+      list-grants \\
+      <span class="code-param">
+       --key-id
+      </span>
+<span class="code-string">
+       "arn:aws:kms:ap-northeast-1:123456789012:key/xxxx"
+      </span>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">
+      🗑️ グラントの無効化
+     </div>
+<div class="code-block">
+<span class="code-comment">
+       # グラントを無効化（retire）
+      </span>
+<span class="code-keyword">
+       aws kms
+      </span>
+      retire-grant \\
+      <span class="code-param">
+       --grant-token
+      </span>
+<span class="code-string">
+       "AQpAM2..."
+      </span>
+<span class="code-comment">
+       # または grant-id を使用
+      </span>
+<span class="code-keyword">
+       aws kms
+      </span>
+      revoke-grant \\
+      <span class="code-param">
+       --key-id
+      </span>
+<span class="code-string">
+       "arn:aws:kms:ap-northeast-1:123456789012:key/xxxx"
+      </span>
+      \\
+      <span class="code-param">
+       --grant-id
+      </span>
+<span class="code-string">
+       "1234567890abcdef..."
+      </span>
+</div>
+</div>
+</section>
+<!-- 注意点 -->
+<section class="section">
+<h2 class="section-title" id="⚠️-グラント利用時の注意点">
+<span class="icon">
+      ⚠️
+     </span>
+     グラント利用時の注意点
+    </h2>
+<div class="caution-box">
+<h3 id="⚡-知っておくべきポイント">
+      ⚡ 知っておくべきポイント
+     </h3>
+<ul class="caution-list">
+<li>
+<strong>
+        反映時間
+       </strong>
+       ：グラント作成後、最大5分程度で反映。即座に使いたい場合はグラントトークンを使用
+      </li>
+<li>
+<strong>
+        クォータ制限
+       </strong>
+       ：1つのKMSキーに対して最大10,000個までのグラントを作成可能
+      </li>
+<li>
+<strong>
+        自動作成
+       </strong>
+       ：EBS、RDSなどのサービスはグラントを自動作成するため、意図せず増える場合がある
+      </li>
+<li>
+<strong>
+        クリーンアップ
+       </strong>
+       ：不要なグラントは定期的に削除（retire/revoke）することを推奨
+      </li>
+<li>
+<strong>
+        監査
+       </strong>
+       ：グラントの作成・使用はCloudTrailでログが記録される
+      </li>
+</ul>
+</div>
+<div class="tip-box">
+<h4>
+      💡 ベストプラクティス
+     </h4>
+<p>
+      ✅ 最小権限の原則：必要な操作のみを許可する
+      <br/>
+      ✅ 暗号化コンテキスト：制約条件（Constraints）を使って範囲を限定
+      <br/>
+      ✅ 定期的な棚卸し：list-grantsで不要なグラントがないか確認
+      <br/>
+      ✅ Retiring Principalの設定：誰がグラントを無効化できるか明確にする
+     </p>
+</div>
+</section>
+<!-- まとめ -->
+<section class="summary-section">
+<h2 id="まとめ">
+     📝 まとめ
+    </h2>
+<p style="font-size: 1.1em; margin-bottom: 20px;">
+     KMSグラントは、暗号キーへの
+     <strong>
+      「一時的な入室許可証」
+     </strong>
+<br/>
+     AWSサービスが自動で使用し、動的な権限管理を実現します
+    </p>
+<div class="summary-points">
+<span class="summary-point">
+      🎫 一時的なアクセス許可
+     </span>
+<span class="summary-point">
+      🤖 AWSサービスが自動作成
+     </span>
+<span class="summary-point">
+      🔧 動的な権限管理
+     </span>
+<span class="summary-point">
+      📋 IAMポリシーを補完
+     </span>
+<span class="summary-point">
+      🔒 最小権限の実現
+     </span>
+</div>
+<p style="margin-top: 30px; opacity: 0.9;">
+     EBS、RDS、Lambdaなどを使っているなら、
+     <br/>
+     裏側でグラントが活躍していることを覚えておきましょう！ 🎉
+    </p>
+</section>
+
+
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script is:inline>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

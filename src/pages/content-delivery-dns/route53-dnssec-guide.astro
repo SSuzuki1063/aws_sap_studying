@@ -1,0 +1,1411 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Route53 Dnssec Guide',
+  pageTitle: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ',
+  category: 'content-delivery-dns',
+  categoryLabel: 'コンテンツ配信・DNS',
+  subcategory: 'Route53 & DNS管理',
+  slug: 'route53-dnssec-guide',
+  pageCss: '/aws_sap_studying/css/pages/route53-dnssec-guide.css',
+  tocItems: [
+    { level: 'h2', id: 'この記事の結論30秒で理解', text: '🎯 この記事の結論（30秒で理解）' },
+    { level: 'h3', id: 'DNSSEC-とは？', text: 'DNSSEC とは？' },
+    { level: 'h3', id: 'DS-レコードの役割', text: 'DS レコードの役割' },
+    { level: 'h3', id: '設定の流れ', text: '設定の流れ' },
+    { level: 'h3', id: '最重要注意点', text: '最重要注意点' },
+    { level: 'h2', id: '️-たとえ話で理解-公証役場のしくみ', text: '🏛️ たとえ話で理解：公証役場のしくみ' },
+    { level: 'h3', id: '️-現実世界-公証役場', text: '🏛️ 現実世界：公証役場' },
+    { level: 'h3', id: '☁️-AWS-DNSSEC', text: '☁️ AWS：DNSSEC' },
+    { level: 'h3', id: 'つまりこういうこと！', text: '💡 つまりこういうこと！' },
+    { level: 'h2', id: '⛓️-信頼の連鎖Chain-of-Trustを理解しよう', text: '⛓️ 信頼の連鎖（Chain of Trust）を理解しよう' },
+    { level: 'h3', id: 'Root-Zoneルートゾーン', text: 'Root Zone（ルートゾーン）' },
+    { level: 'h3', id: 'キーの種類を理解しよう', text: '🔑 キーの種類を理解しよう' },
+    { level: 'h2', id: 'DNSSEC-有効化-&amp;-DS-レコード設定手順', text: '📋 DNSSEC 有効化 &amp; DS レコード設定手順' },
+    { level: 'h3', id: '事前準備重要！', text: '📊 事前準備（重要！）' },
+    { level: 'h3', id: 'KSK鍵署名鍵の作成', text: '🔐 KSK（鍵署名鍵）の作成' },
+    { level: 'h3', id: '✅-署名の有効化確認', text: '✅ 署名の有効化確認' },
+    { level: 'h3', id: 'DS-レコード情報の取得', text: '📋 DS レコード情報の取得' },
+    { level: 'h3', id: 'DS-レコードの登録', text: '📝 DS レコードの登録' },
+    { level: 'h3', id: '信頼チェーンの確認', text: '🔍 信頼チェーンの確認' },
+    { level: 'h2', id: 'AWS-CLI-コマンド例', text: '💻 AWS CLI コマンド例' },
+    { level: 'h2', id: 'DNSSEC-検証フロー', text: '🔄 DNSSEC 検証フロー' },
+    { level: 'h3', id: '検証の流れ', text: '📝 検証の流れ' },
+    { level: 'h2', id: '⚠️-絶対に守るべき注意事項', text: '⚠️ 絶対に守るべき注意事項' },
+    { level: 'h3', id: '❌-順序を間違えない', text: '❌ 順序を間違えない' },
+    { level: 'h2', id: 'レジストラ別-DS-レコード登録方法', text: '📊 レジストラ別 DS レコード登録方法' },
+    { level: 'h2', id: '✨-ベストプラクティス', text: '✨ ベストプラクティス' },
+    { level: 'h3', id: '有効化前に-TTL-を下げる', text: '有効化前に TTL を下げる' },
+    { level: 'h2', id: '❓-よくある質問FAQ', text: '❓ よくある質問（FAQ）' }
+  ],
+  prevPage: 'route53_cross_account_guide.html',
+  nextPage: undefined,
+  pageNum: 15,
+  pageTotal: 15,
+};
+
+const rawContent = `<!-- ヘッダー -->
+<header class="header">
+<div class="emoji-banner">
+     🔐🌐🛡️
+    </div>
+<h1>
+     Route 53 DNSSEC 完全ガイド
+    </h1>
+<p class="subtitle">
+     公証役場のしくみで理解する DNS セキュリティと DS レコード設定
+    </p>
+</header>
+<!-- 結論ファースト -->
+<section class="conclusion-first">
+<h2 id="この記事の結論30秒で理解">
+     🎯 この記事の結論（30秒で理解）
+    </h2>
+<div class="key-points">
+<div class="key-point">
+<div class="icon">
+       🔑
+      </div>
+<h3 id="DNSSEC-とは？">
+       DNSSEC とは？
+      </h3>
+<p>
+       DNS応答が
+       <strong>
+        本物であることを暗号署名で証明
+       </strong>
+       する仕組み。なりすましや改ざんを防止します。
+      </p>
+</div>
+<div class="key-point">
+<div class="icon">
+       📜
+      </div>
+<h3 id="DS-レコードの役割">
+       DS レコードの役割
+      </h3>
+<p>
+       親ドメイン（上位機関）に登録する
+       <strong>
+        「お墨付き」
+       </strong>
+       。信頼の連鎖を構築する重要な鍵です。
+      </p>
+</div>
+<div class="key-point">
+<div class="icon">
+       ⚙️
+      </div>
+<h3 id="設定の流れ">
+       設定の流れ
+      </h3>
+<p>
+       ① KSK作成 → ② 署名有効化 → ③ DS レコード登録 → ④ 信頼チェーン確立（
+       <strong>
+        約15〜30分
+       </strong>
+       ）
+      </p>
+</div>
+<div class="key-point">
+<div class="icon">
+       ⚠️
+      </div>
+<h3 id="最重要注意点">
+       最重要注意点
+      </h3>
+<p>
+       DS レコード登録後、
+       <strong>
+        TTL経過を待たずに無効化すると障害発生
+       </strong>
+       。必ず順序を守ること！
+      </p>
+</div>
+</div>
+</section>
+<!-- たとえ話セクション -->
+<section class="analogy-section">
+<h2 class="section-title" id="️-たとえ話で理解-公証役場のしくみ">
+     🏛️ たとえ話で理解：公証役場のしくみ
+    </h2>
+<div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; margin-bottom: 30px; text-align: center;">
+<p style="font-size: 1.2em;">
+      DNSSEC は、インターネット上の
+      <strong>
+       「公証制度」
+      </strong>
+      です。
+      <br/>
+      あなたのドメインが発行する情報に「これは本物ですよ」という
+      <strong>
+       お墨付き
+      </strong>
+      を与えます。
+     </p>
+</div>
+<div class="analogy-comparison">
+<div class="analogy-box real-world">
+<h3 id="️-現実世界-公証役場">
+       🏛️ 現実世界：公証役場
+      </h3>
+<div class="analogy-item">
+<span class="emoji">
+        📄
+       </span>
+<div>
+<strong>
+         重要書類（契約書）
+        </strong>
+<br/>
+        本物かどうか確認が必要
+       </div>
+</div>
+<div class="analogy-item">
+<span class="emoji">
+        🔏
+       </span>
+<div>
+<strong>
+         公証人の印鑑
+        </strong>
+<br/>
+        この書類が本物である証明
+       </div>
+</div>
+<div class="analogy-item">
+<span class="emoji">
+        🏛️
+       </span>
+<div>
+<strong>
+         公証役場の認定
+        </strong>
+<br/>
+        「この公証人は正式に認められている」
+       </div>
+</div>
+<div class="analogy-item">
+<span class="emoji">
+        ⛓️
+       </span>
+<div>
+<strong>
+         信頼の連鎖
+        </strong>
+<br/>
+        法務省 → 公証役場 → 公証人 → 書類
+       </div>
+</div>
+</div>
+<div class="arrow-connector">
+      ⇄
+     </div>
+<div class="analogy-box aws">
+<h3 id="☁️-AWS-DNSSEC">
+       ☁️ AWS：DNSSEC
+      </h3>
+<div class="analogy-item">
+<span class="emoji">
+        🌐
+       </span>
+<div>
+<strong>
+         DNS レコード
+        </strong>
+<br/>
+        example.com → 192.168.1.1
+       </div>
+</div>
+<div class="analogy-item">
+<span class="emoji">
+        🔑
+       </span>
+<div>
+<strong>
+         ZSK / KSK（署名鍵）
+        </strong>
+<br/>
+        レコードに署名を付与
+       </div>
+</div>
+<div class="analogy-item">
+<span class="emoji">
+        📜
+       </span>
+<div>
+<strong>
+         DS レコード
+        </strong>
+<br/>
+        「この鍵は正式に認められている」
+       </div>
+</div>
+<div class="analogy-item">
+<span class="emoji">
+        ⛓️
+       </span>
+<div>
+<strong>
+         信頼の連鎖
+        </strong>
+<br/>
+        Root → .com → example.com
+       </div>
+</div>
+</div>
+</div>
+<div style="background: rgba(251, 191, 36, 0.2); border: 2px solid #CA8A04; padding: 25px; border-radius: 15px;">
+<h3 id="つまりこういうこと！" style="color: #CA8A04; margin-bottom: 15px;">
+      💡 つまりこういうこと！
+     </h3>
+<p style="font-size: 1.1em;">
+      あなたが「example.com」の DNS レコードを発行するとき、
+      <strong>
+       DNSSEC
+      </strong>
+      はそのレコードに「公証印」を押します。
+      <br/>
+<br/>
+      そして
+      <strong>
+       DS レコード
+      </strong>
+      は、親ドメイン（.com）に対して「example.com の印鑑は本物ですよ」と登録する手続きです。
+      <br/>
+<br/>
+      これにより、世界中の DNS リゾルバが「このDNS情報は改ざんされていない」と確認できるようになります！
+     </p>
+</div>
+</section>
+<!-- 信頼の連鎖の仕組み -->
+<section class="mechanism-section">
+<h2 class="section-title" id="⛓️-信頼の連鎖Chain-of-Trustを理解しよう">
+     ⛓️ 信頼の連鎖（Chain of Trust）を理解しよう
+    </h2>
+<div class="trust-chain">
+<div class="chain-level">
+<div class="chain-node">
+<span class="level-icon">
+        🌍
+       </span>
+<div class="level-info">
+<h3 id="Root-Zoneルートゾーン">
+         Root Zone（ルートゾーン）
+        </h3>
+<p>
+         インターネットの最上位。全ての信頼の源
+        </p>
+</div>
+</div>
+<span class="chain-arrow">
+       ⬇️ DS レコードで保証
+      </span>
+</div>
+<div class="chain-level">
+<div class="chain-node">
+<span class="level-icon">
+        🏢
+       </span>
+<div class="level-info">
+<h4>
+         TLD（.com, .jp など）
+        </h4>
+<p>
+         トップレベルドメインのゾーン
+        </p>
+</div>
+</div>
+<span class="chain-arrow">
+       ⬇️ DS レコードで保証
+      </span>
+</div>
+<div class="chain-level">
+<div class="chain-node">
+<span class="level-icon">
+        🏠
+       </span>
+<div class="level-info">
+<h4>
+         あなたのドメイン
+        </h4>
+<p>
+         example.com（Route 53 で管理）
+        </p>
+</div>
+</div>
+<span class="chain-arrow">
+       ⬇️ KSK/ZSK で署名
+      </span>
+</div>
+<div class="chain-level">
+<div class="chain-node">
+<span class="level-icon">
+        📋
+       </span>
+<div class="level-info">
+<h4>
+         DNS レコード
+        </h4>
+<p>
+         A, AAAA, CNAME, MX など全て署名済み
+        </p>
+</div>
+</div>
+</div>
+</div>
+<h3 id="キーの種類を理解しよう" style="color: #93c5fd; margin: 30px 0 20px;">
+     🔑 キーの種類を理解しよう
+    </h3>
+<div class="key-concept-grid">
+<div class="concept-card">
+<div class="card-header">
+<div class="card-icon">
+        🗝️
+       </div>
+<div>
+<h4>
+         ZSK（Zone Signing Key）
+        </h4>
+<p class="subtitle">
+         ゾーン署名鍵
+        </p>
+</div>
+</div>
+<p>
+<strong>
+        役割：
+       </strong>
+       実際の DNS レコード（A, CNAME 等）に署名します。
+      </p>
+<p style="margin-top: 10px;">
+<strong>
+        管理：
+       </strong>
+       Route 53 が
+       <strong>
+        自動管理
+       </strong>
+       するため、ユーザーの操作は不要です。
+      </p>
+<p style="margin-top: 10px; color: #93c5fd;">
+       💡 公証人が書類に押す「日常使いの印鑑」のようなもの
+      </p>
+</div>
+<div class="concept-card">
+<div class="card-header">
+<div class="card-icon">
+        🔐
+       </div>
+<div>
+<h4>
+         KSK（Key Signing Key）
+        </h4>
+<p class="subtitle">
+         鍵署名鍵
+        </p>
+</div>
+</div>
+<p>
+<strong>
+        役割：
+       </strong>
+       ZSK に署名し、DNSKEY レコードを作成します。
+      </p>
+<p style="margin-top: 10px;">
+<strong>
+        管理：
+       </strong>
+       AWS KMS の CMK と連携。
+       <strong>
+        ユーザーが作成・ローテーション
+       </strong>
+       します。
+      </p>
+<p style="margin-top: 10px; color: #93c5fd;">
+       💡 公証人の「実印」に相当。厳重に管理される
+      </p>
+</div>
+<div class="concept-card">
+<div class="card-header">
+<div class="card-icon">
+        📜
+       </div>
+<div>
+<h4>
+         DS レコード
+        </h4>
+<p class="subtitle">
+         Delegation Signer
+        </p>
+</div>
+</div>
+<p>
+<strong>
+        役割：
+       </strong>
+       KSK の公開鍵のハッシュ値。親ゾーンに登録して信頼を委任します。
+      </p>
+<p style="margin-top: 10px;">
+<strong>
+        登録先：
+       </strong>
+       ドメインレジストラ（Route 53 または他社）経由で TLD に登録。
+      </p>
+<p style="margin-top: 10px; color: #93c5fd;">
+       💡 公証役場への「印鑑登録証明書」
+      </p>
+</div>
+<div class="concept-card">
+<div class="card-header">
+<div class="card-icon">
+        ✍️
+       </div>
+<div>
+<h4>
+         RRSIG レコード
+        </h4>
+<p class="subtitle">
+         Resource Record Signature
+        </p>
+</div>
+</div>
+<p>
+<strong>
+        役割：
+       </strong>
+       各 DNS レコードに付与される電子署名そのもの。
+      </p>
+<p style="margin-top: 10px;">
+<strong>
+        生成：
+       </strong>
+       DNSSEC 有効化後、Route 53 が
+       <strong>
+        自動生成
+       </strong>
+       します。
+      </p>
+<p style="margin-top: 10px; color: #93c5fd;">
+       💡 書類に押された「署名」そのもの
+      </p>
+</div>
+</div>
+</section>
+<!-- 設定手順 -->
+<section class="steps-section">
+<h2 class="section-title" id="DNSSEC-有効化-&amp;-DS-レコード設定手順">
+     📋 DNSSEC 有効化 &amp; DS レコード設定手順
+    </h2>
+<div class="step-timeline">
+<!-- Step 0 -->
+<div class="step-item">
+<div class="step-number">
+       0
+      </div>
+<h3 id="事前準備重要！">
+       📊 事前準備（重要！）
+      </h3>
+<p>
+       障害発生時のロールバックを容易にするため、以下を実施します。
+      </p>
+<div class="step-detail">
+<ul>
+<li>
+<strong>
+          CloudWatch アラーム設定：
+         </strong>
+         DNSSECInternalFailure と DNSSECKeySigningKeysNeedingAction を監視
+        </li>
+<li>
+<strong>
+          TTL を低くする：
+         </strong>
+         レコードの TTL を 3600 秒（1時間）以下に設定
+        </li>
+<li>
+<strong>
+          SOA の TTL と Minimum を下げる：
+         </strong>
+         ネガティブキャッシュの影響を軽減
+        </li>
+<li>
+<strong>
+          TLD が DNSSEC をサポートしているか確認
+         </strong>
+</li>
+</ul>
+</div>
+</div>
+<!-- Step 1 -->
+<div class="step-item">
+<div class="step-number">
+       1
+      </div>
+<h3 id="KSK鍵署名鍵の作成">
+       🔐 KSK（鍵署名鍵）の作成
+      </h3>
+<p>
+       Route 53 コンソールで、AWS KMS の CMK を使って KSK を作成します。
+      </p>
+<div class="step-detail">
+<ul>
+<li>
+         Route 53 コンソール → ホストゾーン → 対象ドメインを選択
+        </li>
+<li>
+         「DNSSEC signing」タブ → 「Enable DNSSEC signing」
+        </li>
+<li>
+         既存の KMS CMK を選択、または新規作成
+        </li>
+<li>
+         KSK 名を入力して「Create KSK and enable signing」をクリック
+        </li>
+</ul>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="step-item">
+<div class="step-number">
+       2
+      </div>
+<h3 id="✅-署名の有効化確認">
+       ✅ 署名の有効化確認
+      </h3>
+<p>
+       DNSSEC signing のステータスが「Signing」になっていることを確認します。
+      </p>
+<div class="step-detail">
+<ul>
+<li>
+         ステータスが「Signing」になるまで数分待機
+        </li>
+<li>
+         KSK のステータスが「Active」であることを確認
+        </li>
+<li>
+         dig コマンドで DNSKEY レコードが返されることを確認
+        </li>
+</ul>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="step-item">
+<div class="step-number">
+       3
+      </div>
+<h3 id="DS-レコード情報の取得">
+       📋 DS レコード情報の取得
+      </h3>
+<p>
+       親ゾーンに登録するための DS レコード情報を取得します。
+      </p>
+<div class="step-detail">
+<ul>
+<li>
+         「DNSSEC signing」タブ → 「View information to create DS record」
+        </li>
+<li>
+         レジストラの種類（Route 53 / 他社）を選択
+        </li>
+<li>
+         Key type, Signing algorithm, Public key（または DS 値）をメモ
+        </li>
+</ul>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="step-item">
+<div class="step-number">
+       4
+      </div>
+<h3 id="DS-レコードの登録">
+       📝 DS レコードの登録
+      </h3>
+<p>
+       取得した情報を使って、ドメインレジストラ経由で親ゾーンに DS レコードを登録します。
+      </p>
+<div class="step-detail">
+<ul>
+<li>
+<strong>
+          Route 53 で登録の場合：
+         </strong>
+         「Registered domains」→ 対象ドメイン → 「DNSSEC keys」→ 「Add key」
+        </li>
+<li>
+         Key type（KSK or ZSK）を選択
+        </li>
+<li>
+         Algorithm を選択（通常 ECDSAP256SHA256）
+        </li>
+<li>
+         Public key を貼り付けて「Add」
+        </li>
+<li>
+<strong>
+          他社レジストラの場合：
+         </strong>
+         各社の管理画面で DS レコードを追加
+        </li>
+</ul>
+</div>
+</div>
+<!-- Step 5 -->
+<div class="step-item">
+<div class="step-number">
+       5
+      </div>
+<h3 id="信頼チェーンの確認">
+       🔍 信頼チェーンの確認
+      </h3>
+<p>
+       DNS リゾルバが DNSSEC を正しく検証できることを確認します。
+      </p>
+<div class="step-detail">
+<ul>
+<li>
+         DS レコードが伝播するまで待機（数分〜数時間）
+        </li>
+<li>
+         dig コマンドで DS レコードが返されることを確認
+        </li>
+<li>
+         オンラインツール（DNSViz, Verisign Labs など）で検証
+        </li>
+<li>
+         2週間程度の監視期間を設けてから TTL を戻す
+        </li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<!-- コマンド例 -->
+<section class="code-section">
+<h2 class="section-title" id="AWS-CLI-コマンド例">
+     💻 AWS CLI コマンド例
+    </h2>
+<div class="code-tabs">
+<button class="code-tab active" onclick="showCode('ksk')">
+      KSK 作成
+     </button>
+<button class="code-tab" onclick="showCode('enable')">
+      署名有効化
+     </button>
+<button class="code-tab" onclick="showCode('ds')">
+      DS レコード取得
+     </button>
+<button class="code-tab" onclick="showCode('verify')">
+      検証コマンド
+     </button>
+</div>
+<div class="code-content active" id="ksk">
+<div class="code-block" data-lang="bash">
+<button class="copy-btn" onclick="copyCode('ksk-code')">
+       📋 コピー
+      </button>
+<pre id="ksk-code"><span class="code-comment"># 1. まず DNSSEC 用の KMS キーを作成（まだない場合）</span>
+aws kms create-key \\
+  --description <span class="code-string">"DNSSEC KSK for example.com"</span> \\
+  --key-usage SIGN_VERIFY \\
+  --customer-master-key-spec ECC_NIST_P256 \\
+  --policy <span class="code-string">'{"Version":"2012-10-17","Statement":[{"Sid":"Route53","Effect":"Allow","Principal":{"Service":"dnssec-route53.amazonaws.com"},"Action":["kms:DescribeKey","kms:GetPublicKey","kms:Sign"],"Resource":"*"}]}'</span>
+
+<span class="code-comment"># 2. KSK を作成</span>
+aws route53 create-key-signing-key \\
+  --hosted-zone-id <span class="code-variable">Z1234567890ABC</span> \\
+  --key-management-service-arn <span class="code-variable">arn:aws:kms:ap-northeast-1:123456789012:key/your-key-id</span> \\
+  --name <span class="code-string">"example-com-ksk"</span> \\
+  --status ACTIVE</pre>
+</div>
+</div>
+<div class="code-content" id="enable">
+<div class="code-block" data-lang="bash">
+<button class="copy-btn" onclick="copyCode('enable-code')">
+       📋 コピー
+      </button>
+<pre id="enable-code"><span class="code-comment"># DNSSEC 署名を有効化</span>
+aws route53 enable-hosted-zone-dnssec \\
+  --hosted-zone-id <span class="code-variable">Z1234567890ABC</span>
+
+<span class="code-comment"># ステータス確認</span>
+aws route53 get-dnssec \\
+  --hosted-zone-id <span class="code-variable">Z1234567890ABC</span>
+
+<span class="code-comment"># 出力例</span>
+<span class="code-comment"># {</span>
+<span class="code-comment">#   "Status": {</span>
+<span class="code-comment">#     "ServeSignature": "SIGNING"</span>
+<span class="code-comment">#   },</span>
+<span class="code-comment">#   "KeySigningKeys": [...]</span>
+<span class="code-comment"># }</span></pre>
+</div>
+</div>
+<div class="code-content" id="ds">
+<div class="code-block" data-lang="bash">
+<button class="copy-btn" onclick="copyCode('ds-code')">
+       📋 コピー
+      </button>
+<pre id="ds-code"><span class="code-comment"># KSK 情報を取得（DS レコード作成に必要な情報を含む）</span>
+aws route53 get-dnssec \\
+  --hosted-zone-id <span class="code-variable">Z1234567890ABC</span> \\
+  --query <span class="code-string">'KeySigningKeys[?Status==\`ACTIVE\`]'</span>
+
+<span class="code-comment"># 出力される PublicKey と KeyTag を使用して DS レコードを登録</span>
+<span class="code-comment"># DS レコードのフォーマット:</span>
+<span class="code-comment"># [KeyTag] [Algorithm] [DigestType] [Digest]</span>
+<span class="code-comment"># 例: 12345 13 2 49FD46E6C4B45C55D4AC...</span>
+
+<span class="code-comment"># Route 53 でドメイン登録している場合の DS 追加</span>
+aws route53domains associate-delegation-signer-to-domain \\
+  --domain-name <span class="code-string">"example.com"</span> \\
+  --signing-attributes \\
+    Algorithm=13,\\
+    Flags=257,\\
+    PublicKey=<span class="code-variable">"YOUR_PUBLIC_KEY_BASE64"</span></pre>
+</div>
+</div>
+<div class="code-content" id="verify">
+<div class="code-block" data-lang="bash">
+<button class="copy-btn" onclick="copyCode('verify-code')">
+       📋 コピー
+      </button>
+<pre id="verify-code"><span class="code-comment"># DNSKEY レコードの確認</span>
+dig example.com DNSKEY +short
+
+<span class="code-comment"># DS レコードの確認（親ゾーンから）</span>
+dig example.com DS +short
+
+<span class="code-comment"># DNSSEC 署名付きで確認（+dnssec オプション）</span>
+dig example.com A +dnssec
+
+<span class="code-comment"># RRSIG（署名）が付いていることを確認</span>
+dig example.com A +dnssec +short
+
+<span class="code-comment"># 信頼チェーン全体を検証（delv コマンド使用）</span>
+delv example.com A +rtrace
+
+<span class="code-comment"># オンラインツールでの確認も推奨</span>
+<span class="code-comment"># - https://dnsviz.net/</span>
+<span class="code-comment"># - https://dnssec-analyzer.verisignlabs.com/</span></pre>
+</div>
+</div>
+</section>
+<!-- フロー図 -->
+<section class="flow-section">
+<h2 class="section-title" id="DNSSEC-検証フロー">
+     🔄 DNSSEC 検証フロー
+    </h2>
+<p style="text-align: center; margin-bottom: 20px; opacity: 0.9;">
+     ユーザーが example.com にアクセスしたときの DNSSEC 検証の流れ
+    </p>
+<div class="flow-diagram">
+<div class="flow-node">
+<div class="node-icon">
+       👤
+      </div>
+<div class="node-label">
+       ユーザー
+      </div>
+<div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">
+       example.com にアクセス
+      </div>
+</div>
+<span class="flow-arrow">
+      →
+     </span>
+<div class="flow-node">
+<div class="node-icon">
+       🔍
+      </div>
+<div class="node-label">
+       DNS リゾルバ
+      </div>
+<div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">
+       DNSSEC 対応リゾルバ
+      </div>
+</div>
+<span class="flow-arrow">
+      →
+     </span>
+<div class="flow-node">
+<div class="node-icon">
+       🌍
+      </div>
+<div class="node-label">
+       Root
+      </div>
+<div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">
+       .com の DS を取得
+      </div>
+</div>
+<span class="flow-arrow">
+      →
+     </span>
+<div class="flow-node">
+<div class="node-icon">
+       🏢
+      </div>
+<div class="node-label">
+       .com TLD
+      </div>
+<div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">
+       example.com の DS を取得
+      </div>
+</div>
+<span class="flow-arrow">
+      →
+     </span>
+<div class="flow-node">
+<div class="node-icon">
+       ☁️
+      </div>
+<div class="node-label">
+       Route 53
+      </div>
+<div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">
+       署名付きレコード返却
+      </div>
+</div>
+</div>
+<div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 15px; margin-top: 20px;">
+<h3 id="検証の流れ" style="color: #e9d5ff; margin-bottom: 15px;">
+      📝 検証の流れ
+     </h3>
+<ol style="padding-left: 20px; line-height: 2;">
+<li>
+       リゾルバは
+       <strong>
+        Root Zone
+       </strong>
+       の公開鍵（トラストアンカー）を保持
+      </li>
+<li>
+       Root の DS レコードで
+       <strong>
+        .com
+       </strong>
+       の DNSKEY を検証
+      </li>
+<li>
+       .com の DS レコードで
+       <strong>
+        example.com
+       </strong>
+       の DNSKEY（KSK）を検証
+      </li>
+<li>
+       KSK で
+       <strong>
+        ZSK
+       </strong>
+       を検証
+      </li>
+<li>
+       ZSK で
+       <strong>
+        A レコードの RRSIG
+       </strong>
+       を検証
+      </li>
+<li>
+       すべて OK なら「このレコードは本物」と判定 ✅
+      </li>
+</ol>
+</div>
+</section>
+<!-- 注意事項 -->
+<section class="warning-section">
+<h2 class="section-title" id="⚠️-絶対に守るべき注意事項">
+     ⚠️ 絶対に守るべき注意事項
+    </h2>
+<div class="warning-grid">
+<div class="warning-card">
+<h3 id="❌-順序を間違えない">
+       ❌ 順序を間違えない
+      </h3>
+<p>
+       DNSSEC を
+       <strong>
+        無効化する前に DS レコードを削除
+       </strong>
+       する必要があります。
+                        順序を間違えると、ドメインが
+       <strong>
+        インターネットからアクセス不能
+       </strong>
+       になります。
+      </p>
+<p style="margin-top: 10px; font-weight: 600;">
+       無効化の順序：DS 削除 → TTL 待機（2日）→ DNSSEC 無効化
+      </p>
+</div>
+<div class="warning-card">
+<h4>
+       ⏰ TTL 経過を待つ
+      </h4>
+<p>
+       DS レコード削除後、
+       <strong>
+        TTL が経過するまで（通常2日）
+       </strong>
+       待ってから次のステップに進みます。
+                        キャッシュが残っている間に無効化すると、検証エラーが発生します。
+      </p>
+</div>
+<div class="warning-card">
+<h4>
+       🔑 KSK のローテーション
+      </h4>
+<p>
+       KSK は Route 53 が自動ローテーションしません。
+                        セキュリティポリシーに従って
+       <strong>
+        定期的に手動ローテーション
+       </strong>
+       を行う必要があります。
+      </p>
+</div>
+<div class="warning-card">
+<h4>
+       📊 TTL の制限
+      </h4>
+<p>
+       DNSSEC 有効化後、Route 53 は TTL を
+       <strong>
+        最大1週間に制限
+       </strong>
+       します。
+                        それ以上の TTL を設定しても、1週間として扱われます。
+      </p>
+</div>
+<div class="warning-card">
+<h4>
+       🌐 マルチベンダー非対応
+      </h4>
+<p>
+       DNSSEC 署名を使用する場合、
+       <strong>
+        複数の DNS プロバイダーの併用
+       </strong>
+       はサポートされません。
+                        すべてのネームサーバーは単一のプロバイダーから提供される必要があります。
+      </p>
+</div>
+<div class="warning-card">
+<h4>
+       📡 親ゾーンの DS 対応確認
+      </h4>
+<p>
+       親ゾーンが DS クエリを正しくサポートしていない場合、
+                        子ゾーンで DNSSEC を有効にすると
+       <strong>
+        名前解決できなくなる
+       </strong>
+       可能性があります。
+      </p>
+</div>
+</div>
+</section>
+<!-- 比較表 -->
+<section class="comparison-section">
+<h2 class="section-title" id="レジストラ別-DS-レコード登録方法">
+     📊 レジストラ別 DS レコード登録方法
+    </h2>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+        レジストラ
+       </th>
+<th>
+        登録方法
+       </th>
+<th>
+        入力項目
+       </th>
+<th>
+        注意点
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+         Route 53
+        </strong>
+</td>
+<td>
+        Registered domains → DNSSEC keys → Add key
+       </td>
+<td>
+        Key type, Algorithm, Public key
+       </td>
+<td>
+        最も簡単。コンソールで完結
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         お名前.com
+        </strong>
+</td>
+<td>
+        ドメイン設定 → DNSSEC 設定
+       </td>
+<td>
+        Key Tag, Algorithm, Digest Type, Digest
+       </td>
+<td>
+        DS 形式での入力が必要
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         Cloudflare
+        </strong>
+</td>
+<td>
+        DNS 設定 → DNSSEC → Enable
+       </td>
+<td>
+        自動生成される DS 値をコピー
+       </td>
+<td>
+        Cloudflare DNS 使用時は自動
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         GoDaddy
+        </strong>
+</td>
+<td>
+        DNS Management → DNSSEC
+       </td>
+<td>
+        Key Tag, Algorithm, Digest Type, Digest
+       </td>
+<td>
+        プレミアムプラン要の場合あり
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         ムームードメイン
+        </strong>
+</td>
+<td>
+        ドメイン管理 → DNSSEC
+       </td>
+<td>
+        Key Tag, Algorithm, Digest
+       </td>
+<td>
+        対応 TLD が限られる場合あり
+       </td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- ベストプラクティス -->
+<section class="best-practices">
+<h2 class="section-title" id="✨-ベストプラクティス">
+     ✨ ベストプラクティス
+    </h2>
+<div class="practice-list">
+<div class="practice-item">
+<span class="practice-icon">
+       📉
+      </span>
+<div class="practice-content">
+<h3 id="有効化前に-TTL-を下げる">
+        有効化前に TTL を下げる
+       </h3>
+<p>
+        TTL を 300〜3600 秒に下げておくと、問題発生時のロールバックが速くなります。
+                        正常動作を確認してから（2週間程度）元の値に戻します。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="practice-icon">
+       📊
+      </span>
+<div class="practice-content">
+<h4>
+        CloudWatch アラームで監視
+       </h4>
+<p>
+        DNSSECInternalFailure と DNSSECKeySigningKeysNeedingAction メトリクスを監視し、
+                        問題を早期検知できるようにします。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="practice-icon">
+       🔄
+      </span>
+<div class="practice-content">
+<h4>
+        KSK ローテーション計画
+       </h4>
+<p>
+        セキュリティポリシーに従って KSK のローテーション計画を立て、
+                        定期的に実施します。新しい KSK の DS を追加 → 古い DS を削除の順序を守ります。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="practice-icon">
+       🧪
+      </span>
+<div class="practice-content">
+<h4>
+        テスト環境で検証
+       </h4>
+<p>
+        本番ドメインで有効化する前に、テスト用のサブドメインや別ドメインで
+                        DNSSEC の動作を確認することを推奨します。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<span class="practice-icon">
+       📝
+      </span>
+<div class="practice-content">
+<h4>
+        ドキュメント化
+       </h4>
+<p>
+        KMS キー ARN、KSK 名、有効化日時、DS レコード情報などを文書化し、
+                        チームで共有します。障害対応時に必要になります。
+       </p>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ -->
+<section class="faq-section">
+<h2 class="section-title" id="❓-よくある質問FAQ">
+     ❓ よくある質問（FAQ）
+    </h2>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+<span>
+       DNSSEC を有効にすると DNS クエリが遅くなりますか？
+      </span>
+<span class="toggle-icon">
+       +
+      </span>
+</div>
+<div class="faq-answer">
+<p>
+       わずかに遅くなる可能性がありますが、通常は体感できないレベルです。
+                    RRSIG などの追加レコードにより応答サイズが大きくなりますが、
+                    キャッシュにより影響は最小限に抑えられます。
+                    セキュリティ向上のメリットが、パフォーマンスへの影響を上回ります。
+      </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+<span>
+       サブドメインにも DNSSEC を設定する必要がありますか？
+      </span>
+<span class="toggle-icon">
+       +
+      </span>
+</div>
+<div class="faq-answer">
+<p>
+       親ドメインで DNSSEC を有効にすると、その親ホストゾーン内のすべてのレコードが署名されます。
+                    ただし、別のホストゾーンで管理している委任されたサブドメインの場合は、
+                    そのサブドメインのホストゾーンでも個別に DNSSEC を設定し、
+                    親ゾーンに DS レコードを追加する必要があります。
+      </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+<span>
+       DNSSEC の料金はかかりますか？
+      </span>
+<span class="toggle-icon">
+       +
+      </span>
+</div>
+<div class="faq-answer">
+<p>
+       Route 53 での DNSSEC 署名自体には追加料金はかかりません。
+                    ただし、KSK の管理に使用する AWS KMS の CMK には通常の KMS 料金（月額約 $1 + 使用量）がかかります。
+                    また、署名により DNS 応答サイズが増加するため、クエリコストがわずかに増加する可能性があります。
+      </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+<span>
+       DNSSEC を無効化する正しい手順は？
+      </span>
+<span class="toggle-icon">
+       +
+      </span>
+</div>
+<div class="faq-answer">
+<p>
+       必ず以下の順序で実行します：
+       <br/>
+<br/>
+       1. レジストラで DS レコードを削除
+       <br/>
+       2. DS レコードの TTL が経過するまで待機（通常 48〜72 時間）
+       <br/>
+       3. Route 53 コンソールで「Disable DNSSEC signing」を実行
+       <br/>
+       4. KSK を非アクティブ化・削除
+       <br/>
+<br/>
+       順序を間違えると、ドメインがインターネットから到達不能になります。
+      </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+<span>
+       すべての TLD で DNSSEC を使用できますか？
+      </span>
+<span class="toggle-icon">
+       +
+      </span>
+</div>
+<div class="faq-answer">
+<p>
+       いいえ、TLD によっては DNSSEC をサポートしていないものがあります。
+                    主要な gTLD（.com, .net, .org など）や多くの ccTLD はサポートしていますが、
+                    一部の新しい gTLD や特定の ccTLD では対応していない場合があります。
+                    Route 53 のドキュメントで対応状況を確認してください。
+      </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+<span>
+       Algorithm は何を選べばいいですか？
+      </span>
+<span class="toggle-icon">
+       +
+      </span>
+</div>
+<div class="faq-answer">
+<p>
+       現在は
+       <strong>
+        ECDSAP256SHA256（Algorithm 13）
+       </strong>
+       が推奨されています。
+                    RSA ベースの Algorithm 8 より鍵が小さく、パフォーマンスが良好です。
+                    Route 53 のデフォルトも ECDSAP256SHA256 です。
+                    古い RSA アルゴリズム（Algorithm 5, 7）はセキュリティ上の理由から非推奨です。
+      </p>
+</div>
+</div>
+</section>
+<!-- フッター -->
+<footer class="footer">
+<p>
+     🔐 Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ
+    </p>
+<p class="update-date">
+     最終更新: 2025年12月
+    </p>
+<p style="margin-top: 15px;">
+     📚 参考:
+     <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring-dnssec.html" style="color: #2563EB; text-decoration: none;">
+      AWS 公式ドキュメント
+     </a>
+</p>
+</footer>
+
+
+</div>
+<script is:inline>
+   // コードタブの切り替え
+        function showCode(tabId) {
+            // すべてのタブとコンテンツを非アクティブに
+            document.querySelectorAll('.code-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.code-content').forEach(content => content.classList.remove('active'));
+            
+            // クリックされたタブとコンテンツをアクティブに
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+        
+        // コードのコピー
+        function copyCode(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const text = codeElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                btn.textContent = '✓ コピー完了';
+                setTimeout(() => {
+                    btn.textContent = '📋 コピー';
+                }, 2000);
+            }).catch(err => {
+                console.error('コピーに失敗しました:', err);
+            });
+        }
+        
+        // FAQ のトグル
+        function toggleFaq(element) {
+            const faqItem = element.parentElement;
+            faqItem.classList.toggle('active');
+        }
+  </script>
+<script is:inline>// コードタブの切り替え
+        function showCode(tabId) {
+            // すべてのタブとコンテンツを非アクティブに
+            document.querySelectorAll('.code-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.code-content').forEach(content => content.classList.remove('active'));
+            
+            // クリックされたタブとコンテンツをアクティブに
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+        
+        // コードのコピー
+        function copyCode(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const text = codeElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                btn.textContent = '✓ コピー完了';
+                setTimeout(() => {
+                    btn.textContent = '📋 コピー';
+                }, 2000);
+            }).catch(err => {
+                console.error('コピーに失敗しました:', err);
+            });
+        }
+        
+        // FAQ のトグル
+        function toggleFaq(element) {
+            const faqItem = element.parentElement;
+            faqItem.classList.toggle('active');
+        }</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

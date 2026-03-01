@@ -1,0 +1,451 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'CloudWatch Logs ログ保持期間 完全ガイド',
+  category: 'development-deployment',
+  categoryLabel: '開発・デプロイメント',
+  subcategory: '',
+  slug: 'cloudwatch-logs-retention-guide',
+  pageCss: '/aws_sap_studying/css/pages/cloudwatch-logs-retention-guide.css',
+  tocItems: [
+    { level: 'h2', id: '結論ファースト-3つの重要ポイント', text: '🎯 結論ファースト：3つの重要ポイント' },
+    { level: 'h3', id: 'デフォルトは永久保存', text: '📌 デフォルトは「永久保存」' },
+    { level: 'h3', id: '選択肢は1日〜10年', text: '📌 選択肢は「1日〜10年」' },
+    { level: 'h3', id: '削除には最大72時間かかる', text: '📌 削除には最大72時間かかる' },
+    { level: 'h2', id: 'たとえ話-倉庫の保管期限ルール', text: '🏪 たとえ話：倉庫の保管期限ルール' },
+    { level: 'h3', id: 'リアルな倉庫', text: 'リアルな倉庫' },
+    { level: 'h3', id: 'CloudWatch-Logs', text: 'CloudWatch Logs' },
+    { level: 'h3', id: '倉庫の棚をイメージしよう', text: '🏢 倉庫の棚をイメージしよう' },
+    { level: 'h2', id: '選べる保持期間オプション', text: '📅 選べる保持期間オプション' },
+    { level: 'h2', id: '倉庫の保管料金-=-AWSストレージコスト', text: '💰 倉庫の保管料金 = AWSストレージコスト' },
+    { level: 'h3', id: '保持期間を設定しない場合', text: '😱 保持期間を設定しない場合' },
+    { level: 'h3', id: '適切に設定した場合', text: '😊 適切に設定した場合' },
+    { level: 'h2', id: '倉庫のたとえで理解する4つのポイント', text: '📦 倉庫のたとえで理解する4つのポイント' },
+    { level: 'h3', id: '️-ロググループ-=-倉庫の棚', text: '🏷️ ロググループ = 倉庫の棚' },
+    { level: 'h3', id: 'ログストリーム-=-棚の中の箱', text: '📄 ログストリーム = 棚の中の箱' },
+    { level: 'h3', id: '⏰-削除は即時ではない', text: '⏰ 削除は即時ではない' },
+    { level: 'h3', id: 'いつでも変更可能', text: '🔄 いつでも変更可能' },
+    { level: 'h2', id: '️-設定方法3つの方法', text: '🛠️ 設定方法（3つの方法）' },
+    { level: 'h2', id: '⚠️-知っておくべき重要ポイント', text: '⚠️ 知っておくべき重要ポイント' },
+    { level: 'h3', id: '削除のタイミング', text: '🕐 削除のタイミング' },
+    { level: 'h3', id: '設定変更の影響', text: '🔄 設定変更の影響' },
+    { level: 'h3', id: '長期保存が必要な場合', text: '📦 長期保存が必要な場合' },
+    { level: 'h3', id: '️-ロググループ単位', text: '🏷️ ロググループ単位' },
+    { level: 'h2', id: '✅-ベストプラクティス', text: '✅ ベストプラクティス' },
+    { level: 'h3', id: '環境ごとに分ける', text: '🎯 環境ごとに分ける' },
+    { level: 'h3', id: 'コンプライアンス対応', text: '📜 コンプライアンス対応' },
+    { level: 'h3', id: '定期的なレビュー', text: '🔍 定期的なレビュー' },
+    { level: 'h3', id: '️-IaCで管理', text: '🏗️ IaCで管理' },
+    { level: 'h2', id: '❓-よくある質問FAQ', text: '❓ よくある質問（FAQ）' },
+    { level: 'h2', id: 'まとめ', text: '🎓 まとめ' },
+    { level: 'h3', id: '倉庫の保管ルール-=-CloudWatch-Logs保持期間', text: '🏪 倉庫の保管ルール = CloudWatch Logs保持期間' }
+  ],
+  prevPage: 'guardduty-suppression-rules.html',
+  nextPage: 'api_gateway_infographic.html',
+  pageNum: 11,
+  pageTotal: 15,
+};
+
+const rawContent = `<!-- ヘッダー -->
+<div class="header">
+<div class="header-icon">🗄️⏰</div>
+<h1>CloudWatch Logs ログ保持期間</h1>
+
+<p class="header-subtitle">〜 倉庫の保管ルールで理解する、ログデータの賢い管理方法 〜</p>
+</div>
+<!-- 結論ファースト -->
+<div class="conclusion-first">
+<h2 id="結論ファースト-3つの重要ポイント">🎯 結論ファースト：3つの重要ポイント</h2>
+<div class="conclusion-grid">
+<div class="conclusion-item">
+<h3 id="デフォルトは永久保存">📌 デフォルトは「永久保存」</h3>
+<p>設定しないとログは永遠に保存され、<strong>コストが膨らみ続けます！</strong>必ず保持期間を設定しましょう。</p>
+</div>
+<div class="conclusion-item">
+<h3 id="選択肢は1日〜10年">📌 選択肢は「1日〜10年」</h3>
+<p>1, 3, 5, 7, 14, 30, 60, 90... 最大3653日（約10年）まで、<strong>18種類の期間</strong>から選べます。</p>
+</div>
+<div class="conclusion-item">
+<h3 id="削除には最大72時間かかる">📌 削除には最大72時間かかる</h3>
+<p>保持期間を過ぎても即削除されません。<strong>最大72時間後</strong>に実際に削除されます。</p>
+</div>
+</div>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-section">
+<h2 id="たとえ話-倉庫の保管期限ルール" class="analogy-title">🏪 たとえ話：倉庫の保管期限ルール</h2>
+<div class="analogy-comparison">
+<div class="analogy-box">
+<div class="icon">📦🏭</div>
+<h3 id="リアルな倉庫">リアルな倉庫</h3>
+<p>企業の倉庫では、書類や商品を<br/>「保管期限」を決めて管理します。<br/><br/>
+                    期限が来たら廃棄して<br/>スペースを確保し、<br/><strong>保管コストを抑えます</strong></p>
+</div>
+<div class="arrow-box">⟺</div>
+<div class="analogy-box">
+<div class="icon">☁️📊</div>
+<h3 id="CloudWatch-Logs">CloudWatch Logs</h3>
+<p>AWSでは、アプリのログを<br/>「保持期間」を決めて管理します。<br/><br/>
+                    期限が来たら自動削除して<br/>ストレージを解放し、<br/><strong>AWSコストを抑えます</strong></p>
+</div>
+</div>
+<!-- 倉庫イラスト -->
+<div class="warehouse-illustration">
+<h3 id="倉庫の棚をイメージしよう" class="warehouse-title">🏢 倉庫の棚をイメージしよう</h3>
+<div class="warehouse-visual">
+<div class="shelf">
+<div class="shelf-label">📅 今週</div>
+<div class="shelf-boxes">
+<div class="box box-new">📄 新しいログ</div>
+<div class="box box-new">📄 新しいログ</div>
+</div>
+</div>
+<div class="shelf">
+<div class="shelf-label">📅 先月</div>
+<div class="shelf-boxes">
+<div class="box box-old">📄 古いログ</div>
+</div>
+</div>
+<div class="shelf">
+<div class="shelf-label">📅 半年前</div>
+<div class="shelf-boxes">
+<div class="box box-expired">🗑️ 期限切れ→削除</div>
+</div>
+</div>
+</div>
+<p style="color: #1565c0; font-size: 1.1em;">
+                    💡 <strong>倉庫と同じ！</strong>保管期限を決めておけば、古い荷物は自動で片付けられます
+                </p>
+</div>
+</div>
+<!-- 保持期間オプション -->
+<div class="retention-options">
+<h2 id="選べる保持期間オプション" class="retention-title">📅 選べる保持期間オプション</h2>
+<div class="retention-timeline">
+<div class="timeline-line"></div>
+<div class="timeline-points">
+<div class="timeline-point">
+<div class="timeline-dot">1日</div>
+<div class="timeline-label">最短</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-dot">30日</div>
+<div class="timeline-label">1ヶ月</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-dot">90日</div>
+<div class="timeline-label">3ヶ月</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-dot">365日</div>
+<div class="timeline-label">1年</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-dot">3653日</div>
+<div class="timeline-label">約10年</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-dot">∞</div>
+<div class="timeline-label">無期限</div>
+</div>
+</div>
+</div>
+<div class="retention-table-section">
+<div class="retention-categories">
+<div class="category-card">
+<div class="category-header">
+<span class="category-icon">🚀</span>
+<span class="category-title">短期（デバッグ用）</span>
+</div>
+<div class="category-list">
+<span class="period-tag period-short">1日</span>
+<span class="period-tag period-short">3日</span>
+<span class="period-tag period-short">5日</span>
+<span class="period-tag period-short">7日</span>
+<span class="period-tag period-short">14日</span>
+</div>
+</div>
+<div class="category-card">
+<div class="category-header">
+<span class="category-icon">📊</span>
+<span class="category-title">中期（運用監視）</span>
+</div>
+<div class="category-list">
+<span class="period-tag period-medium">30日</span>
+<span class="period-tag period-medium">60日</span>
+<span class="period-tag period-medium">90日</span>
+<span class="period-tag period-medium">120日</span>
+<span class="period-tag period-medium">150日</span>
+<span class="period-tag period-medium">180日</span>
+</div>
+</div>
+<div class="category-card">
+<div class="category-header">
+<span class="category-icon">🔒</span>
+<span class="category-title">長期（コンプライアンス）</span>
+</div>
+<div class="category-list">
+<span class="period-tag period-long">365日（1年）</span>
+<span class="period-tag period-long">400日</span>
+<span class="period-tag period-long">545日</span>
+<span class="period-tag period-long">731日（2年）</span>
+<span class="period-tag period-long">1096日（3年）</span>
+</div>
+</div>
+<div class="category-card">
+<div class="category-header">
+<span class="category-icon">🏛️</span>
+<span class="category-title">超長期（アーカイブ）</span>
+</div>
+<div class="category-list">
+<span class="period-tag period-forever">1827日（5年）</span>
+<span class="period-tag period-forever">2192日（6年）</span>
+<span class="period-tag period-forever">2557日（7年）</span>
+<span class="period-tag period-forever">2922日（8年）</span>
+<span class="period-tag period-forever">3288日（9年）</span>
+<span class="period-tag period-forever">3653日（10年）</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- コスト説明 -->
+<div class="cost-section">
+<h2 id="倉庫の保管料金-=-AWSストレージコスト" class="cost-title">💰 倉庫の保管料金 = AWSストレージコスト</h2>
+<div class="cost-comparison">
+<div class="cost-card bad">
+<h3 id="保持期間を設定しない場合">😱 保持期間を設定しない場合</h3>
+<p>倉庫がパンパン！保管料が増え続ける...</p>
+<div class="cost-amount">$1,200/年</div>
+<p>ログが永久に蓄積<br/>→ コストが膨らみ続ける</p>
+</div>
+<div class="cost-card good">
+<h3 id="適切に設定した場合">😊 適切に設定した場合</h3>
+<p>必要な分だけ保管！スッキリ管理</p>
+<div class="cost-amount">$300/年</div>
+<p>30〜90日で設定<br/>→ <strong>約75%のコスト削減！</strong></p>
+</div>
+</div>
+</div>
+<!-- 倉庫のたとえ詳細 -->
+<div class="warehouse-analogy-detail">
+<h2 id="倉庫のたとえで理解する4つのポイント" class="analogy-title">📦 倉庫のたとえで理解する4つのポイント</h2>
+<div class="warehouse-grid">
+<div class="warehouse-item item-1">
+<h3 id="️-ロググループ-=-倉庫の棚"><span class="emoji">🏷️</span> ロググループ = 倉庫の棚</h3>
+<p>倉庫には「食品棚」「書類棚」など用途別の棚がありますよね。CloudWatch Logsの「ロググループ」も同じで、アプリごとに分けた「ログの棚」です。それぞれの棚に別の保管期限を設定できます。</p>
+</div>
+<div class="warehouse-item item-2">
+<h3 id="ログストリーム-=-棚の中の箱"><span class="emoji">📄</span> ログストリーム = 棚の中の箱</h3>
+<p>棚の中にある箱がログストリームです。同じロググループ内でも、サーバーごとやプロセスごとに分かれた箱に入っています。箱ごとではなく、棚全体（ロググループ）に保管期限を設定します。</p>
+</div>
+<div class="warehouse-item item-3">
+<h3 id="⏰-削除は即時ではない"><span class="emoji">⏰</span> 削除は即時ではない</h3>
+<p>倉庫でも「期限切れ」と「実際の廃棄」にはタイムラグがありますよね。CloudWatch Logsも同様に、保持期間を過ぎてから<strong>最大72時間後</strong>に実際に削除されます。ただし、課金は期限切れ時点で止まります。</p>
+</div>
+<div class="warehouse-item item-4">
+<h3 id="いつでも変更可能"><span class="emoji">🔄</span> いつでも変更可能</h3>
+<p>倉庫の保管ルールを変更できるように、保持期間もいつでも変更できます。短くすると古いログは削除され、長くすると保存期間が延びます。ビジネス要件に合わせて調整しましょう。</p>
+</div>
+</div>
+</div>
+<!-- 設定方法 -->
+<div class="setup-section">
+<h2 id="️-設定方法3つの方法" class="setup-title">🛠️ 設定方法（3つの方法）</h2>
+<div class="setup-methods">
+<div class="method-card">
+<div class="method-header console">
+<span>🖥️</span>
+<span>AWSコンソール</span>
+</div>
+<div class="method-steps">
+<div class="step">
+<div class="step-number">1</div>
+<div class="step-text">CloudWatch コンソールを開く</div>
+</div>
+<div class="step">
+<div class="step-number">2</div>
+<div class="step-text">左メニュー「ログ」→「ロググループ」</div>
+</div>
+<div class="step">
+<div class="step-number">3</div>
+<div class="step-text">対象のロググループを選択</div>
+</div>
+<div class="step">
+<div class="step-number">4</div>
+<div class="step-text">「アクション」→「保持設定の編集」</div>
+</div>
+<div class="step">
+<div class="step-number">5</div>
+<div class="step-text">ドロップダウンから期間を選択</div>
+</div>
+</div>
+</div>
+<div class="method-card">
+<div class="method-header cli">
+<span>⌨️</span>
+<span>AWS CLI</span>
+</div>
+<div class="method-content">
+<div class="code-block">
+<span class="code-comment"># 保持期間を30日に設定</span>
+aws logs put-retention-policy \\
+  --log-group-name <span class="code-string">"/aws/lambda/my-function"</span> \\
+  --retention-in-days <span class="code-number">30</span>
+<span class="code-comment"># 現在の設定を確認</span>
+aws logs describe-log-groups \\
+  --log-group-name-prefix <span class="code-string">"/aws/lambda/"</span>
+<span class="code-comment"># 保持期間を削除（永久保存に戻す）</span>
+aws logs delete-retention-policy \\
+  --log-group-name <span class="code-string">"/aws/lambda/my-function"</span>
+</div>
+</div>
+</div>
+<div class="method-card">
+<div class="method-header terraform">
+<span>📝</span>
+<span>Terraform / CloudFormation</span>
+</div>
+<div class="method-content">
+<div class="code-block">
+<span class="code-comment"># Terraform の例</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_cloudwatch_log_group"</span> <span class="code-string">"example"</span> {
+  name              = <span class="code-string">"/aws/lambda/my-function"</span>
+  retention_in_days = <span class="code-number">30</span> <span class="code-comment"># 👈 ここで設定！</span>
+  
+  tags = {
+    Environment = <span class="code-string">"production"</span>
+  }
+}
+
+<span class="code-comment"># 0 または省略 = 永久保存（非推奨）</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 重要ポイント -->
+<div class="important-section">
+<h2 id="⚠️-知っておくべき重要ポイント" class="important-title">⚠️ 知っておくべき重要ポイント</h2>
+<div class="important-grid">
+<div class="important-card">
+<h3 id="削除のタイミング">🕐 削除のタイミング</h3>
+<p>保持期間を過ぎてもすぐには削除されません。<strong>最大72時間</strong>かかることがあります。ただし、課金対象からは外れます。</p>
+</div>
+<div class="important-card">
+<h3 id="設定変更の影響">🔄 設定変更の影響</h3>
+<p>保持期間を短くすると、既存の古いログも削除対象になります。変更前に<strong>必要なログをエクスポート</strong>しておきましょう。</p>
+</div>
+<div class="important-card">
+<h3 id="長期保存が必要な場合">📦 長期保存が必要な場合</h3>
+<p>10年以上保存したい場合は、CloudWatch Logsから<strong>S3にエクスポート</strong>しましょう。S3 Glacierならさらに低コストです。</p>
+</div>
+<div class="important-card">
+<h3 id="️-ロググループ単位">🏷️ ロググループ単位</h3>
+<p>保持期間はロググループ単位で設定します。同じロググループ内のすべてのログストリームに同じ期間が適用されます。</p>
+</div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<div class="best-practices">
+<h2 id="✅-ベストプラクティス" class="bp-title">✅ ベストプラクティス</h2>
+<div class="bp-grid">
+<div class="bp-card">
+<h3 id="環境ごとに分ける">🎯 環境ごとに分ける</h3>
+<p><strong>本番:</strong> 90〜365日（監査・トラブルシュート用）<br/>
+<strong>ステージング:</strong> 30〜60日<br/>
+<strong>開発:</strong> 7〜14日（コスト最小化）</p>
+</div>
+<div class="bp-card">
+<h3 id="コンプライアンス対応">📜 コンプライアンス対応</h3>
+<p>業界規制で1年以上の保存が必要な場合は、CloudWatch Logsで<strong>365日+</strong>に設定するか、S3へエクスポートしてGlacierで長期保存。</p>
+</div>
+<div class="bp-card">
+<h3 id="定期的なレビュー">🔍 定期的なレビュー</h3>
+<p>四半期ごとにロググループの保持設定を見直しましょう。「Never Expire」のまま放置されているグループがないかチェック！</p>
+</div>
+<div class="bp-card">
+<h3 id="️-IaCで管理">🏗️ IaCで管理</h3>
+<p>TerraformやCloudFormationで保持期間を定義。新しいリソース作成時に<strong>自動で適切な期間が設定</strong>されるようにしましょう。</p>
+</div>
+</div>
+</div>
+<!-- FAQ -->
+<div class="faq-section">
+<h2 id="❓-よくある質問FAQ" class="faq-title">❓ よくある質問（FAQ）</h2>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>Q: デフォルトの保持期間は？</span>
+</div>
+<div class="faq-answer">
+<strong>A: 「永久保存（Never Expire）」です。</strong><br/>
+                    倉庫のたとえでいうと、何も設定しないと「永久に保管」されるルールになっています。放置するとログが無限に蓄積してコストが膨らみ続けるので、必ず適切な保持期間を設定しましょう！
+                </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>Q: 保持期間を過ぎたらすぐ削除される？</span>
+</div>
+<div class="faq-answer">
+<strong>A: いいえ、最大72時間かかります。</strong><br/>
+                    倉庫でも「期限切れマーク」を付けてから実際に廃棄するまでタイムラグがありますよね。CloudWatch Logsも同様です。ただし、期限切れ時点で課金対象からは外れるので、コスト面では安心です。
+                </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>Q: なぜ30日や90日という中途半端な選択肢がある？</span>
+</div>
+<div class="faq-answer">
+<strong>A: ビジネス要件に合わせた柔軟な設計です。</strong><br/>
+                    1ヶ月（30日）は月次レビュー、3ヶ月（90日）は四半期レビュー、1年（365日）は年次監査に対応。倉庫の「月次在庫」「四半期決算」「年次監査」のタイミングと同じ発想です。
+                </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>Q: 保持期間を変更したら既存ログはどうなる？</span>
+</div>
+<div class="faq-answer">
+<strong>A: 新しいルールが既存ログにも適用されます。</strong><br/>
+                    例えば90日→30日に変更すると、30日以上前のログは削除対象になります。倉庫の保管ルールを厳しくしたら、古い荷物も対象になるのと同じです。大事なログは事前にエクスポートしておきましょう！
+                </div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary-section">
+<h2 id="まとめ" class="summary-title">🎓 まとめ</h2>
+<div class="summary-content">
+<div class="summary-box">
+<h3 id="倉庫の保管ルール-=-CloudWatch-Logs保持期間">🏪 倉庫の保管ルール = CloudWatch Logs保持期間</h3>
+<p>CloudWatch Logsのログ保持期間は、まさに<strong>倉庫の保管期限ルール</strong>と同じ！<br/>
+                    適切に設定すれば、必要なログは保持しつつ、古いログは自動で片付けられます。</p>
+</div>
+<div class="summary-checklist">
+<span class="checklist-item">✅ デフォルトは永久保存</span>
+<span class="checklist-item">✅ 1日〜10年から選択可能</span>
+<span class="checklist-item">✅ 削除は最大72時間後</span>
+<span class="checklist-item">✅ ロググループ単位で設定</span>
+</div>
+<div class="summary-box" style="margin-top: 25px;">
+<p style="font-size: 1.2em;">
+                        💡 <strong>今すぐやること：</strong><br/><br/>
+                        AWSコンソールで「Never Expire」のロググループがないか確認し、<br/>
+                        適切な保持期間（まずは30〜90日がおすすめ）を設定しましょう！<br/>
+                        それだけで<strong>最大75%のコスト削減</strong>が期待できます 🎉
+                    </p>
+</div>
+</div>
+</div>
+
+
+</div>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

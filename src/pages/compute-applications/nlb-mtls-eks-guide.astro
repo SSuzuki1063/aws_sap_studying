@@ -1,0 +1,2954 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド',
+  category: 'compute-applications',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: '',
+  slug: 'nlb-mtls-eks-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '結論ファースト', text: '📌 結論ファースト' },
+    { level: 'h3', id: 'NLB-+-TCPリスナー', text: 'NLB + TCPリスナー' },
+    { level: 'h3', id: 'AWS-LB-Controller-+-IP-mode', text: 'AWS LB Controller + IP mode' },
+    { level: 'h3', id: 'HPA-+-Cluster-Autoscaler', text: 'HPA + Cluster Autoscaler' },
+    { level: 'h2', id: '️-たとえ話-外交機密便の仕組み', text: '🏛️ たとえ話：「外交機密便」の仕組み' },
+    { level: 'h3', id: '外交機密便の配達フロー-=-mTLS通信フロー', text: '📬 外交機密便の配達フロー = mTLS通信フロー' },
+    { level: 'h3', id: '5つの要件-→-各技術がどう解決するか', text: '🎯 5つの要件 → 各技術がどう解決するか' },
+    { level: 'h2', id: '相互TLSmTLSのハンドシェイク', text: '相互TLS（mTLS）のハンドシェイク' },
+    { level: 'h3', id: 'mTLS-7ステップ-ハンドシェイク', text: '🔄 mTLS 7ステップ・ハンドシェイク' },
+    { level: 'h2', id: 'gRPC-プロトコルとは', text: 'gRPC プロトコルとは' },
+    { level: 'h3', id: 'gRPC-=-Google-が開発した高速-RPC-フレームワーク', text: '📡 gRPC = Google が開発した高速 RPC フレームワーク' },
+    { level: 'h2', id: 'ロードバランサー比較-なぜ-NLB-+-TCP-なのか', text: 'ロードバランサー比較：なぜ NLB + TCP なのか' },
+    { level: 'h2', id: 'AWS-Load-Balancer-Controller-とは', text: 'AWS Load Balancer Controller とは' },
+    { level: 'h3', id: '️-そもそも何をしてくれるもの？', text: '🎛️ そもそも何をしてくれるもの？' },
+    { level: 'h2', id: '全体アーキテクチャ図', text: '全体アーキテクチャ図' },
+    { level: 'h3', id: '️-NLB-+-TCPリスナー-+-AWS-LB-Controller-+-EKS-構成図', text: '🏗️ NLB + TCPリスナー + AWS LB Controller + EKS 構成図' },
+    { level: 'h3', id: '暗号化状態の可視化-パケットはどこで復号化される？', text: '🔐 暗号化状態の可視化：パケットはどこで復号化される？' },
+    { level: 'h2', id: 'Kubernetes-マニフェスト実装', text: 'Kubernetes マニフェスト実装' },
+    { level: 'h2', id: '二段階オートスケーリング', text: '二段階オートスケーリング' },
+    { level: 'h3', id: 'Horizontal-Pod-Autoscaler-HPA-第1段階-Podレベルのスケール', text: 'Horizontal Pod Autoscaler (HPA) 第1段階：Podレベルのスケール' },
+    { level: 'h3', id: 'Cluster-Autoscaler-CA-第2段階-ノードレベルのスケール', text: 'Cluster Autoscaler (CA) 第2段階：ノードレベルのスケール' },
+    { level: 'h2', id: 'よくあるトラブルと解決策', text: 'よくあるトラブルと解決策' },
+    { level: 'h2', id: 'ベストプラクティス', text: 'ベストプラクティス' },
+    { level: 'h3', id: '✅-運用チェックリスト', text: '✅ 運用チェックリスト' }
+  ],
+  prevPage: 'alb-nlb-privatelink-guide.html',
+  nextPage: 'aws-lambda-metrics-perfect.html',
+  pageNum: 30,
+  pageTotal: 46,
+};
+
+const rawContent = `<style>* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            padding: 20px;
+            line-height: 1.6;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #533483 100%);
+            color: white;
+            padding: 55px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.06;
+            top: -40px;
+            right: -30px;
+        }
+
+        .header::after {
+            content: '🛡️';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.05;
+            bottom: -30px;
+            left: -20px;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.25em;
+            opacity: 0.92;
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .badge-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-blue { background: rgba(79,172,254,0.25); color: #93c5fd; border: 1px solid rgba(79,172,254,0.35); }
+        .badge-purple { background: rgba(139,92,246,0.25); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.35); }
+        .badge-green { background: rgba(16,185,129,0.25); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.35); }
+        .badge-orange { background: rgba(245,158,11,0.25); color: #fcd34d; border: 1px solid rgba(245,158,11,0.35); }
+
+        /* ===== CONTENT AREA ===== */
+        .content {
+            padding: 50px;
+        }
+
+        /* ===== 結論セクション ===== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #ede9fe 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border-left: 6px solid #4f46e5;
+            position: relative;
+        }
+
+        .conclusion-first h2 {
+            color: #3730a3;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .conclusion-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .conclusion-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .conclusion-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .conclusion-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .conclusion-card h3 {
+            color: #1e293b;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .conclusion-card p {
+            color: #64748b;
+            font-size: 0.92em;
+        }
+
+        /* ===== たとえ話セクション ===== */
+        .analogy-section {
+            background: linear-gradient(135deg, #fefce8 0%, #fef3c7 50%, #fde68a 100%);
+            border-radius: 16px;
+            padding: 45px;
+            margin-bottom: 50px;
+            border: 2px solid #f59e0b;
+            position: relative;
+        }
+
+        .analogy-section h2 {
+            color: #92400e;
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .analogy-subtitle {
+            text-align: center;
+            color: #a16207;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        .analogy-mapping {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .mapping-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+            transition: transform 0.3s ease;
+        }
+
+        .mapping-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .mapping-emoji {
+            font-size: 2.4em;
+            flex-shrink: 0;
+        }
+
+        .mapping-text {
+            flex: 1;
+        }
+
+        .mapping-real {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1.05em;
+        }
+
+        .mapping-arrow {
+            color: #d97706;
+            font-size: 0.85em;
+            margin: 2px 0;
+        }
+
+        .mapping-analogy {
+            color: #92400e;
+            font-size: 0.92em;
+        }
+
+        /* ===== たとえ話 図解 ===== */
+        .analogy-diagram {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+
+        .analogy-diagram h3 {
+            text-align: center;
+            color: #92400e;
+            font-size: 1.4em;
+            margin-bottom: 25px;
+        }
+
+        .courier-flow {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            position: relative;
+        }
+
+        .courier-stage {
+            flex: 1;
+            text-align: center;
+            padding: 20px 12px;
+            position: relative;
+            border-radius: 12px;
+        }
+
+        .courier-stage:not(:last-child)::after {
+            content: '➤';
+            position: absolute;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            color: #d97706;
+            z-index: 2;
+        }
+
+        .courier-stage-icon {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+        }
+
+        .courier-stage-title {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 0.95em;
+            margin-bottom: 6px;
+        }
+
+        .courier-stage-desc {
+            color: #64748b;
+            font-size: 0.82em;
+            line-height: 1.5;
+        }
+
+        .stage-diplomat { background: linear-gradient(180deg, #ede9fe, #f5f3ff); }
+        .stage-verify { background: linear-gradient(180deg, #fef3c7, #fffbeb); }
+        .stage-gateway { background: linear-gradient(180deg, #dbeafe, #eff6ff); }
+        .stage-route { background: linear-gradient(180deg, #d1fae5, #ecfdf5); }
+        .stage-embassy { background: linear-gradient(180deg, #fce7f3, #fdf2f8); }
+
+        /* ===== セクション共通 ===== */
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .section-number {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4em;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .section-title-area h2 {
+            font-size: 1.8em;
+            color: #1e293b;
+        }
+
+        .section-title-area p {
+            color: #64748b;
+            font-size: 0.95em;
+        }
+
+        /* ===== 通信フロー図 ===== */
+        .flow-diagram {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .flow-diagram h3 {
+            text-align: center;
+            color: #334155;
+            font-size: 1.5em;
+            margin-bottom: 30px;
+        }
+
+        /* mTLS フロー */
+        .mtls-flow {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .mtls-actor {
+            flex: 0 0 140px;
+            text-align: center;
+            padding: 20px 10px;
+        }
+
+        .mtls-actor-icon {
+            font-size: 3em;
+            margin-bottom: 8px;
+        }
+
+        .mtls-actor-label {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1em;
+        }
+
+        .mtls-actor-sub {
+            color: #64748b;
+            font-size: 0.8em;
+        }
+
+        .mtls-steps {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 0 10px;
+        }
+
+        .mtls-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        .mtls-step-num {
+            background: #4f46e5;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-right {
+            background: linear-gradient(90deg, #ede9fe, #dbeafe);
+        }
+
+        .step-right .mtls-step-arrow {
+            color: #4f46e5;
+        }
+
+        .step-left {
+            background: linear-gradient(90deg, #dbeafe, #ede9fe);
+        }
+
+        .step-left .mtls-step-arrow {
+            color: #7c3aed;
+        }
+
+        .step-both {
+            background: linear-gradient(90deg, #d1fae5, #a7f3d0);
+        }
+
+        .step-both .mtls-step-num {
+            background: #059669;
+        }
+
+        .mtls-step-text {
+            color: #1e293b;
+            flex: 1;
+        }
+
+        .mtls-step-arrow {
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+
+        /* ===== アーキテクチャ図（メイン） ===== */
+        .arch-diagram {
+            background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 50%, #f0fdf4 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 2px solid #86efac;
+            position: relative;
+        }
+
+        .arch-diagram h3 {
+            text-align: center;
+            font-size: 1.6em;
+            color: #166534;
+            margin-bottom: 30px;
+        }
+
+        .arch-layers {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .arch-layer {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            position: relative;
+        }
+
+        .arch-layer-label {
+            flex: 0 0 120px;
+            text-align: right;
+            padding-right: 16px;
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.82em;
+        }
+
+        .arch-layer-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 14px;
+        }
+
+        .arch-box {
+            padding: 16px 24px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .arch-box:hover {
+            transform: scale(1.04);
+        }
+
+        .arch-box-icon {
+            font-size: 1.8em;
+            margin-bottom: 4px;
+        }
+
+        .arch-box-label {
+            font-size: 0.9em;
+            color: #1e293b;
+        }
+
+        .arch-box-sub {
+            font-size: 0.75em;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .box-client { background: linear-gradient(135deg, #ede9fe, #ddd6fe); border: 2px solid #8b5cf6; }
+        .box-nlb { background: linear-gradient(135deg, #dbeafe, #bfdbfe); border: 2px solid #3b82f6; min-width: 220px; }
+        .box-controller { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; }
+        .box-pod { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: 2px solid #10b981; }
+        .box-hpa { background: linear-gradient(135deg, #fce7f3, #fbcfe8); border: 2px solid #ec4899; }
+        .box-ca { background: linear-gradient(135deg, #ffedd5, #fed7aa); border: 2px solid #f97316; }
+
+        .arch-connector {
+            text-align: center;
+            font-size: 1.6em;
+            color: #94a3b8;
+            padding: 4px 0;
+        }
+
+        .arch-connector-label {
+            font-size: 0.52em;
+            color: #64748b;
+            display: block;
+            font-weight: 600;
+        }
+
+        /* ===== 暗号化パイプライン ===== */
+        .encryption-pipeline {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+        }
+
+        .encryption-pipeline h3 {
+            text-align: center;
+            color: #334155;
+            font-size: 1.4em;
+            margin-bottom: 25px;
+        }
+
+        .pipeline-track {
+            display: flex;
+            align-items: center;
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .pipeline-stage {
+            flex: 1;
+            text-align: center;
+            padding: 18px 12px;
+            position: relative;
+        }
+
+        .pipeline-stage-icon {
+            font-size: 2.2em;
+            margin-bottom: 6px;
+        }
+
+        .pipeline-stage-name {
+            font-weight: 700;
+            font-size: 0.95em;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .pipeline-stage-detail {
+            font-size: 0.8em;
+            color: #64748b;
+        }
+
+        .pipeline-arrow {
+            flex: 0 0 50px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pipeline-arrow-icon {
+            font-size: 1.6em;
+            color: #10b981;
+        }
+
+        .pipeline-arrow-label {
+            font-size: 0.65em;
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .encrypted-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(90deg, #065f46, #059669, #10b981, #059669, #065f46);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+            max-width: 1000px;
+            margin: 20px auto 0;
+        }
+
+        /* ===== 比較テーブル ===== */
+        .comparison-section {
+            margin-bottom: 30px;
+        }
+
+        .comparison-section h3 {
+            text-align: center;
+            font-size: 1.5em;
+            color: #1e293b;
+            margin-bottom: 25px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .comparison-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .comparison-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .comparison-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+        }
+
+        .card-nlb-tcp::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+        .card-nlb-tls::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+        .card-alb::before { background: linear-gradient(90deg, #f97316, #ef4444); }
+
+        .comparison-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .comparison-card-icon {
+            font-size: 2em;
+        }
+
+        .comparison-card-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .comparison-card-subtitle {
+            font-size: 0.82em;
+            color: #64748b;
+        }
+
+        .comparison-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .comparison-item:last-child {
+            border-bottom: none;
+        }
+
+        .comparison-item-icon {
+            flex-shrink: 0;
+            font-size: 1em;
+        }
+
+        .comparison-item-text {
+            font-size: 0.9em;
+            color: #475569;
+        }
+
+        .comparison-item-text strong {
+            color: #1e293b;
+        }
+
+        .verdict-badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.82em;
+            font-weight: 600;
+        }
+
+        .verdict-best { background: #d1fae5; color: #065f46; }
+        .verdict-ok { background: #fef3c7; color: #92400e; }
+        .verdict-no { background: #fee2e2; color: #991b1b; }
+
+        /* ===== YAML / Code ===== */
+        .code-section {
+            margin-bottom: 30px;
+        }
+
+        .code-block-wrapper {
+            background: #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .code-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: #0f172a;
+        }
+
+        .code-block-title {
+            color: #94a3b8;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .code-block-badge {
+            background: rgba(79,172,254,0.2);
+            color: #93c5fd;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+        }
+
+        .code-block {
+            padding: 20px;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.7;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .code-comment { color: #64748b; }
+        .code-key { color: #93c5fd; }
+        .code-value { color: #86efac; }
+        .code-string { color: #fde68a; }
+        .code-highlight { background: rgba(251,191,36,0.1); display: inline; padding: 1px 4px; border-radius: 3px; }
+
+        /* ===== 注釈付きコード ===== */
+        .annotated-code {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .annotations {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .annotation {
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 0.88em;
+        }
+
+        .annotation-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .annotation-1 { background: #eff6ff; border-left: 4px solid #3b82f6; }
+        .annotation-1 .annotation-title { color: #1d4ed8; }
+        .annotation-1 p { color: #1e40af; }
+
+        .annotation-2 { background: #f0fdf4; border-left: 4px solid #10b981; }
+        .annotation-2 .annotation-title { color: #059669; }
+        .annotation-2 p { color: #047857; }
+
+        .annotation-3 { background: #fefce8; border-left: 4px solid #eab308; }
+        .annotation-3 .annotation-title { color: #ca8a04; }
+        .annotation-3 p { color: #a16207; }
+
+        .annotation-4 { background: #fdf2f8; border-left: 4px solid #ec4899; }
+        .annotation-4 .annotation-title { color: #db2777; }
+        .annotation-4 p { color: #be185d; }
+
+        /* ===== オートスケーリング ===== */
+        .scaling-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .scaling-card {
+            background: white;
+            border-radius: 14px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 5px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .scaling-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .scaling-card-hpa {
+            border-color: #ec4899;
+        }
+
+        .scaling-card-ca {
+            border-color: #f97316;
+        }
+
+        .scaling-card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .scaling-card-icon {
+            font-size: 2.4em;
+        }
+
+        .scaling-card h3 {
+            font-size: 1.3em;
+            color: #1e293b;
+        }
+
+        .scaling-card h3 small {
+            display: block;
+            font-size: 0.6em;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .scaling-visual {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .scaling-visual-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .pod-box {
+            width: 42px;
+            height: 36px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .pod-active { background: #10b981; }
+        .pod-new { background: #f59e0b; border: 2px dashed #d97706; }
+        .pod-placeholder { background: #e2e8f0; color: #94a3b8; border: 2px dashed #cbd5e1; }
+
+        .node-box {
+            padding: 10px 16px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .node-active { background: #dbeafe; color: #1d4ed8; border: 2px solid #93c5fd; }
+        .node-new { background: #fef3c7; color: #92400e; border: 2px dashed #f59e0b; }
+
+        .scaling-detail {
+            font-size: 0.92em;
+            color: #475569;
+            line-height: 1.7;
+        }
+
+        .scaling-detail strong {
+            color: #1e293b;
+        }
+
+        /* ===== トラブルシューティング ===== */
+        .troubleshoot-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .trouble-card {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s ease;
+        }
+
+        .trouble-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .trouble-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .trouble-icon {
+            font-size: 1.6em;
+        }
+
+        .trouble-title {
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 1em;
+        }
+
+        .trouble-cause {
+            background: #fff7ed;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88em;
+            color: #9a3412;
+            margin-bottom: 10px;
+        }
+
+        .trouble-fix {
+            background: #f0fdf4;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88em;
+            color: #166534;
+        }
+
+        /* ===== ベストプラクティス ===== */
+        .best-practices {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 2px solid #7dd3fc;
+        }
+
+        .best-practices h3 {
+            text-align: center;
+            color: #0c4a6e;
+            font-size: 1.5em;
+            margin-bottom: 25px;
+        }
+
+        .bp-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .bp-item {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .bp-item-icon {
+            font-size: 1.4em;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .bp-item-text {
+            font-size: 0.9em;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .bp-item-text strong {
+            color: #0c4a6e;
+        }
+
+        /* ===== 要件マッピング ===== */
+        .requirements-section {
+            background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border: 2px solid #e879f9;
+        }
+
+        .requirements-section h3 {
+            text-align: center;
+            color: #86198f;
+            font-size: 1.5em;
+            margin-bottom: 25px;
+        }
+
+        .req-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+        }
+
+        .req-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transition: transform 0.3s ease;
+        }
+
+        .req-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .req-card-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .req-card h4 {
+            color: #1e293b;
+            font-size: 0.92em;
+            margin-bottom: 6px;
+        }
+
+        .req-card p {
+            color: #64748b;
+            font-size: 0.78em;
+            line-height: 1.5;
+        }
+
+        .req-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            color: #a855f7;
+        }
+
+        .req-solution {
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border: 2px solid #d946ef;
+        }
+
+        .req-solution-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #86198f;
+            margin-bottom: 6px;
+        }
+
+        .req-solution-desc {
+            color: #6b21a8;
+            font-size: 0.92em;
+        }
+
+        /* ===== フッター ===== */
+        .footer {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #94a3b8;
+            padding: 30px 40px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .footer strong {
+            color: #e2e8f0;
+        }
+
+        /* ===== gRPC解説 ===== */
+        .grpc-overview {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 2px solid #38bdf8;
+        }
+
+        .grpc-overview h3 {
+            text-align: center;
+            color: #0c4a6e;
+            font-size: 1.5em;
+            margin-bottom: 12px;
+        }
+
+        .grpc-overview-lead {
+            text-align: center;
+            color: #0369a1;
+            font-size: 1.05em;
+            margin-bottom: 28px;
+            line-height: 1.7;
+        }
+
+        .grpc-analogy-banner {
+            background: white;
+            border-radius: 12px;
+            padding: 22px 28px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+            margin-bottom: 28px;
+        }
+
+        .grpc-analogy-banner-icon {
+            font-size: 3em;
+            flex-shrink: 0;
+        }
+
+        .grpc-analogy-banner-text {
+            color: #0c4a6e;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+
+        .grpc-analogy-banner-text strong {
+            color: #075985;
+        }
+
+        .grpc-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .grpc-feature-card {
+            background: white;
+            border-radius: 14px;
+            padding: 26px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+            border-top: 5px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .grpc-feature-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .grpc-feature-card:nth-child(1) { border-color: #3b82f6; }
+        .grpc-feature-card:nth-child(2) { border-color: #8b5cf6; }
+        .grpc-feature-card:nth-child(3) { border-color: #10b981; }
+
+        .grpc-feature-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .grpc-feature-icon {
+            font-size: 1.8em;
+        }
+
+        .grpc-feature-title {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .grpc-feature-body {
+            color: #475569;
+            font-size: 0.9em;
+            line-height: 1.7;
+            padding-top: 70px;}
+
+        .grpc-feature-body strong {
+            color: #1e293b;
+        }
+
+        .grpc-feature-visual {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 0.82em;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        /* REST vs gRPC 比較 */
+        .grpc-vs {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            align-items: stretch;
+            margin-bottom: 28px;
+        }
+
+        .grpc-vs-card {
+            border-radius: 14px;
+            padding: 26px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grpc-vs-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+        }
+
+        .vs-rest {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+        .vs-rest::before { background: linear-gradient(90deg, #f97316, #ef4444); }
+
+        .vs-grpc {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+        .vs-grpc::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+
+        .vs-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        .vs-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.15em;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .vs-rest .vs-card-title { color: #9a3412; }
+        .vs-grpc .vs-card-title { color: #166534; }
+
+        .vs-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 9px 0;
+            font-size: 0.88em;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .vs-item:last-child { border-bottom: none; }
+
+        .vs-rest .vs-item { color: #7f1d1d; }
+        .vs-grpc .vs-item { color: #14532d; }
+
+        .vs-item-label {
+            font-weight: 600;
+            flex: 0 0 90px;
+        }
+
+        /* gRPC 接続の図解 */
+        .grpc-connection-diagram {
+            background: white;
+            border-radius: 14px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+        }
+
+        .grpc-connection-diagram h4 {
+            text-align: center;
+            color: #334155;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .grpc-conn-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .grpc-conn-box {
+            border-radius: 12px;
+            padding: 22px;
+            text-align: center;
+        }
+
+        .grpc-conn-box-title {
+            font-weight: 700;
+            font-size: 1em;
+            margin-bottom: 12px;
+        }
+
+        .conn-http1 {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+        }
+
+        .conn-http1 .grpc-conn-box-title { color: #92400e; }
+
+        .conn-http2 {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+        }
+
+        .conn-http2 .grpc-conn-box-title { color: #1e40af; }
+
+        .conn-line {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 5px 0;
+            font-size: 0.82em;
+        }
+
+        .conn-line-bar {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            max-width: 160px;
+        }
+
+        .conn-line-label {
+            font-size: 0.78em;
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        .bar-req { background: #f97316; }
+        .bar-res { background: #a3a3a3; }
+        .bar-multi-1 { background: #3b82f6; }
+        .bar-multi-2 { background: #8b5cf6; }
+        .bar-multi-3 { background: #10b981; }
+
+        /* ===== LBコントローラー解説 ===== */
+        .controller-overview {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 2px solid #f59e0b;
+        }
+
+        .controller-overview h3 {
+            text-align: center;
+            color: #92400e;
+            font-size: 1.5em;
+            margin-bottom: 12px;
+        }
+
+        .controller-overview-lead {
+            text-align: center;
+            color: #a16207;
+            font-size: 1.05em;
+            margin-bottom: 28px;
+            line-height: 1.7;
+        }
+
+        .controller-analogy-banner {
+            background: white;
+            border-radius: 12px;
+            padding: 22px 28px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+            margin-bottom: 28px;
+        }
+
+        .controller-analogy-icon {
+            font-size: 3em;
+            flex-shrink: 0;
+        }
+
+        .controller-analogy-text {
+            color: #78350f;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+
+        .controller-analogy-text strong {
+            color: #92400e;
+        }
+
+        .controller-roles {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .controller-role-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+            border-top: 5px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .controller-role-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .controller-role-card:nth-child(1) { border-color: #3b82f6; }
+        .controller-role-card:nth-child(2) { border-color: #10b981; }
+
+        .controller-role-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .controller-role-icon {
+            font-size: 2em;
+        }
+
+        .controller-role-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .controller-role-subtitle {
+            font-size: 0.82em;
+            color: #64748b;
+        }
+
+        .controller-role-body {
+            color: #475569;
+            font-size: 0.92em;
+            line-height: 1.7;
+            padding-top: 70px;}
+
+        .controller-role-body strong {
+            color: #1e293b;
+        }
+
+        .controller-role-visual {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.88em;
+            color: #334155;
+            line-height: 1.8;
+        }
+
+        .controller-comparison {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .controller-comp-card {
+            border-radius: 14px;
+            padding: 26px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .controller-comp-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+        }
+
+        .comp-without {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+        .comp-without::before { background: #ef4444; }
+
+        .comp-with {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+        .comp-with::before { background: #10b981; }
+
+        .comp-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .comp-without .comp-card-title { color: #991b1b; }
+        .comp-with .comp-card-title { color: #166534; }
+
+        .comp-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 0.88em;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .comp-step:last-child { border-bottom: none; }
+
+        .comp-without .comp-step { color: #7f1d1d; }
+        .comp-with .comp-step { color: #14532d; }
+
+        .comp-step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 700;
+            flex-shrink: 0;
+            color: white;
+        }
+
+        .comp-without .comp-step-num { background: #ef4444; }
+        .comp-with .comp-step-num { background: #10b981; }
+
+        .controller-flow {
+            background: white;
+            border-radius: 14px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+        }
+
+        .controller-flow h4 {
+            text-align: center;
+            color: #334155;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .cflow-track {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            max-width: 1050px;
+            margin: 0 auto;
+        }
+
+        .cflow-stage {
+            flex: 1;
+            text-align: center;
+            padding: 16px 10px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .cflow-stage:not(:last-child)::after {
+            content: '➤';
+            position: absolute;
+            right: -13px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3em;
+            color: #94a3b8;
+            z-index: 2;
+        }
+
+        .cflow-icon { font-size: 2em; margin-bottom: 6px; }
+        .cflow-label { font-weight: 700; font-size: 0.85em; color: #1e293b; margin-bottom: 4px; }
+        .cflow-desc { font-size: 0.75em; color: #64748b; line-height: 1.4; }
+
+        .cflow-k8s { background: linear-gradient(180deg, #ede9fe, #f5f3ff); }
+        .cflow-ctrl { background: linear-gradient(180deg, #fef3c7, #fffbeb); }
+        .cflow-aws { background: linear-gradient(180deg, #dbeafe, #eff6ff); }
+        .cflow-pod { background: linear-gradient(180deg, #d1fae5, #ecfdf5); }
+        .cflow-traffic { background: linear-gradient(180deg, #fce7f3, #fdf2f8); }
+
+        /* ===== ユーティリティ ===== */
+        .highlight-box {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin: 20px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .highlight-box-icon {
+            font-size: 1.6em;
+            flex-shrink: 0;
+        }
+
+        .highlight-box-text {
+            color: #92400e;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .highlight-box-text strong {
+            color: #78350f;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            font-size: 0.9em;
+            color: #1e40af;
+        }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+            margin: 40px 0;
+        }
+
+        @media (max-width: 1024px) {
+            .content { padding: 30px; }
+            .comparison-grid { grid-template-columns: 1fr; }
+            .req-grid { grid-template-columns: repeat(3, 1fr); }
+            .annotated-code { grid-template-columns: 1fr; }
+            .controller-roles { grid-template-columns: 1fr; }
+            .controller-comparison { grid-template-columns: 1fr; }
+            .grpc-features { grid-template-columns: 1fr; }
+            .grpc-vs { grid-template-columns: 1fr; gap: 8px; }
+            .vs-divider { transform: rotate(90deg); padding: 8px 0; }
+            .grpc-conn-visual { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .conclusion-grid { grid-template-columns: 1fr; }
+            .analogy-mapping { grid-template-columns: 1fr; }
+            .courier-flow { flex-direction: column; }
+            .courier-stage:not(:last-child)::after { content: '⬇'; right: 50%; transform: translateX(50%); top: auto; bottom: -16px; }
+            .scaling-grid { grid-template-columns: 1fr; }
+            .troubleshoot-grid { grid-template-columns: 1fr; }
+            .bp-grid { grid-template-columns: 1fr; }
+            .req-grid { grid-template-columns: 1fr; }
+            .mtls-flow { flex-direction: column; }
+            .pipeline-track { flex-direction: column; }
+            .pipeline-arrow { transform: rotate(90deg); }
+            .cflow-track { flex-direction: column; }
+            .cflow-stage:not(:last-child)::after { content: '⬇'; right: 50%; transform: translateX(50%); top: auto; bottom: -14px; }
+        }</style>
+<!-- ===== ヘッダー ===== -->
+    <div class="header">
+        <h1>🔐 NLB × TCPリスナー × mTLS × EKS</h1>
+        <p>エンドツーエンド暗号化を維持しながら gRPC マイクロサービスを安全にスケールさせる完全ガイド</p>
+        <div class="badge-row">
+            <span class="badge badge-blue">NLB + TCPリスナー</span>
+            <span class="badge badge-purple">相互TLS (mTLS)</span>
+            <span class="badge badge-green">AWS LB Controller</span>
+            <span class="badge badge-orange">HPA + Cluster Autoscaler</span>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- ===== 結論ファースト ===== -->
+        <div class="conclusion-first">
+            <h2 id="結論ファースト">📌 結論ファースト</h2>
+            <p style="color:#4338ca; font-size:1.1em; margin-bottom:16px; line-height:1.7;">
+                mTLSでクライアント・サーバー間の双方向認証が必要な場合、<strong>NLB＋TCPリスナー</strong>が唯一の正解です。
+                TCPリスナーはパケットを<strong>復号化せずにパススルー</strong>するため、TLSハンドシェイクがクライアント〜Pod間で直接行われ、
+                相互認証と暗号化が途切れません。
+            </p>
+            <div class="conclusion-grid">
+                <div class="conclusion-card">
+                    <div class="conclusion-icon">🔒</div>
+                    <h3 id="NLB-+-TCPリスナー">NLB + TCPリスナー</h3>
+                    <p>レイヤー4で動作。暗号化パケットを<strong>開封せず</strong>そのままPodへ転送。mTLSが正しく機能する</p>
+                </div>
+                <div class="conclusion-card">
+                    <div class="conclusion-icon">☸️</div>
+                    <h3 id="AWS-LB-Controller-+-IP-mode">AWS LB Controller + IP mode</h3>
+                    <p>Pod IPに直接ルーティングすることで、kube-proxyを経由せず<strong>低レイテンシー</strong>な通信を実現</p>
+                </div>
+                <div class="conclusion-card">
+                    <div class="conclusion-icon">📈</div>
+                    <h3 id="HPA-+-Cluster-Autoscaler">HPA + Cluster Autoscaler</h3>
+                    <p>gRPC接続数やCPU使用率に応じてPod→ノードと<strong>二段階</strong>で自動スケール</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== たとえ話 ===== -->
+        <div class="analogy-section">
+            <h2 id="️-たとえ話-外交機密便の仕組み">🏛️ たとえ話：「外交機密便」の仕組み</h2>
+            <p class="analogy-subtitle">mTLS + NLB の仕組みを「国家間の外交機密便ネットワーク」で理解しよう</p>
+
+            <div class="analogy-mapping">
+                <div class="mapping-card">
+                    <div class="mapping-emoji">👨‍💼</div>
+                    <div class="mapping-text">
+                        <div class="mapping-real">クライアント（gRPCアプリ）</div>
+                        <div class="mapping-arrow">↕ たとえると</div>
+                        <div class="mapping-analogy">外交官 — 封印付き外交パスポートで身元を証明</div>
+                    </div>
+                </div>
+                <div class="mapping-card">
+                    <div class="mapping-emoji">🏛️</div>
+                    <div class="mapping-text">
+                        <div class="mapping-real">バックエンドPod（gRPCサーバー）</div>
+                        <div class="mapping-arrow">↕ たとえると</div>
+                        <div class="mapping-analogy">大使館 — 国章の入った公印で大使館の正当性を証明</div>
+                    </div>
+                </div>
+                <div class="mapping-card">
+                    <div class="mapping-emoji">📦</div>
+                    <div class="mapping-text">
+                        <div class="mapping-real">TLS暗号化パケット</div>
+                        <div class="mapping-arrow">↕ たとえると</div>
+                        <div class="mapping-analogy">封蝋付き外交行嚢（ポーチ）— 中身は開封不可</div>
+                    </div>
+                </div>
+                <div class="mapping-card">
+                    <div class="mapping-emoji">🚏</div>
+                    <div class="mapping-text">
+                        <div class="mapping-real">NLB（TCPリスナー）</div>
+                        <div class="mapping-arrow">↕ たとえると</div>
+                        <div class="mapping-analogy">国際郵便の仕分けゲート — 宛先を見て転送するだけで中身は開けない</div>
+                    </div>
+                </div>
+                <div class="mapping-card">
+                    <div class="mapping-emoji">🎛️</div>
+                    <div class="mapping-text">
+                        <div class="mapping-real">AWS LB Controller</div>
+                        <div class="mapping-arrow">↕ たとえると</div>
+                        <div class="mapping-analogy">郵便システムの管理局 — ゲートのルール設定と大使館の住所登録を担当</div>
+                    </div>
+                </div>
+                <div class="mapping-card">
+                    <div class="mapping-emoji">📋</div>
+                    <div class="mapping-text">
+                        <div class="mapping-real">CA（認証局）</div>
+                        <div class="mapping-arrow">↕ たとえると</div>
+                        <div class="mapping-analogy">外務省 — 外交パスポートと公印を発行する信頼の根拠</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- たとえ話フロー図 -->
+            <div class="analogy-diagram">
+                <h3 id="外交機密便の配達フロー-=-mTLS通信フロー">📬 外交機密便の配達フロー = mTLS通信フロー</h3>
+                <div class="courier-flow">
+                    <div class="courier-stage stage-diplomat">
+                        <div class="courier-stage-icon">👨‍💼</div>
+                        <div class="courier-stage-title">外交官</div>
+                        <div class="courier-stage-desc">外交パスポートを提示して身元を証明（＝クライアント証明書）</div>
+                    </div>
+                    <div class="courier-stage stage-verify">
+                        <div class="courier-stage-icon">🤝</div>
+                        <div class="courier-stage-title">相互確認</div>
+                        <div class="courier-stage-desc">外交官と大使館が互いの証明書を確認（＝mTLSハンドシェイク）</div>
+                    </div>
+                    <div class="courier-stage stage-gateway">
+                        <div class="courier-stage-icon">🚏</div>
+                        <div class="courier-stage-title">仕分けゲート</div>
+                        <div class="courier-stage-desc">宛先だけ見て転送。封蝋は開けない（＝NLB TCPパススルー）</div>
+                    </div>
+                    <div class="courier-stage stage-route">
+                        <div class="courier-stage-icon">🗺️</div>
+                        <div class="courier-stage-title">直接配達</div>
+                        <div class="courier-stage-desc">大使館の部屋に直行（＝IP modeでPodへ直接ルーティング）</div>
+                    </div>
+                    <div class="courier-stage stage-embassy">
+                        <div class="courier-stage-icon">🏛️</div>
+                        <div class="courier-stage-title">大使館</div>
+                        <div class="courier-stage-desc">公印で自身を証明し封蝋を開封（＝Podがサーバー証明書を返す）</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 要件 → 解決策マッピング ===== -->
+        <div class="requirements-section">
+            <h3 id="5つの要件-→-各技術がどう解決するか">🎯 5つの要件 → 各技術がどう解決するか</h3>
+            <div class="req-grid">
+                <div class="req-card">
+                    <div class="req-card-icon">🔒</div>
+                    <h4>E2E暗号化</h4>
+                    <p>復号化なしで通信を維持</p>
+                    <div style="margin-top:8px;font-size:0.8em;color:#a855f7;font-weight:600;">→ NLB TCPリスナー</div>
+                </div>
+                <div class="req-card">
+                    <div class="req-card-icon">📡</div>
+                    <h4>gRPC on 443</h4>
+                    <p>HTTP/2ベースのRPC通信</p>
+                    <div style="margin-top:8px;font-size:0.8em;color:#a855f7;font-weight:600;">→ TCP:443 パススルー</div>
+                </div>
+                <div class="req-card">
+                    <div class="req-card-icon">🔥</div>
+                    <h4>数千の同時接続</h4>
+                    <p>高スループット処理</p>
+                    <div style="margin-top:8px;font-size:0.8em;color:#a855f7;font-weight:600;">→ NLBの高性能L4処理</div>
+                </div>
+                <div class="req-card">
+                    <div class="req-card-icon">🤝</div>
+                    <h4>mTLS認証</h4>
+                    <p>双方向の証明書認証</p>
+                    <div style="margin-top:8px;font-size:0.8em;color:#a855f7;font-weight:600;">→ TCPパススルー + Pod</div>
+                </div>
+                <div class="req-card">
+                    <div class="req-card-icon">📈</div>
+                    <h4>自動スケーリング</h4>
+                    <p>負荷に応じた伸縮</p>
+                    <div style="margin-top:8px;font-size:0.8em;color:#a855f7;font-weight:600;">→ HPA + Cluster AS</div>
+                </div>
+            </div>
+            <div class="req-solution">
+                <div class="req-solution-title">✅ すべてを満たす構成 = NLB + TCPリスナー + AWS LB Controller（IP mode）+ HPA + Cluster Autoscaler</div>
+                <div class="req-solution-desc">この組み合わせだけが5つの要件をすべて同時に満たすことができる</div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション1: mTLSの仕組み ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div class="section-title-area">
+                    <h2 id="相互TLSmTLSのハンドシェイク">相互TLS（mTLS）のハンドシェイク</h2>
+                    <p>通常のTLSとの違い：サーバーだけでなく<strong>クライアントも証明書を提示</strong></p>
+                </div>
+            </div>
+
+            <div class="flow-diagram">
+                <h3 id="mTLS-7ステップ-ハンドシェイク">🔄 mTLS 7ステップ・ハンドシェイク</h3>
+                <div class="mtls-flow">
+                    <div class="mtls-actor">
+                        <div class="mtls-actor-icon">💻</div>
+                        <div class="mtls-actor-label">クライアント</div>
+                        <div class="mtls-actor-sub">gRPCアプリ</div>
+                    </div>
+                    <div class="mtls-steps">
+                        <div class="mtls-step step-right">
+                            <div class="mtls-step-num">1</div>
+                            <div class="mtls-step-text">ClientHello を送信（対応する暗号スイート一覧を含む）</div>
+                            <div class="mtls-step-arrow">→</div>
+                        </div>
+                        <div class="mtls-step step-left">
+                            <div class="mtls-step-num">2</div>
+                            <div class="mtls-step-arrow">←</div>
+                            <div class="mtls-step-text">ServerHello + <strong>サーバー証明書</strong>を返送</div>
+                        </div>
+                        <div class="mtls-step step-right">
+                            <div class="mtls-step-num">3</div>
+                            <div class="mtls-step-text">クライアントが<strong>サーバー証明書を検証</strong>（CAチェーンを確認）</div>
+                            <div class="mtls-step-arrow">🔍</div>
+                        </div>
+                        <div class="mtls-step step-left">
+                            <div class="mtls-step-num">4</div>
+                            <div class="mtls-step-arrow">📋</div>
+                            <div class="mtls-step-text">サーバーが<strong>CertificateRequest</strong>を送信（クライアント証明書を要求）</div>
+                        </div>
+                        <div class="mtls-step step-right">
+                            <div class="mtls-step-num">5</div>
+                            <div class="mtls-step-text">クライアントが<strong>クライアント証明書</strong>を送信</div>
+                            <div class="mtls-step-arrow">→</div>
+                        </div>
+                        <div class="mtls-step step-left">
+                            <div class="mtls-step-num">6</div>
+                            <div class="mtls-step-arrow">🔍</div>
+                            <div class="mtls-step-text">サーバーが<strong>クライアント証明書を検証</strong>（CAチェーンを確認）</div>
+                        </div>
+                        <div class="mtls-step step-both">
+                            <div class="mtls-step-num">7</div>
+                            <div class="mtls-step-text">✅ 双方の検証成功 → <strong>暗号化通信チャネルが確立</strong></div>
+                            <div class="mtls-step-arrow">🔐</div>
+                        </div>
+                    </div>
+                    <div class="mtls-actor">
+                        <div class="mtls-actor-icon">🏛️</div>
+                        <div class="mtls-actor-label">サーバー</div>
+                        <div class="mtls-actor-sub">gRPC Pod</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <div class="highlight-box-icon">⚠️</div>
+                <div class="highlight-box-text">
+                    <strong>重要ポイント：</strong>mTLSのハンドシェイクは<strong>クライアントとサーバー間で直接</strong>行われる必要があります。
+                    途中のロードバランサーがTLSを終端してしまうと、サーバーが受け取る証明書はLBのものになり、
+                    クライアント証明書の検証ができなくなります。だからこそ<strong>TCPパススルー</strong>が必要です。
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション2: gRPCとは ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div class="section-title-area">
+                    <h2 id="gRPC-プロトコルとは">gRPC プロトコルとは</h2>
+                    <p>離れたサーバーの関数を「ローカル関数のように呼べる」高速通信の仕組み</p>
+                </div>
+            </div>
+
+            <div class="grpc-overview">
+                <h3 id="gRPC-=-Google-が開発した高速-RPC-フレームワーク">📡 gRPC = Google が開発した高速 RPC フレームワーク</h3>
+                <p class="grpc-overview-lead">
+                    gRPC は <strong>Remote Procedure Call（遠隔手続き呼び出し）</strong>の仕組みです。<br>
+                    離れた場所にあるサーバーの関数を、まるでローカルの関数を呼ぶように実行できます。
+                </p>
+
+                <!-- たとえ話バナー -->
+                <div class="grpc-analogy-banner">
+                    <div class="grpc-analogy-banner-icon">📻</div>
+                    <div class="grpc-analogy-banner-text">
+                        外交機密便のたとえでは、gRPC は<strong>「外交官と大使館が使う共通言語・暗号通信回線」</strong>にあたります。
+                        普通の手紙（REST API / HTTP/1.1）は1通ずつ送って返事を待ちますが、
+                        gRPC の暗号通信回線（HTTP/2）は<strong>1本の回線で複数の会話を同時進行</strong>でき、
+                        さらにバイナリ形式（protobuf）で高速にデータをやり取りします。
+                    </div>
+                </div>
+
+                <!-- 3つの主要特徴 -->
+                <div class="grpc-features">
+                    <div class="grpc-feature-card">
+                        <div class="grpc-feature-header">
+                            <div class="grpc-feature-icon">🚀</div>
+                            <div class="grpc-feature-title">HTTP/2 上で動作</div>
+                        </div>
+                        <div class="grpc-feature-body">
+                            HTTP/2 の<strong>多重化（Multiplexing）</strong>により、1つの TCP 接続で複数のリクエスト・レスポンスを同時にやり取りできます。
+                            これが<strong>「数千の同時接続」</strong>に強い理由です。
+                        </div>
+                        <div class="grpc-feature-visual">
+                            1本の接続 → 同時に複数の RPC を処理<br>
+                            = 接続のオーバーヘッドが劇的に減少
+                        </div>
+                    </div>
+
+                    <div class="grpc-feature-card">
+                        <div class="grpc-feature-header">
+                            <div class="grpc-feature-icon">📦</div>
+                            <div class="grpc-feature-title">Protocol Buffers</div>
+                        </div>
+                        <div class="grpc-feature-body">
+                            JSON のようなテキスト形式ではなく、<strong>バイナリ形式</strong>でデータをシリアライズします。
+                            データサイズが小さく、シリアライズ/デシリアライズが高速で、<strong>低レイテンシー</strong>の通信に最適です。
+                        </div>
+                        <div class="grpc-feature-visual">
+                            JSON: {"name":"Alice","age":30} → 約30バイト<br>
+                            protobuf: 同じデータ → 約10バイト 🚀
+                        </div>
+                    </div>
+
+                    <div class="grpc-feature-card">
+                        <div class="grpc-feature-header">
+                            <div class="grpc-feature-icon">🔄</div>
+                            <div class="grpc-feature-title">双方向ストリーミング</div>
+                        </div>
+                        <div class="grpc-feature-body">
+                            クライアント→サーバー、サーバー→クライアントの<strong>両方向で連続的にデータをストリーム送受信</strong>できます。
+                            リアルタイム通信やマイクロサービス間連携に最適です。
+                        </div>
+                        <div class="grpc-feature-visual">
+                            📱 ← ストリーム → 🏛️<br>
+                            リアルタイムで双方向にデータ交換
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REST vs gRPC 比較 -->
+                <div class="grpc-vs">
+                    <div class="grpc-vs-card vs-rest">
+                        <div class="vs-card-title">
+                            <span>📮</span> REST API（HTTP/1.1）
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">データ形式</span>
+                            <span>JSON（テキスト）— 人間が読みやすいが重い</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">通信方式</span>
+                            <span>リクエスト→レスポンスの1往復ずつ</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">接続管理</span>
+                            <span>リクエストごとに接続 or Keep-Alive</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">ストリーム</span>
+                            <span>❌ 非対応（WebSocket は別途必要）</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">向いている</span>
+                            <span>ブラウザ向け API、シンプルな CRUD</span>
+                        </div>
+                    </div>
+
+                    <div class="vs-divider">VS</div>
+
+                    <div class="grpc-vs-card vs-grpc">
+                        <div class="vs-card-title">
+                            <span>📡</span> gRPC（HTTP/2）
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">データ形式</span>
+                            <span>Protocol Buffers（バイナリ）— 小さくて速い</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">通信方式</span>
+                            <span>1接続で複数のRPCを同時多重化</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">接続管理</span>
+                            <span>長時間接続を維持（Long-lived）</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">ストリーム</span>
+                            <span>✅ 双方向ストリーミング標準サポート</span>
+                        </div>
+                        <div class="vs-item">
+                            <span class="vs-item-label">向いている</span>
+                            <span>マイクロサービス間通信、低レイテンシー</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 接続の図解 -->
+                <div class="grpc-connection-diagram">
+                    <h4>🔌 HTTP/1.1 vs HTTP/2 — 接続の違いを図で理解する</h4>
+                    <div class="grpc-conn-visual">
+                        <div class="grpc-conn-box conn-http1">
+                            <div class="grpc-conn-box-title">HTTP/1.1（REST）— 順番待ち</div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">Req 1</span>
+                                <div class="conn-line-bar bar-req"></div>
+                            </div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">Res 1</span>
+                                <div class="conn-line-bar bar-res"></div>
+                            </div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">Req 2</span>
+                                <div class="conn-line-bar bar-req"></div>
+                            </div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">Res 2</span>
+                                <div class="conn-line-bar bar-res"></div>
+                            </div>
+                            <p style="font-size:0.78em; color:#92400e; margin-top:8px;">
+                                ⏳ 1つずつ順番に処理 → 待ち時間が発生
+                            </p>
+                        </div>
+
+                        <div class="grpc-conn-box conn-http2">
+                            <div class="grpc-conn-box-title">HTTP/2（gRPC）— 同時並行</div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">RPC 1</span>
+                                <div class="conn-line-bar bar-multi-1"></div>
+                            </div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">RPC 2</span>
+                                <div class="conn-line-bar bar-multi-2"></div>
+                            </div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">RPC 3</span>
+                                <div class="conn-line-bar bar-multi-3"></div>
+                            </div>
+                            <div class="conn-line">
+                                <span class="conn-line-label">RPC 4</span>
+                                <div class="conn-line-bar bar-multi-1"></div>
+                            </div>
+                            <p style="font-size:0.78em; color:#1e40af; margin-top:8px;">
+                                ⚡ すべて同時に処理 → 待ち時間なし
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <div class="highlight-box-icon">⚠️</div>
+                <div class="highlight-box-text">
+                    <strong>今回の構成で重要なポイント：</strong>gRPC は HTTP/2 の<strong>長時間接続（Long-lived connection）</strong>を使います。
+                    NLB の TCP リスナーは接続単位で負荷分散するため、一度確立された gRPC 接続は同じ Pod に固定されます。
+                    これがトラブルシューティング（セクション8）で触れる<strong>「gRPC 接続の偏り」</strong>問題の根本原因であり、
+                    クライアント側で定期的に再接続する設計が必要になる理由です。
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション3: なぜNLB + TCPなのか ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div class="section-title-area">
+                    <h2 id="ロードバランサー比較-なぜ-NLB-+-TCP-なのか">ロードバランサー比較：なぜ NLB + TCP なのか</h2>
+                    <p>3つの選択肢を比較して、mTLSに最適な構成を理解する</p>
+                </div>
+            </div>
+
+            <div class="comparison-grid">
+                <!-- NLB + TCP -->
+                <div class="comparison-card card-nlb-tcp">
+                    <div class="comparison-card-header">
+                        <div class="comparison-card-icon">✅</div>
+                        <div>
+                            <div class="comparison-card-title">NLB + TCPリスナー</div>
+                            <div class="comparison-card-subtitle">レイヤー4 / パススルー</div>
+                        </div>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🔒</span>
+                        <span class="comparison-item-text"><strong>TLS終端しない</strong> — パケットをそのまま転送</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🤝</span>
+                        <span class="comparison-item-text"><strong>mTLS対応</strong> — クライアント⇔Pod間で直接ハンドシェイク</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">⚡</span>
+                        <span class="comparison-item-text"><strong>超低レイテンシー</strong> — 復号化/再暗号化なし</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">📡</span>
+                        <span class="comparison-item-text"><strong>gRPC対応</strong> — TCP上でHTTP/2をそのまま通過</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🔥</span>
+                        <span class="comparison-item-text"><strong>数百万接続</strong> — 高スループットに最適化</span>
+                    </div>
+                    <span class="verdict-badge verdict-best">✅ mTLSに最適</span>
+                </div>
+
+                <!-- NLB + TLS -->
+                <div class="comparison-card card-nlb-tls">
+                    <div class="comparison-card-header">
+                        <div class="comparison-card-icon">⚠️</div>
+                        <div>
+                            <div class="comparison-card-title">NLB + TLSリスナー</div>
+                            <div class="comparison-card-subtitle">レイヤー4 / TLS終端あり</div>
+                        </div>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🔓</span>
+                        <span class="comparison-item-text"><strong>NLBでTLS終端</strong> — 一旦復号化される</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">❌</span>
+                        <span class="comparison-item-text"><strong>mTLS不可</strong> — クライアント証明書がNLBで途切れる</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🔄</span>
+                        <span class="comparison-item-text"><strong>再暗号化可能</strong> — バックエンドへの再暗号化は可能</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">📜</span>
+                        <span class="comparison-item-text"><strong>ACM統合</strong> — AWS Certificate Managerで証明書管理</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">⚙️</span>
+                        <span class="comparison-item-text">TLSオフロードでバックエンドの負荷軽減</span>
+                    </div>
+                    <span class="verdict-badge verdict-no">❌ mTLS不可</span>
+                </div>
+
+                <!-- ALB + HTTPS -->
+                <div class="comparison-card card-alb">
+                    <div class="comparison-card-header">
+                        <div class="comparison-card-icon">❌</div>
+                        <div>
+                            <div class="comparison-card-title">ALB + HTTPSリスナー</div>
+                            <div class="comparison-card-subtitle">レイヤー7 / HTTPS終端</div>
+                        </div>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🔓</span>
+                        <span class="comparison-item-text"><strong>HTTPS終端必須</strong> — コンテンツ検査のため復号化</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">❌</span>
+                        <span class="comparison-item-text"><strong>mTLS不可</strong> — クライアント証明書が届かない</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🛣️</span>
+                        <span class="comparison-item-text"><strong>高度なルーティング</strong> — パスベース/ホストベース</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">📡</span>
+                        <span class="comparison-item-text"><strong>gRPC対応</strong> — ALBはgRPCをネイティブサポート</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span class="comparison-item-icon">🔄</span>
+                        <span class="comparison-item-text">WebSocket、HTTP/2もサポート</span>
+                    </div>
+                    <span class="verdict-badge verdict-no">❌ mTLS不可</span>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <div class="highlight-box-icon">💡</div>
+                <div class="highlight-box-text">
+                    <strong>判定基準のまとめ：</strong>TLSリスナーやHTTPSリスナーは、ロードバランサー側でTLSを「終端」します。
+                    すると、クライアント証明書の情報がPodまで届かないため、mTLSが成り立ちません。
+                    <strong>TCPリスナーだけが「触らずに転送」</strong>できるため、mTLSの唯一の選択肢です。
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション4: AWS Load Balancer Controller とは ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div class="section-title-area">
+                    <h2 id="AWS-Load-Balancer-Controller-とは">AWS Load Balancer Controller とは</h2>
+                    <p>KubernetesリソースとAWSロードバランサーを自動連携させる「管理局」</p>
+                </div>
+            </div>
+
+            <!-- たとえ話バナー -->
+            <div class="controller-overview">
+                <h3 id="️-そもそも何をしてくれるもの？">🎛️ そもそも何をしてくれるもの？</h3>
+                <p class="controller-overview-lead">
+                    AWS Load Balancer Controller は、Kubernetes 上で動作するコントローラーで、<br>
+                    <strong>YAML を書くだけで NLB/ALB の作成・設定・ターゲット管理をすべて自動化</strong>してくれます。
+                </p>
+
+                <div class="controller-analogy-banner">
+                    <div class="controller-analogy-icon">🏛️</div>
+                    <div class="controller-analogy-text">
+                        外交機密便のたとえでは<strong>「郵便システムの管理局」</strong>にあたります。
+                        仕分けゲート（NLB）のルール設定、大使館（Pod）の住所登録・削除を自動で行う管理者です。
+                        管理局がなければ、ゲートの設置も大使館の住所変更もすべて手作業になってしまいます。
+                    </div>
+                </div>
+
+                <!-- 2つの主要な役割 -->
+                <div class="controller-roles">
+                    <div class="controller-role-card">
+                        <div class="controller-role-header">
+                            <div class="controller-role-icon">🏗️</div>
+                            <div>
+                                <div class="controller-role-title">役割 ❶ NLBの自動プロビジョニング</div>
+                                <div class="controller-role-subtitle">Service (type: LoadBalancer) → NLB 作成</div>
+                            </div>
+                        </div>
+                        <div class="controller-role-body">
+                            Kubernetes の <strong>Service マニフェスト（YAML）</strong> にアノテーションを書くだけで、
+                            AWS 側で NLB のプロビジョニング、リスナー設定、セキュリティグループの構成まですべて自動実行されます。
+                            手動で AWS コンソールや CLI を操作する必要はありません。
+                        </div>
+                        <div class="controller-role-visual">
+                            📝 YAML を <code>kubectl apply</code>
+                            → 🎛️ Controller が検知
+                            → 🚏 NLB が自動作成される
+                        </div>
+                    </div>
+
+                    <div class="controller-role-card">
+                        <div class="controller-role-header">
+                            <div class="controller-role-icon">🎯</div>
+                            <div>
+                                <div class="controller-role-title">役割 ❷ Pod IP の自動ターゲット登録</div>
+                                <div class="controller-role-subtitle">IP mode: Pod IP を直接 NLB ターゲットに</div>
+                            </div>
+                        </div>
+                        <div class="controller-role-body">
+                            HPA で Pod が増えたら<strong>即座に NLB のターゲットグループに追加</strong>し、
+                            Pod が消えたら自動で除外します。kube-proxy を経由せず Pod に直接トラフィックが届くため、
+                            <strong>低レイテンシー</strong>を実現できます。
+                        </div>
+                        <div class="controller-role-visual">
+                            📈 HPA が Pod を追加
+                            → 🎛️ Controller が検知
+                            → 🎯 NLB ターゲットに自動登録
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controller なし vs あり -->
+                <div class="controller-comparison">
+                    <div class="controller-comp-card comp-without">
+                        <div class="comp-card-title">
+                            <span>❌</span> Controller がない場合
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">1</div>
+                            <span>AWS コンソールで NLB を手動作成</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">2</div>
+                            <span>リスナー / ターゲットグループを手動設定</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">3</div>
+                            <span>Pod が増減するたびに手動でターゲット登録・削除</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">4</div>
+                            <span>HPA / CA と連携できず、スケール時にダウンタイム発生</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">5</div>
+                            <span>Kubernetes と AWS の設定が乖離するリスク</span>
+                        </div>
+                    </div>
+
+                    <div class="controller-comp-card comp-with">
+                        <div class="comp-card-title">
+                            <span>✅</span> Controller がある場合
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">1</div>
+                            <span>YAML にアノテーションを書いて kubectl apply するだけ</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">2</div>
+                            <span>NLB / リスナー / ターゲットグループが自動作成</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">3</div>
+                            <span>Pod 増減時にターゲット登録・削除が自動</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">4</div>
+                            <span>HPA / CA と完全連携し、シームレスにスケール</span>
+                        </div>
+                        <div class="comp-step">
+                            <div class="comp-step-num">5</div>
+                            <span>Kubernetes マニフェストが「唯一の信頼源」（Single Source of Truth）</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controller 連携フロー -->
+                <div class="controller-flow">
+                    <h4>🔄 Controller が裏側で行う自動連携フロー</h4>
+                    <div class="cflow-track">
+                        <div class="cflow-stage cflow-k8s">
+                            <div class="cflow-icon">📝</div>
+                            <div class="cflow-label">YAML apply</div>
+                            <div class="cflow-desc">Service マニフェストを<br>クラスターに適用</div>
+                        </div>
+                        <div class="cflow-stage cflow-ctrl">
+                            <div class="cflow-icon">🎛️</div>
+                            <div class="cflow-label">Controller 検知</div>
+                            <div class="cflow-desc">アノテーションを読み取り<br>NLB 設定を決定</div>
+                        </div>
+                        <div class="cflow-stage cflow-aws">
+                            <div class="cflow-icon">🚏</div>
+                            <div class="cflow-label">NLB 自動作成</div>
+                            <div class="cflow-desc">AWS API を呼び出し<br>NLB + TCPリスナー構築</div>
+                        </div>
+                        <div class="cflow-stage cflow-pod">
+                            <div class="cflow-icon">🎯</div>
+                            <div class="cflow-label">ターゲット登録</div>
+                            <div class="cflow-desc">Pod IP を<br>ターゲットグループに登録</div>
+                        </div>
+                        <div class="cflow-stage cflow-traffic">
+                            <div class="cflow-icon">🔒</div>
+                            <div class="cflow-label">トラフィック開始</div>
+                            <div class="cflow-desc">mTLS 暗号化トラフィックが<br>Pod へ直接到達</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <div class="highlight-box-icon">💡</div>
+                <div class="highlight-box-text">
+                    <strong>mTLS 構成での重要性：</strong>Controller がいるからこそ「Pod が増える → 自動で NLB に登録 → すぐトラフィック受信」
+                    という流れがシームレスに動きます。オートスケーリングとの連携が実現するのは、この Controller のおかげです。
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション5: アーキテクチャ全体図 ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <div class="section-title-area">
+                    <h2 id="全体アーキテクチャ図">全体アーキテクチャ図</h2>
+                    <p>クライアント → NLB → Pod の全経路と各コンポーネントの役割</p>
+                </div>
+            </div>
+
+            <div class="arch-diagram">
+                <h3 id="️-NLB-+-TCPリスナー-+-AWS-LB-Controller-+-EKS-構成図">🏗️ NLB + TCPリスナー + AWS LB Controller + EKS 構成図</h3>
+
+                <div class="arch-layers">
+                    <!-- Client -->
+                    <div class="arch-layer">
+                        <div class="arch-layer-label">外部</div>
+                        <div class="arch-layer-content">
+                            <div class="arch-box box-client">
+                                <div class="arch-box-icon">💻</div>
+                                <div class="arch-box-label">gRPCクライアント</div>
+                                <div class="arch-box-sub">クライアント証明書を保持</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arch-connector">
+                        ⬇️
+                        <span class="arch-connector-label">TCP:443 / TLS暗号化パケット（封蝋付き外交ポーチ）</span>
+                    </div>
+
+                    <!-- NLB -->
+                    <div class="arch-layer">
+                        <div class="arch-layer-label">AWS<br>ネットワーク</div>
+                        <div class="arch-layer-content">
+                            <div class="arch-box box-nlb">
+                                <div class="arch-box-icon">🚏</div>
+                                <div class="arch-box-label">Network Load Balancer</div>
+                                <div class="arch-box-sub">TCPリスナー（ポート443）<br>パケットを復号化しない = パススルー</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arch-connector">
+                        ⬇️
+                        <span class="arch-connector-label">暗号化パケットそのまま転送（IP mode: Pod IPへ直接）</span>
+                    </div>
+
+                    <!-- EKS Cluster -->
+                    <div class="arch-layer" style="background: #f0fdf4; border-radius:16px; padding:20px 0; border:2px dashed #86efac;">
+                        <div class="arch-layer-label" style="color:#166534; font-weight:700;">EKSクラスター</div>
+                        <div class="arch-layer-content" style="flex-direction:column; gap:16px;">
+                            <!-- Controller Row -->
+                            <div style="display:flex; justify-content:center; gap:24px; width:100%;">
+                                <div class="arch-box box-controller">
+                                    <div class="arch-box-icon">🎛️</div>
+                                    <div class="arch-box-label">AWS LB Controller</div>
+                                    <div class="arch-box-sub">NLBのプロビジョニング<br>& TargetGroup管理</div>
+                                </div>
+                            </div>
+                            <!-- Pod Row -->
+                            <div style="display:flex; justify-content:center; gap:16px; width:100%; flex-wrap:wrap;">
+                                <div class="arch-box box-pod">
+                                    <div class="arch-box-icon">🏛️</div>
+                                    <div class="arch-box-label">gRPC Pod A</div>
+                                    <div class="arch-box-sub">サーバー証明書 + mTLS処理</div>
+                                </div>
+                                <div class="arch-box box-pod">
+                                    <div class="arch-box-icon">🏛️</div>
+                                    <div class="arch-box-label">gRPC Pod B</div>
+                                    <div class="arch-box-sub">サーバー証明書 + mTLS処理</div>
+                                </div>
+                                <div class="arch-box box-pod" style="opacity:0.6; border-style:dashed;">
+                                    <div class="arch-box-icon">🏛️</div>
+                                    <div class="arch-box-label">gRPC Pod C</div>
+                                    <div class="arch-box-sub">HPAによる自動追加</div>
+                                </div>
+                            </div>
+                            <!-- Autoscaler Row -->
+                            <div style="display:flex; justify-content:center; gap:24px; width:100%;">
+                                <div class="arch-box box-hpa">
+                                    <div class="arch-box-icon">📊</div>
+                                    <div class="arch-box-label">HPA</div>
+                                    <div class="arch-box-sub">Pod数を自動調整</div>
+                                </div>
+                                <div class="arch-box box-ca">
+                                    <div class="arch-box-icon">🖥️</div>
+                                    <div class="arch-box-label">Cluster Autoscaler</div>
+                                    <div class="arch-box-sub">ノード数を自動調整</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 暗号化パイプライン -->
+            <div class="encryption-pipeline">
+                <h3 id="暗号化状態の可視化-パケットはどこで復号化される？">🔐 暗号化状態の可視化：パケットはどこで復号化される？</h3>
+                <div class="pipeline-track">
+                    <div class="pipeline-stage">
+                        <div class="pipeline-stage-icon">💻</div>
+                        <div class="pipeline-stage-name">クライアント</div>
+                        <div class="pipeline-stage-detail">TLSで暗号化して送信</div>
+                    </div>
+                    <div class="pipeline-arrow">
+                        <div class="pipeline-arrow-icon">🔒→</div>
+                        <div class="pipeline-arrow-label">暗号化維持</div>
+                    </div>
+                    <div class="pipeline-stage">
+                        <div class="pipeline-stage-icon">🚏</div>
+                        <div class="pipeline-stage-name">NLB (TCP)</div>
+                        <div class="pipeline-stage-detail">中身を見ない ⭐</div>
+                    </div>
+                    <div class="pipeline-arrow">
+                        <div class="pipeline-arrow-icon">🔒→</div>
+                        <div class="pipeline-arrow-label">暗号化維持</div>
+                    </div>
+                    <div class="pipeline-stage">
+                        <div class="pipeline-stage-icon">🏛️</div>
+                        <div class="pipeline-stage-name">gRPC Pod</div>
+                        <div class="pipeline-stage-detail">ここで初めて復号化</div>
+                    </div>
+                </div>
+                <div class="encrypted-bar">
+                    🔒 クライアント → NLB → Pod：全経路で暗号化が維持される（エンドツーエンド暗号化） 🔒
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション6: 実装 ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <div class="section-title-area">
+                    <h2 id="Kubernetes-マニフェスト実装">Kubernetes マニフェスト実装</h2>
+                    <p>AWS Load Balancer Controller のアノテーションで NLB + TCP を構成</p>
+                </div>
+            </div>
+
+            <div class="annotated-code">
+                <div class="code-block-wrapper">
+                    <div class="code-block-header">
+                        <span class="code-block-title">service.yaml — NLB + TCPリスナーの定義</span>
+                        <span class="code-block-badge">Kubernetes Service</span>
+                    </div>
+                    <div class="code-block"><span class="code-key">apiVersion:</span> <span class="code-value">v1</span>
+<span class="code-key">kind:</span> <span class="code-value">Service</span>
+<span class="code-key">metadata:</span>
+  <span class="code-key">name:</span> <span class="code-value">grpc-mtls-service</span>
+  <span class="code-key">annotations:</span>
+    <span class="code-comment"># ❶ NLBを指定</span>
+    <span class="code-key">service.beta.kubernetes.io/aws-load-balancer-type:</span> <span class="code-string">"external"</span>
+    <span class="code-key">service.beta.kubernetes.io/aws-load-balancer-nlb-target-type:</span> <span class="code-string">"ip"</span>  <span class="code-comment"># ❷</span>
+    <span class="code-key">service.beta.kubernetes.io/aws-load-balancer-scheme:</span> <span class="code-string">"internet-facing"</span>
+
+    <span class="code-comment"># ❸ TCPリスナーを使用（TLSを終端しない）</span>
+    <span class="code-highlight"><span class="code-key">service.beta.kubernetes.io/aws-load-balancer-backend-protocol:</span> <span class="code-string">"tcp"</span></span>
+
+    <span class="code-comment"># ❹ クロスゾーン負荷分散</span>
+    <span class="code-key">service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled:</span> <span class="code-string">"true"</span>
+
+    <span class="code-comment"># ❺ ヘルスチェック設定</span>
+    <span class="code-key">service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol:</span> <span class="code-string">"TCP"</span>
+    <span class="code-key">service.beta.kubernetes.io/aws-load-balancer-healthcheck-port:</span> <span class="code-string">"443"</span>
+<span class="code-key">spec:</span>
+  <span class="code-key">type:</span> <span class="code-value">LoadBalancer</span>
+  <span class="code-key">loadBalancerClass:</span> <span class="code-value">service.k8s.aws/nlb</span>
+  <span class="code-key">selector:</span>
+    <span class="code-key">app:</span> <span class="code-value">grpc-server</span>
+  <span class="code-key">ports:</span>
+    - <span class="code-key">port:</span> <span class="code-value">443</span>
+      <span class="code-key">targetPort:</span> <span class="code-value">8443</span>
+      <span class="code-key">protocol:</span> <span class="code-value">TCP</span>   <span class="code-comment"># ← TCPを明示</span></div>
+                </div>
+
+                <div class="annotations">
+                    <div class="annotation annotation-1">
+                        <div class="annotation-title">❶ NLBタイプの指定</div>
+                        <p><code>"external"</code> を指定するとAWS LB Controllerが NLB を作成。<code>"nlb-ip"</code> 旧構文も可</p>
+                    </div>
+                    <div class="annotation annotation-2">
+                        <div class="annotation-title">❷ IP モード</div>
+                        <p>Pod IPを直接ターゲットに登録。kube-proxyを経由せずPodに到達。低レイテンシーの鍵</p>
+                    </div>
+                    <div class="annotation annotation-3">
+                        <div class="annotation-title">❸ TCPプロトコル = パススルー</div>
+                        <p><strong>最重要設定。</strong>これによりNLBはTLSパケットを開封せずそのまま転送。mTLSが機能する根拠</p>
+                    </div>
+                    <div class="annotation annotation-4">
+                        <div class="annotation-title">❹ ヘルスチェック</div>
+                        <p>TCPヘルスチェックはポートの応答のみ確認。TLS終端不要なのでHTTPSヘルスチェックは使わない</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HPA YAML -->
+            <div class="code-block-wrapper">
+                <div class="code-block-header">
+                    <span class="code-block-title">hpa.yaml — Horizontal Pod Autoscaler</span>
+                    <span class="code-block-badge">HPA</span>
+                </div>
+                <div class="code-block"><span class="code-key">apiVersion:</span> <span class="code-value">autoscaling/v2</span>
+<span class="code-key">kind:</span> <span class="code-value">HorizontalPodAutoscaler</span>
+<span class="code-key">metadata:</span>
+  <span class="code-key">name:</span> <span class="code-value">grpc-server-hpa</span>
+<span class="code-key">spec:</span>
+  <span class="code-key">scaleTargetRef:</span>
+    <span class="code-key">apiVersion:</span> <span class="code-value">apps/v1</span>
+    <span class="code-key">kind:</span> <span class="code-value">Deployment</span>
+    <span class="code-key">name:</span> <span class="code-value">grpc-server</span>
+  <span class="code-key">minReplicas:</span> <span class="code-value">3</span>
+  <span class="code-key">maxReplicas:</span> <span class="code-value">50</span>
+  <span class="code-key">metrics:</span>
+    - <span class="code-key">type:</span> <span class="code-value">Resource</span>
+      <span class="code-key">resource:</span>
+        <span class="code-key">name:</span> <span class="code-value">cpu</span>
+        <span class="code-key">target:</span>
+          <span class="code-key">type:</span> <span class="code-value">Utilization</span>
+          <span class="code-key">averageUtilization:</span> <span class="code-value">70</span></div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション7: オートスケーリング ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">7</div>
+                <div class="section-title-area">
+                    <h2 id="二段階オートスケーリング">二段階オートスケーリング</h2>
+                    <p>HPAがPodを増やし → Cluster AutoscalerがNodeを追加する連携プレー</p>
+                </div>
+            </div>
+
+            <div class="scaling-grid">
+                <div class="scaling-card scaling-card-hpa">
+                    <div class="scaling-card-header">
+                        <div class="scaling-card-icon">📊</div>
+                        <h3 id="Horizontal-Pod-Autoscaler-HPA-第1段階-Podレベルのスケール">Horizontal Pod Autoscaler (HPA) <small>第1段階：Podレベルのスケール</small></h3>
+                    </div>
+                    <div class="scaling-visual">
+                        <p style="font-size:0.82em; color:#64748b; margin-bottom:10px;">CPU使用率 70% 超過 → Pod を追加</p>
+                        <div class="scaling-visual-row">
+                            <div class="pod-box pod-active">Pod</div>
+                            <div class="pod-box pod-active">Pod</div>
+                            <div class="pod-box pod-active">Pod</div>
+                        </div>
+                        <div style="color:#94a3b8; margin:4px 0;">↓ スケールアウト ↓</div>
+                        <div class="scaling-visual-row">
+                            <div class="pod-box pod-active">Pod</div>
+                            <div class="pod-box pod-active">Pod</div>
+                            <div class="pod-box pod-active">Pod</div>
+                            <div class="pod-box pod-new">+Pod</div>
+                            <div class="pod-box pod-new">+Pod</div>
+                        </div>
+                    </div>
+                    <div class="scaling-detail">
+                        <strong>監視メトリクス：</strong>CPU使用率、メモリ使用率、カスタムメトリクス（gRPC接続数など）。
+                        閾値を超えるとPod数を増加し、負荷低下時は自動で縮小します。
+                        <strong>AWS LB Controller</strong>が新Podを検知してNLBのターゲットグループに自動登録します。
+                    </div>
+                </div>
+
+                <div class="scaling-card scaling-card-ca">
+                    <div class="scaling-card-header">
+                        <div class="scaling-card-icon">🖥️</div>
+                        <h3 id="Cluster-Autoscaler-CA-第2段階-ノードレベルのスケール">Cluster Autoscaler (CA) <small>第2段階：ノードレベルのスケール</small></h3>
+                    </div>
+                    <div class="scaling-visual">
+                        <p style="font-size:0.82em; color:#64748b; margin-bottom:10px;">Podがスケジュール不可 → ノードを追加</p>
+                        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                            <div class="node-box node-active">🖥️ Node 1（満杯）</div>
+                            <div class="node-box node-active">🖥️ Node 2（満杯）</div>
+                        </div>
+                        <div style="color:#94a3b8; margin:8px 0;">↓ ノード追加 ↓</div>
+                        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                            <div class="node-box node-active">🖥️ Node 1</div>
+                            <div class="node-box node-active">🖥️ Node 2</div>
+                            <div class="node-box node-new">🖥️ +Node 3</div>
+                        </div>
+                    </div>
+                    <div class="scaling-detail">
+                        <strong>トリガー条件：</strong>HPAが新しいPodを要求したが、既存ノードにリソース不足でスケジュールできない場合。
+                        CAが<strong>Auto Scaling Group</strong>を通じてEC2インスタンスを追加します。
+                        低負荷時はノードを安全に削除してコストを最適化します。
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                💡 <strong>連携の流れ：</strong>
+                負荷増加 → HPA が Pod 追加を決定 → ノードの空きリソース不足を検知 → CA がノードを追加 →
+                新ノードで Pod がスケジュール → AWS LB Controller が NLB ターゲットに登録 → トラフィック受信開始
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション8: トラブルシューティング ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">8</div>
+                <div class="section-title-area">
+                    <h2 id="よくあるトラブルと解決策">よくあるトラブルと解決策</h2>
+                    <p>mTLS + NLB + EKS環境で遭遇しやすい問題パターン</p>
+                </div>
+            </div>
+
+            <div class="troubleshoot-grid">
+                <div class="trouble-card">
+                    <div class="trouble-card-header">
+                        <div class="trouble-icon">🔴</div>
+                        <div class="trouble-title">mTLSハンドシェイク失敗</div>
+                    </div>
+                    <div class="trouble-cause">
+                        <strong>原因：</strong>TLSリスナーを使用しているため、NLBがTLSを終端してしまい、クライアント証明書がPodに届かない
+                    </div>
+                    <div class="trouble-fix">
+                        <strong>解決：</strong>TCPリスナーに変更。<code>aws-load-balancer-backend-protocol: "tcp"</code> を設定
+                    </div>
+                </div>
+
+                <div class="trouble-card">
+                    <div class="trouble-card-header">
+                        <div class="trouble-icon">🔴</div>
+                        <div class="trouble-title">NLBが作成されない</div>
+                    </div>
+                    <div class="trouble-cause">
+                        <strong>原因：</strong>AWS Load Balancer Controllerがインストールされていないか、IAMロールの権限不足
+                    </div>
+                    <div class="trouble-fix">
+                        <strong>解決：</strong>Controller のデプロイ状況を確認し、IRSA（IAM Roles for Service Accounts）を正しく設定
+                    </div>
+                </div>
+
+                <div class="trouble-card">
+                    <div class="trouble-card-header">
+                        <div class="trouble-icon">🟡</div>
+                        <div class="trouble-title">新しいPodにトラフィックが来ない</div>
+                    </div>
+                    <div class="trouble-cause">
+                        <strong>原因：</strong>ターゲット登録のタイムラグ。NLBのヘルスチェックがまだ通過していない
+                    </div>
+                    <div class="trouble-fix">
+                        <strong>解決：</strong>ヘルスチェック間隔を短縮（10秒）し、deregistration delay を適切に設定
+                    </div>
+                </div>
+
+                <div class="trouble-card">
+                    <div class="trouble-card-header">
+                        <div class="trouble-icon">🟡</div>
+                        <div class="trouble-title">gRPC接続の偏り</div>
+                    </div>
+                    <div class="trouble-cause">
+                        <strong>原因：</strong>gRPCはHTTP/2の長時間接続。NLBがコネクションレベルで分散するため既存接続は再分散されない
+                    </div>
+                    <div class="trouble-fix">
+                        <strong>解決：</strong>クライアント側でコネクションプールを実装し、定期的に再接続する仕組みを導入
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ===== セクション9: ベストプラクティス ===== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">9</div>
+                <div class="section-title-area">
+                    <h2 id="ベストプラクティス">ベストプラクティス</h2>
+                    <p>本番運用で押さえるべきポイント</p>
+                </div>
+            </div>
+
+            <div class="best-practices">
+                <h3 id="✅-運用チェックリスト">✅ 運用チェックリスト</h3>
+                <div class="bp-grid">
+                    <div class="bp-item">
+                        <div class="bp-item-icon">🔐</div>
+                        <div class="bp-item-text">
+                            <strong>証明書のローテーション：</strong>cert-manager等を活用し、クライアント/サーバー証明書の自動更新を設定。有効期限切れはサービス停止に直結
+                        </div>
+                    </div>
+                    <div class="bp-item">
+                        <div class="bp-item-icon">🌐</div>
+                        <div class="bp-item-text">
+                            <strong>クロスゾーン分散：</strong>NLBのクロスゾーンロードバランシングを有効化し、AZ間の負荷偏りを防止
+                        </div>
+                    </div>
+                    <div class="bp-item">
+                        <div class="bp-item-icon">📊</div>
+                        <div class="bp-item-text">
+                            <strong>カスタムメトリクス：</strong>gRPC接続数やリクエストレートをPrometheusで収集し、HPAのスケール指標に活用
+                        </div>
+                    </div>
+                    <div class="bp-item">
+                        <div class="bp-item-icon">🔄</div>
+                        <div class="bp-item-text">
+                            <strong>Graceful Shutdown：</strong>Pod終了時にpreStopフックで接続をドレインし、クライアントの接続断を最小化
+                        </div>
+                    </div>
+                    <div class="bp-item">
+                        <div class="bp-item-icon">🛡️</div>
+                        <div class="bp-item-text">
+                            <strong>SecurityGroupの適切な設定：</strong>NLBからのトラフィックのみPodに到達させ、不正アクセスをネットワークレベルで遮断
+                        </div>
+                    </div>
+                    <div class="bp-item">
+                        <div class="bp-item-icon">🧪</div>
+                        <div class="bp-item-text">
+                            <strong>mTLS接続テスト：</strong><code>grpcurl</code> に <code>--cert/--key</code> オプションを付けて定期的にmTLS接続を検証
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== フッター ===== -->
+    <div class="footer">
+        <p><strong>NLB + TCPリスナー + mTLS + EKS 完全ガイド</strong> — エンドツーエンド暗号化とスケーラブルな相互認証アーキテクチャ</p>
+        <p style="margin-top:8px;">📖 AWS SAP 学習リソース</p>
+    </div>
+
+
+
+</div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script is:inline>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

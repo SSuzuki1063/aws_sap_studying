@@ -1,0 +1,977 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Ec2 Status Check Guide',
+  pageTitle: 'EC2ステータスチェック図解ガイド',
+  category: 'compute-applications',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: 'EC2 & インスタンス管理',
+  slug: 'ec2-status-check-guide',
+  pageCss: '/aws_sap_studying/css/pages/ec2-status-check-guide.css',
+  tocItems: [
+    { level: 'h2', id: 'マンションで例えると超わかりやすい！', text: '🏢 マンションで例えると超わかりやすい！' },
+    { level: 'h2', id: 'マンションの構造とステータスチェック', text: '🏢 マンションの構造とステータスチェック' },
+    { level: 'h2', id: '2つのステータスチェックを理解しよう', text: '🔍 2つのステータスチェックを理解しよう' },
+    { level: 'h3', id: 'System-Status-Check', text: 'System Status Check' },
+    { level: 'h3', id: 'Instance-Status-Check', text: 'Instance Status Check' },
+    { level: 'h2', id: '詳細比較表', text: '📊 詳細比較表' },
+    { level: 'h2', id: '問題が起きたときの対処方法', text: '🔧 問題が起きたときの対処方法' },
+    { level: 'h2', id: 'よくあるシナリオ', text: '🎬 よくあるシナリオ' },
+    { level: 'h3', id: 'シナリオ1-物理ホスト障害', text: 'シナリオ1: 物理ホスト障害' },
+    { level: 'h3', id: 'シナリオ2-カーネルパニック', text: 'シナリオ2: カーネルパニック' },
+    { level: 'h3', id: 'シナリオ3-ネットワーク障害', text: 'シナリオ3: ネットワーク障害' },
+    { level: 'h3', id: 'シナリオ4-ディスク容量不足', text: 'シナリオ4: ディスク容量不足' },
+    { level: 'h2', id: '️-AWSコンソールでの表示例', text: '🖥️ AWSコンソールでの表示例' },
+    { level: 'h3', id: '知っておくべき重要なTips', text: '💡 知っておくべき重要なTips' },
+    { level: 'h2', id: 'まとめ', text: '🎓 まとめ' },
+    { level: 'h3', id: 'System-Status-Check-1', text: 'System Status Check' },
+    { level: 'h3', id: 'Instance-Status-Check-1', text: 'Instance Status Check' }
+  ],
+  prevPage: 'ec2-auto-recovery-guide.html',
+  nextPage: 'iam-passrole-vs-assumerole-guide.html',
+  pageNum: 6,
+  pageTotal: 41,
+};
+
+const rawContent = `<div class="header">
+<h1>
+     ✅ EC2ステータスチェック
+    </h1>
+
+<p>
+     マンション管理で理解する！System vs Instance
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="マンションで例えると超わかりやすい！">
+      🏢 マンションで例えると超わかりやすい！
+     </h2>
+<p class="intro-text">
+      あなたはマンションに住んでいます。何か問題が起きたとき、
+      <br/>
+      それは
+      <strong>
+       「建物全体の問題」
+      </strong>
+      ですか？それとも
+      <strong>
+       「あなたの部屋だけの問題」
+      </strong>
+      ですか？
+     </p>
+</div>
+<!-- 視覚的な図解 -->
+<div class="visual-diagram">
+<h2 id="マンションの構造とステータスチェック" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+      🏢 マンションの構造とステータスチェック
+     </h2>
+<div class="building-visual">
+<div class="building-label label-system">
+       🏗️ System Status Check
+       <br/>
+       （建物全体）
+      </div>
+<div class="building-label label-instance">
+       🚪 Instance Status Check
+       <br/>
+       （各部屋）
+      </div>
+<div class="infrastructure">
+<div class="infra-item">
+        ⚡ 電気
+       </div>
+<div class="infra-item">
+        💧 水道
+       </div>
+<div class="infra-item">
+        🌐 ネットワーク
+       </div>
+<div class="infra-item">
+        🔥 ガス
+       </div>
+</div>
+<div class="rooms-container">
+<div class="room">
+<div class="room-icon">
+         🚪
+        </div>
+<div class="room-label">
+         301号室
+         <br/>
+         (Instance 1)
+        </div>
+</div>
+<div class="room">
+<div class="room-icon">
+         🚪
+        </div>
+<div class="room-label">
+         302号室
+         <br/>
+         (Instance 2)
+        </div>
+</div>
+<div class="room">
+<div class="room-icon">
+         🚪
+        </div>
+<div class="room-label">
+         303号室
+         <br/>
+         (Instance 3)
+        </div>
+</div>
+</div>
+</div>
+<p style="text-align: center; color: #1f2937; font-size: 1.1em; margin-top: 20px;">
+      💡
+      <strong>
+       ポイント：
+      </strong>
+      建物（System）が壊れたら全部屋に影響！部屋（Instance）の問題はその部屋だけ！
+     </p>
+</div>
+<!-- 2つのチェックの詳細 -->
+<div class="building-section">
+<h2 id="2つのステータスチェックを理解しよう" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+      🔍 2つのステータスチェックを理解しよう
+     </h2>
+<div class="building-container">
+<!-- System Status Check -->
+<div class="building-card system">
+<div class="card-icon">
+        🏗️
+       </div>
+<h3 class="card-title" id="System-Status-Check">
+        System Status Check
+       </h3>
+<p class="card-subtitle">
+        建物全体の問題（AWSの責任範囲）
+       </p>
+<div class="example-box">
+<div class="example-title">
+         🏢 マンションの例
+        </div>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
+          建物全体の停電
+         </li>
+<li>
+          共用エレベーターの故障
+         </li>
+<li>
+          本管の水漏れ
+         </li>
+<li>
+          インターネット回線の障害
+         </li>
+</ul>
+</div>
+<div class="example-box">
+<div class="example-title">
+         ☁️ AWSの実際の問題
+        </div>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
+          物理ホストの障害
+         </li>
+<li>
+          ネットワーク接続の問題
+         </li>
+<li>
+          電源供給の問題
+         </li>
+<li>
+          ハードウェアの故障
+         </li>
+</ul>
+</div>
+<h4 style="color: #1e40af; margin: 25px 0 15px; font-size: 1.3em;">
+        チェック項目
+       </h4>
+<div class="check-list">
+<div class="check-item">
+<div class="check-icon">
+          🔌
+         </div>
+<div>
+          物理ホストへの電力供給
+         </div>
+</div>
+<div class="check-item">
+<div class="check-icon">
+          🌐
+         </div>
+<div>
+          ネットワーク接続の可用性
+         </div>
+</div>
+<div class="check-item">
+<div class="check-icon">
+          🖥️
+         </div>
+<div>
+          物理ホストのハードウェア
+         </div>
+</div>
+<div class="check-item">
+<div class="check-icon">
+          🔧
+         </div>
+<div>
+          システムソフトウェアの動作
+         </div>
+</div>
+</div>
+</div>
+<!-- Instance Status Check -->
+<div class="building-card instance">
+<div class="card-icon">
+        🚪
+       </div>
+<h3 class="card-title" id="Instance-Status-Check">
+        Instance Status Check
+       </h3>
+<p class="card-subtitle">
+        あなたの部屋の問題（ユーザーの責任範囲）
+       </p>
+<div class="example-box">
+<div class="example-title">
+         🏠 部屋の例
+        </div>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
+          部屋のブレーカーが落ちた
+         </li>
+<li>
+          エアコンが壊れた
+         </li>
+<li>
+          ルーターの設定ミス
+         </li>
+<li>
+          家具の配置で動線が悪い
+         </li>
+</ul>
+</div>
+<div class="example-box">
+<div class="example-title">
+         ☁️ AWSの実際の問題
+        </div>
+<ul style="padding-left: 20px; line-height: 2;">
+<li>
+          OSのカーネルパニック
+         </li>
+<li>
+          メモリ不足
+         </li>
+<li>
+          ネットワーク設定の誤り
+         </li>
+<li>
+          ファイルシステムの破損
+         </li>
+</ul>
+</div>
+<h4 style="color: #c2410c; margin: 25px 0 15px; font-size: 1.3em;">
+        チェック項目
+       </h4>
+<div class="check-list">
+<div class="check-item">
+<div class="check-icon">
+          🖥️
+         </div>
+<div>
+          OSの動作状態
+         </div>
+</div>
+<div class="check-item">
+<div class="check-icon">
+          🌐
+         </div>
+<div>
+          ネットワーク設定の正常性
+         </div>
+</div>
+<div class="check-item">
+<div class="check-icon">
+          💾
+         </div>
+<div>
+          ファイルシステムの状態
+         </div>
+</div>
+<div class="check-item">
+<div class="check-icon">
+          🧠
+         </div>
+<div>
+          メモリとCPUの使用状況
+         </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<h2 id="詳細比較表" style="color: #1e3a8a; font-size: 2em; margin: 50px 0 20px; text-align: center;">
+     📊 詳細比較表
+    </h2>
+<div class="comparison-table">
+<div class="table-header">
+<div>
+       項目
+      </div>
+<div>
+       🏗️ System Status Check
+      </div>
+<div>
+       🚪 Instance Status Check
+      </div>
+</div>
+<div class="table-row">
+<div class="table-cell">
+       責任者
+      </div>
+<div class="table-cell">
+       AWS（管理会社）
+      </div>
+<div class="table-cell">
+       ユーザー（住人）
+      </div>
+</div>
+<div class="table-row">
+<div class="table-cell">
+       問題の範囲
+      </div>
+<div class="table-cell">
+       物理インフラ全体
+       <br/>
+       （建物レベル）
+      </div>
+<div class="table-cell">
+       個別インスタンス
+       <br/>
+       （部屋レベル）
+      </div>
+</div>
+<div class="table-row">
+<div class="table-cell">
+       修復方法
+      </div>
+<div class="table-cell">
+       インスタンスの停止→起動
+       <br/>
+       （別の物理ホストに移動）
+      </div>
+<div class="table-cell">
+       インスタンスの再起動
+       <br/>
+       （OS・設定の修正）
+      </div>
+</div>
+<div class="table-row">
+<div class="table-cell">
+       自動復旧
+      </div>
+<div class="table-cell">
+       設定可能（Auto Recovery）
+       <br/>
+       別ホストに自動移動
+      </div>
+<div class="table-cell">
+       設定可能（Auto Recovery）
+       <br/>
+       自動再起動
+      </div>
+</div>
+<div class="table-row">
+<div class="table-cell">
+       影響範囲
+      </div>
+<div class="table-cell">
+       同じ物理ホストの全インスタンス
+       <br/>
+       （同じ建物の全部屋）
+      </div>
+<div class="table-cell">
+       該当インスタンスのみ
+       <br/>
+       （その部屋だけ）
+      </div>
+</div>
+<div class="table-row">
+<div class="table-cell">
+       発生頻度
+      </div>
+<div class="table-cell">
+       低い（AWSのインフラは堅牢）
+      </div>
+<div class="table-cell">
+       比較的高い（設定ミスなど）
+      </div>
+</div>
+</div>
+<!-- 対処方法 -->
+<div style="margin: 50px 0;">
+<h2 id="問題が起きたときの対処方法" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+      🔧 問題が起きたときの対処方法
+     </h2>
+<div class="action-card system">
+<div class="action-title">
+<span style="font-size: 1.5em;">
+        🏗️
+       </span>
+       System Status Checkが失敗したら
+      </div>
+<p style="margin-bottom: 20px; color: #4b5563;">
+       建物全体の問題 = あなたには修理できません！AWSに任せて引っ越しましょう
+      </p>
+<ol class="step-list">
+<li class="step-item">
+<strong>
+         インスタンスを停止
+        </strong>
+<br/>
+        AWS CLIまたはコンソールでStop
+       </li>
+<li class="step-item">
+<strong>
+         少し待つ（5-10分）
+        </strong>
+<br/>
+        AWSが状態を確認する時間
+       </li>
+<li class="step-item">
+<strong>
+         インスタンスを起動
+        </strong>
+<br/>
+        自動的に健全な物理ホストに配置される
+       </li>
+<li class="step-item">
+<strong>
+         ステータスチェックを確認
+        </strong>
+<br/>
+        緑色の✓になれば完了！
+       </li>
+</ol>
+<div style="background: #dbeafe; padding: 20px; border-radius: 10px; margin-top: 20px;">
+<strong>
+        💡 重要：
+       </strong>
+       Stop→Startで物理ホストが変わります（新しい建物に引っ越し）
+       <br/>
+<strong>
+        ⚠️ 注意：
+       </strong>
+       Reboot（再起動）では物理ホストは変わりません！
+      </div>
+</div>
+<div class="action-card instance">
+<div class="action-title">
+<span style="font-size: 1.5em;">
+        🚪
+       </span>
+       Instance Status Checkが失敗したら
+      </div>
+<p style="margin-bottom: 20px; color: #4b5563;">
+       部屋の問題 = あなたが修理する必要があります！
+      </p>
+<ol class="step-list">
+<li class="step-item">
+<strong>
+         原因を調査
+        </strong>
+<br/>
+        CloudWatch Logs、システムログを確認
+       </li>
+<li class="step-item">
+<strong>
+         インスタンスを再起動（Reboot）
+        </strong>
+<br/>
+        一時的な問題なら再起動で解決
+       </li>
+<li class="step-item">
+<strong>
+         それでもダメなら詳細調査
+        </strong>
+<br/>
+        - メモリ不足？
+        <br/>
+        - ディスク容量不足？
+        <br/>
+        - 設定ミス？
+       </li>
+<li class="step-item">
+<strong>
+         問題を修正
+        </strong>
+<br/>
+        設定変更、不要ファイル削除など
+       </li>
+</ol>
+<div style="background: #ffedd5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+<strong>
+        💡 よくある原因：
+       </strong>
+<br/>
+       • カーネルパニック（OSクラッシュ）
+       <br/>
+       • メモリ不足でOOMキラーが発動
+       <br/>
+       • ディスク容量100%
+       <br/>
+       • ネットワーク設定の誤り
+      </div>
+</div>
+</div>
+<!-- 実際のシナリオ -->
+<div class="scenario-section">
+<h2 id="よくあるシナリオ" style="color: #1e3a8a; font-size: 2em; margin-bottom: 30px; text-align: center;">
+      🎬 よくあるシナリオ
+     </h2>
+<div class="scenario-grid">
+<div class="scenario-card system">
+<div class="scenario-icon">
+        ⚡
+       </div>
+<h3 id="シナリオ1-物理ホスト障害" style="color: #1e40af; font-size: 1.5em; margin-bottom: 15px;">
+        シナリオ1: 物理ホスト障害
+       </h3>
+<p>
+<strong>
+         状況：
+        </strong>
+        突然インスタンスに接続できなくなった
+       </p>
+<p style="margin-top: 15px;">
+<strong>
+         診断：
+        </strong>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
+         System Status Check:
+         <span class="status-badge badge-fail">
+          ✗ Failed
+         </span>
+</li>
+<li>
+         Instance Status Check:
+         <span class="status-badge badge-ok">
+          ✓ OK
+         </span>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
+         原因：
+        </strong>
+        物理サーバーのハードウェア故障
+       </p>
+<p style="margin-top: 10px;">
+<strong>
+         対処：
+        </strong>
+        Stop → Start で別ホストに移動
+       </p>
+<div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         🏢 マンションの例：
+        </strong>
+        建物全体が停電 → 別の建物に引っ越し
+       </div>
+</div>
+<div class="scenario-card instance">
+<div class="scenario-icon">
+        💥
+       </div>
+<h3 id="シナリオ2-カーネルパニック" style="color: #c2410c; font-size: 1.5em; margin-bottom: 15px;">
+        シナリオ2: カーネルパニック
+       </h3>
+<p>
+<strong>
+         状況：
+        </strong>
+        アプリケーションが応答しない
+       </p>
+<p style="margin-top: 15px;">
+<strong>
+         診断：
+        </strong>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
+         System Status Check:
+         <span class="status-badge badge-ok">
+          ✓ OK
+         </span>
+</li>
+<li>
+         Instance Status Check:
+         <span class="status-badge badge-fail">
+          ✗ Failed
+         </span>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
+         原因：
+        </strong>
+        OSのクラッシュ
+       </p>
+<p style="margin-top: 10px;">
+<strong>
+         対処：
+        </strong>
+        Rebootで再起動
+       </p>
+<div style="background: #ffedd5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         🏠 部屋の例：
+        </strong>
+        部屋のブレーカーが落ちた → ブレーカーを上げる
+       </div>
+</div>
+<div class="scenario-card system">
+<div class="scenario-icon">
+        🌐
+       </div>
+<h3 id="シナリオ3-ネットワーク障害" style="color: #1e40af; font-size: 1.5em; margin-bottom: 15px;">
+        シナリオ3: ネットワーク障害
+       </h3>
+<p>
+<strong>
+         状況：
+        </strong>
+        pingが通らない
+       </p>
+<p style="margin-top: 15px;">
+<strong>
+         診断：
+        </strong>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
+         System Status Check:
+         <span class="status-badge badge-fail">
+          ✗ Failed
+         </span>
+</li>
+<li>
+         Instance Status Check:
+         <span class="status-badge badge-warning">
+          ? Insufficient Data
+         </span>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
+         原因：
+        </strong>
+        物理ネットワーク機器の障害
+       </p>
+<p style="margin-top: 10px;">
+<strong>
+         対処：
+        </strong>
+        AWSサポートに連絡 or Stop → Start
+       </p>
+<div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         🏢 マンションの例：
+        </strong>
+        建物全体のネット回線が切断 → プロバイダに連絡
+       </div>
+</div>
+<div class="scenario-card instance">
+<div class="scenario-icon">
+        💾
+       </div>
+<h3 id="シナリオ4-ディスク容量不足" style="color: #c2410c; font-size: 1.5em; margin-bottom: 15px;">
+        シナリオ4: ディスク容量不足
+       </h3>
+<p>
+<strong>
+         状況：
+        </strong>
+        アプリケーションがエラーを吐く
+       </p>
+<p style="margin-top: 15px;">
+<strong>
+         診断：
+        </strong>
+</p>
+<ul style="padding-left: 20px; line-height: 2; margin-top: 10px;">
+<li>
+         System Status Check:
+         <span class="status-badge badge-ok">
+          ✓ OK
+         </span>
+</li>
+<li>
+         Instance Status Check:
+         <span class="status-badge badge-fail">
+          ✗ Failed
+         </span>
+</li>
+</ul>
+<p style="margin-top: 15px;">
+<strong>
+         原因：
+        </strong>
+        ディスク使用率100%
+       </p>
+<p style="margin-top: 10px;">
+<strong>
+         対処：
+        </strong>
+        不要ファイル削除 or ボリューム拡張
+       </p>
+<div style="background: #ffedd5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         🏠 部屋の例：
+        </strong>
+        部屋が荷物でいっぱい → 断捨離か引っ越し
+       </div>
+</div>
+</div>
+</div>
+<!-- コンソール表示例 -->
+<h2 id="️-AWSコンソールでの表示例" style="color: #1e3a8a; font-size: 2em; margin: 50px 0 20px; text-align: center;">
+     🖥️ AWSコンソールでの表示例
+    </h2>
+<div class="console-mockup">
+<div class="console-header">
+      EC2 Instance Status Checks
+     </div>
+<div style="margin-bottom: 30px;">
+<div style="color: #047857; font-weight: bold; margin-bottom: 15px;">
+       ✓ 正常な状態（両方OK）
+      </div>
+<div class="console-row">
+<span class="console-label">
+        System Status Check:
+       </span>
+<span class="console-value" style="color: #047857;">
+        ✓ Passed
+       </span>
+</div>
+<div class="console-row">
+<span class="console-label">
+        Instance Status Check:
+       </span>
+<span class="console-value" style="color: #047857;">
+        ✓ Passed
+       </span>
+</div>
+</div>
+<div style="margin-bottom: 30px;">
+<div style="color: #ef4444; font-weight: bold; margin-bottom: 15px;">
+       ✗ 物理ホスト障害（System失敗）
+      </div>
+<div class="console-row">
+<span class="console-label">
+        System Status Check:
+       </span>
+<span class="console-value" style="color: #ef4444;">
+        ✗ Failed
+       </span>
+</div>
+<div class="console-row">
+<span class="console-label">
+        Instance Status Check:
+       </span>
+<span class="console-value" style="color: #047857;">
+        ✓ Passed
+       </span>
+</div>
+<div style="color: #CA8A04; margin-top: 10px; padding: 10px; background: #374151; border-radius: 5px;">
+       ⚠️ Action Required: Stop and Start the instance to migrate to a new host
+      </div>
+</div>
+<div>
+<div style="color: #ef4444; font-weight: bold; margin-bottom: 15px;">
+       ✗ OS障害（Instance失敗）
+      </div>
+<div class="console-row">
+<span class="console-label">
+        System Status Check:
+       </span>
+<span class="console-value" style="color: #047857;">
+        ✓ Passed
+       </span>
+</div>
+<div class="console-row">
+<span class="console-label">
+        Instance Status Check:
+       </span>
+<span class="console-value" style="color: #ef4444;">
+        ✗ Failed
+       </span>
+</div>
+<div style="color: #CA8A04; margin-top: 10px; padding: 10px; background: #374151; border-radius: 5px;">
+       ⚠️ Action Required: Reboot the instance or check OS configuration
+      </div>
+</div>
+</div>
+<!-- Tips -->
+<div class="tips-section">
+<h3 id="知っておくべき重要なTips">
+      💡 知っておくべき重要なTips
+     </h3>
+<div class="tips-grid">
+<div class="tip-card">
+<div class="tip-icon">
+        🤖
+       </div>
+<div>
+<strong>
+         自動復旧を設定しよう
+        </strong>
+<br/>
+        CloudWatch Alarmで自動復旧を設定すると、ステータスチェック失敗時に自動的にインスタンスを復旧
+       </div>
+</div>
+<div class="tip-card">
+<div class="tip-icon">
+        📊
+       </div>
+<div>
+<strong>
+         CloudWatchで監視
+        </strong>
+<br/>
+        StatusCheckFailedアラームを設定して、問題をすぐに検知できるようにしましょう
+       </div>
+</div>
+<div class="tip-card">
+<div class="tip-icon">
+        🔄
+       </div>
+<div>
+<strong>
+         Stop vs Reboot
+        </strong>
+<br/>
+        System問題は「Stop→Start」、Instance問題は「Reboot」を使い分けましょう
+       </div>
+</div>
+<div class="tip-card">
+<div class="tip-icon">
+        ⏱️
+       </div>
+<div>
+<strong>
+         チェック間隔
+        </strong>
+<br/>
+        ステータスチェックは1分ごとに実行されます。問題検知は迅速！
+       </div>
+</div>
+<div class="tip-card">
+<div class="tip-icon">
+        💾
+       </div>
+<div>
+<strong>
+         データは大丈夫？
+        </strong>
+<br/>
+        EBSボリュームはインスタンスの移動（Stop→Start）でも保持されます。安心！
+       </div>
+</div>
+<div class="tip-card">
+<div class="tip-icon">
+        🎯
+       </div>
+<div>
+<strong>
+         テスト環境で試そう
+        </strong>
+<br/>
+        本番前にテスト環境でStop→Startやアラームの動作を確認しましょう
+       </div>
+</div>
+</div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color: white; padding: 50px; border-radius: 20px; text-align: center; margin-top: 50px;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1000px; margin: 30px auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🏗️
+       </div>
+<h3 id="System-Status-Check-1" style="font-size: 1.8em; margin-bottom: 15px;">
+        System Status Check
+       </h3>
+<p style="font-size: 1.1em; line-height: 1.8;">
+        建物全体の問題
+        <br/>
+<strong>
+         AWSの責任
+        </strong>
+<br/>
+        対処：Stop → Start
+       </p>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🚪
+       </div>
+<h3 id="Instance-Status-Check-1" style="font-size: 1.8em; margin-bottom: 15px;">
+        Instance Status Check
+       </h3>
+<p style="font-size: 1.1em; line-height: 1.8;">
+        あなたの部屋の問題
+        <br/>
+<strong>
+         ユーザーの責任
+        </strong>
+<br/>
+        対処：Reboot or 設定修正
+       </p>
+</div>
+</div>
+<div style="margin-top: 40px; padding: 30px; background: rgba(255,255,255,0.2); border-radius: 15px; backdrop-filter: blur(10px);">
+<p style="font-size: 1.3em; line-height: 2;">
+       🎯
+       <strong>
+        覚えておくべきこと：
+       </strong>
+<br/>
+       マンションのトラブルと同じ！
+       <br/>
+       建物の問題か、部屋の問題かを見極めることが大切です✨
+      </p>
+</div>
+</div>
+</div>
+
+
+</div>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+    Created by
+    <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+     SSuzuki1063
+    </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+    AWS SAP Learning Resources
+   </p>
+</div>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
