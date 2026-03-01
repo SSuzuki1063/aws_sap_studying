@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #232F3E 0%, #1a252f 50%, #0f1419 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.8;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 30%, #232F3E 70%, #1a252f 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '⚠️';
+            position: absolute;
+            font-size: 25em;
+            opacity: 0.08;
+            top: -80px;
+            right: -100px;
+            transform: rotate(-15deg);
+        }
+        
+        .header-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファーストセクション */
+        .conclusion-first {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border-left: 8px solid #f39c12;
+            position: relative;
+        }
+        
+        .conclusion-first::before {
+            content: '💡';
+            font-size: 3em;
+            position: absolute;
+            top: -20px;
+            left: 30px;
+        }
+        
+        .conclusion-first h2 {
+            color: #d68910;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            padding-top: 20px;
+        }
+        
+        .key-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .key-point {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .key-point-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .key-point h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .key-point p {
+            color: #555;
+            font-size: 0.95em;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .analogy-section h2 {
+            color: #2e7d32;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .analogy-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .analogy-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .analogy-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-emoji {
+            font-size: 3em;
+        }
+        
+        .analogy-title {
+            color: #1b5e20;
+            font-size: 1.3em;
+        }
+        
+        .analogy-subtitle {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .analogy-content {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .analogy-content p {
+            color: #444;
+            margin-bottom: 10px;
+        }
+        
+        .analogy-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* アーキテクチャ図 */
+        .architecture-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 2em;
+            color: #232F3E;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #ff9900;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .architecture-diagram {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+        }
+        
+        .region-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        
+        .region-box {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            min-width: 250px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 3px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+        
+        .region-box.us-east-1 {
+            border-color: #ff4757;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            transform: scale(1.05);
+        }
+        
+        .region-box.us-east-1 .region-name {
+            color: #ff4757;
+        }
+        
+        .region-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .region-services {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .service-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .service-badge.global {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .service-badge.critical {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        /* 障害連鎖フロー */
+        .cascade-flow {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .cascade-title {
+            font-size: 1.5em;
+            color: #c62828;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .cascade-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .cascade-step {
+            background: linear-gradient(135deg, #232F3E 0%, #37474f 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 180px;
+            position: relative;
+        }
+        
+        .cascade-step.error {
+            background: linear-gradient(135deg, #c62828 0%, #e53935 100%);
+        }
+        
+        .cascade-step-number {
+            position: absolute;
+            top: -12px;
+            left: -12px;
+            background: #ff9900;
+            color: #232F3E;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .cascade-step-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .cascade-step h4 {
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+        
+        .cascade-step p {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+        
+        .cascade-arrow {
+            font-size: 2em;
+            color: #c62828;
+        }
+        
+        /* タイムライン */
+        .timeline-section {
+            margin-bottom: 50px;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #4caf50 0%, #ff9800 50%, #f44336 100%);
+            border-radius: 2px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            padding: 20px 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-left: 20px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -32px;
+            top: 25px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border: 4px solid #ff9900;
+            border-radius: 50%;
+        }
+        
+        .timeline-item.critical::before {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .timeline-item.recovery::before {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .timeline-time {
+            display: inline-block;
+            background: #232F3E;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-title {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-desc {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        /* 技術詳細セクション */
+        .technical-section {
+            margin-bottom: 50px;
+        }
+        
+        .tech-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+        
+        .tech-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .tech-card-header {
+            padding: 20px 25px;
+            color: white;
+        }
+        
+        .tech-card-header.dns {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .tech-card-header.ec2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .tech-card-header.nlb {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .tech-card-header h3 {
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tech-card-body {
+            padding: 25px;
+            padding-top: 70px;}
+        
+        .tech-detail {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .tech-detail h4 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+        
+        .tech-detail p {
+            color: #555;
+            font-size: 0.9em;
+        }
+        
+        /* レースコンディション図解 */
+        .race-condition {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+        
+        .race-condition h4 {
+            color: #d68910;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+        
+        .race-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .race-actor {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .race-actor-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .race-actor h5 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .race-actor p {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .race-result {
+            background: #c62828;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        /* 影響範囲 */
+        .impact-section {
+            margin-bottom: 50px;
+        }
+        
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .impact-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .impact-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .impact-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .impact-category {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .impact-services {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        /* 教訓セクション */
+        .lessons-section {
+            background: linear-gradient(135deg, #232F3E 0%, #37474f 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+            color: white;
+        }
+        
+        .lessons-section h2 {
+            color: #ff9900;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .lesson-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .lesson-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .lesson-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .lesson-card h3 {
+            color: #ff9900;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .lesson-card p {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.95em;
+        }
+        
+        /* 対策セクション */
+        .countermeasures {
+            margin-bottom: 50px;
+        }
+        
+        .countermeasure-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .countermeasure-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .countermeasure-header {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .countermeasure-header span {
+            font-size: 2em;
+        }
+        
+        .countermeasure-body {
+            padding: 25px;
+            padding-top: 70px;}
+        
+        .countermeasure-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .countermeasure-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .countermeasure-check {
+            color: #00b894;
+            font-size: 1.5em;
+        }
+        
+        .countermeasure-text h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .countermeasure-text p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            margin-bottom: 50px;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            background: #f8f9fa;
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+        
+        .faq-question::before {
+            content: 'Q';
+            background: #ff9900;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .faq-answer {
+            padding: 20px 25px;
+            color: #555;
+            border-top: 1px solid #eee;
+        }
+        
+        .faq-answer::before {
+            content: 'A';
+            background: #232F3E;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        /* まとめ */
+        .summary-section {
+            background: linear-gradient(135deg, #ff9900 0%, #ff6600 100%);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            text-align: center;
+        }
+        
+        .summary-section h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+        }
+        
+        .summary-text {
+            font-size: 1.1em;
+            max-width: 800px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+        }
+        
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        /* フッター */
+        .footer {
+            background: #232F3E;
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .footer-links {
+            margin-bottom: 20px;
+        }
+        
+        .footer-links a {
+            color: #ff9900;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 0.9em;
+        }
+        
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer-note {
+            font-size: 0.85em;
+            color: #999;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+            
+            .analogy-grid,
+            .tech-cards,
+            .countermeasure-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cascade-steps {
+                flex-direction: column;
+            }
+            
+            .cascade-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .region-container {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+        
+        /* アニメーション */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }
+
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論ファースト-3分で分かる障害の全体像">🎯 結論ファースト：3分で分かる障害の全体像</a></li>
+            <li class="toc-h3"><a href="#US-EAST-1は本社ビル">US-EAST-1は「本社ビル」</a></li>
+            <li class="toc-h3"><a href="#DNSの住所録が消えた">DNSの「住所録」が消えた</a></li>
+            <li class="toc-h3"><a href="#連鎖的に崩壊">連鎖的に崩壊</a></li>
+            <li class="toc-h3"><a href="#世界中に影響">世界中に影響</a></li>
+            <li class="toc-h2"><a href="#たとえ話で理解する障害のメカニズム">🎭 たとえ話で理解する障害のメカニズム</a></li>
+            <li class="toc-h2"><a href="#️-なぜUS-EAST-1が単一障害点なのか">🏗️ なぜUS-EAST-1が「単一障害点」なのか</a></li>
+            <li class="toc-h3"><a href="#障害の連鎖フロー">💥 障害の連鎖フロー</a></li>
+            <li class="toc-h2"><a href="#障害の技術的詳細">🔬 障害の技術的詳細</a></li>
+            <li class="toc-h3"><a href="#第1幕-DNS競合状態レースコンディション">📋 第1幕：DNS競合状態（レースコンディション）</a></li>
+            <li class="toc-h3"><a href="#️-第2幕-EC2の輻輳崩壊">🖥️ 第2幕：EC2の輻輳崩壊</a></li>
+            <li class="toc-h3"><a href="#⚖️-第3幕-NLBのヘルスチェック連鎖障害">⚖️ 第3幕：NLBのヘルスチェック連鎖障害</a></li>
+            <li class="toc-h2"><a href="#⏱️-障害タイムライン日本時間">⏱️ 障害タイムライン（日本時間）</a></li>
+            <li class="toc-h2"><a href="#影響を受けた主なサービス">🌍 影響を受けた主なサービス</a></li>
+            <li class="toc-h2"><a href="#この障害から学ぶ教訓">📚 この障害から学ぶ教訓</a></li>
+            <li class="toc-h3"><a href="#技術的負債の怖さ">技術的負債の怖さ</a></li>
+            <li class="toc-h3"><a href="#自動化の落とし穴">自動化の落とし穴</a></li>
+            <li class="toc-h3"><a href="#密結合のリスク">密結合のリスク</a></li>
+            <li class="toc-h3"><a href="#組織知の重要性">組織知の重要性</a></li>
+            <li class="toc-h2"><a href="#️-AWSが発表した再発防止策">🛡️ AWSが発表した再発防止策</a></li>
+            <li class="toc-h3"><a href="#DynamoDB-DNS管理">DynamoDB DNS管理</a></li>
+            <li class="toc-h3"><a href="#NLBNetwork-Load-Balancer">NLB（Network Load Balancer）</a></li>
+            <li class="toc-h3"><a href="#Amazon-EC2">Amazon EC2</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ">📝 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+    <div class="container">
+        
+    <!-- ブレッドクラムナビゲーション -->
+    <nav class="breadcrumb-nav">
+        <a href="../index.html" class="breadcrumb-home">🏠 ホーム</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">セキュリティ・ガバナンス</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">その他</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-current">Aws Us East 1 Outage Analysis</span>
+    </nav>
+<!-- ヘッダー -->
+        <header class="header">
+            <div class="header-badge">📅 2025年10月20日 大規模障害分析</div>
+            <h1>⚠️ AWS障害はなぜグローバルに拡大したか？</h1>
+            <p>US-EAST-1リージョンの「単一障害点（SPOF）」構造を<br>AWS初心者にも分かりやすく徹底解説</p>
+        </header>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <section class="conclusion-first fade-in">
+                <h2 id="結論ファースト-3分で分かる障害の全体像">🎯 結論ファースト：3分で分かる障害の全体像</h2>
+                <div class="key-points">
+                    <div class="key-point">
+                        <div class="key-point-icon">🏢</div>
+                        <h3 id="US-EAST-1は本社ビル">US-EAST-1は「本社ビル」</h3>
+                        <p>AWSの最古参リージョン。IAMやRoute 53などグローバルサービスの「本店」として機能し、世界中が依存。</p>
+                    </div>
+                    <div class="key-point">
+                        <div class="key-point-icon">📋</div>
+                        <h3 id="DNSの住所録が消えた">DNSの「住所録」が消えた</h3>
+                        <p>DynamoDBのDNS管理システムで競合状態が発生。エンドポイントのIPアドレス情報が全消失した。</p>
+                    </div>
+                    <div class="key-point">
+                        <div class="key-point-icon">⛓️</div>
+                        <h3 id="連鎖的に崩壊">連鎖的に崩壊</h3>
+                        <p>DynamoDB → EC2 → NLB → Lambda... 内部サービスの密結合により、ドミノ倒しのように障害が拡大。</p>
+                    </div>
+                    <div class="key-point">
+                        <div class="key-point-icon">🌍</div>
+                        <h3 id="世界中に影響">世界中に影響</h3>
+                        <p>FortniteやRoblox、金融サービスまで。約14時間にわたり世界中のサービスが混乱した。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- たとえ話で理解 -->
+            <section class="analogy-section fade-in">
+                <h2 id="たとえ話で理解する障害のメカニズム">🎭 たとえ話で理解する障害のメカニズム</h2>
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <div class="analogy-header">
+                            <span class="analogy-emoji">🏢</span>
+                            <div>
+                                <div class="analogy-title">US-EAST-1 = 巨大企業の「本社ビル」</div>
+                                <div class="analogy-subtitle">グローバルサービスの中枢</div>
+                            </div>
+                        </div>
+                        <div class="analogy-content">
+                            <p>🏙️ US-EAST-1は、AWSという巨大企業の「本社ビル」のようなもの。</p>
+                            <p>📇 社員証の発行（IAM）、全社電話帳（Route 53）、経理システム（DynamoDB）など、会社全体を動かす重要部門が集中しています。</p>
+                            <p>💥 本社ビルが火事になったら、支店は仕事ができなくなりますよね？それが今回起きたこと。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-header">
+                            <span class="analogy-emoji">📖</span>
+                            <div>
+                                <div class="analogy-title">DNS = 「電話帳」または「住所録」</div>
+                                <div class="analogy-subtitle">名前とIPアドレスの対応表</div>
+                            </div>
+                        </div>
+                        <div class="analogy-content">
+                            <p>📞 「dynamodb.us-east-1.amazonaws.com」という名前から、実際の「IPアドレス」を調べるのがDNS。</p>
+                            <p>📕 これは「田中さんの電話番号は090-XXXX-XXXXです」と書かれた電話帳のようなもの。</p>
+                            <p>🚫 この電話帳のページが白紙になったら、誰にも電話できなくなります。それが今回起きたこと。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-header">
+                            <span class="analogy-emoji">👨‍🍳</span>
+                            <div>
+                                <div class="analogy-title">レースコンディション = 「2人のシェフ問題」</div>
+                                <div class="analogy-subtitle">競合状態による事故</div>
+                            </div>
+                        </div>
+                        <div class="analogy-content">
+                            <p>👨‍🍳 シェフAとシェフBが同じ鍋を使おうとしている状況を想像してください。</p>
+                            <p>🍲 シェフA「塩を入れた！」→ シェフB「古いスープを捨てるね」→ シェフBは新しいスープも一緒に捨ててしまった！</p>
+                            <p>😱 お互いの作業タイミングがズレたことで、本来残すべきものまで消えてしまう。これが「競合状態」です。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-header">
+                            <span class="analogy-emoji">🔋</span>
+                            <div>
+                                <div class="analogy-title">キャッシュ = 「非常用バッテリー」</div>
+                                <div class="analogy-subtitle">一時的な猶予時間</div>
+                            </div>
+                        </div>
+                        <div class="analogy-content">
+                            <p>🔌 本社ビルの電気が止まっても、各支店にはUPS（無停電電源装置）があります。</p>
+                            <p>⏱️ 障害発生後も「キャッシュ」のおかげで、しばらくは動き続けました。</p>
+                            <p>🪫 でもバッテリーには限りがあり、切れた瞬間に次々とサービスがダウン。約5分後から影響が顕在化しました。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-header">
+                            <span class="analogy-emoji">📞</span>
+                            <div>
+                                <div class="analogy-title">リトライストーム = 「全員が一斉に再コール」</div>
+                                <div class="analogy-subtitle">自己増殖するDDoS攻撃</div>
+                            </div>
+                        </div>
+                        <div class="analogy-content">
+                            <p>☎️ 電話がつながらない時、あなたは何度もかけ直しますよね？</p>
+                            <p>📈 世界中の何百万ものシステムが同時に「リトライ」し始めると...</p>
+                            <p>🌊 それ自体がDDoS攻撃のような状態に。復旧作業をさらに困難にしました。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <div class="analogy-header">
+                            <span class="analogy-emoji">🐝</span>
+                            <div>
+                                <div class="analogy-title">アナフィラキシーショック</div>
+                                <div class="analogy-subtitle">「ハチの一刺し」が全身麻痺に</div>
+                            </div>
+                        </div>
+                        <div class="analogy-content">
+                            <p>🦟 ハチに一度刺されただけで、全身がショック状態になることがあります。</p>
+                            <p>💉 DNSという「一箇所」の障害が、免疫系（=依存関係）を通じて全身（=AWS全体）に広がった。</p>
+                            <p>🏥 堅牢なはずのシステムが、予期せぬ一点から崩壊する「クランブルポイント」の典型例です。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- アーキテクチャ図 -->
+            <section class="architecture-section fade-in">
+                <h2 id="️-なぜUS-EAST-1が単一障害点なのか" class="section-title">🏗️ なぜUS-EAST-1が「単一障害点」なのか</h2>
+                
+                <div class="architecture-diagram">
+                    <div class="region-container">
+                        <div class="region-box us-east-1 pulse">
+                            <div class="region-name">
+                                ⚠️ US-EAST-1（バージニア北部）
+                            </div>
+                            <div class="region-services">
+                                <div class="service-badge global">🌍 IAM（認証の本店）</div>
+                                <div class="service-badge global">🌍 Route 53（DNSの本店）</div>
+                                <div class="service-badge global">🌍 STS（トークン発行の本店）</div>
+                                <div class="service-badge critical">💥 DynamoDB（障害発生元）</div>
+                                <div class="service-badge">📦 EC2 / Lambda / ECS...</div>
+                            </div>
+                        </div>
+                        
+                        <div class="region-box">
+                            <div class="region-name">🌏 AP-NORTHEAST-1（東京）</div>
+                            <div class="region-services">
+                                <div class="service-badge">📦 EC2 / Lambda...</div>
+                                <div class="service-badge global">⬅️ IAM参照はUS-EAST-1へ</div>
+                            </div>
+                        </div>
+                        
+                        <div class="region-box">
+                            <div class="region-name">🌍 EU-WEST-1（アイルランド）</div>
+                            <div class="region-services">
+                                <div class="service-badge">📦 EC2 / Lambda...</div>
+                                <div class="service-badge global">⬅️ IAM参照はUS-EAST-1へ</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="cascade-flow">
+                        <h3 id="障害の連鎖フロー" class="cascade-title">💥 障害の連鎖フロー</h3>
+                        <div class="cascade-steps">
+                            <div class="cascade-step error">
+                                <span class="cascade-step-number">1</span>
+                                <div class="cascade-step-icon">📋</div>
+                                <h4>DNS消失</h4>
+                                <p>DynamoDBの住所が消えた</p>
+                            </div>
+                            <span class="cascade-arrow">→</span>
+                            <div class="cascade-step error">
+                                <span class="cascade-step-number">2</span>
+                                <div class="cascade-step-icon">🗃️</div>
+                                <h4>DynamoDB停止</h4>
+                                <p>接続不能に</p>
+                            </div>
+                            <span class="cascade-arrow">→</span>
+                            <div class="cascade-step error">
+                                <span class="cascade-step-number">3</span>
+                                <div class="cascade-step-icon">🖥️</div>
+                                <h4>EC2起動失敗</h4>
+                                <p>リース管理がダウン</p>
+                            </div>
+                            <span class="cascade-arrow">→</span>
+                            <div class="cascade-step error">
+                                <span class="cascade-step-number">4</span>
+                                <div class="cascade-step-icon">⚖️</div>
+                                <h4>NLB異常</h4>
+                                <p>ヘルスチェック失敗</p>
+                            </div>
+                            <span class="cascade-arrow">→</span>
+                            <div class="cascade-step error">
+                                <span class="cascade-step-number">5</span>
+                                <div class="cascade-step-icon">🌐</div>
+                                <h4>グローバル影響</h4>
+                                <p>世界中のサービス停止</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 技術的詳細 -->
+            <section class="technical-section fade-in">
+                <h2 id="障害の技術的詳細" class="section-title">🔬 障害の技術的詳細</h2>
+                
+                <div class="tech-cards">
+                    <div class="tech-card">
+                        <div class="tech-card-header dns">
+                            <h3 id="第1幕-DNS競合状態レースコンディション">📋 第1幕：DNS競合状態（レースコンディション）</h3>
+                        </div>
+                        <div class="tech-card-body">
+                            <div class="tech-detail">
+                                <h4>🏗️ システム構成</h4>
+                                <p><strong>DNS Planner</strong>：DNSプラン（どのIPアドレスを使うか）を作成<br>
+                                <strong>DNS Enactor</strong>：3つのAZで冗長的に動作し、プランを適用</p>
+                            </div>
+                            
+                            <div class="race-condition">
+                                <h4>⚡ 何が起きたか？</h4>
+                                <div class="race-diagram">
+                                    <div class="race-actor">
+                                        <div class="race-actor-icon">🐢</div>
+                                        <h5>Enactor A（遅延）</h5>
+                                        <p>古いプランを適用中...<br>時間がかかって遅れた</p>
+                                    </div>
+                                    <div class="race-actor">
+                                        <div class="race-actor-icon">🐇</div>
+                                        <h5>Enactor B（高速）</h5>
+                                        <p>新しいプランを適用完了！<br>古いプランを削除しよう</p>
+                                    </div>
+                                </div>
+                                <div class="race-result">
+                                    💥 結果：Enactor Bが「古すぎる」と判断して、Enactor Aが適用したばかりのプランを削除 → IPアドレス全消失！
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card">
+                        <div class="tech-card-header ec2">
+                            <h3 id="️-第2幕-EC2の輻輳崩壊">🖥️ 第2幕：EC2の輻輳崩壊</h3>
+                        </div>
+                        <div class="tech-card-body">
+                            <div class="tech-detail">
+                                <h4>🔧 DWFM（DropletWorkflow Manager）とは</h4>
+                                <p>EC2インスタンスを動かす物理サーバー（Droplet）を管理するシステム。各サーバーとの「リース契約」をDynamoDBで管理。</p>
+                            </div>
+                            <div class="tech-detail">
+                                <h4>💥 何が起きたか</h4>
+                                <p>DynamoDB停止中にリースが大量失効。復旧後、全サーバーが一斉にリース再取得を試み、処理が追いつかず「輻輳崩壊」に。新規EC2起動が「Insufficient Capacity」エラーに。</p>
+                            </div>
+                            <div class="tech-detail">
+                                <h4>🌐 Network Managerも連鎖</h4>
+                                <p>DWFM復旧後、遅延していたネットワーク設定が殺到。新規インスタンスがネットワークに接続できない状態が続いた。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card">
+                        <div class="tech-card-header nlb">
+                            <h3 id="⚖️-第3幕-NLBのヘルスチェック連鎖障害">⚖️ 第3幕：NLBのヘルスチェック連鎖障害</h3>
+                        </div>
+                        <div class="tech-card-body">
+                            <div class="tech-detail">
+                                <h4>🏥 ヘルスチェックとは</h4>
+                                <p>「このサーバーは元気ですか？」を定期的に確認するシステム。異常があればサービスから除外する。</p>
+                            </div>
+                            <div class="tech-detail">
+                                <h4>💥 何が起きたか</h4>
+                                <p>ネットワーク未完了のEC2を「正常」と誤認してサービスに投入。その後のチェックで「異常」と判定。正常↔異常を繰り返す「フラッピング」状態に。</p>
+                            </div>
+                            <div class="tech-detail">
+                                <h4>⚡ 結果</h4>
+                                <p>ヘルスチェックシステム自体が過負荷に。自動フェイルオーバーが誤作動し、本来正常なキャパシティまで除外されてしまった。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- タイムライン -->
+            <section class="timeline-section fade-in">
+                <h2 id="⏱️-障害タイムライン日本時間" class="section-title">⏱️ 障害タイムライン（日本時間）</h2>
+                
+                <div class="timeline">
+                    <div class="timeline-item critical">
+                        <span class="timeline-time">10月20日 15:48</span>
+                        <div class="timeline-title">💥 DNS競合状態発生</div>
+                        <div class="timeline-desc">DynamoDBのリージョンエンドポイントからIPアドレスが消失。全接続が失敗し始める。</div>
+                    </div>
+                    
+                    <div class="timeline-item critical">
+                        <span class="timeline-time">10月20日 15:53頃</span>
+                        <div class="timeline-title">🎮 外部サービスへの影響開始</div>
+                        <div class="timeline-desc">Nintendo Switchのネットワーク障害として最初に検知。キャッシュ切れと共に影響が顕在化。</div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <span class="timeline-time">10月20日 16:38</span>
+                        <div class="timeline-title">🔍 原因特定</div>
+                        <div class="timeline-desc">エンジニアがDynamoDBのDNS状態が障害の原因であることを特定。</div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <span class="timeline-time">10月20日 17:15</span>
+                        <div class="timeline-title">🔧 一時緩和策</div>
+                        <div class="timeline-desc">一部の内部サービスがDynamoDBに接続可能に。重要な内部ツールが復旧し始める。</div>
+                    </div>
+                    
+                    <div class="timeline-item recovery">
+                        <span class="timeline-time">10月20日 18:25</span>
+                        <div class="timeline-title">✅ DNS情報復元</div>
+                        <div class="timeline-desc">すべてのDNS情報が復元。DynamoDB自体は復旧へ。</div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <span class="timeline-time">10月20日 18:25〜21:28</span>
+                        <div class="timeline-title">🖥️ EC2復旧作業</div>
+                        <div class="timeline-desc">DWFMの輻輳崩壊に対応。ホストの選択的再起動などで段階的に復旧。</div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <span class="timeline-time">10月21日 01:36</span>
+                        <div class="timeline-title">⚖️ NLB緩和策</div>
+                        <div class="timeline-desc">NLBの自動ヘルスチェックフェイルオーバーを一時無効化。正常なキャパシティをサービスに復帰。</div>
+                    </div>
+                    
+                    <div class="timeline-item recovery">
+                        <span class="timeline-time">10月21日 05:50</span>
+                        <div class="timeline-title">✅ EC2完全復旧</div>
+                        <div class="timeline-desc">すべてのEC2 APIと新規インスタンス起動が正常に動作。</div>
+                    </div>
+                    
+                    <div class="timeline-item recovery">
+                        <span class="timeline-time">10月21日 06:20</span>
+                        <div class="timeline-title">✅ 主要サービス完全復旧</div>
+                        <div class="timeline-desc">約14時間半に及ぶ障害対応が完了。ECS、EKS、Fargateも復旧。</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 影響範囲 -->
+            <section class="impact-section fade-in">
+                <h2 id="影響を受けた主なサービス" class="section-title">🌍 影響を受けた主なサービス</h2>
+                
+                <div class="impact-grid">
+                    <div class="impact-card">
+                        <div class="impact-icon">🎮</div>
+                        <div class="impact-category">ゲーム</div>
+                        <div class="impact-services">Fortnite, Roblox, Pokémon GO, エルデンリング, FGO</div>
+                    </div>
+                    <div class="impact-card">
+                        <div class="impact-icon">📱</div>
+                        <div class="impact-category">SNS</div>
+                        <div class="impact-services">Snapchat, WhatsApp</div>
+                    </div>
+                    <div class="impact-card">
+                        <div class="impact-icon">💰</div>
+                        <div class="impact-category">金融</div>
+                        <div class="impact-services">Coinbase, Robinhood, Lloyds Bank</div>
+                    </div>
+                    <div class="impact-card">
+                        <div class="impact-icon">🎬</div>
+                        <div class="impact-category">Amazon</div>
+                        <div class="impact-services">Amazon.com, Alexa, Prime Video, Amazon Music</div>
+                    </div>
+                    <div class="impact-card">
+                        <div class="impact-icon">🎮</div>
+                        <div class="impact-category">Nintendo</div>
+                        <div class="impact-services">Nintendo Switch Online</div>
+                    </div>
+                    <div class="impact-card">
+                        <div class="impact-icon">📞</div>
+                        <div class="impact-category">コミュニケーション</div>
+                        <div class="impact-services">Zoom, Amazon Connect</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 教訓 -->
+            <section class="lessons-section fade-in">
+                <h2 id="この障害から学ぶ教訓">📚 この障害から学ぶ教訓</h2>
+                
+                <div class="lesson-cards">
+                    <div class="lesson-card">
+                        <div class="lesson-icon">🏗️</div>
+                        <h3 id="技術的負債の怖さ">技術的負債の怖さ</h3>
+                        <p>US-EAST-1への依存は、AWSの初期設計から続く「技術的負債」。後発のAzureやGCPがより分散化されたアーキテクチャを採用しているのとは対照的です。</p>
+                    </div>
+                    <div class="lesson-card">
+                        <div class="lesson-icon">🤖</div>
+                        <h3 id="自動化の落とし穴">自動化の落とし穴</h3>
+                        <p>可用性向上のための「複雑な自動化」が、予期しない競合状態を生み、システムを破壊する「クランブルポイント」になりうる。</p>
+                    </div>
+                    <div class="lesson-card">
+                        <div class="lesson-icon">🔗</div>
+                        <h3 id="密結合のリスク">密結合のリスク</h3>
+                        <p>内部サービス間の依存関係が複雑すぎると、一箇所の障害が連鎖的に全体に波及する。疎結合の設計が重要。</p>
+                    </div>
+                    <div class="lesson-card">
+                        <div class="lesson-icon">🧠</div>
+                        <h3 id="組織知の重要性">組織知の重要性</h3>
+                        <p>The Registerは、検知から原因特定までの遅れを「シニアエンジニアの離職による組織知の喪失」が一因と指摘。暗黙知の形式知化が不可欠。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- AWSの対策 -->
+            <section class="countermeasures fade-in">
+                <h2 id="️-AWSが発表した再発防止策" class="section-title">🛡️ AWSが発表した再発防止策</h2>
+                
+                <div class="countermeasure-grid">
+                    <div class="countermeasure-card">
+                        <div class="countermeasure-header">
+                            <span>📋</span>
+                            <h3 id="DynamoDB-DNS管理">DynamoDB DNS管理</h3>
+                        </div>
+                        <div class="countermeasure-body">
+                            <div class="countermeasure-item">
+                                <span class="countermeasure-check">✓</span>
+                                <div class="countermeasure-text">
+                                    <h4>自動化の一時停止</h4>
+                                    <p>DNS PlannerとDNS Enactorの自動化を世界中で無効化</p>
+                                </div>
+                            </div>
+                            <div class="countermeasure-item">
+                                <span class="countermeasure-check">✓</span>
+                                <div class="countermeasure-text">
+                                    <h4>競合状態の修正</h4>
+                                    <p>レースコンディションのシナリオを修正し、追加の保護措置を導入</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="countermeasure-card">
+                        <div class="countermeasure-header">
+                            <span>⚖️</span>
+                            <h3 id="NLBNetwork-Load-Balancer">NLB（Network Load Balancer）</h3>
+                        </div>
+                        <div class="countermeasure-body">
+                            <div class="countermeasure-item">
+                                <span class="countermeasure-check">✓</span>
+                                <div class="countermeasure-text">
+                                    <h4>速度制御メカニズム追加</h4>
+                                    <p>ヘルスチェック失敗時のAZフェイルオーバーで、単一NLBが除外できるキャパシティを制限</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="countermeasure-card">
+                        <div class="countermeasure-header">
+                            <span>🖥️</span>
+                            <h3 id="Amazon-EC2">Amazon EC2</h3>
+                        </div>
+                        <div class="countermeasure-body">
+                            <div class="countermeasure-item">
+                                <span class="countermeasure-check">✓</span>
+                                <div class="countermeasure-text">
+                                    <h4>テストスイートの強化</h4>
+                                    <p>DWFMリカバリーワークフローを検証する追加テストを構築</p>
+                                </div>
+                            </div>
+                            <div class="countermeasure-item">
+                                <span class="countermeasure-check">✓</span>
+                                <div class="countermeasure-text">
+                                    <h4>スロットリング改善</h4>
+                                    <p>待機キューサイズに基づく受信作業の制限で、高負荷時のサービス保護を強化</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- FAQ -->
+            <section class="faq-section fade-in">
+                <h2 id="❓-よくある質問" class="section-title">❓ よくある質問</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">なぜ東京リージョン（ap-northeast-1）を使っていても影響を受けたの？</div>
+                    <div class="faq-answer">IAM（認証）やRoute 53（DNS）などのグローバルサービスは、US-EAST-1を「ホームリージョン」として参照しています。そのため、US-EAST-1で障害が起きると、他のリージョンでもこれらのサービスが使えなくなることがあります。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">「レースコンディション」って何？</div>
+                    <div class="faq-answer">複数のプロセスが同じリソースに同時にアクセスする際、実行順序によって予期しない結果が生じる状態です。今回は2つのDNS管理システムが「競争」した結果、本来消すべきでないデータを消してしまいました。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">Multi-AZ構成にしていれば防げたの？</div>
+                    <div class="faq-answer">残念ながら、今回の障害はリージョン全体のコントロールプレーン（管理システム）に影響したため、同一リージョン内でのMulti-AZ構成だけでは防げませんでした。真の耐障害性にはマルチリージョン、またはマルチクラウド構成が必要です。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">DynamoDBのグローバルテーブルを使っていた場合は？</div>
+                    <div class="faq-answer">他のリージョンのレプリカテーブルへの接続とリクエストは正常に行えました。ただし、US-EAST-1との間でレプリケーション遅延が発生しました。完全復旧後に同期が完了しています。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">自分のサービスでできる対策は？</div>
+                    <div class="faq-answer">①マルチリージョン構成の検討 ②適切なタイムアウトとリトライ設定（エクスポネンシャルバックオフ） ③クリティカルパスからの単一リージョン依存の排除 ④障害発生時のフォールバック機能の実装 などが有効です。</div>
+                </div>
+            </section>
+            
+            <!-- まとめ -->
+            <section class="summary-section fade-in">
+                <h2 id="まとめ">📝 まとめ</h2>
+                <div class="summary-text">
+                    2025年10月のAWS大規模障害は、クラウドの利便性の裏に潜む構造的リスクを改めて示しました。
+                    US-EAST-1という「本社ビル」への依存、DNSの「住所録」消失、そして内部サービスの密結合による連鎖崩壊。
+                    AWSは対策を講じていますが、私たち利用者側も、マルチリージョンやマルチクラウドといった
+                    より回復力の高いアーキテクチャの検討が重要な課題となっています。
+                </div>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">約14時間</div>
+                        <div class="stat-label">障害継続時間</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">20+</div>
+                        <div class="stat-label">影響を受けたAWSサービス</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">数百万</div>
+                        <div class="stat-label">影響を受けたユーザー</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- フッター -->
+        <footer class="footer">
+            <div class="footer-links">
+                <a href="https://aws.amazon.com/jp/message/101925/" target="_blank">📄 AWS公式発表（日本語）</a>
+                <a href="https://zenn.dev/gorn/articles/1ce5cc1b5278f4" target="_blank">📝 Zenn分析記事①</a>
+                <a href="https://zenn.dev/gorn/articles/d14dcb953cd70e" target="_blank">📝 Zenn分析記事②</a>
+            </div>
+            <div class="footer-note">
+                本資料は公開情報を基に作成した学習目的のインフォグラフィックであり、AWSの公式見解ではありません。<br>
+                作成日: 2025年1月 | AWS Advanced Networking Study Resources
+            </div>
+        </footer>
+    <!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="ec2-managedinstance-applications-required-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">42</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">42</span>
+    </div>
+    <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

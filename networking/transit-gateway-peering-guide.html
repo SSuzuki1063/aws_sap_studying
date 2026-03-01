@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+    <style>
+        :root {
+            --color-aws-dark: #232F3E;
+            --color-aws-orange: #FF9900;
+            --color-text-primary: #374151;
+            --color-text-secondary: #6B7280;
+            --color-bg-light: #F9FAFB;
+            --color-bg-white: #FFFFFF;
+            --color-success: #10B981;
+            --color-warning: #F59E0B;
+            --color-error: #EF4444;
+            --color-info: #3B82F6;
+            --color-category-networking: #74b9ff;
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
+            --radius-lg: 15px;
+            --radius-xl: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, var(--color-aws-dark) 0%, #37475A 100%);
+            border-radius: var(--radius-xl);
+            padding: 40px;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            color: var(--color-aws-orange);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--color-aws-orange);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-top: 15px;
+        }
+
+        /* 結論ファーストセクション */
+        .conclusion-first {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .conclusion-first h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .conclusion-box {
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .conclusion-box p {
+            font-size: 1.15em;
+            margin-bottom: 15px;
+        }
+
+        .conclusion-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .conclusion-box li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .conclusion-box li::before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+
+        /* たとえ話セクション */
+        .analogy-section {
+            background: var(--color-bg-white);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .analogy-section h2 {
+            color: var(--color-aws-dark);
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 空港ネットワーク図解 */
+        .airport-diagram {
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin: 25px 0;
+        }
+
+        .airport-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .airport-hub {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 3px solid var(--color-category-networking);
+        }
+
+        .airport-hub.main {
+            border-color: var(--color-aws-orange);
+        }
+
+        .airport-hub .icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .airport-hub h3 {
+            color: var(--color-aws-dark);
+            margin-bottom: 8px;
+        }
+
+        .airport-hub .aws-name {
+            color: var(--color-aws-orange);
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .connection-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--color-info);
+        }
+
+        .connection-arrow .arrow {
+            font-size: 2.5em;
+            animation: pulse 2s infinite;
+        }
+
+        .connection-arrow .label {
+            font-size: 0.8em;
+            color: var(--color-text-secondary);
+            text-align: center;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 10px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ターミナル（VPC）の図 */
+        .terminals-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 25px;
+            gap: 15px;
+        }
+
+        .terminal {
+            background: #fef3c7;
+            border-radius: var(--radius-lg);
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .terminal .icon {
+            font-size: 1.8em;
+        }
+
+        .terminal .name {
+            font-size: 0.8em;
+            color: var(--color-text-secondary);
+            margin-top: 5px;
+        }
+
+        /* 対応表 */
+        .mapping-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+
+        .mapping-table th,
+        .mapping-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .mapping-table th {
+            background: var(--color-aws-dark);
+            color: white;
+        }
+
+        .mapping-table th:first-child {
+            border-radius: var(--radius-lg) 0 0 0;
+        }
+
+        .mapping-table th:last-child {
+            border-radius: 0 var(--radius-lg) 0 0;
+        }
+
+        .mapping-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .mapping-table .emoji {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        /* シナリオセクション */
+        .scenario-section {
+            background: var(--color-bg-white);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .scenario-section h2 {
+            color: var(--color-aws-dark);
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 問題シナリオ */
+        .problem-scenario {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--color-warning);
+        }
+
+        .problem-scenario h3 {
+            color: var(--color-aws-dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* アーキテクチャ図 */
+        .architecture-diagram {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin: 25px 0;
+            color: white;
+        }
+
+        .arch-title {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.2em;
+        }
+
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 1fr 80px 1fr 80px 1fr;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .arch-box {
+            background: rgba(255,255,255,0.15);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .arch-box.onprem {
+            border: 2px solid #f59e0b;
+        }
+
+        .arch-box.tgw {
+            border: 2px solid #3b82f6;
+        }
+
+        .arch-box.vpc {
+            border: 2px solid #10b981;
+        }
+
+        .arch-box .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .arch-box h4 {
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .arch-box .region {
+            font-size: 0.75em;
+            opacity: 0.8;
+        }
+
+        .arch-arrow {
+            text-align: center;
+            font-size: 1.8em;
+            color: var(--color-aws-orange);
+        }
+
+        /* データフロー */
+        .data-flow {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .flow-path {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .flow-step {
+            background: white;
+            border-radius: 10px;
+            padding: 10px 15px;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .flow-step .number {
+            background: var(--color-info);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+
+        .flow-arrow {
+            color: var(--color-success);
+            font-size: 1.5em;
+        }
+
+        /* 手順セクション */
+        .steps-section {
+            background: var(--color-bg-white);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .steps-section h2 {
+            color: var(--color-aws-dark);
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .step-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            border-left: 5px solid var(--color-info);
+            position: relative;
+        }
+
+        .step-card .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--color-info);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .step-card h3 {
+            color: var(--color-aws-dark);
+            margin: 10px 0 15px 0;
+            font-size: 1.1em;
+        }
+
+        .step-card p {
+            color: var(--color-text-secondary);
+            font-size: 0.95em;
+        }
+
+        .step-card .analogy {
+            background: rgba(255, 153, 0, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 0.85em;
+            color: var(--color-aws-dark);
+        }
+
+        .step-card .analogy::before {
+            content: "✈️ たとえると：";
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* 比較表 */
+        .comparison-section {
+            background: var(--color-bg-white);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .comparison-section h2 {
+            color: var(--color-aws-dark);
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .comparison-card {
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .comparison-card.good {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid var(--color-success);
+        }
+
+        .comparison-card.bad {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 2px solid var(--color-error);
+        }
+
+        .comparison-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .comparison-card.good h3 {
+            color: #047857;
+        }
+
+        .comparison-card.bad h3 {
+            color: #b91c1c;
+        }
+
+        .comparison-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .comparison-card li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 0.95em;
+        }
+
+        .comparison-card.good li::before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+
+        .comparison-card.bad li::before {
+            content: "❌";
+            position: absolute;
+            left: 0;
+        }
+
+        /* 重要ポイント */
+        .key-points {
+            background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .key-points h2 {
+            color: var(--color-aws-dark);
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .key-points-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .key-point {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .key-point .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .key-point h3, .key-point h4 {
+            color: var(--color-aws-dark);
+            margin-bottom: 8px;
+        }
+
+        .key-point p {
+            color: var(--color-text-secondary);
+            font-size: 0.9em;
+        }
+
+        /* FAQ セクション */
+        .faq-section {
+            background: var(--color-bg-white);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .faq-section h2 {
+            color: var(--color-aws-dark);
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .faq-item {
+            background: var(--color-bg-light);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .faq-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .faq-item h3, .faq-item h4 {
+            color: var(--color-info);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .faq-item p {
+            color: var(--color-text-primary);
+            font-size: 0.95em;
+        }
+
+        /* 試験対策ボックス */
+        .exam-tip {
+            background: linear-gradient(135deg, var(--color-aws-dark) 0%, #37475A 100%);
+            border-radius: var(--radius-xl);
+            padding: 35px;
+            margin-bottom: 30px;
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .exam-tip h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--color-aws-orange);
+        }
+
+        .exam-tip-content {
+            background: rgba(255,255,255,0.1);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .exam-tip-content p {
+            margin-bottom: 15px;
+        }
+
+        .exam-tip-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .exam-tip-content li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .exam-tip-content li::before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6em;
+            }
+
+            .airport-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .connection-arrow {
+                transform: rotate(90deg);
+            }
+
+            .arch-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .arch-arrow {
+                transform: rotate(90deg);
+            }
+
+            .flow-path {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }
+
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論ファースト-3行でわかるTGWピアリング">🎯 結論ファースト：3行でわかるTGWピアリング</a></li>
+            <li class="toc-h2"><a href="#✈️-空港ネットワークで理解しよう">✈️ 空港ネットワークで理解しよう</a></li>
+            <li class="toc-h3"><a href="#️-2つの国際ハブ空港を連絡通路でつなぐイメージ">🏙️ 2つの国際ハブ空港を連絡通路でつなぐイメージ</a></li>
+            <li class="toc-h3"><a href="#ロンドン-ヒースロー空港">ロンドン・ヒースロー空港</a></li>
+            <li class="toc-h3"><a href="#フランクフルト空港">フランクフルト空港</a></li>
+            <li class="toc-h2"><a href="#試験問題のシナリオを図解">📋 試験問題のシナリオを図解</a></li>
+            <li class="toc-h3"><a href="#状況設定">🏢 状況設定</a></li>
+            <li class="toc-h2"><a href="#正解の実装手順5ステップ">🔧 正解の実装手順（5ステップ）</a></li>
+            <li class="toc-h3"><a href="#eu-central-1にTGW作成">eu-central-1にTGW作成</a></li>
+            <li class="toc-h3"><a href="#ピアリングリクエスト送信">ピアリングリクエスト送信</a></li>
+            <li class="toc-h3"><a href="#ピアリングリクエスト承諾">ピアリングリクエスト承諾</a></li>
+            <li class="toc-h3"><a href="#eu-central-1のルート追加">eu-central-1のルート追加</a></li>
+            <li class="toc-h3"><a href="#eu-west-2のルート追加">eu-west-2のルート追加</a></li>
+            <li class="toc-h2"><a href="#⚖️-なぜTGWピアリングが正解なのか？">⚖️ なぜTGWピアリングが正解なのか？</a></li>
+            <li class="toc-h3"><a href="#✅-TGWピアリング正解">✅ TGWピアリング（正解）</a></li>
+            <li class="toc-h3"><a href="#❌-新規Direct-Connect不正解">❌ 新規Direct Connect（不正解）</a></li>
+            <li class="toc-h2"><a href="#覚えておくべき重要ポイント">🔑 覚えておくべき重要ポイント</a></li>
+            <li class="toc-h3"><a href="#リージョン固有">リージョン固有</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h3"><a href="#Q-VPCピアリングじゃダメなの？">🤔 Q: VPCピアリングじゃダメなの？</a></li>
+            <li class="toc-h2"><a href="#試験対策のキーワード">📚 試験対策のキーワード</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+    <div class="container">
+        
+    <!-- ブレッドクラムナビゲーション -->
+    <nav class="breadcrumb-nav">
+        <a href="../index.html" class="breadcrumb-home">🏠 ホーム</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">ネットワーキング</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">Transit Gateway & ゲートウェイ</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-current">Transit Gateway Peering Guide</span>
+    </nav>
+<!-- ヘッダー -->
+        <header class="header">
+            <h1>🌐 AWS Transit Gateway ピアリング</h1>
+            <p class="subtitle">〜 国際空港ネットワークで理解するリージョン間接続 〜</p>
+            <span class="badge">AWS Advanced Networking Specialty</span>
+        </header>
+
+        <!-- 結論ファースト -->
+        <section class="conclusion-first">
+            <h2 id="結論ファースト-3行でわかるTGWピアリング">🎯 結論ファースト：3行でわかるTGWピアリング</h2>
+            <div class="conclusion-box">
+                <p><strong>Transit Gateway ピアリングとは、異なるAWSリージョンにある「交通ハブ」同士を直接つなげる機能です。</strong></p>
+                <ul>
+                    <li>リージョンをまたいだVPC間通信が、AWSのプライベートネットワーク経由で可能に</li>
+                    <li>既存のDirect Connect接続を変更せずに、新リージョンへの接続を拡張できる</li>
+                    <li>ルートテーブルに静的ルートを追加するだけで、トラフィックを制御可能</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- たとえ話セクション -->
+        <section class="analogy-section">
+            <h2 id="✈️-空港ネットワークで理解しよう">✈️ 空港ネットワークで理解しよう</h2>
+            <p>Transit Gatewayピアリングを「国際空港ネットワーク」にたとえて理解しましょう。</p>
+
+            <div class="airport-diagram">
+                <h3 id="️-2つの国際ハブ空港を連絡通路でつなぐイメージ" style="text-align: center; margin-bottom: 20px; color: #232F3E;">🏙️ 2つの国際ハブ空港を連絡通路でつなぐイメージ</h3>
+                
+                <div class="airport-grid">
+                    <div class="airport-hub main">
+                        <div class="icon">🏢</div>
+                        <h3 id="ロンドン-ヒースロー空港">ロンドン・ヒースロー空港</h3>
+                        <div class="aws-name">= eu-west-2 TGW</div>
+                        <div class="terminals-row">
+                            <div class="terminal">
+                                <div class="icon">🛫</div>
+                                <div class="name">ターミナル1<br>(VPC-A)</div>
+                            </div>
+                            <div class="terminal">
+                                <div class="icon">🛫</div>
+                                <div class="name">ターミナル2<br>(VPC-B)</div>
+                            </div>
+                            <div class="terminal">
+                                <div class="icon">🛫</div>
+                                <div class="name">ターミナル3<br>(VPC-C)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="connection-arrow">
+                        <div class="arrow">⟺</div>
+                        <div class="label">国際連絡通路<br>（TGWピアリング）</div>
+                    </div>
+
+                    <div class="airport-hub">
+                        <div class="icon">🏢</div>
+                        <h3 id="フランクフルト空港">フランクフルト空港</h3>
+                        <div class="aws-name">= eu-central-1 TGW</div>
+                        <div class="terminals-row">
+                            <div class="terminal">
+                                <div class="icon">🛫</div>
+                                <div class="name">ターミナル1<br>(VPC-D)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 対応表 -->
+            <table class="mapping-table">
+                <thead>
+                    <tr>
+                        <th>空港のたとえ 🛫</th>
+                        <th>AWSの実際 ☁️</th>
+                        <th>役割</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="emoji">🏢</span>国際ハブ空港</td>
+                        <td><strong>Transit Gateway</strong></td>
+                        <td>各リージョンの中央接続ポイント</td>
+                    </tr>
+                    <tr>
+                        <td><span class="emoji">🛫</span>各ターミナル</td>
+                        <td><strong>VPC</strong></td>
+                        <td>実際のリソースが存在する場所</td>
+                    </tr>
+                    <tr>
+                        <td><span class="emoji">🚇</span>空港間連絡通路</td>
+                        <td><strong>TGWピアリング</strong></td>
+                        <td>リージョン間を直接接続する経路</td>
+                    </tr>
+                    <tr>
+                        <td><span class="emoji">🛤️</span>電車の本社駅</td>
+                        <td><strong>オンプレミス + Direct Connect</strong></td>
+                        <td>社内ネットワーク（データセンター）</td>
+                    </tr>
+                    <tr>
+                        <td><span class="emoji">📋</span>案内板・フライト表示</td>
+                        <td><strong>ルートテーブル</strong></td>
+                        <td>どこ行きはどの経路を使うか指示</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- シナリオセクション -->
+        <section class="scenario-section">
+            <h2 id="試験問題のシナリオを図解">📋 試験問題のシナリオを図解</h2>
+            
+            <div class="problem-scenario">
+                <h3 id="状況設定">🏢 状況設定</h3>
+                <p>グローバル小売企業が以下の環境を持っています：</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>📍 オンプレミスデータセンター → Direct Connectでeu-west-2に接続済み</li>
+                    <li>📍 eu-west-2（ロンドン）→ 複数VPCがTransit Gatewayで接続済み</li>
+                    <li>📍 eu-central-1（フランクフルト）→ 新規に1つのVPCを作成（ユーザーに近い位置）</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>🎯 課題：</strong>eu-central-1の新VPCを、既存インフラに「最小限の変更」で接続したい</p>
+            </div>
+
+            <!-- アーキテクチャ図 -->
+            <div class="architecture-diagram">
+                <div class="arch-title">📐 解決後のアーキテクチャ</div>
+                <div class="arch-grid">
+                    <div class="arch-box onprem">
+                        <div class="icon">🏭</div>
+                        <h4>オンプレミス</h4>
+                        <div class="region">データセンター</div>
+                    </div>
+                    
+                    <div class="arch-arrow">→</div>
+                    
+                    <div class="arch-box tgw">
+                        <div class="icon">🔄</div>
+                        <h4>Transit Gateway</h4>
+                        <div class="region">eu-west-2（ロンドン）</div>
+                        <div style="font-size: 0.7em; margin-top: 8px; opacity: 0.8;">
+                            VPC-A / VPC-B / VPC-C<br>
+                            + Direct Connect接続
+                        </div>
+                    </div>
+                    
+                    <div class="arch-arrow">⟺</div>
+                    
+                    <div class="arch-box tgw" style="border-color: #10b981;">
+                        <div class="icon">🔄</div>
+                        <h4>Transit Gateway</h4>
+                        <div class="region">eu-central-1（フランク）</div>
+                        <div style="font-size: 0.7em; margin-top: 8px; opacity: 0.8;">
+                            VPC-D（新規）
+                        </div>
+                        <div style="font-size: 0.65em; margin-top: 5px; color: #10b981;">
+                            ⭐ 新規作成
+                        </div>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 20px; font-size: 0.9em; opacity: 0.9;">
+                    🔗 TGWピアリングにより、Direct Connectの変更なしで新リージョンに拡張
+                </p>
+            </div>
+
+            <!-- データフロー -->
+            <div class="data-flow">
+                <h4 style="text-align: center; margin-bottom: 15px; color: #232F3E;">📦 オンプレミス → eu-central-1 VPC へのデータフロー</h4>
+                <div class="flow-path">
+                    <div class="flow-step">
+                        <div class="number">1</div>
+                        <div>🏭<br>オンプレミス</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <div class="number">2</div>
+                        <div>📡<br>Direct Connect</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <div class="number">3</div>
+                        <div>🔄<br>eu-west-2 TGW</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <div class="number">4</div>
+                        <div>🔗<br>TGWピアリング</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <div class="number">5</div>
+                        <div>🔄<br>eu-central-1 TGW</div>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step">
+                        <div class="number">6</div>
+                        <div>🖥️<br>VPC-D</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 設定手順 -->
+        <section class="steps-section">
+            <h2 id="正解の実装手順5ステップ">🔧 正解の実装手順（5ステップ）</h2>
+            <div class="step-cards">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3 id="eu-central-1にTGW作成">eu-central-1にTGW作成</h3>
+                    <p>新リージョンに新しいTransit Gatewayを作成します。これが新しい「ハブ空港」になります。</p>
+                    <div class="analogy">フランクフルトに新しい国際空港を建設する</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3 id="ピアリングリクエスト送信">ピアリングリクエスト送信</h3>
+                    <p>eu-central-1のTGWから、eu-west-2のTGWへピアリングアタッチメントリクエストを作成します。</p>
+                    <div class="analogy">フランクフルト空港からヒースローへ「連絡通路を作りたい」と申請する</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3 id="ピアリングリクエスト承諾">ピアリングリクエスト承諾</h3>
+                    <p>eu-west-2側でピアリングリクエストを承諾します。これで接続が確立されます。</p>
+                    <div class="analogy">ヒースロー空港側が申請を承認して、連絡通路の建設が決定</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <h3 id="eu-central-1のルート追加">eu-central-1のルート追加</h3>
+                    <p>eu-central-1 TGWのルートテーブルに、eu-west-2方向へのスタティックルートを追加します。</p>
+                    <div class="analogy">フランクフルト空港の案内板に「ロンドン行きは連絡通路へ」と表示</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">5</div>
+                    <h3 id="eu-west-2のルート追加">eu-west-2のルート追加</h3>
+                    <p>eu-west-2 TGWのルートテーブルにも、eu-central-1方向へのスタティックルートを追加します。</p>
+                    <div class="analogy">ヒースロー空港の案内板に「フランクフルト行きは連絡通路へ」と表示</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 比較セクション -->
+        <section class="comparison-section">
+            <h2 id="⚖️-なぜTGWピアリングが正解なのか？">⚖️ なぜTGWピアリングが正解なのか？</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card good">
+                    <h3 id="✅-TGWピアリング正解">✅ TGWピアリング（正解）</h3>
+                    <ul>
+                        <li>Direct Connectへの変更が不要</li>
+                        <li>AWSバックボーン経由で安全・高速</li>
+                        <li>既存VPCの設定変更なし</li>
+                        <li>スケーラブルな設計</li>
+                        <li>コスト効率が良い</li>
+                    </ul>
+                </div>
+                <div class="comparison-card bad">
+                    <h3 id="❌-新規Direct-Connect不正解">❌ 新規Direct Connect（不正解）</h3>
+                    <ul>
+                        <li>追加コストが高い</li>
+                        <li>セットアップに時間がかかる</li>
+                        <li>要件の「変更を最小限に」に違反</li>
+                        <li>管理対象が増える</li>
+                        <li>過剰な構成</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 重要ポイント -->
+        <section class="key-points">
+            <h2 id="覚えておくべき重要ポイント">🔑 覚えておくべき重要ポイント</h2>
+            <div class="key-points-grid">
+                <div class="key-point">
+                    <div class="icon">🌍</div>
+                    <h3 id="リージョン固有">リージョン固有</h3>
+                    <p>Transit Gatewayはリージョンごとに作成が必要。異なるリージョン間はピアリングで接続。</p>
+                </div>
+                <div class="key-point">
+                    <div class="icon">📝</div>
+                    <h4>静的ルートが必須</h4>
+                    <p>TGWピアリングでは動的ルーティングは使えない。両側のルートテーブルに手動で追加。</p>
+                </div>
+                <div class="key-point">
+                    <div class="icon">🤝</div>
+                    <h4>承諾が必要</h4>
+                    <p>ピアリングはリクエスト＆承諾の2段階。異なるAWSアカウント間でも可能。</p>
+                </div>
+                <div class="key-point">
+                    <div class="icon">🔒</div>
+                    <h4>プライベート通信</h4>
+                    <p>インターネットを経由せず、AWSのプライベートバックボーンネットワークを使用。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="faq-section">
+            <h2 id="❓-よくある質問">❓ よくある質問</h2>
+            
+            <div class="faq-item">
+                <h3 id="Q-VPCピアリングじゃダメなの？">🤔 Q: VPCピアリングじゃダメなの？</h3>
+                <p>VPCピアリングはVPC間の1対1接続です。複数VPCがある場合、すべての組み合わせで個別にピアリングが必要になり、管理が複雑化します。Transit Gatewayは「ハブ」として一元管理でき、スケーラブルです。</p>
+            </div>
+            
+            <div class="faq-item">
+                <h4>🤔 Q: TGWピアリングの通信料金は？</h4>
+                <p>データ転送料金が発生します（リージョン間通信のため）。ただし、新規Direct Connect接続を作成するよりも大幅にコスト効率が良いです。</p>
+            </div>
+            
+            <div class="faq-item">
+                <h4>🤔 Q: 帯域幅の制限はある？</h4>
+                <p>TGWピアリング自体の帯域幅制限は最大50Gbpsです。通常の用途では十分な帯域を確保できます。</p>
+            </div>
+        </section>
+
+        <!-- 試験対策 -->
+        <section class="exam-tip">
+            <h2 id="試験対策のキーワード">📚 試験対策のキーワード</h2>
+            <div class="exam-tip-content">
+                <p>この問題のキーワードを見つけるコツ：</p>
+                <ul>
+                    <li><strong>「複数リージョン間の接続」</strong> → TGWピアリングを検討</li>
+                    <li><strong>「Direct Connectの変更を最小限に」</strong> → 既存インフラを活用する方法</li>
+                    <li><strong>「オンプレミス + 複数リージョン」</strong> → TGWを中心としたハブ構成</li>
+                    <li><strong>「静的ルート」</strong> → TGWピアリングではスタティックルートが必須</li>
+                </ul>
+                <p style="margin-top: 15px; padding: 10px; background: rgba(255,153,0,0.2); border-radius: 8px;">
+                    💡 <strong>覚え方：</strong>「空港同士をつなぐ連絡通路」をイメージ。案内板（ルートテーブル）で行き先を指示する！
+                </p>
+            </div>
+        </section>
+
+        <!-- フッター -->
+        <footer class="footer">
+            <p>AWS Transit Gateway Peering Guide | AWS Advanced Networking Specialty 学習資料</p>
+        </footer>
+    <!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="transit-gateway-deep-dive.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">25</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">26</span>
+    </div>
+    <a href="cloud-wan-attachment-policy-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

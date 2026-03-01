@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   Elastic Beanstalk Blue/Green デプロイメント
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  <!-- ページ固有CSSファイル -->
+  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/beanstalk_blue_green_infographic.css" rel="stylesheet"/>
+  
+  
+
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#Blue-Green-デプロイメント完全ガイド">Blue/Green デプロイメント完全ガイド</a></li>
+            <li class="toc-h3"><a href="#Blue-Green-デプロイメントとは？">💡 Blue/Green デプロイメントとは？</a></li>
+            <li class="toc-h3"><a href="#Blue-Green-デプロイメントの特徴">🎯 Blue/Green デプロイメントの特徴</a></li>
+            <li class="toc-h3"><a href="#実行手順AWS-Console">📋 実行手順（AWS Console）</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     セキュリティ・ガバナンス
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     その他
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Beanstalk Blue Green Infographic
+    </span>
+</nav>
+<div class="header">
+<h1>
+<span class="aws-logo">
+      AWS
+     </span>
+     Elastic Beanstalk
+    </h1>
+
+<h2 id="Blue-Green-デプロイメント完全ガイド">
+     Blue/Green デプロイメント完全ガイド
+    </h2>
+<p class="subtitle">
+     🍽️ レストランの厨房で学ぶ、安全なアプリケーション更新の仕組み
+    </p>
+</div>
+<div class="intro">
+<h3 id="Blue-Green-デプロイメントとは？">
+     💡 Blue/Green デプロイメントとは？
+    </h3>
+<p>
+     アプリケーションを更新する際に、
+     <span class="highlight">
+      ダウンタイムゼロ
+     </span>
+     で安全にデプロイできる手法です。
+    </p>
+<p>
+     まるで2つの厨房を持つレストランのように、片方で新しい料理を準備している間も、お客様へのサービスは止まりません！
+    </p>
+</div>
+<div class="step-container">
+<div class="step">
+<div class="step-header">
+<div class="step-number">
+       1
+      </div>
+<div class="step-title">
+       現在の環境（Blue環境）でサービス提供中
+      </div>
+</div>
+<div class="restaurant-diagram">
+<div class="kitchen">
+<div class="kitchen-icon">
+        👨‍🍳
+       </div>
+<h4>
+        メイン厨房（Blue）
+       </h4>
+<p>
+        現在のアプリv1.0が稼働中
+       </p>
+</div>
+<div class="arrow">
+       ➡️
+      </div>
+<div class="customer">
+<div class="kitchen-icon">
+        👥
+       </div>
+<h4>
+        お客様
+       </h4>
+<p>
+        サービス利用中
+       </p>
+</div>
+</div>
+<div class="aws-flow">
+<h4>
+       🔧 AWS環境
+      </h4>
+<div class="aws-environments">
+<div class="environment blue">
+<strong>
+         Blue環境
+        </strong>
+<br/>
+        本番サービス中
+        <br/>
+        アプリv1.0
+       </div>
+<div class="environment">
+<strong>
+         Green環境
+        </strong>
+<br/>
+        待機中
+        <br/>
+        （まだ未作成）
+       </div>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-header">
+<div class="step-number">
+       2
+      </div>
+<div class="step-title">
+       新しい環境（Green環境）を準備
+      </div>
+</div>
+<div class="restaurant-diagram">
+<div class="kitchen">
+<div class="kitchen-icon">
+        👨‍🍳
+       </div>
+<h4>
+        メイン厨房（Blue）
+       </h4>
+<p>
+        お客様対応継続中
+       </p>
+</div>
+<div class="kitchen green">
+<div class="kitchen-icon">
+        👩‍🍳
+       </div>
+<h4>
+        サブ厨房（Green）
+       </h4>
+<p>
+        新メニュー準備中
+       </p>
+</div>
+</div>
+<div class="aws-flow">
+<h4>
+       🔧 AWS環境
+      </h4>
+<div class="aws-environments">
+<div class="environment blue">
+<strong>
+         Blue環境
+        </strong>
+<br/>
+        本番サービス中
+        <br/>
+        アプリv1.0
+       </div>
+<div class="environment green">
+<strong>
+         Green環境
+        </strong>
+<br/>
+        デプロイ中
+        <br/>
+        アプリv2.0 🚀
+       </div>
+</div>
+<p>
+       💫 Elastic Beanstalkが自動的に新しい環境を作成し、新バージョンをデプロイ
+      </p>
+</div>
+</div>
+<div class="step">
+<div class="step-header">
+<div class="step-number">
+       3
+      </div>
+<div class="step-title">
+       テスト・検証フェーズ
+      </div>
+</div>
+<p>
+      Green環境では専用のテスト用URLが発行されるので、本番に影響を与えずに新バージョンをテストできます。
+     </p>
+<div class="aws-flow">
+<h4>
+       🧪 テスト段階
+      </h4>
+<div class="aws-environments">
+<div class="environment blue">
+<strong>
+         Blue環境
+        </strong>
+<br/>
+        production.com
+        <br/>
+        お客様利用中 ✅
+       </div>
+<div class="environment green">
+<strong>
+         Green環境
+        </strong>
+<br/>
+        test-abc123.com
+        <br/>
+        内部テスト中 🔍
+       </div>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-header">
+<div class="step-number">
+       4
+      </div>
+<div class="step-title">
+       🔄 URL切り替え（Swap Environment URLs）
+      </div>
+</div>
+<div class="restaurant-diagram">
+<div class="kitchen green">
+<div class="kitchen-icon">
+        👩‍🍳
+       </div>
+<h4>
+        新メイン厨房（Green）
+       </h4>
+<p>
+        新メニューでサービス開始！
+       </p>
+</div>
+<div class="arrow">
+       ➡️
+      </div>
+<div class="customer">
+<div class="kitchen-icon">
+        👥
+       </div>
+<h4>
+        お客様
+       </h4>
+<p>
+        新サービス利用中
+       </p>
+</div>
+</div>
+<div class="swap-animation">
+<button class="swap-button" onclick="animateSwap()">
+       ⚡ URL切り替え実行
+      </button>
+</div>
+<div class="aws-flow">
+<h4>
+       🔄 切り替え後
+      </h4>
+<div class="aws-environments">
+<div class="environment green">
+<strong>
+         Green環境
+        </strong>
+<br/>
+        production.com
+        <br/>
+        新本番サービス中 ✅
+       </div>
+<div class="environment blue">
+<strong>
+         Blue環境
+        </strong>
+<br/>
+        test-abc123.com
+        <br/>
+        旧版待機中 💤
+       </div>
+</div>
+<p>
+       ⚡
+       <strong>
+        数秒で切り替え完了！
+       </strong>
+       ユーザーには全く気づかれません
+      </p>
+</div>
+</div>
+</div>
+<div class="intro">
+<h3 id="Blue-Green-デプロイメントの特徴">
+     🎯 Blue/Green デプロイメントの特徴
+    </h3>
+<div class="benefits">
+<div class="benefit">
+<div class="benefit-icon icon-good">
+       ⚡
+      </div>
+<h4>
+       ダウンタイムゼロ
+      </h4>
+<p>
+       サービス停止なしで更新可能
+      </p>
+</div>
+<div class="benefit">
+<div class="benefit-icon icon-good">
+       🔄
+      </div>
+<h4>
+       即座にロールバック
+      </h4>
+<p>
+       問題発生時は瞬時に旧版に戻せる
+      </p>
+</div>
+<div class="benefit">
+<div class="benefit-icon icon-good">
+       🧪
+      </div>
+<h4>
+       本番同等環境でテスト
+      </h4>
+<p>
+       実際の本番環境と同じ構成でテスト
+      </p>
+</div>
+<div class="benefit">
+<div class="benefit-icon icon-bad">
+       💰
+      </div>
+<h4>
+       コスト増
+      </h4>
+<p>
+       2つの環境を一時的に稼働
+      </p>
+</div>
+<div class="benefit">
+<div class="benefit-icon icon-neutral">
+       ⏱️
+      </div>
+<h4>
+       切り替え時間
+      </h4>
+<p>
+       DNS変更により数分かかる場合も
+      </p>
+</div>
+<div class="benefit">
+<div class="benefit-icon icon-neutral">
+       🔧
+      </div>
+<h4>
+       設定管理
+      </h4>
+<p>
+       2つの環境の同期管理が必要
+      </p>
+</div>
+</div>
+</div>
+<div class="intro">
+<h3 id="実行手順AWS-Console">
+     📋 実行手順（AWS Console）
+    </h3>
+<ol style="margin-left: 20px; line-height: 1.8;">
+<li>
+<strong>
+       新環境作成：
+      </strong>
+      Elastic Beanstalk Console → "Create Environment"
+     </li>
+<li>
+<strong>
+       アプリケーションデプロイ：
+      </strong>
+      新しいバージョンをGreen環境にアップロード
+     </li>
+<li>
+<strong>
+       テスト実行：
+      </strong>
+      Green環境のURLで動作確認
+     </li>
+<li>
+<strong>
+       URL切り替え：
+      </strong>
+      Actions → "Swap Environment URLs"
+     </li>
+<li>
+<strong>
+       確認・クリーンアップ：
+      </strong>
+      旧環境（Blue）を必要に応じて削除
+     </li>
+</ol>
+</div>
+</div>
+<script>
+   function animateSwap() {
+            const environments = document.querySelectorAll('.environment');
+            environments.forEach(env => {
+                env.style.transform = 'rotateY(180deg)';
+                setTimeout(() => {
+                    env.style.transform = 'rotateY(0deg)';
+                }, 500);
+            });
+            
+            setTimeout(() => {
+                alert('🎉 URL切り替え完了！\n\nGreen環境が新しい本番環境になりました。\nお客様は何も気づかずに新しいサービスを利用できます。');
+            }, 1000);
+        }
+
+        // ページロード時のアニメーション
+        window.addEventListener('load', () => {
+            const steps = document.querySelectorAll('.step');
+            steps.forEach((step, index) => {
+                step.style.opacity = '0';
+                step.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    step.style.transition = 'all 0.6s ease';
+                    step.style.opacity = '1';
+                    step.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+  </script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+    Created by
+    <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+     SSuzuki1063
+    </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+    AWS SAP Learning Resources
+   </p>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

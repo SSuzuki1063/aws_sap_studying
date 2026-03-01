@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   AWS EIP &amp; NATゲートウェイ 超初心者ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/aws_eip_nat_infographic.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#そもそも何の問題を解決するの？">🤔 そもそも何の問題を解決するの？</a></li>
+            <li class="toc-h3"><a href="#会社のセキュリティと同じです">🏢 会社のセキュリティと同じです</a></li>
+            <li class="toc-h3"><a href="#困った状況">困った状況</a></li>
+            <li class="toc-h3"><a href="#解決後">解決後</a></li>
+            <li class="toc-h2"><a href="#️-全体の仕組み完成形">🗺️ 全体の仕組み（完成形）</a></li>
+            <li class="toc-h3"><a href="#車での通勤ルートと同じです">🚗 車での通勤ルートと同じです</a></li>
+            <li class="toc-h2"><a href="#実際の設定方法超簡単4ステップ">📋 実際の設定方法（超簡単4ステップ）</a></li>
+            <li class="toc-h3"><a href="#固定ナンバープレートをもらうEIP取得">🎯 固定ナンバープレートをもらう（EIP取得）</a></li>
+            <li class="toc-h3"><a href="#通り道の橋を作るNATゲートウェイ作成">🌉 通り道の橋を作る（NATゲートウェイ作成）</a></li>
+            <li class="toc-h3"><a href="#️-道案内の看板を設置ルートテーブル設定">🗺️ 道案内の看板を設置（ルートテーブル設定）</a></li>
+            <li class="toc-h3"><a href="#門番にナンバーを教えるファイアウォール設定">💂 門番にナンバーを教える（ファイアウォール設定）</a></li>
+            <li class="toc-h2"><a href="#重要なポイント失敗しないコツ">🎯 重要なポイント（失敗しないコツ）</a></li>
+            <li class="toc-h3"><a href="#一番よくある間違い">💡 一番よくある間違い</a></li>
+            <li class="toc-h3"><a href="#設定前に確認すること">設定前に確認すること</a></li>
+            <li class="toc-h3"><a href="#完了！おめでとうございます！">完了！おめでとうございます！</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     ネットワーキング
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     VPC &amp; ネットワーク基礎
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Aws Eip Nat Infographic
+    </span>
+</nav>
+<div class="header">
+<h1>
+     🌐 AWS初心者でも分かる！
+    </h1>
+<p>
+     固定IPでファイアウォールを通り抜ける方法
+    </p>
+<div class="simple-explanation">
+<strong>
+      簡単に言うと：
+     </strong>
+     あなたのアプリが外部のサービスに接続する時に、毎回同じIPアドレスを使って身元を証明する仕組みです
+    </div>
+</div>
+<div class="section">
+<h2 id="そもそも何の問題を解決するの？">
+     🤔 そもそも何の問題を解決するの？
+    </h2>
+<div class="analogy-box">
+<h3 id="会社のセキュリティと同じです">
+      🏢 会社のセキュリティと同じです
+     </h3>
+<p>
+      会社のオフィスに入る時、受付で身分証明書を見せますよね？
+      <br/>
+      インターネットの世界でも同じことが起きています。
+      <br/>
+<strong>
+       「この人は信頼できる人ですか？」
+      </strong>
+      という確認が必要なんです。
+     </p>
+</div>
+<div class="problem-solution">
+<div class="problem">
+<span class="big-icon">
+       😞
+      </span>
+<h3 id="困った状況">
+       困った状況
+      </h3>
+<p>
+       あなたのアプリが外部サービスに接続しようとしても、「知らない人お断り！」と言われてしまう
+      </p>
+</div>
+<div class="solution">
+<span class="big-icon">
+       😊
+      </span>
+<h3 id="解決後">
+       解決後
+      </h3>
+<p>
+       「あ、○○さんですね！いつもの方ですね！」と認識してもらえて、スムーズに接続できる
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="️-全体の仕組み完成形">
+     🗺️ 全体の仕組み（完成形）
+    </h2>
+<div class="analogy-box">
+<h3 id="車での通勤ルートと同じです">
+      🚗 車での通勤ルートと同じです
+     </h3>
+<p>
+      家（あなたのアプリ）から会社（外部サービス）に行く時の経路です。
+      <br/>
+      毎日同じナンバープレートの車で、同じ道を通って、同じ門番に挨拶して入場します。
+     </p>
+</div>
+<div class="architecture-flow">
+<div class="flow-component you">
+<span class="flow-icon">
+       🏠
+      </span>
+<div class="flow-title">
+       あなたのアプリ
+      </div>
+<div class="flow-desc">
+       家にいる状態
+       <br/>
+       （プライベート環境）
+      </div>
+</div>
+<span class="big-arrow">
+      →
+     </span>
+<div class="flow-component nat">
+<span class="flow-icon">
+       🌉
+      </span>
+<div class="flow-title">
+       NAT橋
+      </div>
+<div class="flow-desc">
+       通り道
+       <br/>
+       （身元を統一）
+      </div>
+</div>
+<span class="big-arrow">
+      →
+     </span>
+<div class="flow-component eip">
+<span class="flow-icon">
+       🚗
+      </span>
+<div class="flow-title">
+       固定ナンバー
+      </div>
+<div class="flow-desc">
+       いつものIP
+       <br/>
+       （身分証明）
+      </div>
+</div>
+<span class="big-arrow">
+      →
+     </span>
+<div class="flow-component guard">
+<span class="flow-icon">
+       💂
+      </span>
+<div class="flow-title">
+       門番
+      </div>
+<div class="flow-desc">
+       身元確認
+       <br/>
+       （ファイアウォール）
+      </div>
+</div>
+<span class="big-arrow">
+      →
+     </span>
+<div class="flow-component api">
+<span class="flow-icon">
+       🏢
+      </span>
+<div class="flow-title">
+       外部サービス
+      </div>
+<div class="flow-desc">
+       目的地
+       <br/>
+       （API接続成功）
+      </div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実際の設定方法超簡単4ステップ">
+     📋 実際の設定方法（超簡単4ステップ）
+    </h2>
+<div class="step-by-step">
+<div class="easy-step">
+<h3 id="固定ナンバープレートをもらうEIP取得">
+       🎯 固定ナンバープレートをもらう（EIP取得）
+      </h3>
+<div class="step-visual">
+<div class="step-explanation">
+<p style="font-size: 1.2em; margin-bottom: 15px;">
+<strong>
+          車のナンバープレートを取得するのと同じです。
+         </strong>
+<br/>
+         一度取得すると、ずっと同じ番号を使えます。
+        </p>
+<div class="action-list">
+<h4>
+          やること：
+         </h4>
+<ol>
+<li>
+           AWSコンソールにログイン
+          </li>
+<li>
+           「EC2」をクリック
+          </li>
+<li>
+           左メニューの「Elastic IP」をクリック
+          </li>
+<li>
+           「Elastic IPアドレスを割り当て」ボタンをクリック
+          </li>
+<li>
+           「割り当て」ボタンをクリック
+          </li>
+</ol>
+</div>
+</div>
+<div class="step-image">
+<span class="big-icon">
+         🎯
+        </span>
+<p>
+<strong>
+          完了！
+         </strong>
+<br/>
+         例：203.0.113.1
+         <br/>
+         というIPが手に入る
+        </p>
+</div>
+</div>
+</div>
+<div class="easy-step">
+<h3 id="通り道の橋を作るNATゲートウェイ作成">
+       🌉 通り道の橋を作る（NATゲートウェイ作成）
+      </h3>
+<div class="step-visual">
+<div class="step-explanation">
+<p style="font-size: 1.2em; margin-bottom: 15px;">
+<strong>
+          家と会社を繋ぐ橋を作ります。
+         </strong>
+<br/>
+         この橋を通る時に、さっきのナンバープレートを付けてもらいます。
+        </p>
+<div class="action-list">
+<h4>
+          やること：
+         </h4>
+<ol>
+<li>
+           AWSコンソールで「VPC」をクリック
+          </li>
+<li>
+           左メニューの「NATゲートウェイ」をクリック
+          </li>
+<li>
+           「NATゲートウェイを作成」ボタンをクリック
+          </li>
+<li>
+           パブリックサブネットを選択
+          </li>
+<li>
+           さっき作った固定IPを選択
+          </li>
+<li>
+           「NATゲートウェイを作成」をクリック
+          </li>
+</ol>
+</div>
+</div>
+<div class="step-image">
+<span class="big-icon">
+         🌉
+        </span>
+<p>
+<strong>
+          橋完成！
+         </strong>
+<br/>
+         通るたびに
+         <br/>
+         同じナンバーに変更
+        </p>
+</div>
+</div>
+</div>
+<div class="easy-step">
+<h3 id="️-道案内の看板を設置ルートテーブル設定">
+       🗺️ 道案内の看板を設置（ルートテーブル設定）
+      </h3>
+<div class="step-visual">
+<div class="step-explanation">
+<p style="font-size: 1.2em; margin-bottom: 15px;">
+<strong>
+          「外に出る時はこの橋を使ってね」という看板を立てます。
+         </strong>
+<br/>
+         これがないと、どの道を通ればいいか分からなくなります。
+        </p>
+<div class="action-list">
+<h4>
+          やること：
+         </h4>
+<ol>
+<li>
+           VPCコンソールで「ルートテーブル」をクリック
+          </li>
+<li>
+           プライベートサブネット用のテーブルを選択
+          </li>
+<li>
+           「ルート」タブをクリック
+          </li>
+<li>
+           「ルートを編集」をクリック
+          </li>
+<li>
+           「ルートを追加」で「0.0.0.0/0」→「NATゲートウェイ」を設定
+          </li>
+<li>
+           「変更を保存」をクリック
+          </li>
+</ol>
+</div>
+</div>
+<div class="step-image">
+<span class="big-icon">
+         🗺️
+        </span>
+<p>
+<strong>
+          道案内完了！
+         </strong>
+<br/>
+         外向きの通信は
+         <br/>
+         全部NAT橋経由
+        </p>
+</div>
+</div>
+</div>
+<div class="easy-step">
+<h3 id="門番にナンバーを教えるファイアウォール設定">
+       💂 門番にナンバーを教える（ファイアウォール設定）
+      </h3>
+<div class="step-visual">
+<div class="step-explanation">
+<p style="font-size: 1.2em; margin-bottom: 15px;">
+<strong>
+          会社の門番に「このナンバーの車は通してください」と伝えます。
+         </strong>
+<br/>
+         これで門番があなたを認識してくれるようになります。
+        </p>
+<div class="action-list">
+<h4>
+          やること：
+         </h4>
+<ol>
+<li>
+           取得した固定IP（例：203.0.113.1）をメモ
+          </li>
+<li>
+           接続先のファイアウォール設定画面を開く
+          </li>
+<li>
+           「許可するIPアドレス」の欄に追加
+          </li>
+<li>
+           必要なポート（通常443）も開放
+          </li>
+<li>
+           設定を保存
+          </li>
+</ol>
+</div>
+</div>
+<div class="step-image">
+<span class="big-icon">
+         💂
+        </span>
+<p>
+<strong>
+          登録完了！
+         </strong>
+<br/>
+         固定IPが
+         <br/>
+         通行許可リストに追加
+        </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="重要なポイント失敗しないコツ">
+     🎯 重要なポイント（失敗しないコツ）
+    </h2>
+<div class="tip-box">
+<h3 id="一番よくある間違い">
+      💡 一番よくある間違い
+     </h3>
+<p>
+<strong>
+       NAT橋の場所を間違える
+      </strong>
+<br/>
+      NAT橋は「パブリックサブネット」に作ってください。「プライベートサブネット」に作ると動きません。
+                道路で言うと「表通り」に橋を架けるイメージです。
+     </p>
+</div>
+<div class="tip-box">
+<h4>
+      💰 お金のこと
+     </h4>
+<p>
+<strong>
+       NAT橋は時間課金です
+      </strong>
+<br/>
+      使わない時は削除すれば料金を節約できます。でも、削除すると外部接続ができなくなるので注意してください。
+     </p>
+</div>
+<div class="tip-box">
+<h4>
+      🔍 動作確認の方法
+     </h4>
+<p>
+<strong>
+       設定後は必ずテストを！
+      </strong>
+<br/>
+      実際にアプリから外部サービスに接続して、正常に動作することを確認してください。
+     </p>
+</div>
+</div>
+<div class="section">
+<div class="important-box">
+<span class="big-icon">
+      ⚠️
+     </span>
+<h3 id="設定前に確認すること">
+      設定前に確認すること
+     </h3>
+<p>
+      接続先のサービスが「IPアドレスでのアクセス制限」に対応しているか確認してください。
+      <br/>
+      対応していない場合は、この方法では解決できません。
+     </p>
+</div>
+</div>
+<div class="section">
+<div class="success-box">
+<span class="big-icon">
+      🎉
+     </span>
+<h3 id="完了！おめでとうございます！">
+      完了！おめでとうございます！
+     </h3>
+<p>
+      これで、あなたのアプリは毎回同じ「身分証明書」を持って外部サービスにアクセスできるようになりました。
+      <br/>
+<strong>
+       もう「知らない人お断り」と言われることはありません！
+      </strong>
+</p>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="../networking/aws-eni-infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">7</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">19</span>
+    </div>
+    <a href="vpc_privatelink_cidr_overlap.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+    Created by
+    <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+     SSuzuki1063
+    </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+    AWS SAP Learning Resources
+   </p>
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

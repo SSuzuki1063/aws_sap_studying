@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   ALB ターゲットグループ完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/alb-target-group-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#️-レストランの厨房チームで例えると超わかりやすい！">🍽️ レストランの厨房チームで例えると超わかりやすい！</a></li>
+            <li class="toc-h2"><a href="#レストラン-=-AWS構成図">🏪 レストラン = AWS構成図</a></li>
+            <li class="toc-h2"><a href="#3種類のターゲットタイプ">🎪 3種類のターゲットタイプ</a></li>
+            <li class="toc-h2"><a href="#リクエストの流れを図解">🔄 リクエストの流れを図解</a></li>
+            <li class="toc-h2"><a href="#ヘルスチェック-=-シェフの体調確認">💓 ヘルスチェック = シェフの体調確認</a></li>
+            <li class="toc-h3"><a href="#ヘルスチェックパス">ヘルスチェックパス</a></li>
+            <li class="toc-h2"><a href="#ルーティングアルゴリズム-=-注文の振り分け方">🎲 ルーティングアルゴリズム = 注文の振り分け方</a></li>
+            <li class="toc-h3"><a href="#Round-Robinラウンドロビン">Round Robin（ラウンドロビン）</a></li>
+            <li class="toc-h2"><a href="#スティッキーセッション-=-指名制度">🍪 スティッキーセッション = 指名制度</a></li>
+            <li class="toc-h2"><a href="#ターゲットタイプ比較表">📊 ターゲットタイプ比較表</a></li>
+            <li class="toc-h2"><a href="#ユースケース別-最適な設定は？">💼 ユースケース別：最適な設定は？</a></li>
+            <li class="toc-h3"><a href="#ECサイト">ECサイト</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+            <li class="toc-h3"><a href="#️-レストラン-=-ALB構成">🍽️ レストラン = ALB構成</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     コンピュート・アプリケーション
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     Auto Scaling &amp; ロードバランシング
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Alb Target Group Guide
+    </span>
+</nav>
+<div class="header">
+<h1>
+     🎯 ALB ターゲットグループ
+    </h1>
+<p>
+     レストランの厨房チームで理解する！トラフィック振り分けの完全ガイド
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="️-レストランの厨房チームで例えると超わかりやすい！">
+      🍽️ レストランの厨房チームで例えると超わかりやすい！
+     </h2>
+<p class="intro-text">
+<strong>
+       ALB（Application Load Balancer）= レストランの案内係
+      </strong>
+<br/>
+<strong>
+       ターゲットグループ = 厨房チーム
+      </strong>
+<br/>
+<br/>
+      お客様（リクエスト）が来たら、案内係（ALB）が
+      <br/>
+      適切な厨房チーム（ターゲットグループ）に注文を振り分けます。
+      <br/>
+<br/>
+      和食チーム、洋食チーム、デザートチーム...
+      <br/>
+<strong>
+       どのチームに注文を振り分けるか
+      </strong>
+      を決めるのがターゲットグループです✨
+     </p>
+</div>
+<!-- レストランの例え図解 -->
+<div class="analogy-hero">
+<h2 class="analogy-hero-title" id="レストラン-=-AWS構成図">
+      🏪 レストラン = AWS構成図
+     </h2>
+<div class="analogy-diagram">
+<div class="analogy-box">
+<div class="analogy-icon">
+        👥
+       </div>
+<div class="analogy-label">
+        お客様
+       </div>
+<div class="analogy-aws">
+        ユーザーリクエスト
+       </div>
+</div>
+<div class="arrow">
+       ➡️
+      </div>
+<div class="analogy-box">
+<div class="analogy-icon">
+        🧑‍💼
+       </div>
+<div class="analogy-label">
+        案内係
+       </div>
+<div class="analogy-aws">
+        ALB
+       </div>
+</div>
+<div class="arrow">
+       ➡️
+      </div>
+<div class="analogy-box" style="border: 3px solid #ffc107;">
+<div class="analogy-icon">
+        👨‍🍳
+       </div>
+<div class="analogy-label">
+        厨房チーム
+       </div>
+<div class="analogy-aws">
+        ターゲットグループ
+       </div>
+</div>
+<div class="arrow">
+       ➡️
+      </div>
+<div class="analogy-box">
+<div class="analogy-icon">
+        🍳
+       </div>
+<div class="analogy-label">
+        シェフたち
+       </div>
+<div class="analogy-aws">
+        EC2/Lambda等
+       </div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 12px; margin-top: 30px;">
+<p style="color: #f57f17; font-size: 1.1em; line-height: 1.8; text-align: center;">
+<strong>
+        💡 ポイント：
+       </strong>
+<br/>
+       案内係（ALB）は「和食が食べたい」というお客様を和食チームへ、
+       <br/>
+       「パスタが食べたい」というお客様を洋食チームへ振り分けます。
+       <br/>
+       各チーム（ターゲットグループ）には複数のシェフ（EC2等）がいて、
+       <br/>
+<strong>
+        手が空いているシェフに順番に注文を回します！
+       </strong>
+</p>
+</div>
+</div>
+<!-- ターゲットタイプ -->
+<div class="target-types-section">
+<h2 class="section-title" id="3種類のターゲットタイプ">
+      🎪 3種類のターゲットタイプ
+     </h2>
+<div class="target-grid">
+<div class="target-card instance">
+<div class="target-icon">
+        🖥️
+       </div>
+<div class="target-name">
+        Instance（インスタンス）
+       </div>
+<div class="target-analogy">
+<div class="target-analogy-title">
+         🍽️ レストランの例え
+        </div>
+<div class="target-analogy-text">
+<strong>
+          正社員シェフ
+         </strong>
+<br/>
+         毎日出勤する固定メンバー。厨房の設備をフル活用できる。
+        </div>
+</div>
+<div class="target-features">
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+<strong>
+           EC2インスタンス
+          </strong>
+          をターゲットとして登録
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          インスタンスIDで指定（i-xxxxx）
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          Auto Scalingとの連携が簡単
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          同じVPC内のインスタンスのみ
+         </span>
+</div>
+</div>
+<span class="target-badge badge-popular">
+        ⭐ 最も一般的
+       </span>
+</div>
+<div class="target-card ip">
+<div class="target-icon">
+        🌐
+       </div>
+<div class="target-name">
+        IP（IPアドレス）
+       </div>
+<div class="target-analogy">
+<div class="target-analogy-title">
+         🍽️ レストランの例え
+        </div>
+<div class="target-analogy-text">
+<strong>
+          外部委託シェフ
+         </strong>
+<br/>
+         別の場所にいるシェフに住所（IP）を指定して配達依頼。
+        </div>
+</div>
+<div class="target-features">
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+<strong>
+           IPアドレス
+          </strong>
+          で直接指定
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          オンプレミスサーバーも対象可能
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          他のVPCのリソースにもルーティング
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          コンテナ（ECS/EKS）との相性◎
+         </span>
+</div>
+</div>
+<span class="target-badge badge-flexible">
+        🔄 柔軟性が高い
+       </span>
+</div>
+<div class="target-card lambda">
+<div class="target-icon">
+        ⚡
+       </div>
+<div class="target-name">
+        Lambda
+       </div>
+<div class="target-analogy">
+<div class="target-analogy-title">
+         🍽️ レストランの例え
+        </div>
+<div class="target-analogy-text">
+<strong>
+          ゴーストキッチン
+         </strong>
+<br/>
+         注文があった時だけ稼働。設備維持費ゼロの魔法の厨房！
+        </div>
+</div>
+<div class="target-features">
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+<strong>
+           Lambda関数
+          </strong>
+          を直接呼び出し
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          サーバーレスでコスト最適化
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          1グループに1Lambda関数のみ
+         </span>
+</div>
+<div class="target-feature">
+<span class="feature-icon">
+          ✅
+         </span>
+<span class="feature-text">
+          低頻度アクセスのAPIに最適
+         </span>
+</div>
+</div>
+<span class="target-badge badge-serverless">
+        🚀 サーバーレス
+       </span>
+</div>
+</div>
+</div>
+<!-- フロー図 -->
+<div class="flow-section">
+<h2 class="section-title" id="リクエストの流れを図解">
+      🔄 リクエストの流れを図解
+     </h2>
+<div class="flow-diagram">
+<div class="flow-row">
+<div class="flow-box">
+<div class="flow-box-icon">
+         👥
+        </div>
+<div class="flow-box-label">
+         ユーザー
+        </div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-row">
+<div class="flow-box" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+<div class="flow-box-icon">
+         ⚖️
+        </div>
+<div class="flow-box-label">
+         ALB
+         <br/>
+<small>
+          リスナー（ポート80/443）
+         </small>
+</div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div style="text-align: center; color: #64748b; font-weight: bold;">
+       ルールに基づいて振り分け
+      </div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-row">
+<div class="flow-box" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+<div class="flow-box-icon">
+         🎯
+        </div>
+<div class="flow-box-label">
+         ターゲットグループ
+        </div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div style="text-align: center; color: #64748b; font-weight: bold;">
+       ヘルシーなターゲットに分散
+      </div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-targets">
+<div class="flow-target">
+<div class="flow-target-icon">
+         🖥️
+        </div>
+<div>
+         EC2 #1
+        </div>
+</div>
+<div class="flow-target">
+<div class="flow-target-icon">
+         🖥️
+        </div>
+<div>
+         EC2 #2
+        </div>
+</div>
+<div class="flow-target">
+<div class="flow-target-icon">
+         🖥️
+        </div>
+<div>
+         EC2 #3
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- ヘルスチェック -->
+<div class="health-check-section">
+<h2 class="health-title" id="ヘルスチェック-=-シェフの体調確認">
+      💓 ヘルスチェック = シェフの体調確認
+     </h2>
+<div style="background: white; padding: 30px; border-radius: 15px; margin-bottom: 30px;">
+<p style="color: #880e4f; font-size: 1.15em; line-height: 1.8; text-align: center;">
+<strong>
+        🍽️ レストランの例え：
+       </strong>
+<br/>
+       店長が定期的に各シェフの体調を確認。
+       <br/>
+       「元気ですか？」→「はい！」なら注文を回す。
+       <br/>
+       体調不良なら休ませて、他のシェフに注文を回す。
+       <br/>
+<br/>
+       これがALBの
+       <strong>
+        ヘルスチェック
+       </strong>
+       です！
+      </p>
+</div>
+<div class="health-grid">
+<div class="health-card">
+<div class="health-icon">
+        🔗
+       </div>
+<h3 id="ヘルスチェックパス">
+        ヘルスチェックパス
+       </h3>
+<div class="health-description">
+        「どこに体調確認しに行くか」を指定。通常は専用のヘルスチェック用エンドポイントを用意します。
+       </div>
+<div class="health-param">
+<div class="health-param-title">
+         設定例
+        </div>
+<div class="health-param-value">
+         /health または /api/health
+        </div>
+</div>
+</div>
+<div class="health-card">
+<div class="health-icon">
+        ⏱️
+       </div>
+<h4>
+        インターバル
+       </h4>
+<div class="health-description">
+        「何秒ごとに体調確認するか」。短すぎると負荷に、長すぎると障害検知が遅れます。
+       </div>
+<div class="health-param">
+<div class="health-param-title">
+         デフォルト
+        </div>
+<div class="health-param-value">
+         30秒（5〜300秒で設定可能）
+        </div>
+</div>
+</div>
+<div class="health-card">
+<div class="health-icon">
+        ✅
+       </div>
+<h4>
+        正常しきい値
+       </h4>
+<div class="health-description">
+        「何回連続で元気なら復帰OK」。2回連続で「元気！」と答えたら仕事に復帰。
+       </div>
+<div class="health-param">
+<div class="health-param-title">
+         デフォルト
+        </div>
+<div class="health-param-value">
+         5回（2〜10回で設定可能）
+        </div>
+</div>
+</div>
+<div class="health-card">
+<div class="health-icon">
+        ❌
+       </div>
+<h4>
+        非正常しきい値
+       </h4>
+<div class="health-description">
+        「何回連続で不調なら休ませるか」。2回連続で返事がなければ休養させる。
+       </div>
+<div class="health-param">
+<div class="health-param-title">
+         デフォルト
+        </div>
+<div class="health-param-value">
+         2回（2〜10回で設定可能）
+        </div>
+</div>
+</div>
+<div class="health-card">
+<div class="health-icon">
+        📊
+       </div>
+<h4>
+        成功コード
+       </h4>
+<div class="health-description">
+        「どの返事を元気とみなすか」。HTTPステータスコードで判断します。
+       </div>
+<div class="health-param">
+<div class="health-param-title">
+         デフォルト
+        </div>
+<div class="health-param-value">
+         200（200-299も可）
+        </div>
+</div>
+</div>
+<div class="health-card">
+<div class="health-icon">
+        ⏰
+       </div>
+<h4>
+        タイムアウト
+       </h4>
+<div class="health-description">
+        「何秒待っても返事がなければ不調とみなすか」。応答が遅い場合のタイムアウト設定。
+       </div>
+<div class="health-param">
+<div class="health-param-title">
+         デフォルト
+        </div>
+<div class="health-param-value">
+         5秒（2〜120秒で設定可能）
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- ルーティングアルゴリズム -->
+<div class="routing-section">
+<h2 class="routing-title" id="ルーティングアルゴリズム-=-注文の振り分け方">
+      🎲 ルーティングアルゴリズム = 注文の振り分け方
+     </h2>
+<div class="routing-grid">
+<div class="routing-card">
+<div class="routing-icon">
+        🔄
+       </div>
+<h3 id="Round-Robinラウンドロビン">
+        Round Robin（ラウンドロビン）
+       </h3>
+<div class="routing-analogy">
+<div class="routing-analogy-label">
+         🍽️ レストランの例え
+        </div>
+<div class="routing-analogy-text">
+         注文を順番に各シェフに回す。
+         <br/>
+         1番目の注文→シェフA
+         <br/>
+         2番目の注文→シェフB
+         <br/>
+         3番目の注文→シェフC
+         <br/>
+         4番目の注文→シェフA...
+        </div>
+</div>
+<p style="color: #475569; margin-top: 15px;">
+<strong>
+         特徴：
+        </strong>
+        シンプルで均等に分散。デフォルト設定。
+       </p>
+</div>
+<div class="routing-card">
+<div class="routing-icon">
+        ⚖️
+       </div>
+<h4>
+        Least Outstanding Requests
+       </h4>
+<div class="routing-analogy">
+<div class="routing-analogy-label">
+         🍽️ レストランの例え
+        </div>
+<div class="routing-analogy-text">
+         今一番手が空いているシェフに注文を回す。
+         <br/>
+         シェフA: 注文3件処理中
+         <br/>
+         シェフB: 注文1件処理中 ← ここへ！
+         <br/>
+         シェフC: 注文2件処理中
+        </div>
+</div>
+<p style="color: #475569; margin-top: 15px;">
+<strong>
+         特徴：
+        </strong>
+        処理時間にばらつきがある場合に効果的。
+       </p>
+</div>
+<div class="routing-card">
+<div class="routing-icon">
+        ⚡
+       </div>
+<h4>
+        Weighted Random
+       </h4>
+<div class="routing-analogy">
+<div class="routing-analogy-label">
+         🍽️ レストランの例え
+        </div>
+<div class="routing-analogy-text">
+         ベテランシェフに多く、新人シェフに少なく注文を回す。
+         <br/>
+         シェフA（ベテラン）: 50%
+         <br/>
+         シェフB（中堅）: 30%
+         <br/>
+         シェフC（新人）: 20%
+        </div>
+</div>
+<p style="color: #475569; margin-top: 15px;">
+<strong>
+         特徴：
+        </strong>
+        サーバースペックに差がある場合に有効。
+       </p>
+</div>
+</div>
+</div>
+<!-- スティッキーセッション -->
+<div class="sticky-section">
+<h2 class="sticky-title" id="スティッキーセッション-=-指名制度">
+      🍪 スティッキーセッション = 指名制度
+     </h2>
+<div class="sticky-explanation">
+<div class="sticky-analogy">
+<div class="sticky-analogy-item">
+<div class="sticky-analogy-icon">
+         👤
+        </div>
+<div class="sticky-analogy-label">
+         常連客の田中さん
+        </div>
+</div>
+<div style="font-size: 2em; color: #2196f3;">
+        ➡️
+       </div>
+<div class="sticky-analogy-item">
+<div class="sticky-analogy-icon">
+         👨‍🍳
+        </div>
+<div class="sticky-analogy-label">
+         いつも佐藤シェフが担当
+        </div>
+</div>
+</div>
+<p style="color: #0d47a1; font-size: 1.15em; line-height: 1.8; text-align: center;">
+<strong>
+        💡 スティッキーセッションとは：
+       </strong>
+<br/>
+       同じお客様は、必ず同じシェフ（サーバー）が担当する仕組み。
+       <br/>
+       「田中さんの好みは佐藤シェフが一番わかってる」→ 毎回同じ担当に！
+       <br/>
+<br/>
+       ショッピングカートやログイン状態の維持に必須の機能です。
+      </p>
+</div>
+<div class="sticky-types">
+<div class="sticky-type-card">
+<div class="sticky-type-title">
+        🍪 Application Cookie（アプリケーションCookie）
+       </div>
+<div class="sticky-type-desc">
+        アプリケーションが発行するCookieで紐付け。
+        <br/>
+<strong>
+         例：
+        </strong>
+        ログインセッションIDなど、アプリ側で管理するCookieを使用。
+        <br/>
+<strong>
+         向いているケース：
+        </strong>
+        既存のセッション管理がある場合
+       </div>
+</div>
+<div class="sticky-type-card">
+<div class="sticky-type-title">
+        ⏰ Duration-based Cookie（期間ベースCookie）
+       </div>
+<div class="sticky-type-desc">
+        ALBが自動でCookieを発行し、指定期間同じターゲットに送信。
+        <br/>
+<strong>
+         例：
+        </strong>
+        1時間、1日など期間を指定。
+        <br/>
+<strong>
+         向いているケース：
+        </strong>
+        シンプルに実装したい場合
+       </div>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<div class="comparison-table">
+<h2 class="table-title" id="ターゲットタイプ比較表">
+      📊 ターゲットタイプ比較表
+     </h2>
+<table>
+<thead>
+<tr>
+<th>
+         項目
+        </th>
+<th>
+         Instance
+        </th>
+<th>
+         IP
+        </th>
+<th>
+         Lambda
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+          対象リソース
+         </strong>
+</td>
+<td>
+         EC2インスタンス
+        </td>
+<td>
+         任意のIPアドレス
+        </td>
+<td>
+         Lambda関数
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          指定方法
+         </strong>
+</td>
+<td>
+         インスタンスID
+        </td>
+<td>
+         IPアドレス
+        </td>
+<td>
+         Lambda ARN
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          Auto Scaling連携
+         </strong>
+</td>
+<td>
+<span class="check">
+          ✅ 簡単
+         </span>
+</td>
+<td>
+<span class="cross">
+          ⚠️ 手動設定
+         </span>
+</td>
+<td>
+<span class="check">
+          ✅ 不要
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          オンプレミス対応
+         </strong>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+<td>
+<span class="check">
+          ✅ 可能
+         </span>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          他VPCへのルーティング
+         </strong>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+<td>
+<span class="check">
+          ✅ 可能
+         </span>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          コンテナとの相性
+         </strong>
+</td>
+<td>
+         △ 可能
+        </td>
+<td>
+<span class="check">
+          ✅ 最適
+         </span>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          サーバーレス
+         </strong>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+<td>
+<span class="cross">
+          ❌ 不可
+         </span>
+</td>
+<td>
+<span class="check">
+          ✅ 完全対応
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          推奨用途
+         </strong>
+</td>
+<td>
+         一般的なWebアプリ
+        </td>
+<td>
+         ハイブリッド/コンテナ
+        </td>
+<td>
+         APIバックエンド
+        </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- ユースケース -->
+<div class="usecase-section">
+<h2 class="usecase-title" id="ユースケース別-最適な設定は？">
+      💼 ユースケース別：最適な設定は？
+     </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<div class="usecase-icon">
+        🛒
+       </div>
+<h3 id="ECサイト">
+        ECサイト
+       </h3>
+<div class="usecase-description">
+        ショッピングカートの状態を維持しながら、高負荷に対応したい。
+       </div>
+<div class="usecase-config">
+<div class="usecase-config-title">
+         推奨設定
+        </div>
+<div class="usecase-config-item">
+         • ターゲットタイプ:
+         <strong>
+          Instance
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • スティッキーセッション:
+         <strong>
+          有効
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • ヘルスチェックパス:
+         <strong>
+          /health
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • Auto Scaling:
+         <strong>
+          推奨
+         </strong>
+</div>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        📱
+       </div>
+<h4>
+        モバイルアプリAPI
+       </h4>
+<div class="usecase-description">
+        ステートレスなREST APIで、リクエスト数の変動が大きい。
+       </div>
+<div class="usecase-config">
+<div class="usecase-config-title">
+         推奨設定
+        </div>
+<div class="usecase-config-item">
+         • ターゲットタイプ:
+         <strong>
+          Lambda
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • スティッキーセッション:
+         <strong>
+          不要
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • コスト:
+         <strong>
+          使った分だけ
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • スケーリング:
+         <strong>
+          自動
+         </strong>
+</div>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        🐳
+       </div>
+<h4>
+        マイクロサービス（ECS/EKS）
+       </h4>
+<div class="usecase-description">
+        コンテナベースのマイクロサービスで、動的にポートが変わる。
+       </div>
+<div class="usecase-config">
+<div class="usecase-config-title">
+         推奨設定
+        </div>
+<div class="usecase-config-item">
+         • ターゲットタイプ:
+         <strong>
+          IP
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • ルーティング:
+         <strong>
+          Least Outstanding
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • ヘルスチェック:
+         <strong>
+          短めのインターバル
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • 登録解除遅延:
+         <strong>
+          短め（30秒）
+         </strong>
+</div>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        🏢
+       </div>
+<h4>
+        ハイブリッドクラウド
+       </h4>
+<div class="usecase-description">
+        オンプレミスのサーバーとAWSを併用したい。
+       </div>
+<div class="usecase-config">
+<div class="usecase-config-title">
+         推奨設定
+        </div>
+<div class="usecase-config-item">
+         • ターゲットタイプ:
+         <strong>
+          IP
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • オンプレミスIP:
+         <strong>
+          Direct Connect経由
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • ヘルスチェック:
+         <strong>
+          長めのタイムアウト
+         </strong>
+</div>
+<div class="usecase-config-item">
+         • フェイルオーバー:
+         <strong>
+          設定推奨
+         </strong>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       ターゲットグループ設定のベストプラクティス
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. ヘルスチェックは専用エンドポイントを作る：
+      </strong>
+<br/>
+      /healthや/api/healthなど、軽量で高速に応答するエンドポイントを用意。DBアクセスなど重い処理は避ける。
+      <br/>
+<br/>
+<strong>
+       2. 登録解除遅延（Deregistration Delay）を適切に設定：
+      </strong>
+<br/>
+      デフォルト300秒は長すぎることも。処理中のリクエストが完了する時間を考慮して設定（30〜60秒が一般的）。
+      <br/>
+<br/>
+<strong>
+       3. スローアウォーミング期間を活用：
+      </strong>
+<br/>
+      新しいターゲットに徐々にトラフィックを増やす設定。急激な負荷を避けられる。
+      <br/>
+<br/>
+<strong>
+       4. クロスゾーン負荷分散を有効に：
+      </strong>
+<br/>
+      複数AZに均等にトラフィックを分散。一部AZの障害時も他AZで処理継続。
+      <br/>
+<br/>
+<strong>
+       5. CloudWatchでターゲットの状態を監視：
+      </strong>
+<br/>
+      HealthyHostCount、UnHealthyHostCountのアラームを設定。障害を早期発見！
+     </div>
+</div>
+<!-- コード例 -->
+<div class="code-example">
+<div class="code-title">
+      AWS CLI でターゲットグループを作成する例
+     </div>
+<pre><span class="code-comment"># ターゲットグループの作成</span>
+aws elbv2 create-target-group \
+    --name <span class="code-string">my-app-targets</span> \
+    --protocol <span class="code-string">HTTP</span> \
+    --port <span class="code-number">80</span> \
+    --vpc-id <span class="code-string">vpc-12345678</span> \
+    --target-type <span class="code-string">instance</span> \
+    --health-check-protocol <span class="code-string">HTTP</span> \
+    --health-check-path <span class="code-string">/health</span> \
+    --health-check-interval-seconds <span class="code-number">30</span> \
+    --healthy-threshold-count <span class="code-number">2</span> \
+    --unhealthy-threshold-count <span class="code-number">2</span>
+
+<span class="code-comment"># ターゲットの登録</span>
+aws elbv2 register-targets \
+    --target-group-arn <span class="code-string">arn:aws:elasticloadbalancing:...</span> \
+    --targets Id=<span class="code-string">i-1234567890abcdef0</span> Id=<span class="code-string">i-0987654321fedcba0</span>
+
+<span class="code-comment"># スティッキーセッションの有効化</span>
+aws elbv2 modify-target-group-attributes \
+    --target-group-arn <span class="code-string">arn:aws:elasticloadbalancing:...</span> \
+    --attributes Key=<span class="code-string">stickiness.enabled</span>,Value=<span class="code-string">true</span> \
+               Key=<span class="code-string">stickiness.type</span>,Value=<span class="code-string">lb_cookie</span> \
+               Key=<span class="code-string">stickiness.lb_cookie.duration_seconds</span>,Value=<span class="code-number">3600</span></pre>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ">
+      🎓 まとめ
+     </h2>
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="️-レストラン-=-ALB構成" style="font-size: 1.8em; margin-bottom: 15px;">
+       🍽️ レストラン = ALB構成
+      </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+       ターゲットグループは
+       <strong>
+        「どのシェフチームに注文を回すか」
+       </strong>
+       を決める仕組み！
+       <br/>
+       適切な設定で、安定したサービス提供を実現しましょう✨
+      </p>
+</div>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">
+        🖥️
+       </div>
+<div class="summary-label">
+        Instance
+       </div>
+<div class="summary-text">
+        EC2の標準構成
+        <br/>
+        Auto Scalingと相性◎
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        🌐
+       </div>
+<div class="summary-label">
+        IP
+       </div>
+<div class="summary-text">
+        柔軟なルーティング
+        <br/>
+        コンテナ・ハイブリッド向け
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        ⚡
+       </div>
+<div class="summary-label">
+        Lambda
+       </div>
+<div class="summary-text">
+        サーバーレスAPI
+        <br/>
+        コスト最適化
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        💓
+       </div>
+<div class="summary-label">
+        ヘルスチェック
+       </div>
+<div class="summary-text">
+        異常検知の要
+        <br/>
+        軽量エンドポイント推奨
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        🍪
+       </div>
+<div class="summary-label">
+        スティッキー
+       </div>
+<div class="summary-text">
+        セッション維持
+        <br/>
+        EC・ログインに必須
+       </div>
+</div>
+</div>
+<p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8; margin-top: 30px;">
+      🎯
+      <strong>
+       ターゲットグループのポイント：
+      </strong>
+<br/>
+      用途に合ったターゲットタイプを選び、
+      <br/>
+      ヘルスチェックで障害を早期発見、
+      <br/>
+      スティッキーセッションでユーザー体験を向上させよう！🚀
+     </p>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="codepipeline-deploymentgroup-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">22</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">41</span>
+    </div>
+    <a href="ecs-fargate-rolling-deploy-complete-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

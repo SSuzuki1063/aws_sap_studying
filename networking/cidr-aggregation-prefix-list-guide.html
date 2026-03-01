@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIDRブロック集約と許可プレフィックスリスト完全ガイド</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 25%, #4a5568 50%, #2d3748 75%, #1a365d 100%);
+            padding: 20px;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #FF9900 0%, #FF6600 50%, #EC7211 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🌐';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.15;
+            top: -40px;
+            right: -30px;
+        }
+        
+        .header::after {
+            content: '📡';
+            position: absolute;
+            font-size: 10em;
+            opacity: 0.1;
+            bottom: -20px;
+            left: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファーストセクション */
+        .conclusion-first {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border-left: 8px solid #f59e0b;
+            position: relative;
+        }
+        
+        .conclusion-first::before {
+            content: '💡';
+            position: absolute;
+            font-size: 4em;
+            top: -15px;
+            left: 30px;
+        }
+        
+        .conclusion-first h2 {
+            color: #92400e;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-left: 70px;
+        }
+        
+        .answer-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .answer-highlight {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            font-size: 1.4em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .answer-reason {
+            font-size: 1.1em;
+            color: #374151;
+            line-height: 1.8;
+        }
+        
+        .answer-reason strong {
+            color: #059669;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #3b82f6;
+        }
+        
+        .analogy-title {
+            color: #1e40af;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-card h4 {
+            color: #1e40af;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .analogy-card p {
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        .mapping-arrow {
+            font-size: 1.5em;
+            color: #3b82f6;
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        /* 問題のシナリオセクション */
+        .scenario-section {
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ec4899;
+        }
+        
+        .scenario-title {
+            color: #9d174d;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        /* アーキテクチャ図 */
+        .architecture-diagram {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .diagram-title {
+            text-align: center;
+            font-size: 1.8em;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+        
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .diagram-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            min-width: 200px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .diagram-box.onprem {
+            border: 3px solid #7c3aed;
+            background: linear-gradient(to bottom, #f5f3ff 0%, white 100%);
+        }
+        
+        .diagram-box.dx {
+            border: 3px solid #ec4899;
+            background: linear-gradient(to bottom, #fdf2f8 0%, white 100%);
+        }
+        
+        .diagram-box.dxgw {
+            border: 3px solid #f59e0b;
+            background: linear-gradient(to bottom, #fffbeb 0%, white 100%);
+        }
+        
+        .diagram-box.tgw {
+            border: 3px solid #10b981;
+            background: linear-gradient(to bottom, #f0fdf4 0%, white 100%);
+        }
+        
+        .diagram-box.vpc {
+            border: 3px solid #3b82f6;
+            background: linear-gradient(to bottom, #eff6ff 0%, white 100%);
+        }
+        
+        .diagram-box .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .diagram-box .label {
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .diagram-box .sublabel {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .diagram-arrow {
+            font-size: 2em;
+            color: #64748b;
+        }
+        
+        .vpc-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .vpc-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .vpc-small {
+            background: #eff6ff;
+            border: 2px solid #3b82f6;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-size: 0.8em;
+            text-align: center;
+        }
+        
+        .vpc-new {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px dashed #f59e0b;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        /* CIDRブロック解説 */
+        .cidr-section {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #10b981;
+        }
+        
+        .cidr-title {
+            color: #065f46;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .cidr-visual {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        
+        .cidr-row {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            gap: 20px;
+        }
+        
+        .cidr-block {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .cidr-range {
+            background: #f8fafc;
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            flex: 1;
+        }
+        
+        .range-label {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        
+        .range-value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .aggregation-arrow {
+            text-align: center;
+            padding: 30px 0;
+            font-size: 3em;
+            color: #10b981;
+        }
+        
+        .supernet-block {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        /* プレフィックスリストセクション */
+        .prefix-section {
+            background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #eab308;
+        }
+        
+        .prefix-title {
+            color: #713f12;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .prefix-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .prefix-header {
+            background: linear-gradient(135deg, #713f12 0%, #92400e 100%);
+            color: white;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr 120px;
+            gap: 20px;
+            font-weight: bold;
+        }
+        
+        .prefix-row {
+            padding: 15px 20px;
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr 120px;
+            gap: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            align-items: center;
+        }
+        
+        .prefix-row:nth-child(even) {
+            background: #fefce8;
+        }
+        
+        .prefix-row.full {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+        
+        .prefix-row.new {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid #10b981;
+        }
+        
+        .entry-num {
+            font-weight: bold;
+            color: #64748b;
+        }
+        
+        .prefix-cidr {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .status-used {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-last {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .status-new {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        /* 問題解決プロセス */
+        .solution-process {
+            background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #9333ea;
+        }
+        
+        .solution-title {
+            color: #581c87;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .process-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .process-step {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-content h4 {
+            color: #581c87;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .step-content p {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        /* 計算過程 */
+        .calculation-box {
+            background: #faf5ff;
+            border: 2px solid #c4b5fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .calc-line {
+            margin: 8px 0;
+            color: #5b21b6;
+        }
+        
+        .calc-result {
+            background: #9333ea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        /* ビジュアル比較 */
+        .comparison-visual {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 50px 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-title {
+            text-align: center;
+            font-size: 1.8em;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+        
+        .visual-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .bad-approach, .good-approach {
+            padding: 30px;
+            border-radius: 15px;
+        }
+        
+        .bad-approach {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 3px solid #ef4444;
+        }
+        
+        .good-approach {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 3px solid #10b981;
+        }
+        
+        .approach-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .approach-icon {
+            font-size: 2em;
+        }
+        
+        .bad-approach .approach-title {
+            color: #b91c1c;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .good-approach .approach-title {
+            color: #065f46;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .approach-detail {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .vs-circle {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        /* ポイントセクション */
+        .key-points {
+            background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ef4444;
+        }
+        
+        .key-points h3 {
+            color: #991b1b;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .point-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .point-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .point-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .point-card h4 {
+            color: #991b1b;
+            margin-bottom: 10px;
+        }
+        
+        .point-card p {
+            color: #64748b;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        /* 関連概念 */
+        .related-concepts {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .related-title {
+            color: #0c4a6e;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .concept-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .concept-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 4px solid #0ea5e9;
+        }
+        
+        .concept-card h4 {
+            color: #0369a1;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .concept-card p {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .faq-title {
+            color: #166534;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            margin: 15px 0;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+            color: white;
+            padding: 20px 25px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .faq-answer {
+            padding: 20px 25px;
+            color: #374151;
+            line-height: 1.8;
+        }
+        
+        /* フッター */
+        .footer {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .footer-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #f59e0b;
+        }
+        
+        .footer-tags {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .footer-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 1024px) {
+            .analogy-grid, .comparison-section, .concept-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .visual-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .vs-circle {
+                margin: 20px auto;
+            }
+            
+            .point-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-container {
+                flex-direction: column;
+            }
+            
+            .diagram-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px;
+            }
+            
+            .prefix-header, .prefix-row {
+                grid-template-columns: 40px 1fr 1fr;
+            }
+            
+            .prefix-header > *:last-child,
+            .prefix-row > *:last-child {
+                display: none;
+            }
+        }
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論ファースト-正解と理由">結論ファースト：正解と理由</a></li>
+            <li class="toc-h3"><a href="#たとえ話-郵便配達システムで理解する">🏢 たとえ話：郵便配達システムで理解する</a></li>
+            <li class="toc-h3"><a href="#問題のシナリオを図解">📋 問題のシナリオを図解</a></li>
+            <li class="toc-h3"><a href="#CIDRブロックの集約スーパーネットを理解する">🔢 CIDRブロックの集約（スーパーネット）を理解する</a></li>
+            <li class="toc-h3"><a href="#許可プレフィックスリストの制約">📋 許可プレフィックスリストの制約</a></li>
+            <li class="toc-h3"><a href="#問題解決の思考プロセス">🧩 問題解決の思考プロセス</a></li>
+            <li class="toc-h3"><a href="#❌-vs-✅-アプローチの比較">❌ vs ✅ アプローチの比較</a></li>
+            <li class="toc-h3"><a href="#試験で押さえるべきキーポイント">🎯 試験で押さえるべきキーポイント</a></li>
+            <li class="toc-h3"><a href="#関連する重要概念">📚 関連する重要概念</a></li>
+            <li class="toc-h3"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <h1>🌐 CIDRブロック集約と許可プレフィックスリスト</h1>
+            <p>Direct Connect × Transit Gateway ハイブリッド接続でのルートアドバタイズ最適化</p>
+        </header>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <section class="conclusion-first">
+                <h2 id="結論ファースト-正解と理由">結論ファースト：正解と理由</h2>
+                <div class="answer-box">
+                    <div class="answer-highlight">
+                        ✅ 許可プレフィックスリストに 10.0.32.0/20 を追加する
+                    </div>
+                    <p class="answer-reason">
+                        残り<strong>1つのエントリ</strong>しか使えない状況で、2つのVPC（10.0.32.0/21と10.0.40.0/21）を
+                        オンプレミスにアドバタイズするには、これらを<strong>1つのスーパーネット（10.0.32.0/20）に集約</strong>
+                        することで解決できます。/21を2つ合わせると/20になり、効率的にルートを広告できます。
+                    </p>
+                </div>
+            </section>
+            
+            <!-- たとえ話セクション -->
+            <section class="analogy-section">
+                <h3 id="たとえ話-郵便配達システムで理解する" class="analogy-title">🏢 たとえ話：郵便配達システムで理解する</h3>
+                
+                <div class="analogy-grid">
+                    <div class="analogy-card">
+                        <h4>🏠 各VPCは「マンションの一棟」</h4>
+                        <p>
+                            10.0.32.0/21 → 「山田マンション」（101〜255号室）<br>
+                            10.0.40.0/21 → 「鈴木マンション」（101〜255号室）<br><br>
+                            それぞれ独立した住所体系を持っています。
+                        </p>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <h4>📮 プレフィックスリストは「配達ルート表」</h4>
+                        <p>
+                            郵便局（オンプレミス）が「どの住所に配達するか」を記録するリスト。
+                            <strong>残りスペースが1行</strong>しかないので、効率的に記載する必要があります。
+                        </p>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <h4>🏘️ スーパーネットは「地区名」</h4>
+                        <p>
+                            「山田マンション」と「鈴木マンション」を<strong>「青山地区」</strong>として
+                            1行にまとめる = 10.0.32.0/20<br><br>
+                            これで1行で両方のマンションに配達できます！
+                        </p>
+                    </div>
+                    
+                    <div class="analogy-card">
+                        <h4>🚚 ルートアドバタイズは「配達可能エリアの通知」</h4>
+                        <p>
+                            AWS側からオンプレミスに「この住所範囲に送ってOKですよ」と伝えること。
+                            効率的にまとめれば、少ないエントリで多くのVPCをカバーできます。
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 問題シナリオ -->
+            <section class="scenario-section">
+                <h3 id="問題のシナリオを図解" class="scenario-title">📋 問題のシナリオを図解</h3>
+                
+                <div class="architecture-diagram">
+                    <h4 class="diagram-title">現在のハイブリッドアーキテクチャ</h4>
+                    <div class="diagram-container">
+                        <div class="diagram-box onprem">
+                            <div class="icon">🏢</div>
+                            <div class="label">オンプレミス</div>
+                            <div class="sublabel">データセンター</div>
+                        </div>
+                        
+                        <div class="diagram-arrow">⟷</div>
+                        
+                        <div class="diagram-box dx">
+                            <div class="icon">🔌</div>
+                            <div class="label">Direct Connect</div>
+                            <div class="sublabel">専用線接続</div>
+                        </div>
+                        
+                        <div class="diagram-arrow">⟷</div>
+                        
+                        <div class="diagram-box dxgw">
+                            <div class="icon">🌉</div>
+                            <div class="label">DX Gateway</div>
+                            <div class="sublabel">許可プレフィックスリスト</div>
+                        </div>
+                        
+                        <div class="diagram-arrow">⟷</div>
+                        
+                        <div class="diagram-box tgw">
+                            <div class="icon">🔀</div>
+                            <div class="label">Transit Gateway</div>
+                            <div class="sublabel">中央ルーター</div>
+                        </div>
+                        
+                        <div class="diagram-arrow">⟷</div>
+                        
+                        <div class="vpc-grid">
+                            <div class="vpc-row">
+                                <div class="vpc-small">VPC 1</div>
+                                <div class="vpc-small">VPC 2</div>
+                                <div class="vpc-small">VPC 3</div>
+                            </div>
+                            <div class="vpc-row">
+                                <div class="vpc-small">VPC 4</div>
+                                <div class="vpc-small">...</div>
+                                <div class="vpc-small">VPC 19</div>
+                            </div>
+                            <div class="vpc-row">
+                                <div class="vpc-small vpc-new">🆕 VPC 20<br>10.0.32.0/21</div>
+                                <div class="vpc-small vpc-new">🆕 VPC 21<br>10.0.40.0/21</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- CIDRブロック解説 -->
+            <section class="cidr-section">
+                <h3 id="CIDRブロックの集約スーパーネットを理解する" class="cidr-title">🔢 CIDRブロックの集約（スーパーネット）を理解する</h3>
+                
+                <div class="cidr-visual">
+                    <h4 style="color: #065f46; margin-bottom: 20px;">割り当てられた2つのCIDRブロック</h4>
+                    
+                    <div class="cidr-row">
+                        <div class="cidr-block">10.0.32.0/21</div>
+                        <div class="cidr-range">
+                            <div class="range-label">IPアドレス範囲</div>
+                            <div class="range-value">10.0.32.0 ～ 10.0.39.255</div>
+                        </div>
+                        <div class="cidr-range">
+                            <div class="range-label">利用可能IP数</div>
+                            <div class="range-value">2,048個（2^11）</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cidr-row">
+                        <div class="cidr-block">10.0.40.0/21</div>
+                        <div class="cidr-range">
+                            <div class="range-label">IPアドレス範囲</div>
+                            <div class="range-value">10.0.40.0 ～ 10.0.47.255</div>
+                        </div>
+                        <div class="cidr-range">
+                            <div class="range-label">利用可能IP数</div>
+                            <div class="range-value">2,048個（2^11）</div>
+                        </div>
+                    </div>
+                    
+                    <div class="aggregation-arrow">⬇️ 集約（スーパーネット化） ⬇️</div>
+                    
+                    <div class="cidr-row">
+                        <div class="cidr-block supernet-block">10.0.32.0/20</div>
+                        <div class="cidr-range">
+                            <div class="range-label">IPアドレス範囲</div>
+                            <div class="range-value">10.0.32.0 ～ 10.0.47.255</div>
+                        </div>
+                        <div class="cidr-range">
+                            <div class="range-label">利用可能IP数</div>
+                            <div class="range-value">4,096個（2^12）</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- プレフィックスリスト -->
+            <section class="prefix-section">
+                <h3 id="許可プレフィックスリストの制約" class="prefix-title">📋 許可プレフィックスリストの制約</h3>
+                
+                <div class="prefix-table">
+                    <div class="prefix-header">
+                        <div>#</div>
+                        <div>CIDRブロック</div>
+                        <div>対象VPC</div>
+                        <div>状態</div>
+                    </div>
+                    <div class="prefix-row">
+                        <div class="entry-num">1</div>
+                        <div class="prefix-cidr">10.0.0.0/21</div>
+                        <div>VPC 1-3</div>
+                        <div><span class="status-badge status-used">使用中</span></div>
+                    </div>
+                    <div class="prefix-row">
+                        <div class="entry-num">2</div>
+                        <div class="prefix-cidr">10.0.8.0/21</div>
+                        <div>VPC 4-6</div>
+                        <div><span class="status-badge status-used">使用中</span></div>
+                    </div>
+                    <div class="prefix-row">
+                        <div class="entry-num">...</div>
+                        <div class="prefix-cidr">...</div>
+                        <div>...</div>
+                        <div><span class="status-badge status-used">使用中</span></div>
+                    </div>
+                    <div class="prefix-row full">
+                        <div class="entry-num">19</div>
+                        <div class="prefix-cidr">10.0.24.0/21</div>
+                        <div>VPC 17-19</div>
+                        <div><span class="status-badge status-last">⚠️ 残り1枠</span></div>
+                    </div>
+                    <div class="prefix-row new">
+                        <div class="entry-num">20</div>
+                        <div class="prefix-cidr">10.0.32.0/20 ✨</div>
+                        <div>VPC 20-21（集約）</div>
+                        <div><span class="status-badge status-new">✅ 新規追加</span></div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 解決プロセス -->
+            <section class="solution-process">
+                <h3 id="問題解決の思考プロセス" class="solution-title">🧩 問題解決の思考プロセス</h3>
+                
+                <div class="process-steps">
+                    <div class="process-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>制約条件を確認</h4>
+                            <p>プレフィックスリストには残り<strong>1エントリ</strong>しか追加できない。<br>
+                            しかし、追加したいVPCは<strong>2つ</strong>（10.0.32.0/21と10.0.40.0/21）</p>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>CIDRブロックの連続性を確認</h4>
+                            <p>2つのブロックが連続した範囲かどうかをチェック：</p>
+                            <div class="calculation-box">
+                                <div class="calc-line">10.0.32.0/21 = 10.0.32.0 ～ 10.0.39.255</div>
+                                <div class="calc-line">10.0.40.0/21 = 10.0.40.0 ～ 10.0.47.255</div>
+                                <div class="calc-line">───────────────────────</div>
+                                <div class="calc-line">39.255の次が40.0 → <strong>連続している！</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>スーパーネットを計算</h4>
+                            <p>連続する2つの /21 を1つの /20 に集約できる：</p>
+                            <div class="calculation-box">
+                                <div class="calc-line">/21 × 2ブロック = /20 × 1ブロック</div>
+                                <div class="calc-line">（プレフィックス長が1つ減る = 範囲が2倍）</div>
+                                <div class="calc-result">結果：10.0.32.0/20</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>許可プレフィックスリストに追加</h4>
+                            <p>Direct Connectゲートウェイの許可プレフィックスリストに<strong>10.0.32.0/20</strong>を追加。<br>
+                            これにより、1エントリで2つのVPCのルートをオンプレミスにアドバタイズできる！</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ビジュアル比較 -->
+            <section class="comparison-visual">
+                <h3 id="❌-vs-✅-アプローチの比較" class="comparison-title">❌ vs ✅ アプローチの比較</h3>
+                
+                <div class="visual-grid">
+                    <div class="bad-approach">
+                        <div class="approach-header">
+                            <span class="approach-icon">❌</span>
+                            <span class="approach-title">個別に追加（失敗）</span>
+                        </div>
+                        <div class="approach-detail">
+                            <p>10.0.32.0/21 を追加 → 成功</p>
+                        </div>
+                        <div class="approach-detail">
+                            <p>10.0.40.0/21 を追加 → <strong style="color: #b91c1c;">失敗！クォータ超過</strong></p>
+                        </div>
+                        <p style="margin-top: 15px; color: #7f1d1d;">
+                            🚫 2エントリ必要だが、残り1エントリしかない
+                        </p>
+                    </div>
+                    
+                    <div class="vs-circle">VS</div>
+                    
+                    <div class="good-approach">
+                        <div class="approach-header">
+                            <span class="approach-icon">✅</span>
+                            <span class="approach-title">集約して追加（成功）</span>
+                        </div>
+                        <div class="approach-detail">
+                            <p>10.0.32.0/20 を追加 → <strong style="color: #065f46;">成功！</strong></p>
+                        </div>
+                        <p style="margin-top: 15px; color: #14532d;">
+                            ✅ 1エントリで両方のVPCをカバー<br>
+                            ✅ クォータ制限内で解決
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- キーポイント -->
+            <section class="key-points">
+                <h3 id="試験で押さえるべきキーポイント">🎯 試験で押さえるべきキーポイント</h3>
+                
+                <div class="point-grid">
+                    <div class="point-card">
+                        <div class="icon">📊</div>
+                        <h4>クォータ制限の把握</h4>
+                        <p>プレフィックスリストには最大エントリ数の制限がある。制限に達する前に効率的な設計が必要。</p>
+                    </div>
+                    
+                    <div class="point-card">
+                        <div class="icon">🔢</div>
+                        <h4>CIDR集約の計算</h4>
+                        <p>連続するCIDRブロックは上位のプレフィックス（小さい数字）に集約可能。/21 × 2 = /20</p>
+                    </div>
+                    
+                    <div class="point-card">
+                        <div class="icon">🎯</div>
+                        <h4>許可プレフィックスリスト</h4>
+                        <p>DXGWとTGWの関連付けで、オンプレミスへアドバタイズするルートを制御するリスト。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 関連概念 -->
+            <section class="related-concepts">
+                <h3 id="関連する重要概念" class="related-title">📚 関連する重要概念</h3>
+                
+                <div class="concept-cards">
+                    <div class="concept-card">
+                        <h4>🌉 Direct Connect Gateway（DXGW）</h4>
+                        <p>複数のDirect Connect接続を複数のVPCやTransit Gatewayに接続するためのグローバルリソース。
+                        リージョン間でも接続可能で、許可プレフィックスリストでルートを制御します。</p>
+                    </div>
+                    
+                    <div class="concept-card">
+                        <h4>🔀 Transit Gateway（TGW）</h4>
+                        <p>VPC、VPN、Direct Connectを中央集約型で接続するリージョナルルーター。
+                        数千のVPCを接続可能で、ルートテーブルでトラフィックを制御します。</p>
+                    </div>
+                    
+                    <div class="concept-card">
+                        <h4>📋 許可プレフィックスリスト</h4>
+                        <p>DXGWからオンプレミスへアドバタイズするCIDRブロックを指定するリスト。
+                        AWSマネージドプレフィックスリストとは別物で、DXGWの関連付け設定で使用します。</p>
+                    </div>
+                    
+                    <div class="concept-card">
+                        <h4>🔢 スーパーネット（CIDR集約）</h4>
+                        <p>複数の連続するネットワークを1つの大きなネットワークにまとめる技術。
+                        ルートテーブルのエントリ数を削減し、ルーティング効率を向上させます。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- FAQ -->
+            <section class="faq-section">
+                <h3 id="❓-よくある質問" class="faq-title">❓ よくある質問</h3>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q1</span>
+                        なぜ/21を2つ合わせると/20になるのですか？
+                    </div>
+                    <div class="faq-answer">
+                        プレフィックス長（/の後の数字）は、ネットワーク部分のビット数を表します。
+                        /21は2^11=2,048個のIPアドレスをカバーし、/20は2^12=4,096個をカバーします。
+                        連続する2つの/21（合計4,096個）は、1つの/20でちょうど表現できます。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q2</span>
+                        許可プレフィックスリストとAWSマネージドプレフィックスリストの違いは？
+                    </div>
+                    <div class="faq-answer">
+                        <strong>許可プレフィックスリスト</strong>：DXGWの関連付け設定で、オンプレミスへアドバタイズするルートを指定するもの。<br>
+                        <strong>AWSマネージドプレフィックスリスト</strong>：セキュリティグループやルートテーブルで使用する、AWSが管理するIPアドレス範囲のリスト（例：S3のIP範囲）。
+                        この問題では前者を扱っています。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Q3</span>
+                        集約できないCIDRブロックの場合はどうすればいい？
+                    </div>
+                    <div class="faq-answer">
+                        連続していないCIDRブロックは集約できません。その場合の選択肢：
+                        1) クォータの引き上げをAWSサポートにリクエスト、
+                        2) 既存のプレフィックスを見直して集約可能なものがないか確認、
+                        3) IP設計を見直して連続した範囲を割り当てる。
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- フッター -->
+        <footer class="footer">
+            <div class="footer-title">AWS Advanced Networking - Specialty 試験対策</div>
+            <p>Direct Connect / Transit Gateway / CIDR集約 / ルートアドバタイズ</p>
+            <div class="footer-tags">
+                <span class="footer-tag">ANS-C01</span>
+                <span class="footer-tag">ハイブリッド接続</span>
+                <span class="footer-tag">ネットワーク設計</span>
+                <span class="footer-tag">CIDR計算</span>
+                <span class="footer-tag">プレフィックスリスト</span>
+            </div>
+        </footer>
+    <!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="ec2-mtu-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">21</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">26</span>
+    </div>
+    <a href="aws-gateways.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   S3バケットポリシー Principal要素 完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/s3-bucket-policy-principal-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#たとえ話で理解するPrincipalとグループの関係">🏢
+     
+     たとえ話で理解する「Principalとグループの関係」</a></li>
+            <li class="toc-h2"><a href="#なぜIAMグループをPrincipalに指定できないのか？">🔍 なぜIAMグループをPrincipalに指定できないのか？</a></li>
+            <li class="toc-h2"><a href="#Principal-に指定できるもの-できないもの">📝
+     
+     Principal に指定できるもの・できないもの</a></li>
+            <li class="toc-h2"><a href="#なぜAWSはこの設計にしたのか？">🤔
+     
+     なぜAWSはこの設計にしたのか？</a></li>
+            <li class="toc-h3"><a href="#AWSの設計思想">💡 AWSの設計思想</a></li>
+            <li class="toc-h2"><a href="#グループのメンバーにアクセスを許可する方法">💡
+     
+     グループのメンバーにアクセスを許可する方法</a></li>
+            <li class="toc-h2"><a href="#バケットポリシー-vs-IAMポリシー-比較">📊
+     
+     バケットポリシー vs IAMポリシー 比較</a></li>
+            <li class="toc-h2"><a href="#⚠️-よくある間違いと正しい対処法">⚠️
+     
+     よくある間違いと正しい対処法</a></li>
+            <li class="toc-h2"><a href="#ベストプラクティス">🏆
+     
+     ベストプラクティス</a></li>
+            <li class="toc-h3"><a href="#グループアクセスにはロールを使う">グループアクセスにはロールを使う</a></li>
+            <li class="toc-h2"><a href="#まとめ">📝 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ヘッダー -->
+<header class="header">
+<div class="header-icon">
+     🪣🔐
+    </div>
+<h1>
+     S3バケットポリシー Principal要素
+    </h1>
+<p class="header-subtitle">
+     IAMグループとの重要な関係を図解で完全理解
+    </p>
+</header>
+<!-- 結論ファースト -->
+<div class="conclusion-first">
+<div class="conclusion-title">
+<span>
+      🎯
+     </span>
+<span>
+      最初に覚える最重要ポイント
+     </span>
+</div>
+<div class="conclusion-content">
+     S3バケットポリシーの
+     <strong>
+      Principal
+     </strong>
+     には
+     <br/>
+<strong style="font-size: 1.3em; color: #CA8A04;">
+      IAMグループを直接指定できません！
+     </strong>
+</div>
+<div class="highlight-box">
+<strong>
+      指定できるもの：
+     </strong>
+     IAMユーザー、IAMロール、AWSアカウント、AWSサービス、匿名ユーザー（*）
+     <br/>
+<strong>
+      指定できないもの：
+     </strong>
+     IAMグループ ← これが最大の落とし穴！
+    </div>
+</div>
+<!-- たとえ話セクション -->
+<section class="section analogy-section">
+<h2 class="section-title" id="たとえ話で理解するPrincipalとグループの関係">
+<div class="section-title-icon">
+      🏢
+     </div>
+     たとえ話で理解する「Principalとグループの関係」
+    </h2>
+<p style="font-size: 1.2em; text-align: center; margin-bottom: 30px; color: #64748B;">
+     S3バケットポリシーを「オフィスビルのセキュリティゲート」に例えて説明します
+    </p>
+<div class="analogy-container">
+<div class="analogy-card">
+<div class="analogy-icon">
+       🪣
+      </div>
+<div class="analogy-title">
+       S3バケット
+      </div>
+<div class="analogy-aws">
+       = AWSのストレージ
+      </div>
+<div class="analogy-real">
+       📦
+       <strong>
+        オフィスビル
+       </strong>
+       のようなもの。
+       <br/>
+       重要な書類（データ）が保管されている場所。誰でも入れるわけではない。
+      </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+       📋
+      </div>
+<div class="analogy-title">
+       バケットポリシー
+      </div>
+<div class="analogy-aws">
+       = アクセス許可ルール
+      </div>
+<div class="analogy-real">
+       🚨
+       <strong>
+        セキュリティゲートのルール
+       </strong>
+       のようなもの。
+       <br/>
+       「誰が」「何を」「どこで」できるかを決める公式ルール。
+      </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+       🎫
+      </div>
+<div class="analogy-title">
+       Principal要素
+      </div>
+<div class="analogy-aws">
+       = 「誰に」許可するか
+      </div>
+<div class="analogy-real">
+       👤
+       <strong>
+        入館許可リスト
+       </strong>
+       のようなもの。
+       <br/>
+       ゲートに「この人は通していい」と登録される名前。
+      </div>
+</div>
+<div class="analogy-card" style="border-color: rgba(239, 68, 68, 0.5);">
+<div class="analogy-icon">
+       👥
+      </div>
+<div class="analogy-title">
+       IAMグループ
+      </div>
+<div class="analogy-aws">
+       = ユーザーの集まり
+      </div>
+<div class="analogy-real">
+       🏷️
+       <strong>
+        部署ラベル
+       </strong>
+       のようなもの。
+       <br/>
+       「営業部」「開発チーム」などの分類。
+       <br/>
+<strong style="color: #f87171;">
+        ⚠️ ゲートは個人IDしか認識しない！
+       </strong>
+</div>
+</div>
+</div>
+</section>
+<!-- 図解：なぜグループが使えないか -->
+<div class="diagram-section">
+<h2 class="diagram-title" id="なぜIAMグループをPrincipalに指定できないのか？">
+     🔍 なぜIAMグループをPrincipalに指定できないのか？
+    </h2>
+<div class="building-diagram">
+<div class="building">
+<div class="building-roof">
+       📦 S3バケット（オフィスビル）
+      </div>
+<div class="security-gate">
+<div class="gate-title">
+        🚨 セキュリティゲート
+        <br/>
+        （バケットポリシー）
+       </div>
+<div class="gate-list">
+<div class="gate-item allowed">
+         ✅ 山田太郎さん（IAMユーザー）
+        </div>
+<div class="gate-item allowed">
+         ✅ システム管理者役（IAMロール）
+        </div>
+<div class="gate-item allowed">
+         ✅ 取引先A社（AWSアカウント）
+        </div>
+<div class="gate-item denied">
+         ❌ 開発チーム（グループ名）
+        </div>
+</div>
+</div>
+<div style="margin-top: 20px; padding: 15px; background: rgba(239,68,68,0.2); border-radius: 10px; text-align: center;">
+<div style="font-size: 1.2em; color: #f87171; margin-bottom: 10px;">
+        ⚠️ ゲートの仕様
+       </div>
+<div style="color: #e2e8f0;">
+        個人ID（ユーザー/ロール）のみ認識
+        <br/>
+        部署名（グループ）は認識できない
+       </div>
+</div>
+</div>
+</div>
+<div class="people-section">
+<p style="text-align: center; font-size: 1.2em; margin-bottom: 20px; color: #c4b5fd;">
+      「開発チーム」グループに所属するメンバーたち
+     </p>
+<div class="people-group">
+<div class="person cannot-enter">
+<div class="person-icon">
+        👨‍💻
+       </div>
+<div class="person-label">
+        鈴木さん
+        <br/>
+<small style="color: #f87171;">
+         入れない
+        </small>
+</div>
+</div>
+<div class="person cannot-enter">
+<div class="person-icon">
+        👩‍💻
+       </div>
+<div class="person-label">
+        田中さん
+        <br/>
+<small style="color: #f87171;">
+         入れない
+        </small>
+</div>
+</div>
+<div class="person cannot-enter">
+<div class="person-icon">
+        🧑‍💻
+       </div>
+<div class="person-label">
+        佐藤さん
+        <br/>
+<small style="color: #f87171;">
+         入れない
+        </small>
+</div>
+</div>
+</div>
+<p style="text-align: center; color: #f87171; font-size: 1.1em; margin-top: 20px;">
+      😢 グループ名で許可しても、メンバーは誰も入れない！
+     </p>
+</div>
+</div>
+<!-- Principal に指定できるもの一覧 -->
+<section class="section">
+<h2 class="section-title" id="Principal-に指定できるもの-できないもの">
+<div class="section-title-icon">
+      📝
+     </div>
+     Principal に指定できるもの・できないもの
+    </h2>
+<div class="principal-grid">
+<div class="principal-card">
+<div class="principal-header">
+<div class="principal-icon">
+        👤
+       </div>
+<div class="principal-name">
+        IAMユーザー
+       </div>
+</div>
+<span class="principal-status status-ok">
+       ✅ 指定可能
+      </span>
+<p>
+       個人のAWSアカウントユーザー。社員証を持った個人のようなもの。
+      </p>
+<div class="principal-example">
+       "Principal": {
+       <br/>
+       "AWS": "arn:aws:iam::123456789012:user/yamada"
+       <br/>
+       }
+      </div>
+</div>
+<div class="principal-card">
+<div class="principal-header">
+<div class="principal-icon">
+        🎭
+       </div>
+<div class="principal-name">
+        IAMロール
+       </div>
+</div>
+<span class="principal-status status-ok">
+       ✅ 指定可能
+      </span>
+<p>
+       一時的に引き受けられる役割。「システム管理者」という腕章のようなもの。
+      </p>
+<div class="principal-example">
+       "Principal": {
+       <br/>
+       "AWS": "arn:aws:iam::123456789012:role/AdminRole"
+       <br/>
+       }
+      </div>
+</div>
+<div class="principal-card">
+<div class="principal-header">
+<div class="principal-icon">
+        🏢
+       </div>
+<div class="principal-name">
+        AWSアカウント
+       </div>
+</div>
+<span class="principal-status status-ok">
+       ✅ 指定可能
+      </span>
+<p>
+       アカウント全体を許可。取引先企業全体に許可を出すようなもの。
+      </p>
+<div class="principal-example">
+       "Principal": {
+       <br/>
+       "AWS": "arn:aws:iam::123456789012:root"
+       <br/>
+       }
+      </div>
+</div>
+<div class="principal-card">
+<div class="principal-header">
+<div class="principal-icon">
+        ⚙️
+       </div>
+<div class="principal-name">
+        AWSサービス
+       </div>
+</div>
+<span class="principal-status status-ok">
+       ✅ 指定可能
+      </span>
+<p>
+       CloudFrontやLambdaなど。ビル管理システムのようなもの。
+      </p>
+<div class="principal-example">
+       "Principal": {
+       <br/>
+       "Service": "cloudfront.amazonaws.com"
+       <br/>
+       }
+      </div>
+</div>
+<div class="principal-card">
+<div class="principal-header">
+<div class="principal-icon">
+        🌍
+       </div>
+<div class="principal-name">
+        匿名ユーザー（*）
+       </div>
+</div>
+<span class="principal-status status-ok">
+       ✅ 指定可能
+      </span>
+<p>
+       誰でもアクセス可能に。一般公開の受付ロビーのようなもの。
+      </p>
+<div class="principal-example">
+       "Principal": "*"
+      </div>
+</div>
+<div class="principal-card cannot-use">
+<div class="principal-header">
+<div class="principal-icon">
+        👥
+       </div>
+<div class="principal-name">
+        IAMグループ
+       </div>
+</div>
+<span class="principal-status status-ng">
+       ❌ 指定不可
+      </span>
+<p style="color: #f87171;">
+<strong>
+        バケットポリシーでは使えません！
+       </strong>
+<br/>
+       グループはIAMポリシー内でのみ使用可能。
+      </p>
+<div class="principal-example" style="border: 2px dashed #ef4444;">
+<span style="color: #f87171;">
+        // ❌ これはエラーになる
+       </span>
+<br/>
+       "Principal": {
+       <br/>
+       "AWS": "arn:aws:iam::123456789012:group/Developers"
+       <br/>
+       }
+      </div>
+</div>
+</div>
+</section>
+<!-- なぜこの設計なのか -->
+<section class="problem-section">
+<h2 class="section-title" id="なぜAWSはこの設計にしたのか？" style="color: #f87171;">
+<div class="section-title-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+      🤔
+     </div>
+     なぜAWSはこの設計にしたのか？
+    </h2>
+<div class="problem-flow">
+<div class="flow-item">
+<div class="flow-icon">
+       👥
+      </div>
+<div class="flow-label">
+       IAMグループ
+      </div>
+</div>
+<div class="flow-arrow">
+      →
+     </div>
+<div class="flow-item">
+<div class="flow-icon">
+       🔄
+      </div>
+<div class="flow-label">
+       メンバーは
+       <br/>
+       変動する
+      </div>
+</div>
+<div class="flow-arrow">
+      →
+     </div>
+<div class="flow-item">
+<div class="flow-icon">
+       📊
+      </div>
+<div class="flow-label">
+       アクセス評価が
+       <br/>
+       複雑に
+      </div>
+</div>
+<div class="flow-x">
+      ✕
+     </div>
+</div>
+<div style="max-width: 800px; margin: 30px auto; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 16px;">
+<h3 id="AWSの設計思想" style="color: #CA8A04; margin-bottom: 20px; font-size: 1.3em;">
+      💡 AWSの設計思想
+     </h3>
+<ul style="list-style: none; padding: 0;">
+<li style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; gap: 15px;">
+<span style="color: #dc7600; font-size: 1.3em;">
+        1️⃣
+       </span>
+<span>
+<strong>
+         シンプルさの追求：
+        </strong>
+        リソースポリシー（バケットポリシー）は「リソース側から見て誰がアクセスするか」を明確にする
+       </span>
+</li>
+<li style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; gap: 15px;">
+<span style="color: #dc7600; font-size: 1.3em;">
+        2️⃣
+       </span>
+<span>
+<strong>
+         パフォーマンス：
+        </strong>
+        グループメンバーシップを毎回チェックするとアクセス評価が遅くなる
+       </span>
+</li>
+<li style="padding: 12px 0; display: flex; gap: 15px;">
+<span style="color: #dc7600; font-size: 1.3em;">
+        3️⃣
+       </span>
+<span>
+<strong>
+         責任の分離：
+        </strong>
+        IAMポリシー（アイデンティティ側）とリソースポリシー（リソース側）の役割を分ける
+       </span>
+</li>
+</ul>
+</div>
+</section>
+<!-- 解決策 -->
+<section class="section">
+<h2 class="section-title" id="グループのメンバーにアクセスを許可する方法">
+<div class="section-title-icon" style="background: linear-gradient(135deg, #16A34A 0%, #047857 100%);">
+      💡
+     </div>
+     グループのメンバーにアクセスを許可する方法
+    </h2>
+<div class="solution-grid">
+<div class="solution-card">
+<div class="solution-number">
+       1
+      </div>
+<div class="solution-title">
+<span>
+        🎭
+       </span>
+<span>
+        IAMロールを使う（推奨）
+       </span>
+</div>
+<div class="solution-desc">
+       グループメンバーが共通のロールを引き受ける（AssumeRole）設計に変更。バケットポリシーにはロールを指定。
+      </div>
+<div class="solution-code">
+       // バケットポリシー
+       <br/>
+       {
+       <br/>
+       "Principal": {
+       <br/>
+       "AWS": "arn:aws:iam::123456789012:role/DevelopersRole"
+       <br/>
+       },
+       <br/>
+       "Action": "s3:GetObject",
+       <br/>
+       "Effect": "Allow"
+       <br/>
+       }
+      </div>
+</div>
+<div class="solution-card">
+<div class="solution-number">
+       2
+      </div>
+<div class="solution-title">
+<span>
+        📋
+       </span>
+<span>
+        IAMポリシーをグループに付与
+       </span>
+</div>
+<div class="solution-desc">
+       バケットポリシーではなく、IAMグループに直接S3アクセス権限を持つポリシーをアタッチする。
+      </div>
+<div class="solution-code">
+       // グループにアタッチするIAMポリシー
+       <br/>
+       {
+       <br/>
+       "Effect": "Allow",
+       <br/>
+       "Action": "s3:GetObject",
+       <br/>
+       "Resource": "arn:aws:s3:::my-bucket/*"
+       <br/>
+       }
+      </div>
+</div>
+<div class="solution-card">
+<div class="solution-number">
+       3
+      </div>
+<div class="solution-title">
+<span>
+        🏢
+       </span>
+<span>
+        AWSアカウント全体を許可
+       </span>
+</div>
+<div class="solution-desc">
+       同一アカウント内の場合、アカウントルートを許可し、IAM側で細かく制御する。
+      </div>
+<div class="solution-code">
+       // バケットポリシー
+       <br/>
+       {
+       <br/>
+       "Principal": {
+       <br/>
+       "AWS": "arn:aws:iam::123456789012:root"
+       <br/>
+       },
+       <br/>
+       "Action": "s3:*",
+       <br/>
+       "Effect": "Allow"
+       <br/>
+       }
+      </div>
+</div>
+</div>
+</section>
+<!-- 比較表 -->
+<section class="section">
+<h2 class="section-title" id="バケットポリシー-vs-IAMポリシー-比較">
+<div class="section-title-icon">
+      📊
+     </div>
+     バケットポリシー vs IAMポリシー 比較
+    </h2>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+        項目
+       </th>
+<th>
+        バケットポリシー
+       </th>
+<th>
+        IAMポリシー
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+         付与先
+        </strong>
+</td>
+<td>
+        S3バケット（リソース）
+       </td>
+<td>
+        ユーザー/グループ/ロール
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         IAMユーザー指定
+        </strong>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+         IAMロール指定
+        </strong>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+         IAMグループ指定
+        </strong>
+</td>
+<td>
+<span class="table-x">
+         ❌
+        </span>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+         クロスアカウント
+        </strong>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+        必須
+       </td>
+<td>
+<span class="table-x">
+         ❌
+        </span>
+        単独では不可
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         匿名アクセス
+        </strong>
+</td>
+<td>
+<span class="table-check">
+         ✅
+        </span>
+</td>
+<td>
+<span class="table-x">
+         ❌
+        </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+         管理場所
+        </strong>
+</td>
+<td>
+        S3バケット
+       </td>
+<td>
+        IAMコンソール
+       </td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- よくある間違い -->
+<section class="section mistakes-section">
+<h2 class="section-title" id="⚠️-よくある間違いと正しい対処法">
+<div class="section-title-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+      ⚠️
+     </div>
+     よくある間違いと正しい対処法
+    </h2>
+<div class="mistake-card">
+<div class="mistake-title">
+<span>
+       ❌
+      </span>
+<span>
+       間違い：グループARNをPrincipalに指定
+      </span>
+</div>
+<div class="code-block">
+<div class="code-content">
+       {
+       <br/>
+       "Version": "2012-10-17",
+       <br/>
+       "Statement": [{
+       <br/>
+       "Effect": "Allow",
+       <br/>
+       "Principal": {
+       <br/>
+<span style="color: #f87171;">
+        "AWS": "arn:aws:iam::123456789012:group/Developers"  // ❌ エラー！
+       </span>
+<br/>
+       },
+       <br/>
+       "Action": "s3:GetObject",
+       <br/>
+       "Resource": "arn:aws:s3:::my-bucket/*"
+       <br/>
+       }]
+       <br/>
+       }
+      </div>
+</div>
+</div>
+<div class="correct-card">
+<div class="correct-title">
+<span>
+       ✅
+      </span>
+<span>
+       正解：ロールを使って許可
+      </span>
+</div>
+<div class="code-block">
+<div class="code-content">
+<span class="comment">
+        // ステップ1: バケットポリシーでロールを許可
+       </span>
+<br/>
+       {
+       <br/>
+       "Version": "2012-10-17",
+       <br/>
+       "Statement": [{
+       <br/>
+       "Effect": "Allow",
+       <br/>
+       "Principal": {
+       <br/>
+<span style="color: #4ade80;">
+        "AWS": "arn:aws:iam::123456789012:role/DevelopersRole"  // ✅ OK！
+       </span>
+<br/>
+       },
+       <br/>
+       "Action": "s3:GetObject",
+       <br/>
+       "Resource": "arn:aws:s3:::my-bucket/*"
+       <br/>
+       }]
+       <br/>
+       }
+       <br/>
+<br/>
+<span class="comment">
+        // ステップ2: グループにロール引き受け権限を付与（IAMポリシー）
+       </span>
+<br/>
+       {
+       <br/>
+       "Effect": "Allow",
+       <br/>
+       "Action": "sts:AssumeRole",
+       <br/>
+       "Resource": "arn:aws:iam::123456789012:role/DevelopersRole"
+       <br/>
+       }
+      </div>
+</div>
+</div>
+</section>
+<!-- ベストプラクティス -->
+<section class="best-practices">
+<h2 class="section-title" id="ベストプラクティス" style="color: #c4b5fd;">
+<div class="section-title-icon" style="background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);">
+      🏆
+     </div>
+     ベストプラクティス
+    </h2>
+<div class="practice-list">
+<div class="practice-item">
+<div class="practice-icon">
+       🎭
+      </div>
+<div class="practice-content">
+<h3 id="グループアクセスにはロールを使う">
+        グループアクセスにはロールを使う
+       </h3>
+<p>
+        複数ユーザーへの一括許可が必要な場合、共通のIAMロールを作成し、そのロールをPrincipalに指定します。メンバー変更時もロールの設定変更不要。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<div class="practice-icon">
+       🔒
+      </div>
+<div class="practice-content">
+<h4>
+        最小権限の原則を守る
+       </h4>
+<p>
+        Principalに「*」を使う場合は、Conditionで接続元IPやVPCエンドポイントを制限するなど、追加の制約を必ず設定しましょう。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<div class="practice-icon">
+       📍
+      </div>
+<div class="practice-content">
+<h4>
+        同一アカウント内はIAMポリシーを優先
+       </h4>
+<p>
+        同じAWSアカウント内のアクセス制御は、バケットポリシーよりIAMポリシー（グループ経由）の方が管理しやすいケースが多いです。
+       </p>
+</div>
+</div>
+<div class="practice-item">
+<div class="practice-icon">
+       🌐
+      </div>
+<div class="practice-content">
+<h4>
+        クロスアカウントはバケットポリシー必須
+       </h4>
+<p>
+        他のAWSアカウントからのアクセスを許可する場合は、バケットポリシーでのPrincipal指定が必要です。IAMポリシーだけでは不可。
+       </p>
+</div>
+</div>
+</div>
+</section>
+<!-- まとめ -->
+<section class="summary-section">
+<h2 class="summary-title" id="まとめ">
+     📝 まとめ
+    </h2>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">
+       🎫
+      </div>
+<div class="summary-text">
+<strong>
+        Principal = 「誰に」
+       </strong>
+<br/>
+       アクセスを許可/拒否する対象を指定する要素
+      </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+       ❌
+      </div>
+<div class="summary-text">
+<strong>
+        グループは指定不可
+       </strong>
+<br/>
+       IAMグループはバケットポリシーのPrincipalには使えない
+      </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+       🎭
+      </div>
+<div class="summary-text">
+<strong>
+        解決策はロール
+       </strong>
+<br/>
+       グループメンバーに一括許可したいならIAMロールを活用
+      </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+       📋
+      </div>
+<div class="summary-text">
+<strong>
+        IAMポリシーも選択肢
+       </strong>
+<br/>
+       同一アカウント内ならグループにIAMポリシーをアタッチ
+      </div>
+</div>
+</div>
+</section>
+<!-- フッター -->
+<footer class="footer">
+<p>
+     🪣 S3 Bucket Policy Principal Guide | AWS初心者向け図解ガイド
+    </p>
+<p style="margin-top: 10px; font-size: 0.9em;">
+     💡 覚えておこう：バケットポリシーは「個人ID」しか認識しない！
+    </p>
+</footer>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="aws-directory-service-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">11</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">19</span>
+    </div>
+    <a href="nacl-sg-comparison-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

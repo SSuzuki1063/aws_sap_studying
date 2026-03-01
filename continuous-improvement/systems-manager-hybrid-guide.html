@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   AWS Systems Manager完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/systems-manager-hybrid-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#Systems-Managerとは？">🌐 Systems Managerとは？</a></li>
+            <li class="toc-h3"><a href="#❌-Systems-Manager-なし">❌ Systems Manager なし</a></li>
+            <li class="toc-h3"><a href="#✅-Systems-Manager-あり">✅ Systems Manager あり</a></li>
+            <li class="toc-h2"><a href="#️-ハイブリッド環境の全体像">🏗️ ハイブリッド環境の全体像</a></li>
+            <li class="toc-h3"><a href="#Systems-Manager">🎯 Systems Manager</a></li>
+            <li class="toc-h2"><a href="#Systems-Managerの主要機能">🎯 Systems Managerの主要機能</a></li>
+            <li class="toc-h3"><a href="#実際の使用シナリオ">💼 実際の使用シナリオ</a></li>
+            <li class="toc-h2"><a href="#ハイブリッドアクティベーション完全ガイド">🔑 ハイブリッドアクティベーション完全ガイド</a></li>
+            <li class="toc-h3"><a href="#アクティベーションの仕組み">📋 アクティベーションの仕組み</a></li>
+            <li class="toc-h3"><a href="#️-アクティベーション作成の詳細手順">🛠️ アクティベーション作成の詳細手順</a></li>
+            <li class="toc-h3"><a href="#サーバー側での登録手順">💻 サーバー側での登録手順</a></li>
+            <li class="toc-h3"><a href="#よくあるトラブルと解決方法">🔧 よくあるトラブルと解決方法</a></li>
+            <li class="toc-h3"><a href="#⭐-アクティベーションのベストプラクティス">⭐ アクティベーションのベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#セットアップ手順5ステップ">🚀 セットアップ手順（5ステップ）</a></li>
+            <li class="toc-h3"><a href="#IAMロールの作成">📝 IAMロールの作成</a></li>
+            <li class="toc-h3"><a href="#Systems-Managerを使うメリット">🎁 Systems Managerを使うメリット</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+            <li class="toc-h3"><a href="#大企業の本社-=-Systems-Manager">🏢 大企業の本社 = Systems Manager</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     セキュリティ・ガバナンス
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     その他
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Systems Manager Hybrid Guide
+    </span>
+</nav>
+<div class="header">
+<h1>
+     🏢 AWS Systems Manager
+    </h1>
+<p>
+     大企業の支社管理で理解する！ハイブリッド環境の一元管理完全ガイド
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro-section">
+<h2 id="Systems-Managerとは？">
+      🌐 Systems Managerとは？
+     </h2>
+<p class="intro-text">
+<strong>
+       AWS、オンプレミス、他のクラウドなど、
+      </strong>
+<br/>
+<strong>
+       すべてのサーバーを1つの画面から管理できる統合管理サービス
+      </strong>
+<br/>
+<br/>
+      まるで大企業の本社が、世界中の支社を一元管理するように！
+     </p>
+</div>
+<!-- たとえ話 -->
+<div class="analogy-box">
+<div class="analogy-title">
+<span>
+       🏢
+      </span>
+<span>
+       たとえ話：グローバル企業の支社管理システム
+      </span>
+</div>
+<div class="analogy-content">
+<p>
+<strong>
+        あなたは、世界中に支社を持つ大企業の本社IT部門の責任者です。
+       </strong>
+</p>
+<br/>
+<p>
+       📍
+       <strong>
+        支社の場所はバラバラ：
+       </strong>
+</p>
+<ul style="margin: 15px 0 15px 30px; line-height: 2;">
+<li>
+        東京本社ビル（オンプレミス）
+       </li>
+<li>
+        AWSクラウドオフィス（EC2インスタンス）
+       </li>
+<li>
+        Google Cloudの共同オフィス（他のクラウド）
+       </li>
+<li>
+        リモートワーカーの自宅（エッジデバイス）
+       </li>
+</ul>
+<p>
+       🎯
+       <strong>
+        本社からの指示：
+       </strong>
+<br/>
+       「全支社のパソコンに、今日中に最新セキュリティパッチを適用せよ！」
+      </p>
+<br/>
+<p>
+<strong>
+        Systems Managerは、この命令を一斉に全支社に届け、実行させることができる「統合司令システム」です。
+       </strong>
+</p>
+</div>
+</div>
+<!-- Before/After比較 -->
+<div class="comparison-grid">
+<div class="comparison-card before">
+<h3 id="❌-Systems-Manager-なし">
+       ❌ Systems Manager なし
+      </h3>
+<ul class="problem-list">
+<li>
+        各支社に個別に電話・メール連絡
+       </li>
+<li>
+        それぞれ異なる管理ツールを使用
+       </li>
+<li>
+        作業完了の確認が遅い
+       </li>
+<li>
+        誰が完了したか把握できない
+       </li>
+<li>
+        緊急対応に時間がかかる
+       </li>
+<li>
+        統一されたセキュリティ基準がない
+       </li>
+</ul>
+</div>
+<div class="comparison-card after">
+<h3 id="✅-Systems-Manager-あり">
+       ✅ Systems Manager あり
+      </h3>
+<ul class="solution-list">
+<li>
+        1つの画面から全支社に指示
+       </li>
+<li>
+        統一された管理システム
+       </li>
+<li>
+        リアルタイムで作業状況を確認
+       </li>
+<li>
+        完了状況が一目瞭然
+       </li>
+<li>
+        数分で全支社に緊急対応
+       </li>
+<li>
+        一貫したセキュリティポリシー
+       </li>
+</ul>
+</div>
+</div>
+<!-- アーキテクチャ図 -->
+<div class="architecture-section">
+<h2 class="architecture-title" id="️-ハイブリッド環境の全体像">
+      🏗️ ハイブリッド環境の全体像
+     </h2>
+<div class="architecture-diagram">
+<div class="central-hub">
+<h3 id="Systems-Manager">
+        🎯 Systems Manager
+       </h3>
+<p>
+        （本社の統合司令室）
+       </p>
+<p style="margin-top: 15px; font-size: 0.95em;">
+        すべての支社を
+        <br/>
+        1つの画面から管理
+       </p>
+</div>
+<div class="branches-container">
+<div class="branch-card aws">
+<div class="branch-icon">
+         ☁️
+        </div>
+<div class="branch-title">
+         AWS環境
+        </div>
+<div class="branch-description">
+<strong>
+          EC2インスタンス
+         </strong>
+<br/>
+         本社直営の最新オフィス。
+         <br/>
+         自動的にSystems Managerに接続され、管理が簡単。
+        </div>
+</div>
+<div class="branch-card onprem">
+<div class="branch-icon">
+         🏢
+        </div>
+<div class="branch-title">
+         オンプレミス
+        </div>
+<div class="branch-description">
+<strong>
+          自社データセンター
+         </strong>
+<br/>
+         創業時からの本社ビル。
+         <br/>
+         SSM Agentをインストールして本社と通信。
+        </div>
+</div>
+<div class="branch-card other">
+<div class="branch-icon">
+         🌍
+        </div>
+<div class="branch-title">
+         他のクラウド
+        </div>
+<div class="branch-description">
+<strong>
+          Google Cloud / Azure
+         </strong>
+<br/>
+         提携先の共同オフィス。
+         <br/>
+         SSM Agentで本社システムに統合。
+        </div>
+</div>
+<div class="branch-card aws">
+<div class="branch-icon">
+         🖥️
+        </div>
+<div class="branch-title">
+         物理サーバー
+        </div>
+<div class="branch-description">
+<strong>
+          専用ハードウェア
+         </strong>
+<br/>
+         特殊な業務用の専用機器。
+         <br/>
+         他のサーバーと同様に一元管理。
+        </div>
+</div>
+<div class="branch-card onprem">
+<div class="branch-icon">
+         📱
+        </div>
+<div class="branch-title">
+         エッジデバイス
+        </div>
+<div class="branch-description">
+<strong>
+          IoT・リモート端末
+         </strong>
+<br/>
+         支店の小さな事務所や工場。
+         <br/>
+         本社から遠隔管理が可能。
+        </div>
+</div>
+<div class="branch-card other">
+<div class="branch-icon">
+         🐳
+        </div>
+<div class="branch-title">
+         コンテナ
+        </div>
+<div class="branch-description">
+<strong>
+          ECS / EKS
+         </strong>
+<br/>
+         移動式の臨時オフィス。
+         <br/>
+         動的に作られる環境も管理。
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- 主要機能 -->
+<div class="features-section">
+<h2 class="architecture-title" id="Systems-Managerの主要機能">
+      🎯 Systems Managerの主要機能
+     </h2>
+<div class="features-grid">
+<div class="feature-card">
+<div class="feature-header">
+<div class="feature-icon">
+         📋
+        </div>
+<div class="feature-title">
+         Run Command
+        </div>
+</div>
+<div class="feature-analogy">
+        🏢 たとえ：全支社に一斉メール送信
+       </div>
+<div class="feature-description">
+<strong>
+         やること：
+        </strong>
+        複数のサーバーで同時にコマンドを実行
+        <br/>
+<br/>
+<strong>
+         具体例：
+        </strong>
+<br/>
+        • 「全サーバーでディスク容量を確認せよ」
+        <br/>
+        • 「この設定ファイルを全員に配布せよ」
+        <br/>
+        • 「緊急パッチを今すぐ全台に適用せよ」
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-header">
+<div class="feature-icon">
+         📦
+        </div>
+<div class="feature-title">
+         State Manager
+        </div>
+</div>
+<div class="feature-analogy">
+        🏢 たとえ：支社の定期巡回チェック
+       </div>
+<div class="feature-description">
+<strong>
+         やること：
+        </strong>
+        サーバーの設定を常に理想の状態に保つ
+        <br/>
+<br/>
+<strong>
+         具体例：
+        </strong>
+<br/>
+        • 「毎日午前3時に自動バックアップ」
+        <br/>
+        • 「セキュリティ設定が変更されたら元に戻す」
+        <br/>
+        • 「必要なソフトが消えたら再インストール」
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-header">
+<div class="feature-icon">
+         🔧
+        </div>
+<div class="feature-title">
+         Patch Manager
+        </div>
+</div>
+<div class="feature-analogy">
+        🏢 たとえ：全支社の設備点検・修繕
+       </div>
+<div class="feature-description">
+<strong>
+         やること：
+        </strong>
+        OSやソフトウェアの更新を自動化
+        <br/>
+<br/>
+<strong>
+         具体例：
+        </strong>
+<br/>
+        • 「毎週金曜日にセキュリティパッチ適用」
+        <br/>
+        • 「緊急度の高い更新を優先的に適用」
+        <br/>
+        • 「適用前に自動でバックアップ取得」
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-header">
+<div class="feature-icon">
+         🗂️
+        </div>
+<div class="feature-title">
+         Parameter Store
+        </div>
+</div>
+<div class="feature-analogy">
+        🏢 たとえ：本社の金庫（機密情報保管庫）
+       </div>
+<div class="feature-description">
+<strong>
+         やること：
+        </strong>
+        パスワードや設定値を安全に保管・配布
+        <br/>
+<br/>
+<strong>
+         具体例：
+        </strong>
+<br/>
+        • 「DBパスワードを暗号化して保管」
+        <br/>
+        • 「APIキーを全支社で共有」
+        <br/>
+        • 「設定値の変更履歴を記録」
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-header">
+<div class="feature-icon">
+         🔍
+        </div>
+<div class="feature-title">
+         Inventory
+        </div>
+</div>
+<div class="feature-analogy">
+        🏢 たとえ：全支社の資産台帳
+       </div>
+<div class="feature-description">
+<strong>
+         やること：
+        </strong>
+        すべてのサーバーの情報を自動収集
+        <br/>
+<br/>
+<strong>
+         具体例：
+        </strong>
+<br/>
+        • 「どのサーバーに何がインストールされているか」
+        <br/>
+        • 「OSのバージョンを全台分リスト化」
+        <br/>
+        • 「ライセンス管理に必要な情報を収集」
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-header">
+<div class="feature-icon">
+         🪟
+        </div>
+<div class="feature-title">
+         Session Manager
+        </div>
+</div>
+<div class="feature-analogy">
+        🏢 たとえ：支社への安全なビデオ通話
+       </div>
+<div class="feature-description">
+<strong>
+         やること：
+        </strong>
+        ブラウザから直接サーバーにログイン
+        <br/>
+<br/>
+<strong>
+         具体例：
+        </strong>
+<br/>
+        • 「SSHキー不要でログイン」
+        <br/>
+        • 「誰がいつログインしたか記録」
+        <br/>
+        • 「踏み台サーバー不要で安全に接続」
+       </div>
+</div>
+</div>
+</div>
+<!-- ユースケース -->
+<div class="use-case-section">
+<h3 class="use-case-title" id="実際の使用シナリオ">
+      💼 実際の使用シナリオ
+     </h3>
+<div class="scenario-grid">
+<div class="scenario-card">
+<h4>
+<span>
+         🚨
+        </span>
+<span>
+         緊急セキュリティ対応
+        </span>
+</h4>
+<div class="scenario-problem">
+<strong>
+         😱 問題：
+        </strong>
+<br/>
+        「重大な脆弱性が発見された！全サーバーに今すぐパッチを適用しなければ…でもサーバーが世界中に散らばっている…」
+       </div>
+<div class="scenario-solution">
+<strong>
+         ✅ 解決：
+        </strong>
+<br/>
+        Systems ManagerのRun Commandで、全サーバーに一斉にパッチ適用コマンドを送信。AWS、オンプレミス、他クラウド関係なく、5分で対応完了！
+       </div>
+</div>
+<div class="scenario-card">
+<h4>
+<span>
+         🔄
+        </span>
+<span>
+         定期メンテナンス自動化
+        </span>
+</h4>
+<div class="scenario-problem">
+<strong>
+         😱 問題：
+        </strong>
+<br/>
+        「毎週末、全サーバーのログをクリアして、不要ファイルを削除…手作業だと6時間かかる…」
+       </div>
+<div class="scenario-solution">
+<strong>
+         ✅ 解決：
+        </strong>
+<br/>
+        State Managerで自動化スケジュールを設定。毎週土曜日午前2時に、全サーバーで自動実行。人間は寝ている間に作業完了！
+       </div>
+</div>
+<div class="scenario-card">
+<h4>
+<span>
+         📊
+        </span>
+<span>
+         監査対応
+        </span>
+</h4>
+<div class="scenario-problem">
+<strong>
+         😱 問題：
+        </strong>
+<br/>
+        「監査で『全サーバーの構成情報とソフトウェアリストを提出せよ』と言われた…手動で調査すると1ヶ月かかる…」
+       </div>
+<div class="scenario-solution">
+<strong>
+         ✅ 解決：
+        </strong>
+<br/>
+        Inventoryが自動収集している情報をエクスポート。AWS、オンプレミス、すべての情報が揃った詳細レポートが5分で完成！
+       </div>
+</div>
+<div class="scenario-card">
+<h4>
+<span>
+         🏗️
+        </span>
+<span>
+         ハイブリッド環境の統合
+        </span>
+</h4>
+<div class="scenario-problem">
+<strong>
+         😱 問題：
+        </strong>
+<br/>
+        「AWS、オンプレミス、Google Cloudにサーバーがあって、それぞれ別のツールで管理…効率が悪すぎる…」
+       </div>
+<div class="scenario-solution">
+<strong>
+         ✅ 解決：
+        </strong>
+<br/>
+        すべてのサーバーにSSM Agentをインストールして、Systems Managerで一元管理。場所に関係なく、同じ操作で管理可能！
+       </div>
+</div>
+</div>
+</div>
+<!-- ハイブリッドアクティベーション詳細 -->
+<div class="architecture-section" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 8px solid #CA8A04;">
+<h2 class="architecture-title" id="ハイブリッドアクティベーション完全ガイド" style="color: #92400e;">
+      🔑 ハイブリッドアクティベーション完全ガイド
+     </h2>
+<div style="max-width: 1000px; margin: 0 auto;">
+<!-- アクティベーションとは -->
+<div class="analogy-box" style="margin-bottom: 40px;">
+<div class="analogy-title">
+<span>
+         🎫
+        </span>
+<span>
+         ハイブリッドアクティベーションとは？
+        </span>
+</div>
+<div class="analogy-content">
+<p>
+<strong>
+          たとえ：外部支社の本社システム登録
+         </strong>
+</p>
+<br/>
+<p>
+         AWS以外のサーバー（オンプレミス、他のクラウド）を
+         <br/>
+         Systems Managerに登録するための「入館証発行プロセス」です。
+        </p>
+<br/>
+<p>
+         🏢
+         <strong>
+          本社（AWS）の社員は自動で入館証を持っています。
+         </strong>
+<br/>
+         でも、外部支社の社員（オンプレミスサーバー）には、
+         <br/>
+         特別な入館証（アクティベーションコード）を発行する必要があります。
+        </p>
+<br/>
+<p style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+          🎯 重要：
+         </strong>
+<br/>
+         EC2インスタンスはIAMロールで自動認証されますが、
+         <br/>
+         それ以外のサーバーはこのアクティベーションプロセスが必須です！
+        </p>
+</div>
+</div>
+<!-- アクティベーションの仕組み -->
+<div style="background: white; padding: 40px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+<h3 id="アクティベーションの仕組み" style="color: #92400e; font-size: 1.8em; margin-bottom: 25px; text-align: center;">
+        📋 アクティベーションの仕組み
+       </h3>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
+<div style="background: linear-gradient(to bottom, #fef3c7 0%, #fef9c3 100%); padding: 25px; border-radius: 12px; text-align: center; border-top: 4px solid #CA8A04;">
+<div style="font-size: 3em; margin-bottom: 15px;">
+          1️⃣
+         </div>
+<h4 style="color: #92400e; font-size: 1.3em; margin-bottom: 12px;">
+          申請
+         </h4>
+<p style="color: #78350f; line-height: 1.6;">
+          AWS管理者が
+          <br/>
+          Systems Managerで
+          <br/>
+          アクティベーションを作成
+         </p>
+</div>
+<div style="background: linear-gradient(to bottom, #fef3c7 0%, #fef9c3 100%); padding: 25px; border-radius: 12px; text-align: center; border-top: 4px solid #CA8A04;">
+<div style="font-size: 3em; margin-bottom: 15px;">
+          2️⃣
+         </div>
+<h4 style="color: #92400e; font-size: 1.3em; margin-bottom: 12px;">
+          発行
+         </h4>
+<p style="color: #78350f; line-height: 1.6;">
+          アクティベーションIDと
+          <br/>
+          アクティベーションコードが
+          <br/>
+          発行される
+         </p>
+</div>
+<div style="background: linear-gradient(to bottom, #fef3c7 0%, #fef9c3 100%); padding: 25px; border-radius: 12px; text-align: center; border-top: 4px solid #CA8A04;">
+<div style="font-size: 3em; margin-bottom: 15px;">
+          3️⃣
+         </div>
+<h4 style="color: #92400e; font-size: 1.3em; margin-bottom: 12px;">
+          登録
+         </h4>
+<p style="color: #78350f; line-height: 1.6;">
+          サーバーで
+          <br/>
+          SSM Agentに
+          <br/>
+          コードを設定
+         </p>
+</div>
+</div>
+<div style="background: #fef9c3; padding: 25px; border-radius: 10px; border-left: 5px solid #CA8A04;">
+<h4 style="color: #92400e; margin-bottom: 15px; font-size: 1.2em;">
+         🔐 発行される2つの重要情報
+        </h4>
+<div style="color: #78350f; line-height: 1.8;">
+<strong>
+          1. Activation ID（アクティベーションID）
+         </strong>
+<br/>
+<code style="background: white; padding: 5px 10px; border-radius: 5px; display: inline-block; margin: 8px 0;">
+          例: 12345678-1234-1234-1234-123456789012
+         </code>
+<br/>
+         → ユーザー名のようなもの
+         <br/>
+<br/>
+<strong>
+          2. Activation Code（アクティベーションコード）
+         </strong>
+<br/>
+<code style="background: white; padding: 5px 10px; border-radius: 5px; display: inline-block; margin: 8px 0;">
+          例: ABCD1234EFGH5678IJKL
+         </code>
+<br/>
+         → パスワードのようなもの（一度しか表示されない！）
+        </div>
+</div>
+</div>
+<!-- アクティベーション作成の詳細手順 -->
+<div style="background: white; padding: 40px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+<h3 id="️-アクティベーション作成の詳細手順" style="color: #92400e; font-size: 1.8em; margin-bottom: 25px; text-align: center;">
+        🛠️ アクティベーション作成の詳細手順
+       </h3>
+<div style="background: #fef9c3; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+<h4 style="color: #92400e; margin-bottom: 15px; font-size: 1.2em;">
+         📍 AWSマネジメントコンソールでの作成
+        </h4>
+<ol style="color: #78350f; line-height: 2; margin-left: 20px;">
+<li>
+<strong>
+           Systems Manager
+          </strong>
+          コンソールを開く
+         </li>
+<li>
+          左メニューから
+          <strong>
+           「ハイブリッドアクティベーション」
+          </strong>
+          を選択
+         </li>
+<li>
+<strong>
+           「アクティベーションを作成」
+          </strong>
+          ボタンをクリック
+         </li>
+<li>
+          必要な情報を入力（下記参照）
+         </li>
+<li>
+          作成後、IDとコードをすぐにコピー保存！
+         </li>
+</ol>
+</div>
+<h4 style="color: #92400e; margin-bottom: 20px; font-size: 1.3em;">
+        ⚙️ 設定項目の詳細
+       </h4>
+<div style="display: grid; gap: 20px;">
+<div style="background: #fef9c3; padding: 20px; border-radius: 10px; border-left: 4px solid #CA8A04;">
+<h5 style="color: #92400e; margin-bottom: 10px; font-size: 1.15em;">
+          1. アクティベーションの説明
+         </h5>
+<p style="color: #78350f; margin-bottom: 8px;">
+<strong>
+           例：
+          </strong>
+          "Tokyo-Datacenter-WebServers"
+         </p>
+<p style="color: #78350f; font-size: 0.95em;">
+          💡 どのサーバー群かわかる名前をつけましょう
+         </p>
+</div>
+<div style="background: #fef9c3; padding: 20px; border-radius: 10px; border-left: 4px solid #CA8A04;">
+<h5 style="color: #92400e; margin-bottom: 10px; font-size: 1.15em;">
+          2. IAMロール
+         </h5>
+<p style="color: #78350f; margin-bottom: 8px;">
+<strong>
+           推奨：
+          </strong>
+          "AmazonSSMManagedInstanceCore" ポリシーを持つロール
+         </p>
+<p style="color: #78350f; font-size: 0.95em;">
+          💡 事前に作成しておくか、自動作成オプションを使用
+         </p>
+</div>
+<div style="background: #fef9c3; padding: 20px; border-radius: 10px; border-left: 4px solid #CA8A04;">
+<h5 style="color: #92400e; margin-bottom: 10px; font-size: 1.15em;">
+          3. インスタンス登録数の上限
+         </h5>
+<p style="color: #78350f; margin-bottom: 8px;">
+<strong>
+           デフォルト：
+          </strong>
+          10台
+         </p>
+<p style="color: #78350f; font-size: 0.95em;">
+          💡 登録予定のサーバー台数を設定（最大1000台）
+         </p>
+</div>
+<div style="background: #fef9c3; padding: 20px; border-radius: 10px; border-left: 4px solid #CA8A04;">
+<h5 style="color: #92400e; margin-bottom: 10px; font-size: 1.15em;">
+          4. 有効期限
+         </h5>
+<p style="color: #78350f; margin-bottom: 8px;">
+<strong>
+           デフォルト：
+          </strong>
+          24時間
+         </p>
+<p style="color: #78350f; font-size: 0.95em;">
+          💡 この期間内にサーバー登録を完了する必要あり（最大30日）
+         </p>
+</div>
+<div style="background: #fef9c3; padding: 20px; border-radius: 10px; border-left: 4px solid #CA8A04;">
+<h5 style="color: #92400e; margin-bottom: 10px; font-size: 1.15em;">
+          5. デフォルトインスタンス名（オプション）
+         </h5>
+<p style="color: #78350f; margin-bottom: 8px;">
+<strong>
+           例：
+          </strong>
+          "OnPrem-Web-"
+         </p>
+<p style="color: #78350f; font-size: 0.95em;">
+          💡 登録時に自動的にこのプレフィックスが付く
+         </p>
+</div>
+</div>
+</div>
+<!-- サーバー側の登録手順 -->
+<div style="background: white; padding: 40px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+<h3 id="サーバー側での登録手順" style="color: #92400e; font-size: 1.8em; margin-bottom: 25px; text-align: center;">
+        💻 サーバー側での登録手順
+       </h3>
+<div style="margin-bottom: 30px;">
+<h4 style="color: #92400e; margin-bottom: 15px; font-size: 1.3em; display: flex; align-items: center; gap: 10px;">
+<span>
+          🐧
+         </span>
+<span>
+          Linux / macOSの場合
+         </span>
+</h4>
+<div style="background: #1e293b; color: #f1f5f9; padding: 25px; border-radius: 10px; font-family: 'Courier New', monospace; overflow-x: auto;">
+<pre style="margin: 0; line-height: 1.8;"><span style="color: #64748B;"># 1. SSM Agentのインストール（必要な場合）</span>
+<span style="color: #f472b6;">sudo</span> yum install -y amazon-ssm-agent  <span style="color: #64748B;"># Amazon Linux/RHEL</span>
+<span style="color: #f472b6;">sudo</span> apt-get install -y amazon-ssm-agent  <span style="color: #64748B;"># Ubuntu/Debian</span>
+
+<span style="color: #64748B;"># 2. アクティベーションコードで登録</span>
+<span style="color: #f472b6;">sudo</span> amazon-ssm-agent -register \
+  -code <span style="color: #34d399;">"ABCD1234EFGH5678IJKL"</span> \
+  -id <span style="color: #34d399;">"12345678-1234-1234-1234-123456789012"</span> \
+  -region <span style="color: #34d399;">"ap-northeast-1"</span>
+
+<span style="color: #64748B;"># 3. SSM Agentを起動</span>
+<span style="color: #f472b6;">sudo</span> systemctl start amazon-ssm-agent
+<span style="color: #f472b6;">sudo</span> systemctl enable amazon-ssm-agent
+
+<span style="color: #64748B;"># 4. ステータス確認</span>
+<span style="color: #f472b6;">sudo</span> systemctl status amazon-ssm-agent</pre>
+</div>
+</div>
+<div style="margin-bottom: 30px;">
+<h4 style="color: #92400e; margin-bottom: 15px; font-size: 1.3em; display: flex; align-items: center; gap: 10px;">
+<span>
+          🪟
+         </span>
+<span>
+          Windowsの場合
+         </span>
+</h4>
+<div style="background: #1e293b; color: #f1f5f9; padding: 25px; border-radius: 10px; font-family: 'Courier New', monospace; overflow-x: auto;">
+<pre style="margin: 0; line-height: 1.8;"><span style="color: #64748B;"># 1. PowerShellを管理者として起動</span>
+
+<span style="color: #64748B;"># 2. SSM Agentのインストール（通常は既にインストール済み）</span>
+<span style="color: #64748B;"># https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe</span>
+
+<span style="color: #64748B;"># 3. アクティベーションコードで登録</span>
+$code = <span style="color: #34d399;">"ABCD1234EFGH5678IJKL"</span>
+$id = <span style="color: #34d399;">"12345678-1234-1234-1234-123456789012"</span>
+$region = <span style="color: #34d399;">"ap-northeast-1"</span>
+
+<span style="color: #f472b6;">Invoke-Expression</span> <span style="color: #34d399;">"C:\Program Files\Amazon\SSM\amazon-ssm-agent.exe -register -code $code -id $id -region $region"</span>
+
+<span style="color: #64748B;"># 4. サービス再起動</span>
+<span style="color: #f472b6;">Restart-Service</span> AmazonSSMAgent
+
+<span style="color: #64748B;"># 5. ステータス確認</span>
+<span style="color: #f472b6;">Get-Service</span> AmazonSSMAgent</pre>
+</div>
+</div>
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 5px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 12px; font-size: 1.1em;">
+         ✅ 登録成功の確認方法
+        </h4>
+<ol style="color: #166534; line-height: 1.8; margin-left: 20px;">
+<li>
+          Systems Managerコンソールの「Fleet Manager」を開く
+         </li>
+<li>
+          登録したサーバーが「マネージドインスタンス」として表示される
+         </li>
+<li>
+          インスタンスIDが「mi-」で始まる（Managed Instanceの略）
+         </li>
+<li>
+          Ping statusが「Online」になっていればOK！
+         </li>
+</ol>
+</div>
+</div>
+<!-- トラブルシューティング -->
+<div style="background: white; padding: 40px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+<h3 id="よくあるトラブルと解決方法" style="color: #92400e; font-size: 1.8em; margin-bottom: 25px; text-align: center;">
+        🔧 よくあるトラブルと解決方法
+       </h3>
+<div style="display: grid; gap: 20px;">
+<div style="background: #fef2f2; padding: 20px; border-radius: 10px; border-left: 4px solid #dc2626;">
+<h4 style="color: #991b1b; margin-bottom: 12px; font-size: 1.15em;">
+          ❌ 問題1: 「アクティベーションが期限切れ」
+         </h4>
+<p style="color: #7f1d1d; margin-bottom: 10px;">
+<strong>
+           原因：
+          </strong>
+          有効期限内に登録が完了しなかった
+         </p>
+<p style="color: #7f1d1d;">
+<strong>
+           解決：
+          </strong>
+          新しいアクティベーションを作成し直す（古いものは削除してOK）
+         </p>
+</div>
+<div style="background: #fef2f2; padding: 20px; border-radius: 10px; border-left: 4px solid #dc2626;">
+<h4 style="color: #991b1b; margin-bottom: 12px; font-size: 1.15em;">
+          ❌ 問題2: 「登録できない・Offlineになる」
+         </h4>
+<p style="color: #7f1d1d; margin-bottom: 10px;">
+<strong>
+           原因：
+          </strong>
+          ネットワーク設定やファイアウォール
+         </p>
+<p style="color: #7f1d1d;">
+<strong>
+           解決：
+          </strong>
+<br/>
+          • HTTPS(443)でAWSエンドポイントへの通信を許可
+          <br/>
+          • ssm.region.amazonaws.com への接続確認
+          <br/>
+          • プロキシ設定が必要な場合は環境変数を設定
+         </p>
+</div>
+<div style="background: #fef2f2; padding: 20px; border-radius: 10px; border-left: 4px solid #dc2626;">
+<h4 style="color: #991b1b; margin-bottom: 12px; font-size: 1.15em;">
+          ❌ 問題3: 「登録数上限に達した」
+         </h4>
+<p style="color: #7f1d1d; margin-bottom: 10px;">
+<strong>
+           原因：
+          </strong>
+          アクティベーション作成時の上限に到達
+         </p>
+<p style="color: #7f1d1d;">
+<strong>
+           解決：
+          </strong>
+          新しいアクティベーションを上限を増やして作成
+         </p>
+</div>
+<div style="background: #fef2f2; padding: 20px; border-radius: 10px; border-left: 4px solid #dc2626;">
+<h4 style="color: #991b1b; margin-bottom: 12px; font-size: 1.15em;">
+          ❌ 問題4: 「IAMロールのエラー」
+         </h4>
+<p style="color: #7f1d1d; margin-bottom: 10px;">
+<strong>
+           原因：
+          </strong>
+          適切な権限がない
+         </p>
+<p style="color: #7f1d1d;">
+<strong>
+           解決：
+          </strong>
+<br/>
+          • AmazonSSMManagedInstanceCore ポリシーを確認
+          <br/>
+          • 信頼関係に ssm.amazonaws.com が含まれているか確認
+         </p>
+</div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<div style="background: white; padding: 40px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+<h3 id="⭐-アクティベーションのベストプラクティス" style="color: #92400e; font-size: 1.8em; margin-bottom: 25px; text-align: center;">
+        ⭐ アクティベーションのベストプラクティス
+       </h3>
+<div style="display: grid; gap: 20px;">
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 4px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 10px; font-size: 1.15em;">
+          1. 用途別にアクティベーションを分ける
+         </h4>
+<p style="color: #166534; line-height: 1.7;">
+          環境・場所・役割ごとに別々のアクティベーションを作成。
+          <br/>
+          例: "Tokyo-Production", "Osaka-Development"
+         </p>
+</div>
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 4px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 10px; font-size: 1.15em;">
+          2. アクティベーションコードは即座に保存
+         </h4>
+<p style="color: #166534; line-height: 1.7;">
+          コードは作成時に一度しか表示されません！
+          <br/>
+          AWS Secrets Managerやパスワードマネージャーに保存しましょう。
+         </p>
+</div>
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 4px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 10px; font-size: 1.15em;">
+          3. 有効期限は短めに設定
+         </h4>
+<p style="color: #166534; line-height: 1.7;">
+          セキュリティのため、必要最小限の期限に。
+          <br/>
+          一度に多数登録する場合は長めでもOK。
+         </p>
+</div>
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 4px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 10px; font-size: 1.15em;">
+          4. タグを活用
+         </h4>
+<p style="color: #166534; line-height: 1.7;">
+          登録時にタグを設定すれば、後からグループ管理が簡単。
+          <br/>
+          Environment=Production, Location=Tokyo など。
+         </p>
+</div>
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 4px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 10px; font-size: 1.15em;">
+          5. 使用済みアクティベーションは削除
+         </h4>
+<p style="color: #166534; line-height: 1.7;">
+          登録が完了したら、セキュリティのため古いアクティベーションは削除。
+          <br/>
+          登録済みサーバーには影響ありません。
+         </p>
+</div>
+<div style="background: #dcfce7; padding: 20px; border-radius: 10px; border-left: 4px solid #16a34a;">
+<h4 style="color: #15803d; margin-bottom: 10px; font-size: 1.15em;">
+          6. 自動化スクリプトを用意
+         </h4>
+<p style="color: #166534; line-height: 1.7;">
+          複数サーバーへの登録はスクリプト化すると効率的。
+          <br/>
+          Ansible、Chef、Puppetなどの構成管理ツールと組み合わせも◎
+         </p>
+</div>
+</div>
+</div>
+<!-- 料金情報 -->
+<div style="background: #dbeafe; padding: 25px; border-radius: 12px; border-left: 5px solid #2563eb;">
+<h4 style="color: #1e40af; margin-bottom: 15px; font-size: 1.2em; display: flex; align-items: center; gap: 10px;">
+<span>
+         💰
+        </span>
+<span>
+         ハイブリッドアクティベーションの料金
+        </span>
+</h4>
+<div style="color: #1e3a8a; line-height: 1.8;">
+<p>
+<strong>
+          🎉 アクティベーション自体は無料！
+         </strong>
+</p>
+<br/>
+<p>
+<strong>
+          💵 課金対象：
+         </strong>
+<br/>
+         • オンプレミスインスタンスの管理:
+         <strong>
+          月額 $0.00695/時間
+         </strong>
+         （約$5/月/台）
+         <br/>
+         • Advanced Tier使用時: 追加料金あり
+        </p>
+<br/>
+<p>
+<strong>
+          💡 ポイント：
+         </strong>
+<br/>
+         AWSのEC2インスタンスは無料ですが、オンプレミスサーバーは
+         <br/>
+         Systems Managerで管理すると少額の料金が発生します。
+        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- セットアップ手順 -->
+<div class="step-by-step">
+<h2 class="step-title" id="セットアップ手順5ステップ">
+      🚀 セットアップ手順（5ステップ）
+     </h2>
+<div class="steps-container">
+<div class="step-item">
+<div class="step-number">
+        1
+       </div>
+<div class="step-content">
+<h3 id="IAMロールの作成">
+         📝 IAMロールの作成
+        </h3>
+<p>
+<strong>
+          たとえ：社員証の発行
+         </strong>
+<br/>
+         Systems Managerがサーバーにアクセスするための権限（社員証）を作成。「AmazonSSMManagedInstanceCore」というポリシーをアタッチします。
+        </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+        2
+       </div>
+<div class="step-content">
+<h4>
+         💾 SSM Agentのインストール
+        </h4>
+<p>
+<strong>
+          たとえ：支社に連絡係を配置
+         </strong>
+<br/>
+         各サーバーにSSM Agent（本社との連絡係）をインストール。Amazon Linux 2やWindows Server 2016以降は最初から入っています！
+        </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+        3
+       </div>
+<div class="step-content">
+<h4>
+         🔐 アクティベーション（オンプレミス用）
+        </h4>
+<p>
+<strong>
+          たとえ：外部支社の登録
+         </strong>
+<br/>
+         オンプレミスや他クラウドのサーバーは、アクティベーションコードを使ってSystems Managerに登録。これで本社のシステムに正式参加！
+        </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+        4
+       </div>
+<div class="step-content">
+<h4>
+         ✅ 接続確認
+        </h4>
+<p>
+<strong>
+          たとえ：出席確認
+         </strong>
+<br/>
+         Systems Managerコンソールの「Fleet Manager」で、すべてのサーバーが正しく接続されているか確認。緑色のチェックマークが出ればOK！
+        </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+        5
+       </div>
+<div class="step-content">
+<h4>
+         🎯 機能の設定
+        </h4>
+<p>
+<strong>
+          たとえ：業務ルールの設定
+         </strong>
+<br/>
+         Patch Managerでパッチ適用スケジュール、State Managerで定期タスク、Parameter Storeで機密情報保管など、必要な機能を設定して完了！
+        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- メリット -->
+<div class="benefits-section">
+<h3 class="benefits-title" id="Systems-Managerを使うメリット">
+      🎁 Systems Managerを使うメリット
+     </h3>
+<div class="benefits-grid">
+<div class="benefit-card">
+<div class="benefit-icon">
+        ⚡
+       </div>
+<h4>
+        スピード向上
+       </h4>
+<p>
+        手動で1日かかる作業が
+        <br/>
+        数分で完了！
+        <br/>
+        緊急対応も迅速に。
+       </p>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        💰
+       </div>
+<h4>
+        コスト削減
+       </h4>
+<p>
+        基本機能は無料！
+        <br/>
+        人件費と時間の
+        <br/>
+        大幅な削減が可能。
+       </p>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        🔒
+       </div>
+<h4>
+        セキュリティ強化
+       </h4>
+<p>
+        統一されたポリシー適用。
+        <br/>
+        すべての操作を記録。
+        <br/>
+        コンプライアンス対応。
+       </p>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        👀
+       </div>
+<h4>
+        可視化
+       </h4>
+<p>
+        全サーバーの状態を
+        <br/>
+        1つの画面で把握。
+        <br/>
+        問題の早期発見。
+       </p>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        🤖
+       </div>
+<h4>
+        自動化
+       </h4>
+<p>
+        繰り返し作業を自動化。
+        <br/>
+        人的ミスを削減。
+        <br/>
+        夜間・休日も稼働。
+       </p>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        🌐
+       </div>
+<h4>
+        柔軟性
+       </h4>
+<p>
+        どこでも管理可能。
+        <br/>
+        AWS以外もOK。
+        <br/>
+        環境を選ばない。
+       </p>
+</div>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       成功のための重要ポイント
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. 小さく始める：
+      </strong>
+<br/>
+      最初は少数のサーバーでテスト。Run Commandで簡単なコマンドを実行してみましょう。
+      <br/>
+<br/>
+<strong>
+       2. タグ付けを徹底：
+      </strong>
+<br/>
+      サーバーに適切なタグ（Environment: Production、Team: Web など）を付けることで、グループ管理が簡単に。
+      <br/>
+<br/>
+<strong>
+       3. CloudWatch Logsと連携：
+      </strong>
+<br/>
+      すべての操作ログをCloudWatch Logsに送信。監査やトラブルシューティングが楽になります。
+      <br/>
+<br/>
+<strong>
+       4. ドライラン活用：
+      </strong>
+<br/>
+      本番実行前に、必ず少数のサーバーでテスト実行。予期しない問題を事前に発見！
+      <br/>
+<br/>
+<strong>
+       5. 段階的ロールアウト：
+      </strong>
+<br/>
+      すべてのサーバーに一度に適用せず、10%→50%→100%のように段階的に展開すると安全です。
+     </div>
+</div>
+<!-- 料金情報 -->
+<div class="tip-box" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-color: #2563eb;">
+<div class="tip-title" style="color: #1e40af;">
+<span>
+       💵
+      </span>
+<span>
+       料金について
+      </span>
+</div>
+<div class="tip-content" style="color: #1e3a8a;">
+<strong>
+       ✅ 無料で使える機能：
+      </strong>
+<br/>
+      • Run Command（コマンド実行）
+      <br/>
+      • Session Manager（ブラウザSSH）
+      <br/>
+      • Parameter Store（標準パラメーター10,000個まで）
+      <br/>
+      • State Manager（基本機能）
+      <br/>
+<br/>
+<strong>
+       💰 従量課金の機能：
+      </strong>
+<br/>
+      • Patch Manager: 管理対象インスタンスあたり月額$0.08
+      <br/>
+      • Inventory: 収集データ量に応じて課金
+      <br/>
+      • Advanced Parameters: パラメーターあたり月額$0.05
+      <br/>
+<br/>
+<strong>
+       🎯 ポイント：
+      </strong>
+<br/>
+      基本的な管理なら、ほぼ無料で使えます！まずは無料機能から始めましょう。
+     </div>
+</div>
+<!-- まとめ -->
+<div class="summary-section">
+<h2 class="summary-title" id="まとめ">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="大企業の本社-=-Systems-Manager" style="font-size: 1.8em; margin-bottom: 15px;">
+        🏢 大企業の本社 = Systems Manager
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        世界中に散らばった支社（サーバー）を
+        <br/>
+        1つの司令室から一元管理！
+        <br/>
+<strong>
+         場所も環境も関係なく、すべてを統合✨
+        </strong>
+</p>
+</div>
+<div class="summary-grid">
+<div class="summary-card">
+<div class="summary-card-icon">
+         🌐
+        </div>
+<h4>
+         ハイブリッド対応
+        </h4>
+<p>
+         AWS、オンプレミス、
+         <br/>
+         他のクラウド、
+         <br/>
+         すべてを統合管理
+        </p>
+</div>
+<div class="summary-card">
+<div class="summary-card-icon">
+         ⚡
+        </div>
+<h4>
+         圧倒的効率化
+        </h4>
+<p>
+         手動作業を自動化し、
+         <br/>
+         作業時間を
+         <br/>
+         90%以上削減
+        </p>
+</div>
+<div class="summary-card">
+<div class="summary-card-icon">
+         🔒
+        </div>
+<h4>
+         セキュリティ
+        </h4>
+<p>
+         統一されたポリシー、
+         <br/>
+         すべての操作を記録、
+         <br/>
+         安全な管理を実現
+        </p>
+</div>
+</div>
+<p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8; margin-top: 30px;">
+       🎯
+       <strong>
+        まずはここから始めよう！
+       </strong>
+<br/>
+<br/>
+       1️⃣ EC2インスタンスで Run Command を試す
+       <br/>
+       2️⃣ Session Manager でブラウザSSHを体験
+       <br/>
+       3️⃣ State Manager で定期タスクを自動化
+       <br/>
+<br/>
+       この3つをマスターすれば、
+       <br/>
+<strong>
+        あなたも立派なSystems Managerユーザー！🎉
+       </strong>
+</p>
+</div>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="../compute-applications/aws_patch_manager_infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">37</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">41</span>
+    </div>
+    <a href="ec2-image-builder-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

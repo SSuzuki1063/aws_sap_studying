@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   ネットワーク層とアプリケーション層の違い
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/vpc_privatelink_cidr_overlap.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#現実世界の具体例">現実世界の具体例</a></li>
+            <li class="toc-h3"><a href="#シナリオ-大企業の複数オフィス">📍 シナリオ：大企業の複数オフィス</a></li>
+            <li class="toc-h3"><a href="#東京オフィス">🏢 東京オフィス</a></li>
+            <li class="toc-h3"><a href="#大阪オフィス">🏢 大阪オフィス</a></li>
+            <li class="toc-h2"><a href="#ネットワーク層L3の問題">ネットワーク層（L3）の問題</a></li>
+            <li class="toc-h3"><a href="#アプリケーション層">アプリケーション層</a></li>
+            <li class="toc-h3"><a href="#東京オフィス-1">東京オフィス</a></li>
+            <li class="toc-h3"><a href="#大阪オフィス-1">大阪オフィス</a></li>
+            <li class="toc-h2"><a href="#アプリケーション層L7の解決">アプリケーション層（L7）の解決</a></li>
+            <li class="toc-h3"><a href="#DNS名による解決プロセス">🔍 DNS名による解決プロセス</a></li>
+            <li class="toc-h2"><a href="#AWS-PrivateLinkでの実装">AWS PrivateLinkでの実装</a></li>
+            <li class="toc-h3"><a href="#🪄-PrivateLinkの魔法的な仕組み">🪄 PrivateLinkの魔法的な仕組み</a></li>
+            <li class="toc-h2"><a href="#レイヤー別比較表">レイヤー別比較表</a></li>
+            <li class="toc-h3"><a href="#本質的な違いの理解">本質的な違いの理解</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎯 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     ネットワーキング
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     VPC &amp; ネットワーク基礎
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Vpc Privatelink Cidr Overlap
+    </span>
+</nav>
+<div class="header">
+<h1>
+     🌐 ネットワーク層 vs アプリケーション層
+    </h1>
+<p>
+     同じIPアドレス、違うDNS名の具体例で理解
+    </p>
+</div>
+<div class="section example">
+<div class="section-title">
+<div class="section-icon">
+      🏢
+     </div>
+<h2 id="現実世界の具体例">
+      現実世界の具体例
+     </h2>
+</div>
+<div class="real-world-example">
+<h3 id="シナリオ-大企業の複数オフィス" style="color: #2d3436; margin-bottom: 20px;">
+      📍 シナリオ：大企業の複数オフィス
+     </h3>
+<p style="font-size: 1.2em; color: #495057;">
+      同じ会社の東京オフィスと大阪オフィス、どちらも社内で同じIPアドレス範囲を使用している状況を考えてみましょう。
+     </p>
+</div>
+<div class="company-offices">
+<div class="office">
+<h3 id="東京オフィス">
+       🏢 東京オフィス
+      </h3>
+<div class="server-info">
+<strong>
+        📊 Webサーバー
+       </strong>
+<br/>
+<div class="ip-address">
+        🌐 IP: 192.168.1.100
+       </div>
+<div class="dns-name">
+        📧 DNS: tokyo-web.company.com
+       </div>
+</div>
+<div class="server-info">
+<strong>
+        💾 DBサーバー
+       </strong>
+<br/>
+<div class="ip-address">
+        🌐 IP: 192.168.1.200
+       </div>
+<div class="dns-name">
+        📧 DNS: tokyo-db.company.com
+       </div>
+</div>
+</div>
+<div class="office">
+<h3 id="大阪オフィス">
+       🏢 大阪オフィス
+      </h3>
+<div class="server-info">
+<strong>
+        📊 Webサーバー
+       </strong>
+<br/>
+<div class="ip-address">
+        🌐 IP: 192.168.1.100
+       </div>
+<div class="dns-name">
+        📧 DNS: osaka-web.company.com
+       </div>
+</div>
+<div class="server-info">
+<strong>
+        💾 DBサーバー
+       </strong>
+<br/>
+<div class="ip-address">
+        🌐 IP: 192.168.1.200
+       </div>
+<div class="dns-name">
+        📧 DNS: osaka-db.company.com
+       </div>
+</div>
+</div>
+</div>
+<div class="highlight-concept">
+<h4>
+      🔍 ここがポイント！
+     </h4>
+<p style="font-size: 1.2em; line-height: 1.8; color: #2d3436;">
+<strong>
+       IPアドレスは全く同じ
+      </strong>
+      だが、
+      <strong>
+       DNS名は完全に違う
+      </strong>
+      ！
+      <br/>
+<br/>
+      これが
+      <strong>
+       「ネットワーク層（L3）では衝突するが、アプリケーション層（L7）では区別できる」
+      </strong>
+      という状況の典型例です。
+     </p>
+</div>
+</div>
+<div class="section layer3">
+<div class="section-title">
+<div class="section-icon">
+      🚫
+     </div>
+<h2 id="ネットワーク層L3の問題">
+      ネットワーク層（L3）の問題
+     </h2>
+</div>
+<div class="layer-stack">
+<div class="layer application">
+<div class="layer-number">
+       7
+      </div>
+<h3 id="アプリケーション層">
+       アプリケーション層
+      </h3>
+<p>
+       DNS名: tokyo-web.company.com, osaka-web.company.com
+      </p>
+</div>
+<div class="layer transport">
+<div class="layer-number">
+       4
+      </div>
+<h4>
+       トランスポート層
+      </h4>
+<p>
+       TCP/UDP ポート番号
+      </p>
+</div>
+<div class="layer network">
+<div class="layer-number">
+       3
+      </div>
+<h4>
+       ネットワーク層 ← ここで問題発生！
+      </h4>
+<p>
+       IPアドレス: 192.168.1.100（東京）vs 192.168.1.100（大阪）
+      </p>
+</div>
+<div class="layer datalink">
+<div class="layer-number">
+       2
+      </div>
+<h4>
+       データリンク層
+      </h4>
+<p>
+       MACアドレス、Ethernet
+      </p>
+</div>
+</div>
+<div class="problem-demo">
+<div class="office">
+<h3 id="東京オフィス-1">
+       東京オフィス
+      </h3>
+<div class="ip-address">
+       192.168.1.100
+      </div>
+</div>
+<div class="router-confusion">
+<div class="confusion-animation">
+       🤯
+      </div>
+<h4>
+       ルーターの混乱
+      </h4>
+<p>
+       「192.168.1.100って
+       <br/>
+       どっちのこと？？」
+      </p>
+</div>
+<div class="office">
+<h3 id="大阪オフィス-1">
+       大阪オフィス
+      </h3>
+<div class="ip-address">
+       192.168.1.100
+      </div>
+</div>
+</div>
+<div class="code-example">
+<span class="code-comment">
+      # ルーティングテーブルの競合例
+     </span>
+<span class="code-error">
+      ❌ ネットワーク層での問題
+     </span>
+     192.168.1.0/24 via 東京ゲートウェイ
+     <span class="code-comment">
+      # ルート1
+     </span>
+     192.168.1.0/24 via 大阪ゲートウェイ
+     <span class="code-comment">
+      # ルート2
+     </span>
+<span class="code-error">
+      ERROR: 同じ宛先ネットワークに複数のルートが存在
+     </span>
+<span class="code-error">
+      ルーターが判断できない = 通信不可
+     </span>
+</div>
+</div>
+<div class="section layer7">
+<div class="section-title">
+<div class="section-icon">
+      ✅
+     </div>
+<h2 id="アプリケーション層L7の解決">
+      アプリケーション層（L7）の解決
+     </h2>
+</div>
+<div class="dns-resolution">
+<h3 id="DNS名による解決プロセス" style="color: #2d3436; text-align: center; margin-bottom: 25px;">
+      🔍 DNS名による解決プロセス
+     </h3>
+<div class="dns-flow">
+<div class="dns-step" data-step="1">
+<h4>
+        👤 ユーザーのアクセス
+       </h4>
+<div class="dns-query">
+        tokyo-web.company.com にアクセス
+       </div>
+</div>
+<div class="dns-step" data-step="2">
+<h5>
+        🔍 DNS解決
+       </h5>
+<div class="dns-query">
+        DNS: "それは 10.0.50.100 ですよ"
+       </div>
+</div>
+<div class="dns-step" data-step="3">
+<h5>
+        🎯 正確な特定
+       </h5>
+<div class="dns-query">
+        ENI経由で東京の実サーバーへ
+       </div>
+</div>
+<div class="dns-step" data-step="4">
+<h5>
+        ✅ 安全な通信
+       </h5>
+<div class="dns-query">
+        元のIPに関係なく通信成功
+       </div>
+</div>
+</div>
+</div>
+<div class="code-example">
+<span class="code-comment">
+      # アプリケーション層での解決例
+     </span>
+<span class="code-success">
+      ✅ DNS名による識別
+     </span>
+     ユーザー: "tokyo-web.company.com にアクセスしたい"
+DNS Server: "それは 10.0.50.100 (ENI) です"
+ENI: "分かりました、東京の 192.168.1.100 に転送します"
+
+ユーザー: "osaka-web.company.com にアクセスしたい"  
+DNS Server: "それは 10.0.51.100 (ENI) です"
+ENI: "分かりました、大阪の 192.168.1.100 に転送します"
+     <span class="code-success">
+      SUCCESS: DNS名が違うので完全に区別可能
+     </span>
+</div>
+</div>
+<div class="section privatelink">
+<div class="section-title">
+<div class="section-icon">
+      🔗
+     </div>
+<h2 id="AWS-PrivateLinkでの実装">
+      AWS PrivateLinkでの実装
+     </h2>
+</div>
+<div class="privatelink-magic">
+<h3 id="🪄-PrivateLinkの魔法的な仕組み" style="color: #2d3436; text-align: center; margin-bottom: 25px;">
+      🪄 PrivateLinkの魔法的な仕組み
+     </h3>
+<div class="privatelink-diagram">
+<div class="vpc-endpoint">
+<h4>
+        🖥️ VPC-A (Consumer)
+       </h4>
+<div style="font-size: 0.9em; margin: 10px 0;">
+        CIDR: 10.0.0.0/16
+       </div>
+<div style="font-size: 0.9em; margin: 10px 0;">
+        実際のIP: 10.0.1.100
+       </div>
+<strong style="display: block; margin-top: 15px;">
+        VPCエンドポイント
+       </strong>
+<div style="font-size: 0.8em; background: rgba(255,255,255,0.3); padding: 5px; border-radius: 5px; margin-top: 10px;">
+        DNS解決用の窓口
+       </div>
+</div>
+<div class="privatelink-bridge">
+<h4>
+        🌉 PrivateLink
+       </h4>
+<div class="magic-arrow">
+        ⟷
+       </div>
+<div style="font-size: 0.9em;">
+<strong>
+         特別なDNS名：
+        </strong>
+<br/>
+        service.abc123.vpce.amazonaws.com
+       </div>
+<div style="font-size: 0.8em; margin-top: 10px; background: rgba(255,255,255,0.3); padding: 8px; border-radius: 5px;">
+        IPアドレスの衝突を完全回避
+       </div>
+</div>
+<div class="endpoint-service">
+<h4>
+        🏢 VPC-B (Provider)
+       </h4>
+<div style="font-size: 0.9em; margin: 10px 0;">
+        CIDR: 10.0.0.0/16
+       </div>
+<div style="font-size: 0.9em; margin: 10px 0;">
+        実際のIP: 10.0.1.100
+       </div>
+<strong style="display: block; margin-top: 15px;">
+        VPCエンドポイントサービス
+       </strong>
+<div style="font-size: 0.8em; background: rgba(255,255,255,0.3); padding: 5px; border-radius: 5px; margin-top: 10px;">
+        サービス提供用の受付
+       </div>
+</div>
+</div>
+<div style="background: rgba(255,255,255,0.8); padding: 25px; border-radius: 15px; margin-top: 25px;">
+<h4 style="color: #2d3436; margin-bottom: 15px;">
+       🎯 重要な実現ポイント
+      </h4>
+<ol style="color: #2d3436; font-size: 1.1em; line-height: 2; padding-left: 25px;">
+<li>
+<strong>
+         両方のVPCで10.0.1.100が存在
+        </strong>
+        （IPアドレス重複）
+       </li>
+<li>
+<strong>
+         PrivateLinkが専用のDNS名を発行
+        </strong>
+        （service.abc123...）
+       </li>
+<li>
+<strong>
+         ENI（Elastic Network Interface）が仲介
+        </strong>
+</li>
+<li>
+<strong>
+         アクセス時は専用DNS名を使用
+        </strong>
+        → 衝突回避
+       </li>
+</ol>
+</div>
+</div>
+</div>
+<div class="section comparison">
+<div class="section-title">
+<div class="section-icon">
+      📊
+     </div>
+<h2 id="レイヤー別比較表">
+      レイヤー別比較表
+     </h2>
+</div>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+        観点
+       </th>
+<th>
+        ネットワーク層（L3）
+       </th>
+<th>
+        アプリケーション層（L7）
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+         識別方法
+        </strong>
+</td>
+<td>
+        IPアドレス（192.168.1.100）
+       </td>
+<td>
+        DNS名（tokyo-web.company.com）
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         重複時の問題
+        </strong>
+</td>
+<td>
+        ❌ ルーティング競合で通信不可
+       </td>
+<td>
+        ✅ DNS名が違うので問題なし
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         AWS実装例
+        </strong>
+</td>
+<td>
+        VPCピアリング、Transit Gateway
+       </td>
+<td>
+        PrivateLink、ALB
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         解決の仕組み
+        </strong>
+</td>
+<td>
+        ルーティングテーブルで経路決定
+       </td>
+<td>
+        DNS解決→ENI→実サーバー
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         抽象化レベル
+        </strong>
+</td>
+<td>
+        低い（直接IPアドレス）
+       </td>
+<td>
+        高い（サービス名でアクセス）
+       </td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-concept">
+<h3 id="本質的な違いの理解">
+      本質的な違いの理解
+     </h3>
+<p style="font-size: 1.2em; line-height: 1.8; color: #2d3436;">
+<strong>
+       ネットワーク層（L3）
+      </strong>
+      は「どこに送るか」をIPアドレスで判断します。同じIPアドレスがあると、物理的にどこに送ればいいか分からなくなります。
+      <br/>
+<br/>
+<strong>
+       アプリケーション層（L7）
+      </strong>
+      は「何のサービスか」をDNS名で判断します。DNS名さえ違えば、背後のIPアドレスがどうであろうと関係ありません。
+      <br/>
+<br/>
+      これが
+      <strong>
+       「住所（IP）は同じでも、電話番号（DNS名）が違えば連絡先を区別できる」
+      </strong>
+      のと同じ理屈なのです！
+     </p>
+</div>
+</div>
+<div style="background: linear-gradient(135deg, #3378be, #0984e3); color: white; padding: 40px; border-radius: 25px; text-align: center; font-size: 1.3em; line-height: 1.8; margin-top: 40px;">
+<h2 id="まとめ" style="margin-bottom: 20px;">
+     🎯 まとめ
+    </h2>
+<p>
+<strong>
+      同じIPアドレスでも、DNS名が違えば区別可能！
+     </strong>
+<br/>
+<br/>
+     🏢 現実例：東京の192.168.1.100 ≠ 大阪の192.168.1.100
+     <br/>
+     📧 DNS名：tokyo-web.company.com ≠ osaka-web.company.com
+     <br/>
+<br/>
+     ☁️ AWS例：VPC-Aの10.0.1.100 ≠ VPC-Bの10.0.1.100
+     <br/>
+     🔗 PrivateLink：service.abc123.vpce.amazonaws.com で区別
+     <br/>
+<br/>
+<span style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 15px; display: inline-block;">
+      レイヤーの違いが生む、シンプルで強力な解決策！🚀
+     </span>
+</p>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="aws_eip_nat_infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">8</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">19</span>
+    </div>
+    <a href="../organizational-complexity/aws_ram_vpc_prefix_infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+    Created by
+    <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+     SSuzuki1063
+    </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+    AWS SAP Learning Resources
+   </p>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

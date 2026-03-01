@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   OpenSearch Dashboards によるログデータの可視化 - 完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  <!-- ページ固有CSSファイル -->
+  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/opensearch-dashboards-guide.css" rel="stylesheet"/>
+  
+  
+
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#OpenSearch-Dashboards-を一言で言うと？">OpenSearch Dashboards を一言で言うと？</a></li>
+            <li class="toc-h3"><a href="#交通管制センターに例えると...">🚦 交通管制センターに例えると...</a></li>
+            <li class="toc-h3"><a href="#️-OpenSearch-Dashboards-=-モニタールーム">🖥️ OpenSearch Dashboards = モニタールーム</a></li>
+            <li class="toc-h3"><a href="#ログから可視化までの流れ">📝 ログから可視化までの流れ</a></li>
+            <li class="toc-h3"><a href="#たとえ話で理解する違い">🎭 たとえ話で理解する違い</a></li>
+            <li class="toc-h3"><a href="#詳細比較表">📋 詳細比較表</a></li>
+            <li class="toc-h3"><a href="#コスト比較の目安">💰 コスト比較の目安</a></li>
+            <li class="toc-h3"><a href="#使い分けガイド">🎯 使い分けガイド</a></li>
+            <li class="toc-h3"><a href="#ベストプラクティス-両方を組み合わせる">🤝 ベストプラクティス：両方を組み合わせる</a></li>
+            <li class="toc-h3"><a href="#かんたん判定チャート">📌 かんたん判定チャート</a></li>
+            <li class="toc-h3"><a href="#まとめ-OpenSearch-Dashboards-でできること">📌 まとめ：OpenSearch Dashboards でできること</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- Header -->
+<div class="header">
+<div class="header-icon">
+     📊🔍
+    </div>
+<h1>
+     OpenSearch Dashboards
+    </h1>
+
+<p class="header-subtitle">
+     ログデータの可視化 完全ガイド
+    </p>
+</div>
+<!-- Conclusion First -->
+<div class="conclusion-first">
+<h2 id="OpenSearch-Dashboards-を一言で言うと？">
+     OpenSearch Dashboards を一言で言うと？
+    </h2>
+<p style="font-size: 1.2em; margin-bottom: 25px; color: #d1fae5;">
+<strong>
+      「膨大なログデータを美しいグラフやダッシュボードに変換する可視化ツール」
+     </strong>
+     です。
+     <br/>
+     交通管制センターのように、あらゆるデータをリアルタイムで監視・分析できます。
+    </p>
+<div class="key-points">
+<div class="key-point">
+<div class="key-point-title">
+       🎯 何ができる？
+      </div>
+      ログデータを検索・グラフ化・ダッシュボード化して、システムの状態を「見える化」
+     </div>
+<div class="key-point">
+<div class="key-point-title">
+       👤 誰が使う？
+      </div>
+      運用エンジニア、SRE、セキュリティ担当者、ビジネスアナリスト
+     </div>
+<div class="key-point">
+<div class="key-point-title">
+       💰 料金は？
+      </div>
+      Amazon OpenSearch Serviceの料金に含まれる（追加料金なし）
+     </div>
+<div class="key-point">
+<div class="key-point-title">
+       ⏱️ 導入時間は？
+      </div>
+      基本的なダッシュボード作成なら30分〜1時間で可能
+     </div>
+</div>
+</div>
+<!-- Analogy Section -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      🏢
+     </span>
+     たとえ話で理解する OpenSearch Dashboards
+    </div>
+<div class="analogy-container">
+<div class="analogy-header">
+<h3 id="交通管制センターに例えると...">
+       🚦 交通管制センターに例えると...
+      </h3>
+<p style="color: #64748B;">
+       OpenSearch Dashboards は「交通管制センターのモニタールーム」のような存在です
+      </p>
+</div>
+<div class="analogy-comparison">
+<div class="analogy-side real-world">
+<h4>
+        🚦 交通管制センター
+       </h4>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         📹
+        </span>
+<div class="analogy-item-text">
+<strong>
+          各地のセンサー・カメラ
+         </strong>
+<br/>
+         道路の混雑状況、事故情報、天候データを収集
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         💾
+        </span>
+<div class="analogy-item-text">
+<strong>
+          中央データベース
+         </strong>
+<br/>
+         すべての情報を蓄積・検索可能に保存
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         🖥️
+        </span>
+<div class="analogy-item-text">
+<strong>
+          モニタールーム
+         </strong>
+<br/>
+         複数の画面でリアルタイム状況を可視化
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         📊
+        </span>
+<div class="analogy-item-text">
+<strong>
+          各種表示パネル
+         </strong>
+<br/>
+         地図、グラフ、アラート表示を目的別に配置
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         🔔
+        </span>
+<div class="analogy-item-text">
+<strong>
+          異常検知アラート
+         </strong>
+<br/>
+         渋滞や事故発生を即座に通知
+        </div>
+</div>
+</div>
+<div class="analogy-arrow">
+       ⟷
+      </div>
+<div class="analogy-side aws">
+<h4>
+        ☁️ OpenSearch + Dashboards
+       </h4>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         📝
+        </span>
+<div class="analogy-item-text">
+<strong>
+          ログソース
+         </strong>
+<br/>
+         アプリケーション、サーバー、AWSサービスのログ
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         🗄️
+        </span>
+<div class="analogy-item-text">
+<strong>
+          OpenSearch クラスター
+         </strong>
+<br/>
+         ログを全文検索・分析可能な形式で保存
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         📊
+        </span>
+<div class="analogy-item-text">
+<strong>
+          OpenSearch Dashboards
+         </strong>
+<br/>
+         データを美しく可視化するWebインターフェース
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         📈
+        </span>
+<div class="analogy-item-text">
+<strong>
+          ビジュアライゼーション
+         </strong>
+<br/>
+         棒グラフ、円グラフ、ヒートマップなど多彩な表現
+        </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">
+         ⚠️
+        </span>
+<div class="analogy-item-text">
+<strong>
+          アラート機能
+         </strong>
+<br/>
+         閾値超過やエラー急増を自動通知
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Control Center Visual -->
+<div class="control-center">
+<div class="control-center-title">
+<h3 id="️-OpenSearch-Dashboards-=-モニタールーム">
+       🖥️ OpenSearch Dashboards = モニタールーム
+      </h3>
+<p style="color: #64748B; margin-top: 10px;">
+       あなたのシステムの「今」を一目で把握
+      </p>
+</div>
+<div class="monitors-grid">
+<div class="monitor">
+<div class="monitor-led">
+</div>
+<div class="monitor-icon">
+        📈
+       </div>
+<div class="monitor-title">
+        リクエスト数
+       </div>
+<div class="monitor-desc">
+        時系列の推移をグラフ化
+       </div>
+</div>
+<div class="monitor">
+<div class="monitor-led">
+</div>
+<div class="monitor-icon">
+        🚨
+       </div>
+<div class="monitor-title">
+        エラー率
+       </div>
+<div class="monitor-desc">
+        異常を即座に検知
+       </div>
+</div>
+<div class="monitor">
+<div class="monitor-led">
+</div>
+<div class="monitor-icon">
+        ⏱️
+       </div>
+<div class="monitor-title">
+        レイテンシ
+       </div>
+<div class="monitor-desc">
+        応答時間の分布を表示
+       </div>
+</div>
+<div class="monitor">
+<div class="monitor-led">
+</div>
+<div class="monitor-icon">
+        🌍
+       </div>
+<div class="monitor-title">
+        地域別アクセス
+       </div>
+<div class="monitor-desc">
+        世界地図上にマッピング
+       </div>
+</div>
+<div class="monitor">
+<div class="monitor-led">
+</div>
+<div class="monitor-icon">
+        🔐
+       </div>
+<div class="monitor-title">
+        セキュリティ
+       </div>
+<div class="monitor-desc">
+        不正アクセスを監視
+       </div>
+</div>
+<div class="monitor">
+<div class="monitor-led">
+</div>
+<div class="monitor-icon">
+        💻
+       </div>
+<div class="monitor-title">
+        サーバー状態
+       </div>
+<div class="monitor-desc">
+        CPU/メモリ使用率
+       </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Architecture Section -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      🔄
+     </span>
+     データの流れを理解する
+    </div>
+<div class="architecture-flow">
+<div class="flow-title">
+<h3 id="ログから可視化までの流れ">
+       📝 ログから可視化までの流れ
+      </h3>
+</div>
+<div class="flow-container">
+<div class="flow-step">
+<div class="flow-step-icon">
+        📝
+       </div>
+<div class="flow-step-label">
+        ログ生成
+       </div>
+<div class="flow-step-desc">
+        アプリ・サーバーがログ出力
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step">
+<div class="flow-step-icon">
+        🚚
+       </div>
+<div class="flow-step-label">
+        収集・転送
+       </div>
+<div class="flow-step-desc">
+        Fluent Bit / Firehose
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step">
+<div class="flow-step-icon">
+        🗄️
+       </div>
+<div class="flow-step-label">
+        保存・索引
+       </div>
+<div class="flow-step-desc">
+        OpenSearch クラスター
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-step">
+<div class="flow-step-icon">
+        📊
+       </div>
+<div class="flow-step-label">
+        可視化
+       </div>
+<div class="flow-step-desc">
+        Dashboards で表示
+       </div>
+</div>
+</div>
+</div>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+        コンポーネント
+       </th>
+<th>
+        役割
+       </th>
+<th>
+        たとえ話
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+         インデックス
+        </strong>
+</td>
+<td>
+        ログデータの格納先
+       </td>
+<td>
+        📚 図書館の本棚（カテゴリごとに分類）
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         インデックスパターン
+        </strong>
+</td>
+<td>
+        Dashboardsで検索する対象を定義
+       </td>
+<td>
+        🔖 「この棚の本を検索対象にする」という設定
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         Discover
+        </strong>
+</td>
+<td>
+        ログの検索・閲覧機能
+       </td>
+<td>
+        🔍 本を自由に検索・閲覧できる端末
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         Visualize
+        </strong>
+</td>
+<td>
+        グラフ・チャートの作成
+       </td>
+<td>
+        🎨 データを絵にする画材セット
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         Dashboard
+        </strong>
+</td>
+<td>
+        複数のグラフをまとめて表示
+       </td>
+<td>
+        🖼️ 絵を並べて展示するギャラリー
+       </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Visualization Types -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      📊
+     </span>
+     ビジュアライゼーションの種類
+    </div>
+<div class="viz-grid">
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        📈
+       </div>
+<div class="viz-card-title">
+        Line Chart（折れ線グラフ）
+       </div>
+</div>
+<div class="viz-card-desc">
+       時間経過に伴うデータの変化を表示。トレンド分析に最適。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       リクエスト数の推移、CPU使用率の変動、売上トレンド
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        📊
+       </div>
+<div class="viz-card-title">
+        Bar Chart（棒グラフ）
+       </div>
+</div>
+<div class="viz-card-desc">
+       カテゴリ別の比較に最適。縦横どちらも対応。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       エラーコード別件数、サーバー別負荷、ブラウザ別アクセス
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        🥧
+       </div>
+<div class="viz-card-title">
+        Pie Chart（円グラフ）
+       </div>
+</div>
+<div class="viz-card-desc">
+       全体に対する割合を視覚的に表現。構成比の把握に便利。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       HTTPステータスコード分布、OS別シェア、地域別アクセス比率
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        🗺️
+       </div>
+<div class="viz-card-title">
+        Map（地図表示）
+       </div>
+</div>
+<div class="viz-card-desc">
+       地理的データを世界地図上に可視化。ロケーション分析に。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       アクセス元の国別分布、攻撃元IPの地理的分析
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        🔥
+       </div>
+<div class="viz-card-title">
+        Heat Map（ヒートマップ）
+       </div>
+</div>
+<div class="viz-card-desc">
+       データの密度や強度を色の濃淡で表現。パターン発見に有効。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       時間帯×曜日別のアクセス量、ページ別滞在時間
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        🔢
+       </div>
+<div class="viz-card-title">
+        Metric（メトリック）
+       </div>
+</div>
+<div class="viz-card-desc">
+       単一の数値を大きく表示。KPIの即時把握に最適。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       総リクエスト数、現在のエラー率、アクティブユーザー数
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        📋
+       </div>
+<div class="viz-card-title">
+        Data Table（データテーブル）
+       </div>
+</div>
+<div class="viz-card-desc">
+       詳細データを表形式で表示。ドリルダウン分析の起点に。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       Top 10 エラーログ一覧、スロークエリリスト
+      </div>
+</div>
+<div class="viz-card">
+<div class="viz-card-header">
+<div class="viz-card-icon">
+        ☁️
+       </div>
+<div class="viz-card-title">
+        Tag Cloud（タグクラウド）
+       </div>
+</div>
+<div class="viz-card-desc">
+       出現頻度に応じた文字サイズで表示。頻出キーワードを一目で。
+      </div>
+<div class="viz-use-case">
+<div class="viz-use-case-label">
+        💡 活用例
+       </div>
+       エラーメッセージの頻出パターン、検索キーワード分析
+      </div>
+</div>
+</div>
+</div>
+<!-- Setup Steps -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      🚀
+     </span>
+     はじめてのダッシュボード作成
+    </div>
+<div class="steps-container">
+<div class="step">
+<div class="step-number">
+       1
+      </div>
+<div class="step-content">
+<div class="step-title">
+        OpenSearch Dashboards にアクセス
+       </div>
+<div class="step-desc">
+        Amazon OpenSearch Service のドメインを作成すると、Dashboards の URL が自動で生成されます。
+       </div>
+<div class="code-block">
+<span class="code-label">
+         URL形式
+        </span>
+<code>
+         https://
+         <span class="variable">
+          {domain-name}
+         </span>
+         .
+         <span class="variable">
+          {region}
+         </span>
+         .es.amazonaws.com/_dashboards/
+        </code>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+       2
+      </div>
+<div class="step-content">
+<div class="step-title">
+        インデックスパターンを作成
+       </div>
+<div class="step-desc">
+        どのログデータを可視化するか定義します。ワイルドカード（*）が使えます。
+       </div>
+<div class="code-block">
+<span class="code-label">
+         例
+        </span>
+<code>
+<span class="comment">
+          # アプリケーションログ全体を対象にする場合
+         </span>
+         app-logs-*
+         <span class="comment">
+          # 特定月のWebアクセスログを対象にする場合
+         </span>
+         web-access-2024.12.*
+         <span class="comment">
+          # 全インデックスを対象にする場合
+         </span>
+         *
+        </code>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+       3
+      </div>
+<div class="step-content">
+<div class="step-title">
+        Discover でログを探索
+       </div>
+<div class="step-desc">
+        まずはログの中身を確認。検索クエリを使って必要なログを絞り込めます。
+       </div>
+<div class="code-block">
+<span class="code-label">
+         検索クエリ例
+        </span>
+<code>
+<span class="comment">
+          # エラーログを検索
+         </span>
+         level:
+         <span class="string">
+          "ERROR"
+         </span>
+<span class="comment">
+          # 特定のAPIエンドポイントを検索
+         </span>
+         request.path:
+         <span class="string">
+          "/api/users"
+         </span>
+         AND status:
+         <span class="string">
+          500
+         </span>
+<span class="comment">
+          # 過去1時間のログを検索
+         </span>
+         @timestamp &gt;= now-1h
+        </code>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+       4
+      </div>
+<div class="step-content">
+<div class="step-title">
+        Visualize でグラフを作成
+       </div>
+<div class="step-desc">
+        表現したいデータに合わせてグラフタイプを選択し、フィールドを設定します。
+       </div>
+<div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; margin-top: 15px;">
+<p style="color: #CA8A04; font-weight: bold; margin-bottom: 10px;">
+         📌 設定のポイント
+        </p>
+<ul style="margin-left: 20px; color: #64748B;">
+<li>
+<strong>
+           Metrics（Y軸）:
+          </strong>
+          何を計測するか（Count, Sum, Average など）
+         </li>
+<li>
+<strong>
+           Buckets（X軸）:
+          </strong>
+          どう分割するか（時間、カテゴリなど）
+         </li>
+<li>
+<strong>
+           Filters:
+          </strong>
+          対象を絞り込む条件
+         </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+       5
+      </div>
+<div class="step-content">
+<div class="step-title">
+        Dashboard に配置
+       </div>
+<div class="step-desc">
+        作成したビジュアライゼーションを1つの画面にまとめて、監視ダッシュボードを完成させます。
+       </div>
+<div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; margin-top: 15px;">
+<p style="color: #CA8A04; font-weight: bold; margin-bottom: 10px;">
+         💡 ダッシュボード設計のコツ
+        </p>
+<ul style="margin-left: 20px; color: #64748B;">
+<li>
+          重要な KPI は上部に大きく配置
+         </li>
+<li>
+          関連するグラフはグルーピング
+         </li>
+<li>
+          自動更新間隔を設定（10秒〜5分）
+         </li>
+<li>
+          時間範囲のデフォルト値を設定
+         </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Use Cases -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      💼
+     </span>
+     実践的なユースケース
+    </div>
+<div class="use-case-grid">
+<div class="use-case-card">
+<div class="use-case-header">
+<span class="use-case-icon">
+        🌐
+       </span>
+<span class="use-case-title">
+        Webアプリケーション監視
+       </span>
+</div>
+<div class="use-case-desc">
+       アクセスログから、ユーザー行動やパフォーマンスをリアルタイム監視
+      </div>
+<div class="use-case-metrics">
+<div class="use-case-metrics-title">
+        可視化するメトリクス
+       </div>
+<ul class="metric-list">
+<li>
+         リクエスト数 / 秒（RPS）
+        </li>
+<li>
+         レスポンスタイム（P50, P95, P99）
+        </li>
+<li>
+         HTTPステータスコード分布
+        </li>
+<li>
+         エンドポイント別トラフィック
+        </li>
+</ul>
+</div>
+</div>
+<div class="use-case-card">
+<div class="use-case-header">
+<span class="use-case-icon">
+        🔐
+       </span>
+<span class="use-case-title">
+        セキュリティ監視（SIEM）
+       </span>
+</div>
+<div class="use-case-desc">
+       不正アクセスや異常な振る舞いを検知し、インシデント対応を迅速化
+      </div>
+<div class="use-case-metrics">
+<div class="use-case-metrics-title">
+        可視化するメトリクス
+       </div>
+<ul class="metric-list">
+<li>
+         ログイン失敗回数・パターン
+        </li>
+<li>
+         不審なIPアドレスからのアクセス
+        </li>
+<li>
+         権限昇格イベント
+        </li>
+<li>
+         異常なAPI呼び出しパターン
+        </li>
+</ul>
+</div>
+</div>
+<div class="use-case-card">
+<div class="use-case-header">
+<span class="use-case-icon">
+        🐛
+       </span>
+<span class="use-case-title">
+        アプリケーション障害分析
+       </span>
+</div>
+<div class="use-case-desc">
+       エラーログを集約・分析し、問題の根本原因を素早く特定
+      </div>
+<div class="use-case-metrics">
+<div class="use-case-metrics-title">
+        可視化するメトリクス
+       </div>
+<ul class="metric-list">
+<li>
+         エラー発生数の時系列推移
+        </li>
+<li>
+         例外タイプ別の発生頻度
+        </li>
+<li>
+         エラー発生サービス・モジュール
+        </li>
+<li>
+         スタックトレースの傾向
+        </li>
+</ul>
+</div>
+</div>
+<div class="use-case-card">
+<div class="use-case-header">
+<span class="use-case-icon">
+        📦
+       </span>
+<span class="use-case-title">
+        ビジネスメトリクス分析
+       </span>
+</div>
+<div class="use-case-desc">
+       ログからビジネスKPIを抽出し、データドリブンな意思決定を支援
+      </div>
+<div class="use-case-metrics">
+<div class="use-case-metrics-title">
+        可視化するメトリクス
+       </div>
+<ul class="metric-list">
+<li>
+         注文・取引件数の推移
+        </li>
+<li>
+         コンバージョン率
+        </li>
+<li>
+         機能別利用状況
+        </li>
+<li>
+         ユーザーセグメント分析
+        </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- Best Practices -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      ✨
+     </span>
+     ベストプラクティス
+    </div>
+<div class="best-practice-grid">
+<div class="best-practice-card">
+<div class="best-practice-header">
+<span class="best-practice-icon">
+        📅
+       </span>
+<span class="best-practice-title">
+        日付ベースのインデックス
+       </span>
+</div>
+<div class="best-practice-desc">
+<code>
+        logs-2024.12.27
+       </code>
+       のように日付を含めることで、古いデータの削除や検索効率が向上
+      </div>
+</div>
+<div class="best-practice-card">
+<div class="best-practice-header">
+<span class="best-practice-icon">
+        ⏰
+       </span>
+<span class="best-practice-title">
+        適切な自動更新間隔
+       </span>
+</div>
+<div class="best-practice-desc">
+       リアルタイム監視には10〜30秒、日次レポートには更新不要など、目的に応じて設定
+      </div>
+</div>
+<div class="best-practice-card">
+<div class="best-practice-header">
+<span class="best-practice-icon">
+        🎨
+       </span>
+<span class="best-practice-title">
+        色とレイアウトの一貫性
+       </span>
+</div>
+<div class="best-practice-desc">
+       赤=エラー、緑=正常など色の意味を統一し、視認性を向上させる
+      </div>
+</div>
+<div class="best-practice-card">
+<div class="best-practice-header">
+<span class="best-practice-icon">
+        🔖
+       </span>
+<span class="best-practice-title">
+        保存済みクエリの活用
+       </span>
+</div>
+<div class="best-practice-desc">
+       頻繁に使う検索条件は保存しておき、チームで共有して効率化
+      </div>
+</div>
+<div class="best-practice-card">
+<div class="best-practice-header">
+<span class="best-practice-icon">
+        📊
+       </span>
+<span class="best-practice-title">
+        目的別ダッシュボード
+       </span>
+</div>
+<div class="best-practice-desc">
+       「運用監視用」「障害調査用」「経営報告用」など役割別に分けて作成
+      </div>
+</div>
+<div class="best-practice-card">
+<div class="best-practice-header">
+<span class="best-practice-icon">
+        🔔
+       </span>
+<span class="best-practice-title">
+        アラートとの連携
+       </span>
+</div>
+<div class="best-practice-desc">
+       重要なメトリクスには閾値ベースのアラートを設定し、問題を即座に検知
+      </div>
+</div>
+</div>
+<div class="caution-card">
+<div class="caution-header">
+      ⚠️ よくある落とし穴
+     </div>
+<ul style="margin-left: 20px; color: #fca5a5;">
+<li>
+<strong>
+        情報過多:
+       </strong>
+       1つのダッシュボードに詰め込みすぎると見づらくなる
+      </li>
+<li>
+<strong>
+        時間範囲の誤り:
+       </strong>
+       デフォルトの時間範囲が短すぎて重要なデータを見逃す
+      </li>
+<li>
+<strong>
+        権限設定:
+       </strong>
+       機密データを含むダッシュボードのアクセス制御を忘れずに
+      </li>
+<li>
+<strong>
+        重いクエリ:
+       </strong>
+       全期間対象のクエリは負荷が高いので、適切な期間を指定
+      </li>
+</ul>
+</div>
+</div>
+<!-- FAQ Section -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      ❓
+     </span>
+     よくある質問（FAQ）
+    </div>
+<div class="faq-item" onclick="this.classList.toggle('active')">
+<div class="faq-question">
+      OpenSearch Dashboards と Kibana の違いは？
+      <span class="faq-toggle">
+       ▼
+      </span>
+</div>
+<div class="faq-answer">
+      OpenSearch Dashboards は Kibana 7.10.2 をフォークして作られた OSS です。基本的な機能や操作方法はほぼ同じですが、Elastic 社のライセンス変更後に独自の機能追加が進んでいます。AWS 環境では OpenSearch Dashboards が推奨されます。
+     </div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('active')">
+<div class="faq-question">
+      ログをOpenSearchに送る方法は？
+      <span class="faq-toggle">
+       ▼
+      </span>
+</div>
+<div class="faq-answer">
+      主な方法は3つあります。①Fluent Bit / Fluentd で直接送信、②Amazon Kinesis Data Firehose 経由で配信、③Logstash で加工しながら転送。AWS環境では Fluent Bit + Firehose の組み合わせが人気です。
+     </div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('active')">
+<div class="faq-question">
+      料金はどのくらいかかる？
+      <span class="faq-toggle">
+       ▼
+      </span>
+</div>
+<div class="faq-answer">
+      OpenSearch Dashboards 自体の追加料金はありません。Amazon OpenSearch Service のクラスター料金（インスタンス + ストレージ）に含まれています。小規模なら月額$50〜、本番環境では$200〜$1000程度が目安です。
+     </div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('active')">
+<div class="faq-question">
+      CloudWatch Logs との使い分けは？
+      <span class="faq-toggle">
+       ▼
+      </span>
+</div>
+<div class="faq-answer">
+      シンプルな監視・アラートなら CloudWatch Logs で十分です。一方、複雑な検索クエリ、カスタムダッシュボード、大量のログ分析、SIEM用途には OpenSearch の方が適しています。両方を組み合わせることも可能です。
+     </div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('active')">
+<div class="faq-question">
+      認証・アクセス制御はどうする？
+      <span class="faq-toggle">
+       ▼
+      </span>
+</div>
+<div class="faq-answer">
+      Amazon OpenSearch Service では、①IAMベースのアクセス制御、②内部データベースによる認証、③SAML連携（SSO）、④Amazon Cognito連携 が選択できます。本番環境では Cognito + IAM の組み合わせが推奨されます。
+     </div>
+</div>
+</div>
+<!-- CloudWatch Logs Insights Comparison Section -->
+<div class="section">
+<div class="section-title">
+<span class="section-icon">
+      ⚖️
+     </span>
+     CloudWatch Logs Insights との比較
+    </div>
+<!-- Analogy Comparison -->
+<div class="comparison-analogy">
+<div class="comparison-analogy-header">
+<h3 id="たとえ話で理解する違い">
+       🎭 たとえ話で理解する違い
+      </h3>
+</div>
+<div class="comparison-cards">
+<div class="comparison-card cloudwatch">
+<div class="comparison-card-icon">
+        🔍
+       </div>
+<div class="comparison-card-title">
+        CloudWatch Logs Insights
+       </div>
+<div class="comparison-card-subtitle">
+        = Google検索
+       </div>
+<div class="comparison-card-desc">
+        知りたいことがあるとき、
+        <strong>
+         サクッと検索
+        </strong>
+        して答えを見つける。
+        <br/>
+        必要なときだけ使う、シンプルで手軽なツール。
+       </div>
+<div class="comparison-card-metaphor">
+        📱 スマホでググる感覚
+       </div>
+</div>
+<div class="comparison-vs">
+       VS
+      </div>
+<div class="comparison-card opensearch">
+<div class="comparison-card-icon">
+        🖥️
+       </div>
+<div class="comparison-card-title">
+        OpenSearch Dashboards
+       </div>
+<div class="comparison-card-subtitle">
+        = 放送局の管制室
+       </div>
+<div class="comparison-card-desc">
+        複数のモニターで
+        <strong>
+         常時監視
+        </strong>
+        。
+        <br/>
+        リアルタイムで状況を把握し、異常を即座に検知。
+       </div>
+<div class="comparison-card-metaphor">
+        🏢 24時間体制の監視センター
+       </div>
+</div>
+</div>
+</div>
+<!-- Detailed Comparison Table -->
+<div class="detailed-comparison">
+<h3 id="詳細比較表" style="color: #c4b5fd; margin-bottom: 20px; text-align: center;">
+      📋 詳細比較表
+     </h3>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+         比較項目
+        </th>
+<th>
+         🔍 CloudWatch Logs Insights
+        </th>
+<th>
+         📊 OpenSearch Dashboards
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+          主な用途
+         </strong>
+</td>
+<td>
+         アドホックなログ検索・調査
+        </td>
+<td>
+         継続的な監視・可視化・分析
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          セットアップ
+         </strong>
+</td>
+<td>
+<span class="badge-good">
+          ✅ 即座に利用可能
+         </span>
+</td>
+<td>
+<span class="badge-warn">
+          ⚠️ クラスター構築が必要
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          クエリ言語
+         </strong>
+</td>
+<td>
+         独自のシンプルな構文
+        </td>
+<td>
+         Lucene / DQL（高機能）
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          ダッシュボード
+         </strong>
+</td>
+<td>
+         簡易的（一時保存）
+        </td>
+<td>
+<span class="badge-good">
+          ✅ 本格的（保存・共有・自動更新）
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          可視化の種類
+         </strong>
+</td>
+<td>
+         基本的なグラフのみ
+        </td>
+<td>
+<span class="badge-good">
+          ✅ 20種類以上（地図、ヒートマップ等）
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          リアルタイム性
+         </strong>
+</td>
+<td>
+         クエリ実行時のみ
+        </td>
+<td>
+<span class="badge-good">
+          ✅ 常時リアルタイム表示
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          データ保持
+         </strong>
+</td>
+<td>
+         CloudWatch Logsに依存
+        </td>
+<td>
+         独自に管理（柔軟に設定）
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          スケーリング
+         </strong>
+</td>
+<td>
+<span class="badge-good">
+          ✅ 自動（サーバーレス）
+         </span>
+</td>
+<td>
+         手動でクラスターサイズ調整
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          アラート機能
+         </strong>
+</td>
+<td>
+         CloudWatch Alarms連携
+        </td>
+<td>
+<span class="badge-good">
+          ✅ 高度な条件設定可能
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          SIEM用途
+         </strong>
+</td>
+<td>
+<span class="badge-warn">
+          ⚠️ 基本的な分析のみ
+         </span>
+</td>
+<td>
+<span class="badge-good">
+          ✅ 本格的なセキュリティ分析
+         </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Cost Comparison -->
+<div class="cost-comparison">
+<h3 id="コスト比較の目安" style="color: #CA8A04; margin-bottom: 20px;">
+      💰 コスト比較の目安
+     </h3>
+<div class="cost-grid">
+<div class="cost-card">
+<div class="cost-scenario">
+        📱 小規模
+       </div>
+<div class="cost-desc">
+        月数回の調査
+       </div>
+<div class="cost-values">
+<div class="cost-item cloudwatch-cost">
+<span class="cost-service">
+          Logs Insights
+         </span>
+<span class="cost-value winner">
+          $5〜20
+         </span>
+</div>
+<div class="cost-item opensearch-cost">
+<span class="cost-service">
+          OpenSearch
+         </span>
+<span class="cost-value">
+          $50〜100
+         </span>
+</div>
+</div>
+</div>
+<div class="cost-card">
+<div class="cost-scenario">
+        🏢 中規模
+       </div>
+<div class="cost-desc">
+        日常的な監視
+       </div>
+<div class="cost-values">
+<div class="cost-item cloudwatch-cost">
+<span class="cost-service">
+          Logs Insights
+         </span>
+<span class="cost-value">
+          $50〜200
+         </span>
+</div>
+<div class="cost-item opensearch-cost">
+<span class="cost-service">
+          OpenSearch
+         </span>
+<span class="cost-value winner">
+          $100〜300
+         </span>
+</div>
+</div>
+</div>
+<div class="cost-card">
+<div class="cost-scenario">
+        🏭 大規模
+       </div>
+<div class="cost-desc">
+        SIEM/常時監視
+       </div>
+<div class="cost-values">
+<div class="cost-item cloudwatch-cost">
+<span class="cost-service">
+          Logs Insights
+         </span>
+<span class="cost-value">
+          $500+
+         </span>
+</div>
+<div class="cost-item opensearch-cost">
+<span class="cost-service">
+          OpenSearch
+         </span>
+<span class="cost-value winner">
+          $300〜1000
+         </span>
+</div>
+</div>
+</div>
+</div>
+<p style="text-align: center; color: #64748B; margin-top: 15px; font-size: 0.9em;">
+      💡 頻繁にクエリを実行する場合は OpenSearch の方がコスパが良くなる傾向
+     </p>
+</div>
+<!-- Use Case Decision -->
+<div class="decision-guide">
+<h3 id="使い分けガイド" style="color: #6ee7b7; margin-bottom: 25px; text-align: center;">
+      🎯 使い分けガイド
+     </h3>
+<div class="decision-grid">
+<div class="decision-card use-cloudwatch">
+<div class="decision-header">
+<span class="decision-icon">
+         🔍
+        </span>
+<span class="decision-title">
+         CloudWatch Logs Insights を選ぶ
+        </span>
+</div>
+<ul class="decision-list">
+<li>
+         「今起きた問題」を素早く調査したい
+        </li>
+<li>
+         コストを最小限に抑えたい
+        </li>
+<li>
+         すぐに使い始めたい（セットアップ不要）
+        </li>
+<li>
+         シンプルな集計・分析で十分
+        </li>
+<li>
+         すでにCloudWatch Logsを使用中
+        </li>
+</ul>
+<div class="decision-example">
+<strong>
+         具体例：
+        </strong>
+        Lambda関数のエラー調査、EC2の障害原因特定、一時的なトラブルシューティング
+       </div>
+</div>
+<div class="decision-card use-opensearch">
+<div class="decision-header">
+<span class="decision-icon">
+         📊
+        </span>
+<span class="decision-title">
+         OpenSearch Dashboards を選ぶ
+        </span>
+</div>
+<ul class="decision-list">
+<li>
+         常時監視用のダッシュボードが必要
+        </li>
+<li>
+         複雑な可視化（ヒートマップ、地図など）
+        </li>
+<li>
+         高度なアラート設定が必要
+        </li>
+<li>
+         SIEM（セキュリティ監視）用途
+        </li>
+<li>
+         複数ソースのログを統合分析
+        </li>
+</ul>
+<div class="decision-example">
+<strong>
+         具体例：
+        </strong>
+        NOCの監視画面、セキュリティインシデント分析、ビジネスKPIダッシュボード
+       </div>
+</div>
+</div>
+</div>
+<!-- Best Practice: Combination -->
+<div class="combination-pattern">
+<h3 id="ベストプラクティス-両方を組み合わせる" style="color: #a5b4fc; margin-bottom: 20px;">
+      🤝 ベストプラクティス：両方を組み合わせる
+     </h3>
+<div class="combination-flow">
+<div class="combination-diagram">
+<div class="flow-source">
+<div class="flow-box source-box">
+         📝 ログソース
+        </div>
+</div>
+<div class="flow-arrow-down">
+        ↓
+       </div>
+<div class="flow-middle">
+<div class="flow-box logs-box">
+         ☁️ CloudWatch Logs
+         <span class="flow-note">
+          （ログの一次保管）
+         </span>
+</div>
+</div>
+<div class="flow-branches">
+<div class="flow-branch left-branch">
+<div class="flow-arrow-branch">
+          ↙
+         </div>
+<div class="flow-box insights-box">
+          🔍 Logs Insights
+          <span class="flow-use">
+           アドホック調査
+          </span>
+</div>
+</div>
+<div class="flow-branch right-branch">
+<div class="flow-arrow-branch">
+          ↘
+         </div>
+<div class="flow-box opensearch-box">
+          📊 OpenSearch
+          <span class="flow-use">
+           常時監視ダッシュボード
+          </span>
+</div>
+</div>
+</div>
+</div>
+<div class="combination-benefits">
+<div class="benefit-item">
+<span class="benefit-icon">
+         ✅
+        </span>
+<span>
+<strong>
+          日常の障害調査
+         </strong>
+         → Logs Insights でサクッと検索
+        </span>
+</div>
+<div class="benefit-item">
+<span class="benefit-icon">
+         ✅
+        </span>
+<span>
+<strong>
+          運用監視ダッシュボード
+         </strong>
+         → OpenSearch で常時表示
+        </span>
+</div>
+<div class="benefit-item">
+<span class="benefit-icon">
+         ✅
+        </span>
+<span>
+<strong>
+          月次レポート
+         </strong>
+         → OpenSearch で美しいグラフ作成
+        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Decision Chart -->
+<div class="quick-decision">
+<h3 id="かんたん判定チャート" style="color: #f472b6; margin-bottom: 20px; text-align: center;">
+      📌 かんたん判定チャート
+     </h3>
+<div class="decision-table">
+<div class="decision-row header-row">
+<div class="decision-cell">
+        あなたの状況
+       </div>
+<div class="decision-cell">
+        おすすめ
+       </div>
+</div>
+<div class="decision-row">
+<div class="decision-cell">
+        AWSを使い始めたばかり
+       </div>
+<div class="decision-cell">
+<span class="recommend cloudwatch-recommend">
+         CloudWatch Logs Insights
+        </span>
+</div>
+</div>
+<div class="decision-row">
+<div class="decision-cell">
+        本格的な監視基盤を構築したい
+       </div>
+<div class="decision-cell">
+<span class="recommend opensearch-recommend">
+         OpenSearch Dashboards
+        </span>
+</div>
+</div>
+<div class="decision-row">
+<div class="decision-cell">
+        コストを最小限に抑えたい
+       </div>
+<div class="decision-cell">
+<span class="recommend cloudwatch-recommend">
+         CloudWatch Logs Insights
+        </span>
+</div>
+</div>
+<div class="decision-row">
+<div class="decision-cell">
+        セキュリティチームがある
+       </div>
+<div class="decision-cell">
+<span class="recommend opensearch-recommend">
+         OpenSearch Dashboards
+        </span>
+</div>
+</div>
+<div class="decision-row">
+<div class="decision-cell">
+        両方の良さを活かしたい
+       </div>
+<div class="decision-cell">
+<span class="recommend both-recommend">
+         🤝 併用がベスト
+        </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary -->
+<div class="summary-box">
+<h3 id="まとめ-OpenSearch-Dashboards-でできること">
+     📌 まとめ：OpenSearch Dashboards でできること
+    </h3>
+<p style="color: #c4b5fd; font-size: 1.1em; margin-bottom: 20px;">
+     「交通管制センターのモニタールーム」のように、
+     <br/>
+     あらゆるログデータを可視化し、システムの状態を一目で把握できます。
+    </p>
+<div class="summary-steps">
+<div class="summary-step">
+<span class="summary-step-num">
+       1
+      </span>
+<span>
+       ログを収集・保存
+      </span>
+</div>
+<div class="summary-step">
+<span class="summary-step-num">
+       2
+      </span>
+<span>
+       Discover で探索
+      </span>
+</div>
+<div class="summary-step">
+<span class="summary-step-num">
+       3
+      </span>
+<span>
+       Visualize でグラフ化
+      </span>
+</div>
+<div class="summary-step">
+<span class="summary-step-num">
+       4
+      </span>
+<span>
+       Dashboard で監視
+      </span>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<div class="footer">
+<p>
+     📚 参考:
+     <a href="https://docs.aws.amazon.com/opensearch-service/" target="_blank">
+      AWS OpenSearch Service Documentation
+     </a>
+</p>
+<p style="margin-top: 10px;">
+     作成日: 2024年12月
+    </p>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="cis-benchmark-security-hub-config-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">39</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">71</span>
+    </div>
+    <a href="aws-config-conformance-stacksets-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<script>
+   // FAQ toggle functionality is handled by CSS and onclick
+  </script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

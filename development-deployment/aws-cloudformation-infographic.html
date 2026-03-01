@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   AWS CloudFormation テンプレート作成ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  <!-- ページ固有CSSファイル -->
+  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/aws-cloudformation-infographic.css" rel="stylesheet"/>
+  
+  
+
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#AWS-CloudFormation-とは？">AWS CloudFormation とは？</a></li>
+            <li class="toc-h2"><a href="#CloudFormation-テンプレートの基本構造">CloudFormation テンプレートの基本構造</a></li>
+            <li class="toc-h3"><a href="#テンプレート構造YAML形式">テンプレート構造（YAML形式）</a></li>
+            <li class="toc-h3"><a href="#セクションの説明">セクションの説明</a></li>
+            <li class="toc-h2"><a href="#テンプレート作成の手順">テンプレート作成の手順</a></li>
+            <li class="toc-h3"><a href="#要件の定義">要件の定義</a></li>
+            <li class="toc-h3"><a href="#構造の設計">構造の設計</a></li>
+            <li class="toc-h3"><a href="#リソースの定義">リソースの定義</a></li>
+            <li class="toc-h3"><a href="#パラメータの追加">パラメータの追加</a></li>
+            <li class="toc-h3"><a href="#出力の定義">出力の定義</a></li>
+            <li class="toc-h3"><a href="#テストと検証">テストと検証</a></li>
+            <li class="toc-h2"><a href="#代表的なパラメータと属性">代表的なパラメータと属性</a></li>
+            <li class="toc-h3"><a href="#パラメータの型">パラメータの型</a></li>
+            <li class="toc-h3"><a href="#パラメータの属性">パラメータの属性</a></li>
+            <li class="toc-h2"><a href="#組み込み関数">組み込み関数</a></li>
+            <li class="toc-h3"><a href="#関数の使用例">関数の使用例</a></li>
+            <li class="toc-h2"><a href="#代表的なリソースタイプ">代表的なリソースタイプ</a></li>
+            <li class="toc-h3"><a href="#コンピューティング">コンピューティング</a></li>
+            <li class="toc-h3"><a href="#ストレージ">ストレージ</a></li>
+            <li class="toc-h3"><a href="#ネットワーキング">ネットワーキング</a></li>
+            <li class="toc-h3"><a href="#セキュリティ">セキュリティ</a></li>
+            <li class="toc-h2"><a href="#実践的なテンプレート例">実践的なテンプレート例</a></li>
+            <li class="toc-h3"><a href="#基本的なWebサーバー構成">基本的なWebサーバー構成</a></li>
+            <li class="toc-h2"><a href="#デプロイ方法">デプロイ方法</a></li>
+            <li class="toc-h3"><a href="#AWSコンソールからのデプロイ">AWSコンソールからのデプロイ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     開発・デプロイメント
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     IaC &amp; CloudFormation
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Aws Cloudformation Infographic
+    </span>
+</nav>
+<header>
+<h1>
+     AWS CloudFormation テンプレート作成ガイド
+    </h1>
+
+<div class="subtitle">
+     インフラストラクチャをコードとして管理する方法
+    </div>
+</header>
+<section class="intro">
+<h2 id="AWS-CloudFormation-とは？">
+     AWS CloudFormation とは？
+    </h2>
+<p>
+     AWS CloudFormation は、AWSリソースをコードとして定義し、一貫した方法でプロビジョニングするためのサービスです。JSON または YAML 形式のテンプレートファイルを作成することで、インフラストラクチャ全体を自動的にデプロイ、更新、削除できます。
+    </p>
+<div class="note">
+<strong>
+      メリット:
+     </strong>
+     コード化されたインフラ（IaC）により、リソース作成の自動化、再現性の向上、バージョン管理が可能になります。
+    </div>
+</section>
+<section class="section">
+<h2 id="CloudFormation-テンプレートの基本構造">
+     CloudFormation テンプレートの基本構造
+    </h2>
+<div class="blueprint">
+<div class="blueprint-col">
+<h3 id="テンプレート構造YAML形式">
+       テンプレート構造（YAML形式）
+      </h3>
+<div class="code-block">
+<span class="comment">
+        # テンプレートのフォーマットバージョン（必須）
+       </span>
+<span class="key">
+        AWSTemplateFormatVersion
+       </span>
+       :
+       <span class="string">
+        "2010-09-09"
+       </span>
+<span class="comment">
+        # テンプレートの説明（オプション）
+       </span>
+<span class="key">
+        Description
+       </span>
+       :
+       <span class="string">
+        "シンプルなEC2インスタンスを作成するテンプレート"
+       </span>
+<span class="comment">
+        # メタデータ（オプション）
+       </span>
+<span class="key">
+        Metadata
+       </span>
+       :
+       <span class="key">
+        AWS::CloudFormation::Interface
+       </span>
+       :
+       <span class="key">
+        ParameterGroups
+       </span>
+       :
+      -
+       <span class="key">
+        Parameters
+       </span>
+       :
+        -
+       <span class="string">
+        "InstanceType"
+       </span>
+<span class="comment">
+        # パラメータ（オプション）
+       </span>
+<span class="key">
+        Parameters
+       </span>
+       :
+       <span class="key">
+        InstanceType
+       </span>
+       :
+       <span class="key">
+        Type
+       </span>
+       :
+       <span class="string">
+        "String"
+       </span>
+<span class="key">
+        Default
+       </span>
+       :
+       <span class="string">
+        "t2.micro"
+       </span>
+<span class="key">
+        Description
+       </span>
+       :
+       <span class="string">
+        "EC2インスタンスタイプ"
+       </span>
+<span class="comment">
+        # マッピング（オプション）
+       </span>
+<span class="key">
+        Mappings
+       </span>
+       :
+       <span class="key">
+        RegionMap
+       </span>
+       :
+       <span class="key">
+        ap-northeast-1
+       </span>
+       :
+       <span class="key">
+        AMI
+       </span>
+       :
+       <span class="string">
+        "ami-0ab0bbbd329f565e6"
+       </span>
+<span class="comment">
+        # 条件（オプション）
+       </span>
+<span class="key">
+        Conditions
+       </span>
+       :
+       <span class="key">
+        CreateProdResources
+       </span>
+       :
+       <span class="string">
+        !Equals [!Ref "Environment", "prod"]
+       </span>
+<span class="comment">
+        # リソース（必須）
+       </span>
+<span class="key">
+        Resources
+       </span>
+       :
+       <span class="key">
+        MyEC2Instance
+       </span>
+       :
+       <span class="key">
+        Type
+       </span>
+       :
+       <span class="string">
+        "AWS::EC2::Instance"
+       </span>
+<span class="key">
+        Properties
+       </span>
+       :
+       <span class="key">
+        InstanceType
+       </span>
+       :
+       <span class="string">
+        !Ref "InstanceType"
+       </span>
+<span class="key">
+        ImageId
+       </span>
+       :
+       <span class="string">
+        !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+       </span>
+<span class="comment">
+        # 出力（オプション）
+       </span>
+<span class="key">
+        Outputs
+       </span>
+       :
+       <span class="key">
+        InstanceId
+       </span>
+       :
+       <span class="key">
+        Description
+       </span>
+       :
+       <span class="string">
+        "EC2インスタンスID"
+       </span>
+<span class="key">
+        Value
+       </span>
+       :
+       <span class="string">
+        !Ref "MyEC2Instance"
+       </span>
+</div>
+</div>
+<div class="blueprint-col">
+<h3 id="セクションの説明">
+       セクションの説明
+      </h3>
+<ul>
+<li>
+<strong>
+         AWSTemplateFormatVersion:
+        </strong>
+        テンプレートの形式バージョン（現在は "2010-09-09" のみ）
+       </li>
+<li>
+<strong>
+         Description:
+        </strong>
+        テンプレートの説明文
+       </li>
+<li>
+<strong>
+         Metadata:
+        </strong>
+        テンプレートに関する追加情報
+       </li>
+<li>
+<strong>
+         Parameters:
+        </strong>
+        スタック作成時に指定可能なパラメータ
+       </li>
+<li>
+<strong>
+         Mappings:
+        </strong>
+        キーと値のマッピングテーブル
+       </li>
+<li>
+<strong>
+         Conditions:
+        </strong>
+        条件付きでリソースを作成するための条件式
+       </li>
+<li>
+<strong>
+         Resources:
+        </strong>
+        作成するAWSリソースの定義（必須）
+       </li>
+<li>
+<strong>
+         Outputs:
+        </strong>
+        スタック作成後に参照できる出力値
+       </li>
+</ul>
+<div class="note">
+<strong>
+        重要:
+       </strong>
+       テンプレートでは
+       <code>
+        Resources
+       </code>
+       セクションのみが必須で、他はオプションです。YAMLまたはJSON形式で記述できますが、YAMLの方が読みやすく推奨されています。
+      </div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 id="テンプレート作成の手順">
+     テンプレート作成の手順
+    </h2>
+<div class="step-box">
+<div class="step">
+<div class="step-number">
+       1
+      </div>
+<h3 id="要件の定義">
+       要件の定義
+      </h3>
+<p>
+       作成したいインフラストラクチャの要件を明確にします。必要なリソース、依存関係、パラメータを特定します。
+      </p>
+</div>
+<div class="step">
+<div class="step-number">
+       2
+      </div>
+<h3 id="構造の設計">
+       構造の設計
+      </h3>
+<p>
+       テンプレートの基本構造を設計します。必要なセクション（リソース、パラメータなど）を決めます。
+      </p>
+</div>
+<div class="step">
+<div class="step-number">
+       3
+      </div>
+<h3 id="リソースの定義">
+       リソースの定義
+      </h3>
+<p>
+       必要なAWSリソースを定義します。各リソースのプロパティと設定を指定します。
+      </p>
+</div>
+<div class="step">
+<div class="step-number">
+       4
+      </div>
+<h3 id="パラメータの追加">
+       パラメータの追加
+      </h3>
+<p>
+       テンプレートを再利用可能にするためのパラメータを追加します。デフォルト値や制約を設定します。
+      </p>
+</div>
+<div class="step">
+<div class="step-number">
+       5
+      </div>
+<h3 id="出力の定義">
+       出力の定義
+      </h3>
+<p>
+       参照用の出力値を定義します。これらは他のスタックで使用したり、情報表示に利用できます。
+      </p>
+</div>
+<div class="step">
+<div class="step-number">
+       6
+      </div>
+<h3 id="テストと検証">
+       テストと検証
+      </h3>
+<p>
+       AWS CloudFormation コンソールやCLIでテンプレートを検証し、エラーがないことを確認します。
+      </p>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 id="代表的なパラメータと属性">
+     代表的なパラメータと属性
+    </h2>
+<h3 id="パラメータの型">
+     パラメータの型
+    </h3>
+<table class="parameter-table">
+<thead>
+<tr>
+<th>
+        パラメータ型
+       </th>
+<th>
+        説明
+       </th>
+<th>
+        例
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+        String
+       </td>
+<td>
+        文字列値
+       </td>
+<td>
+        インスタンス名、キー名など
+       </td>
+</tr>
+<tr>
+<td>
+        Number
+       </td>
+<td>
+        整数または小数
+       </td>
+<td>
+        ポート番号、容量サイズなど
+       </td>
+</tr>
+<tr>
+<td>
+        AWS::EC2::VPC::Id
+       </td>
+<td>
+        既存のVPC ID
+       </td>
+<td>
+        vpc-0123456789abcdef0
+       </td>
+</tr>
+<tr>
+<td>
+        AWS::EC2::Subnet::Id
+       </td>
+<td>
+        既存のサブネットID
+       </td>
+<td>
+        subnet-0123456789abcdef0
+       </td>
+</tr>
+<tr>
+<td>
+        CommaDelimitedList
+       </td>
+<td>
+        カンマ区切りの値リスト
+       </td>
+<td>
+        test1,test2,test3
+       </td>
+</tr>
+<tr>
+<td>
+        List
+        <number>
+</number>
+</td>
+<td>
+        数値のリスト
+       </td>
+<td>
+        [80, 443, 8080]
+       </td>
+</tr>
+</tbody>
+</table>
+<h3 id="パラメータの属性">
+     パラメータの属性
+    </h3>
+<table class="parameter-table">
+<thead>
+<tr>
+<th>
+        属性
+       </th>
+<th>
+        説明
+       </th>
+<th>
+        例
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+        Default
+       </td>
+<td>
+        パラメータのデフォルト値
+       </td>
+<td>
+        t2.micro
+       </td>
+</tr>
+<tr>
+<td>
+        AllowedValues
+       </td>
+<td>
+        許可される値のリスト
+       </td>
+<td>
+        [t2.micro, t2.small, t2.medium]
+       </td>
+</tr>
+<tr>
+<td>
+        AllowedPattern
+       </td>
+<td>
+        正規表現パターン
+       </td>
+<td>
+        ^[a-zA-Z0-9]*$
+       </td>
+</tr>
+<tr>
+<td>
+        MinLength/MaxLength
+       </td>
+<td>
+        文字列の長さ制限
+       </td>
+<td>
+        MinLength: 1, MaxLength: 255
+       </td>
+</tr>
+<tr>
+<td>
+        MinValue/MaxValue
+       </td>
+<td>
+        数値の範囲制限
+       </td>
+<td>
+        MinValue: 1, MaxValue: 65535
+       </td>
+</tr>
+<tr>
+<td>
+        NoEcho
+       </td>
+<td>
+        パラメータ値を隠す（パスワードなど）
+       </td>
+<td>
+        true
+       </td>
+</tr>
+</tbody>
+</table>
+</section>
+<section class="section">
+<h2 id="組み込み関数">
+     組み込み関数
+    </h2>
+<div class="icon-grid">
+<div class="icon-item">
+<div class="icon">
+       Ref
+      </div>
+<p>
+<strong>
+        !Ref
+       </strong>
+</p>
+<p>
+       パラメータやリソースを参照
+      </p>
+</div>
+<div class="icon-item">
+<div class="icon">
+       Get
+      </div>
+<p>
+<strong>
+        !GetAtt
+       </strong>
+</p>
+<p>
+       リソースの属性を取得
+      </p>
+</div>
+<div class="icon-item">
+<div class="icon">
+       Join
+      </div>
+<p>
+<strong>
+        !Join
+       </strong>
+</p>
+<p>
+       値を連結
+      </p>
+</div>
+<div class="icon-item">
+<div class="icon">
+       Sub
+      </div>
+<p>
+<strong>
+        !Sub
+       </strong>
+</p>
+<p>
+       文字列内の変数を置換
+      </p>
+</div>
+<div class="icon-item">
+<div class="icon">
+       Map
+      </div>
+<p>
+<strong>
+        !FindInMap
+       </strong>
+</p>
+<p>
+       マッピングから値を検索
+      </p>
+</div>
+<div class="icon-item">
+<div class="icon">
+       If
+      </div>
+<p>
+<strong>
+        !If
+       </strong>
+</p>
+<p>
+       条件に基づいて値を選択
+      </p>
+</div>
+</div>
+<h3 id="関数の使用例">
+     関数の使用例
+    </h3>
+<div class="code-block">
+<span class="comment">
+      # パラメータの参照
+     </span>
+<span class="key">
+      InstanceType
+     </span>
+     :
+     <span class="string">
+      !Ref "InstanceTypeParameter"
+     </span>
+<span class="comment">
+      # リソースの属性取得
+     </span>
+<span class="key">
+      PublicIP
+     </span>
+     :
+     <span class="string">
+      !GetAtt "MyEC2Instance.PublicIp"
+     </span>
+<span class="comment">
+      # 文字列の連結
+     </span>
+<span class="key">
+      BucketName
+     </span>
+     :
+     <span class="string">
+      !Join ["-", ["my-bucket", !Ref "AWS::AccountId"]]
+     </span>
+<span class="comment">
+      # 変数置換
+     </span>
+<span class="key">
+      Endpoint
+     </span>
+     :
+     <span class="string">
+      !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+     </span>
+<span class="comment">
+      # マッピングの検索
+     </span>
+<span class="key">
+      AMI
+     </span>
+     :
+     <span class="string">
+      !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+     </span>
+<span class="comment">
+      # 条件分岐
+     </span>
+<span class="key">
+      EnvironmentType
+     </span>
+     :
+     <span class="string">
+      !If [IsProd, "production", "development"]
+     </span>
+</div>
+</section>
+<section class="section">
+<h2 id="代表的なリソースタイプ">
+     代表的なリソースタイプ
+    </h2>
+<div class="blueprint">
+<div class="blueprint-col">
+<h3 id="コンピューティング">
+       コンピューティング
+      </h3>
+<ul>
+<li>
+<strong>
+         AWS::EC2::Instance
+        </strong>
+        - EC2インスタンス
+       </li>
+<li>
+<strong>
+         AWS::AutoScaling::AutoScalingGroup
+        </strong>
+        - Auto Scalingグループ
+       </li>
+<li>
+<strong>
+         AWS::ECS::Cluster
+        </strong>
+        - ECSクラスター
+       </li>
+<li>
+<strong>
+         AWS::Lambda::Function
+        </strong>
+        - Lambda関数
+       </li>
+</ul>
+<h3 id="ストレージ">
+       ストレージ
+      </h3>
+<ul>
+<li>
+<strong>
+         AWS::S3::Bucket
+        </strong>
+        - S3バケット
+       </li>
+<li>
+<strong>
+         AWS::RDS::DBInstance
+        </strong>
+        - RDSデータベース
+       </li>
+<li>
+<strong>
+         AWS::DynamoDB::Table
+        </strong>
+        - DynamoDBテーブル
+       </li>
+<li>
+<strong>
+         AWS::EFS::FileSystem
+        </strong>
+        - EFSファイルシステム
+       </li>
+</ul>
+</div>
+<div class="blueprint-col">
+<h3 id="ネットワーキング">
+       ネットワーキング
+      </h3>
+<ul>
+<li>
+<strong>
+         AWS::EC2::VPC
+        </strong>
+        - 仮想プライベートクラウド
+       </li>
+<li>
+<strong>
+         AWS::EC2::Subnet
+        </strong>
+        - サブネット
+       </li>
+<li>
+<strong>
+         AWS::EC2::SecurityGroup
+        </strong>
+        - セキュリティグループ
+       </li>
+<li>
+<strong>
+         AWS::ElasticLoadBalancing::LoadBalancer
+        </strong>
+        - ロードバランサー
+       </li>
+<li>
+<strong>
+         AWS::Route53::RecordSet
+        </strong>
+        - DNS レコード
+       </li>
+</ul>
+<h3 id="セキュリティ">
+       セキュリティ
+      </h3>
+<ul>
+<li>
+<strong>
+         AWS::IAM::Role
+        </strong>
+        - IAMロール
+       </li>
+<li>
+<strong>
+         AWS::IAM::Policy
+        </strong>
+        - IAMポリシー
+       </li>
+<li>
+<strong>
+         AWS::KMS::Key
+        </strong>
+        - KMS暗号化キー
+       </li>
+</ul>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 id="実践的なテンプレート例">
+     実践的なテンプレート例
+    </h2>
+<h3 id="基本的なWebサーバー構成">
+     基本的なWebサーバー構成
+    </h3>
+<div class="code-block">
+<span class="key">
+      AWSTemplateFormatVersion
+     </span>
+     :
+     <span class="string">
+      "2010-09-09"
+     </span>
+<span class="key">
+      Description
+     </span>
+     :
+     <span class="string">
+      "基本的なWebサーバー構成"
+     </span>
+<span class="key">
+      Parameters
+     </span>
+     :
+     <span class="key">
+      InstanceType
+     </span>
+     :
+     <span class="key">
+      Type
+     </span>
+     :
+     <span class="string">
+      "String"
+     </span>
+<span class="key">
+      Default
+     </span>
+     :
+     <span class="string">
+      "t2.micro"
+     </span>
+<span class="key">
+      AllowedValues
+     </span>
+     :
+      -
+     <span class="string">
+      "t2.micro"
+     </span>
+     -
+     <span class="string">
+      "t2.small"
+     </span>
+     -
+     <span class="string">
+      "t2.medium"
+     </span>
+<span class="key">
+      Description
+     </span>
+     :
+     <span class="string">
+      "EC2インスタンスタイプ"
+     </span>
+<span class="key">
+      KeyName
+     </span>
+     :
+     <span class="key">
+      Type
+     </span>
+     :
+     <span class="string">
+      "AWS::EC2::KeyPair::KeyName"
+     </span>
+<span class="key">
+      Description
+     </span>
+     :
+     <span class="string">
+      "EC2インスタンスへのSSHアクセス用のキーペア名"
+     </span>
+<span class="key">
+      Resources
+     </span>
+     :
+     <span class="key">
+      WebServerSecurityGroup
+     </span>
+     :
+     <span class="key">
+      Type
+     </span>
+     :
+     <span class="string">
+      "AWS::EC2::SecurityGroup"
+     </span>
+<span class="key">
+      Properties
+     </span>
+     :
+     <span class="key">
+      GroupDescription
+     </span>
+     :
+     <span class="string">
+      "Webサーバー用セキュリティグループ"
+     </span>
+<span class="key">
+      SecurityGroupIngress
+     </span>
+     :
+        -
+     <span class="key">
+      IpProtocol
+     </span>
+     :
+     <span class="string">
+      "tcp"
+     </span>
+<span class="key">
+      FromPort
+     </span>
+     :
+     <span class="string">
+      80
+     </span>
+<span class="key">
+      ToPort
+     </span>
+     :
+     <span class="string">
+      80
+     </span>
+<span class="key">
+      CidrIp
+     </span>
+     :
+     <span class="string">
+      "0.0.0.0/0"
+     </span>
+     -
+     <span class="key">
+      IpProtocol
+     </span>
+     :
+     <span class="string">
+      "tcp"
+     </span>
+<span class="key">
+      FromPort
+     </span>
+     :
+     <span class="string">
+      22
+     </span>
+<span class="key">
+      ToPort
+     </span>
+     :
+     <span class="string">
+      22
+     </span>
+<span class="key">
+      CidrIp
+     </span>
+     :
+     <span class="string">
+      "0.0.0.0/0"
+     </span>
+<span class="key">
+      WebServer
+     </span>
+     :
+     <span class="key">
+      Type
+     </span>
+     :
+     <span class="string">
+      "AWS::EC2::Instance"
+     </span>
+<span class="key">
+      Properties
+     </span>
+     :
+     <span class="key">
+      InstanceType
+     </span>
+     :
+     <span class="string">
+      !Ref "InstanceType"
+     </span>
+<span class="key">
+      SecurityGroups
+     </span>
+     :
+        -
+     <span class="string">
+      !Ref "WebServerSecurityGroup"
+     </span>
+<span class="key">
+      KeyName
+     </span>
+     :
+     <span class="string">
+      !Ref "KeyName"
+     </span>
+<span class="key">
+      ImageId
+     </span>
+     :
+     <span class="string">
+      "ami-0ab0bbbd329f565e6"
+     </span>
+<span class="comment">
+      # Amazon Linux 2 in Tokyo region
+     </span>
+<span class="key">
+      UserData
+     </span>
+     :
+     <span class="key">
+      Fn::Base64
+     </span>
+     :
+     <span class="string">
+      !Sub |
+          #!/bin/bash -xe
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "&lt;html&gt;&lt;body&gt;&lt;h1&gt;CloudFormation で作成されたウェブサーバーへようこそ!&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;" &gt; /var/www/html/index.html
+     </span>
+    </pre>
+   </div>
+  </section>
+ </main>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">1</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">15</span>
+    </div>
+    <a href="cloudformation-protection-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<!-- フッター部分 -->
+<div class="footer-section">
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+         🏠 リソース集に戻る
+        </button>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+          Created by
+          <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+           SSuzuki1063
+          </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+          AWS SAP Learning Resources
+         </p>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+         // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>
+      " &gt; /var/www/html/index.html
+     </span>
+<span class="key">
+      Outputs
+     </span>
+     :
+     <span class="key">
+      WebsiteURL
+     </span>
+     :
+     <span class="key">
+      Description
+     </span>
+     :
+     <span class="string">
+      "ウェブサーバーのURL"
+     </span>
+<span class="key">
+      Value
+     </span>
+     :
+     <span class="string">
+      !Sub "http://${WebServer.PublicDnsName}"
+     </span>
+<span class="key">
+      PublicIP
+     </span>
+     :
+     <span class="key">
+      Description
+     </span>
+     :
+     <span class="string">
+      "EC2インスタンスのパブリックIP"
+     </span>
+<span class="key">
+      Value
+     </span>
+     :
+     <span class="string">
+      !GetAtt "WebServer.PublicIp"
+     </span>
+</div>
+</section>
+<section class="section">
+<h2 id="デプロイ方法">
+     デプロイ方法
+    </h2>
+<div class="step-box">
+<div class="step">
+<div class="step-number">
+       1
+      </div>
+<h3 id="AWSコンソールからのデプロイ">
+       AWSコンソールからのデプロイ
+      </h3>
+<ol>
+<li>
+        AWSマネジメントコンソールにログイン
+       </li>
+<li>
+        CloudFormationサービスに移動
+       </li>
+<li>
+        「スタックの作成」→「新しいリソースを使用」をクリック
+       </li>
+<li>
+        テンプレートファイルをアップロードまたはS3 URLを指定
+       </li>
+<li>
+        パラメータを入力し、スタック名を設定
+       </li>
+<li>
+        オプション設定を確認し、スタックを作成
+       </li>
+</ol>
+</div>
+</div>
+</section>
+</div>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

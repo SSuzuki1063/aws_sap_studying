@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   CloudWatch Logs データ保護ポリシー完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/cloudwatch-logs-data-protection-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#郵便局の手紙検査官でイメージしよう">郵便局の「手紙検査官」でイメージしよう</a></li>
+            <li class="toc-h3"><a href="#ログ-=-手紙">ログ = 手紙</a></li>
+            <li class="toc-h2"><a href="#データ保護の仕組み">データ保護の仕組み</a></li>
+            <li class="toc-h2"><a href="#検出できる機密データの種類">検出できる機密データの種類</a></li>
+            <li class="toc-h2"><a href="#設定方法">設定方法</a></li>
+            <li class="toc-h2"><a href="#主なユースケース">主なユースケース</a></li>
+            <li class="toc-h3"><a href="#医療-ヘルスケア">医療・ヘルスケア</a></li>
+            <li class="toc-h2"><a href="#注意事項と料金">注意事項と料金</a></li>
+            <li class="toc-h2"><a href="#よくある質問">よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ">📝 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<!-- ヒーローセクション -->
+<section class="hero">
+<div class="hero-content">
+<div class="hero-badge">
+     🛡️ AWS Security &amp; Compliance
+    </div>
+<h1>
+     CloudWatch Logs
+     <br/>
+     データ保護ポリシー完全ガイド
+    </h1>
+<p class="hero-subtitle">
+     ログに含まれる機密情報を自動検出＆マスキング！
+     <br/>
+     個人情報やクレジットカード番号を守る仕組みを図解で解説
+    </p>
+</div>
+</section>
+<!-- キーポイント -->
+<section class="key-points">
+<div class="key-point-card">
+<div class="key-point-icon">
+     🔍
+    </div>
+<div class="key-point-title">
+     自動検出
+    </div>
+<div class="key-point-desc">
+     150種類以上の機密データパターンを自動で検出
+    </div>
+</div>
+<div class="key-point-card">
+<div class="key-point-icon">
+     🎭
+    </div>
+<div class="key-point-title">
+     自動マスキング
+    </div>
+<div class="key-point-desc">
+     検出した機密情報を「*****」で自動的に置換
+    </div>
+</div>
+<div class="key-point-card">
+<div class="key-point-icon">
+     📋
+    </div>
+<div class="key-point-title">
+     監査ログ
+    </div>
+<div class="key-point-desc">
+     どんな機密情報が何件検出されたかを記録
+    </div>
+</div>
+<div class="key-point-card">
+<div class="key-point-icon">
+     ⚖️
+    </div>
+<div class="key-point-title">
+     コンプライアンス
+    </div>
+<div class="key-point-desc">
+     GDPR・PCI-DSS等の規制対応をサポート
+    </div>
+</div>
+</section>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">🏠 ホーム</a>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-item">セキュリティ・ガバナンス</span>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-item">その他</span>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-current">Cloudwatch Logs Data Protection Guide</span>
+</nav>
+<!-- セクション1: たとえ話で理解 -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      1
+     </div>
+<h2 class="section-title" id="郵便局の手紙検査官でイメージしよう">
+      郵便局の「手紙検査官」でイメージしよう
+     </h2>
+</div>
+<div class="analogy-container">
+<div class="analogy-title">
+<span>
+       📮
+      </span>
+      データ保護ポリシー = 郵便局の「機密情報検査官」
+     </div>
+<p class="analogy-intro">
+      CloudWatch Logsのデータ保護ポリシーは、
+      <strong style="color: var(--accent-orange);">
+       郵便局で手紙をチェックする「機密情報検査官」
+      </strong>
+      のようなものです。
+      <br/>
+      アプリケーションから送られてくる「ログ」という手紙の中に、見せてはいけない情報が含まれていないかをチェックし、必要に応じて黒塗り（マスキング）します。
+     </p>
+<div class="analogy-grid">
+<div class="analogy-card">
+<span class="analogy-card-icon">
+        📝
+       </span>
+<h3 id="ログ-=-手紙">
+        ログ = 手紙
+       </h3>
+<p>
+        アプリケーションが生成するログは、状況を報告する「手紙」のようなもの。時にはうっかり個人情報が含まれてしまうことも...
+       </p>
+</div>
+<div class="analogy-card">
+<span class="analogy-card-icon">
+        🔍
+       </span>
+<h4>
+        検出 = 手紙の検査
+       </h4>
+<p>
+        検査官が「クレジットカード番号のパターン」「メールアドレスの形式」などを知っていて、手紙の中から見つけ出します
+       </p>
+</div>
+<div class="analogy-card">
+<span class="analogy-card-icon">
+        🖊️
+       </span>
+<h4>
+        マスキング = 黒塗り
+       </h4>
+<p>
+        見つけた機密情報を黒いペンで塗りつぶし「*****」に置き換え。第三者が見ても中身がわからないように保護します
+       </p>
+</div>
+<div class="analogy-card">
+<span class="analogy-card-icon">
+        📊
+       </span>
+<h4>
+        監査 = 検査記録
+       </h4>
+<p>
+        「今日はクレジットカード番号を5件、メールアドレスを10件検出しました」という記録を残し、後から確認できるようにします
+       </p>
+</div>
+</div>
+</div>
+<!-- ビフォーアフター -->
+<div class="comparison-section">
+<div class="comparison-card before">
+<span class="comparison-badge">
+       ❌ 保護なし
+      </span>
+<h4>
+       データ保護ポリシー適用前
+      </h4>
+<div class="log-example">
+<div class="log-line">
+<span class="log-key">
+         "message":
+        </span>
+<span class="log-value">
+         "User login: "
+        </span>
+</div>
+<div class="log-line">
+<span class="log-key">
+         "email":
+        </span>
+<span class="log-sensitive">
+         "tanaka@example.com"
+        </span>
+</div>
+<div class="log-line">
+<span class="log-key">
+         "card":
+        </span>
+<span class="log-sensitive">
+         "4532-1234-5678-9012"
+        </span>
+</div>
+<div class="log-line">
+<span class="log-key">
+         "phone":
+        </span>
+<span class="log-sensitive">
+         "090-1234-5678"
+        </span>
+</div>
+</div>
+<p class="comparison-result">
+       😱 機密情報がそのままログに記録されてしまう！
+      </p>
+</div>
+<div class="comparison-card after">
+<span class="comparison-badge">
+       ✅ 保護あり
+      </span>
+<h4>
+       データ保護ポリシー適用後
+      </h4>
+<div class="log-example">
+<div class="log-line">
+<span class="log-key">
+         "message":
+        </span>
+<span class="log-value">
+         "User login: "
+        </span>
+</div>
+<div class="log-line">
+<span class="log-key">
+         "email":
+        </span>
+<span class="log-masked">
+         "*****"
+        </span>
+</div>
+<div class="log-line">
+<span class="log-key">
+         "card":
+        </span>
+<span class="log-masked">
+         "*****"
+        </span>
+</div>
+<div class="log-line">
+<span class="log-key">
+         "phone":
+        </span>
+<span class="log-masked">
+         "*****"
+        </span>
+</div>
+</div>
+<p class="comparison-result">
+       😊 機密情報が自動的にマスキングされて安心！
+      </p>
+</div>
+</div>
+</section>
+<!-- セクション2: 仕組み -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      2
+     </div>
+<h2 class="section-title" id="データ保護の仕組み">
+      データ保護の仕組み
+     </h2>
+</div>
+<div class="flow-container">
+<div class="flow-title">
+      🔄 データ保護ポリシーの処理フロー
+     </div>
+<div class="flow-steps">
+<div class="flow-step">
+<div class="step-icon">
+        📤
+       </div>
+<div class="step-label">
+        STEP 1
+       </div>
+<div class="step-title">
+        ログ送信
+       </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+        🔍
+       </div>
+<div class="step-label">
+        STEP 2
+       </div>
+<div class="step-title">
+        パターン検出
+       </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+        📋
+       </div>
+<div class="step-label">
+        STEP 3
+       </div>
+<div class="step-title">
+        監査記録
+       </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+        🎭
+       </div>
+<div class="step-label">
+        STEP 4
+       </div>
+<div class="step-title">
+        マスキング
+       </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+        💾
+       </div>
+<div class="step-label">
+        STEP 5
+       </div>
+<div class="step-title">
+        保存完了
+       </div>
+</div>
+</div>
+</div>
+<!-- アクションタイプ -->
+<div class="actions-section">
+<div class="action-card audit">
+<div class="action-header">
+<span class="action-icon">
+        📊
+       </span>
+<div>
+<div class="action-title">
+         Audit（監査）
+        </div>
+</div>
+</div>
+<p class="action-desc">
+       検出した機密情報の種類と件数を記録します。データ自体は変更しませんが、「何が見つかったか」を把握できます。
+      </p>
+<ul class="action-features">
+<li>
+        CloudWatch Metricsに検出結果を出力
+       </li>
+<li>
+        CloudWatch Logsに監査ログを記録
+       </li>
+<li>
+        S3やFirehoseへの転送も可能
+       </li>
+<li>
+        データの中身は変更されない
+       </li>
+</ul>
+</div>
+<div class="action-card deidentify">
+<div class="action-header">
+<span class="action-icon">
+        🎭
+       </span>
+<div>
+<div class="action-title">
+         Deidentify（非識別化）
+        </div>
+</div>
+</div>
+<p class="action-desc">
+       検出した機密情報を「*****」でマスキング（置換）します。実際にログデータを変更して機密情報を隠します。
+      </p>
+<ul class="action-features">
+<li>
+        機密情報を「*****」に自動置換
+       </li>
+<li>
+        元のデータは完全に上書き
+       </li>
+<li>
+        権限を持つユーザーは復元可能
+       </li>
+<li>
+        コンプライアンス要件に対応
+       </li>
+</ul>
+</div>
+</div>
+</section>
+<!-- セクション3: 検出できるデータ -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      3
+     </div>
+<h2 class="section-title" id="検出できる機密データの種類">
+      検出できる機密データの種類
+     </h2>
+</div>
+<div class="identifiers-section">
+<p style="color: var(--text-secondary); margin-bottom: 20px;">
+      AWS が提供する
+      <strong style="color: var(--accent-cyan);">
+       「マネージドデータ識別子」
+      </strong>
+      を使用して、150種類以上の機密データパターンを検出できます。
+     </p>
+<div class="identifiers-grid">
+<div class="identifier-card">
+<div class="identifier-icon">
+        💳
+       </div>
+<div class="identifier-name">
+        クレジットカード情報
+       </div>
+<div class="identifier-examples">
+        VISA, MasterCard, JCB など主要ブランドに対応
+       </div>
+<span class="identifier-tag">
+        CreditCardNumber
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        📧
+       </div>
+<div class="identifier-name">
+        メールアドレス
+       </div>
+<div class="identifier-examples">
+        xxx@example.com 形式のアドレスを検出
+       </div>
+<span class="identifier-tag">
+        EmailAddress
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        📱
+       </div>
+<div class="identifier-name">
+        電話番号
+       </div>
+<div class="identifier-examples">
+        日本の携帯・固定電話番号に対応
+       </div>
+<span class="identifier-tag">
+        PhoneNumber
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        🏠
+       </div>
+<div class="identifier-name">
+        住所
+       </div>
+<div class="identifier-examples">
+        日本の住所形式を検出
+       </div>
+<span class="identifier-tag">
+        Address
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        🔑
+       </div>
+<div class="identifier-name">
+        AWSシークレットキー
+       </div>
+<div class="identifier-examples">
+        誤ってログに含まれたキーを検出
+       </div>
+<span class="identifier-tag">
+        AwsSecretKey
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        🌐
+       </div>
+<div class="identifier-name">
+        IPアドレス
+       </div>
+<div class="identifier-examples">
+        IPv4 / IPv6アドレス
+       </div>
+<span class="identifier-tag">
+        IpAddress
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        👤
+       </div>
+<div class="identifier-name">
+        氏名
+       </div>
+<div class="identifier-examples">
+        個人名のパターンを検出
+       </div>
+<span class="identifier-tag">
+        Name
+       </span>
+</div>
+<div class="identifier-card">
+<div class="identifier-icon">
+        🔐
+       </div>
+<div class="identifier-name">
+        パスワード
+       </div>
+<div class="identifier-examples">
+        ログに含まれたパスワードを検出
+       </div>
+<span class="identifier-tag">
+        Password
+       </span>
+</div>
+</div>
+<div class="identifiers-tip">
+<p>
+       💡
+       <strong>
+        ポイント：
+       </strong>
+       日本固有のデータ（マイナンバー、運転免許証番号など）にも対応しています。また、カスタムデータ識別子を作成して独自のパターンを追加することも可能です。
+      </p>
+</div>
+</div>
+</section>
+<!-- セクション4: 設定方法 -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      4
+     </div>
+<h2 class="section-title" id="設定方法">
+      設定方法
+     </h2>
+</div>
+<div class="code-section">
+<div class="code-tabs">
+<span class="code-tab active">
+       AWS CLI
+      </span>
+<span class="code-tab">
+       ポリシーJSON
+      </span>
+<span class="code-tab">
+       CloudFormation
+      </span>
+</div>
+<!-- AWS CLI -->
+<div class="code-block">
+<span class="code-label">
+       AWS CLI
+      </span>
+<pre><span class="code-comment"># データ保護ポリシーを作成（JSONファイルを指定）</span>
+aws logs put-data-protection-policy \
+  <span class="code-keyword">--log-group-identifier</span> <span class="code-string">"/aws/my-application/logs"</span> \
+  <span class="code-keyword">--policy-document</span> file://data-protection-policy.json
+
+<span class="code-comment"># 現在のポリシーを確認</span>
+aws logs get-data-protection-policy \
+  <span class="code-keyword">--log-group-identifier</span> <span class="code-string">"/aws/my-application/logs"</span>
+
+<span class="code-comment"># ポリシーを削除</span>
+aws logs delete-data-protection-policy \
+  <span class="code-keyword">--log-group-identifier</span> <span class="code-string">"/aws/my-application/logs"</span></pre>
+</div>
+<!-- ポリシーJSON例 -->
+<div class="code-block">
+<span class="code-label">
+       data-protection-policy.json
+      </span>
+<pre>{
+  <span class="code-property">"Name"</span>: <span class="code-string">"data-protection-policy"</span>,
+  <span class="code-property">"Description"</span>: <span class="code-string">"機密情報の検出とマスキング"</span>,
+  <span class="code-property">"Version"</span>: <span class="code-string">"2021-06-01"</span>,
+  <span class="code-property">"Statement"</span>: [
+    {
+      <span class="code-comment">// 監査アクション: 検出結果を記録</span>
+      <span class="code-property">"Sid"</span>: <span class="code-string">"audit-policy"</span>,
+      <span class="code-property">"DataIdentifier"</span>: [
+        <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/CreditCardNumber"</span>,
+        <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/EmailAddress"</span>,
+        <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/Address"</span>
+      ],
+      <span class="code-property">"Operation"</span>: {
+        <span class="code-property">"Audit"</span>: {
+          <span class="code-property">"FindingsDestination"</span>: {
+            <span class="code-property">"CloudWatchLogs"</span>: {
+              <span class="code-property">"LogGroup"</span>: <span class="code-string">"/aws/data-protection/audit-logs"</span>
+            }
+          }
+        }
+      }
+    },
+    {
+      <span class="code-comment">// マスキングアクション: 機密情報を「*****」に置換</span>
+      <span class="code-property">"Sid"</span>: <span class="code-string">"deidentify-policy"</span>,
+      <span class="code-property">"DataIdentifier"</span>: [
+        <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/CreditCardNumber"</span>,
+        <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/EmailAddress"</span>,
+        <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/Address"</span>
+      ],
+      <span class="code-property">"Operation"</span>: {
+        <span class="code-property">"Deidentify"</span>: {
+          <span class="code-property">"MaskConfig"</span>: {}
+        }
+      }
+    }
+  ]
+}</pre>
+</div>
+<!-- CloudFormation -->
+<div class="code-block">
+<span class="code-label">
+       CloudFormation
+      </span>
+<pre><span class="code-property">Resources</span>:
+  <span class="code-property">MyLogGroup</span>:
+    <span class="code-keyword">Type</span>: AWS::Logs::LogGroup
+    <span class="code-keyword">Properties</span>:
+      <span class="code-property">LogGroupName</span>: <span class="code-string">/aws/my-application/logs</span>
+      <span class="code-property">RetentionInDays</span>: <span class="code-number">30</span>
+      <span class="code-comment"># データ保護ポリシーを設定</span>
+      <span class="code-property">DataProtectionPolicy</span>:
+        <span class="code-property">Name</span>: <span class="code-string">"data-protection-policy"</span>
+        <span class="code-property">Version</span>: <span class="code-string">"2021-06-01"</span>
+        <span class="code-property">Statement</span>:
+          - <span class="code-property">Sid</span>: <span class="code-string">"audit-and-mask"</span>
+            <span class="code-property">DataIdentifier</span>:
+              - <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/CreditCardNumber"</span>
+              - <span class="code-string">"arn:aws:dataprotection::aws:data-identifier/EmailAddress"</span>
+            <span class="code-property">Operation</span>:
+              <span class="code-property">Audit</span>:
+                <span class="code-property">FindingsDestination</span>:
+                  <span class="code-property">CloudWatchLogs</span>:
+                    <span class="code-property">LogGroup</span>: <span class="code-string">/aws/data-protection/audit</span>
+              <span class="code-property">Deidentify</span>:
+                <span class="code-property">MaskConfig</span>: {}</pre>
+</div>
+</div>
+</section>
+<!-- セクション5: ユースケース -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      5
+     </div>
+<h2 class="section-title" id="主なユースケース">
+      主なユースケース
+     </h2>
+</div>
+<div class="usecases-grid">
+<div class="usecase-card">
+<div class="usecase-icon">
+       🏥
+      </div>
+<h3 id="医療-ヘルスケア">
+       医療・ヘルスケア
+      </h3>
+<p>
+       患者の氏名、病歴、保険番号などの医療情報をログから自動的に保護。HIPAA対応に貢献します。
+      </p>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+       🛒
+      </div>
+<h4>
+       ECサイト・決済
+      </h4>
+<p>
+       クレジットカード番号、CVV、顧客の住所など決済関連情報を保護。PCI-DSS準拠をサポートします。
+      </p>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+       🏦
+      </div>
+<h4>
+       金融・銀行
+      </h4>
+<p>
+       口座番号、取引情報、顧客の個人情報を保護。金融規制への対応と顧客データの保護を実現します。
+      </p>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+       🌍
+      </div>
+<h4>
+       グローバル展開
+      </h4>
+<p>
+       EU圏ユーザーのデータをGDPR準拠で保護。国際的なプライバシー規制への対応を支援します。
+      </p>
+</div>
+</div>
+</section>
+<!-- セクション6: 注意事項と料金 -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      6
+     </div>
+<h2 class="section-title" id="注意事項と料金">
+      注意事項と料金
+     </h2>
+</div>
+<div class="caution-box">
+<div class="caution-header">
+<span>
+       ⚡
+      </span>
+<span>
+       設定前に知っておくべきこと
+      </span>
+</div>
+<ul class="caution-list">
+<li>
+       データ保護ポリシーは
+       <strong>
+        ロググループ単位
+       </strong>
+       で設定します。必要なロググループにのみ適用しましょう。
+      </li>
+<li>
+       マスキング（Deidentify）されたデータは
+       <strong>
+        元に戻せません
+       </strong>
+       。監査目的で元データが必要な場合は「Audit」のみを使用することを検討してください。
+      </li>
+<li>
+       ポリシーは
+       <strong>
+        新規ログイベント
+       </strong>
+       にのみ適用されます。既存のログには遡及的に適用されません。
+      </li>
+<li>
+       検出精度は100%ではありません。
+       <strong>
+        誤検出
+       </strong>
+       （False Positive）や
+       <strong>
+        検出漏れ
+       </strong>
+       （False Negative）が発生する可能性があります。
+      </li>
+<li>
+       権限を持つユーザー（logs:Unmask）は、マスキングされたデータを
+       <strong>
+        表示時に復元
+       </strong>
+       できます。
+      </li>
+<li>
+       データ保護ポリシーを有効にすると
+       <strong>
+        追加料金
+       </strong>
+       が発生します（下記参照）。
+      </li>
+</ul>
+</div>
+<div class="pricing-section">
+<div class="pricing-header">
+<span>
+       💰
+      </span>
+<span>
+       料金体系
+      </span>
+</div>
+<div class="pricing-grid">
+<div class="pricing-item">
+<div class="pricing-icon">
+        🔍
+       </div>
+<div class="pricing-label">
+        データスキャン
+       </div>
+<div class="pricing-value">
+        $0.12 / GB
+       </div>
+</div>
+<div class="pricing-item">
+<div class="pricing-icon">
+        🎭
+       </div>
+<div class="pricing-label">
+        データ保護
+       </div>
+<div class="pricing-value">
+        $0.12 / GB
+       </div>
+</div>
+<div class="pricing-item">
+<div class="pricing-icon">
+        🔓
+       </div>
+<div class="pricing-label">
+        マスク解除
+       </div>
+<div class="pricing-value">
+        $0.02 / 1000件
+       </div>
+</div>
+<div class="pricing-item">
+<div class="pricing-icon">
+        📊
+       </div>
+<div class="pricing-label">
+        監査結果出力
+       </div>
+<div class="pricing-value">
+        各サービス料金
+       </div>
+</div>
+</div>
+<p class="pricing-note">
+      ※ 料金は東京リージョン（ap-northeast-1）の場合。最新の料金は AWS 公式サイトをご確認ください。
+     </p>
+</div>
+</section>
+<!-- セクション7: FAQ -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      7
+     </div>
+<h2 class="section-title" id="よくある質問">
+      よくある質問
+     </h2>
+</div>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       マスキングされたデータは完全に削除されますか？
+      </div>
+<p class="faq-answer">
+       はい、Deidentifyアクションでマスキングされたデータは「*****」に
+       <strong>
+        上書き
+       </strong>
+       されます。ただし、
+       <code>
+        logs:Unmask
+       </code>
+       権限を持つユーザーは、CloudWatch Logsコンソールや API でデータを
+       <strong>
+        表示する際に
+       </strong>
+       元の値を見ることができます（ログ自体は変更されたまま）。この機能は監査やトラブルシューティング用に提供されています。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       既存のログにも適用されますか？
+      </div>
+<p class="faq-answer">
+       いいえ、データ保護ポリシーは
+       <strong>
+        ポリシー設定後に新しく送信されたログイベント
+       </strong>
+       にのみ適用されます。既存のログには遡及的に適用されません。既存ログに機密情報が含まれている場合は、手動で対応するか、ログの保持期間設定で古いログを自動削除する方法を検討してください。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       カスタムの検出パターンを追加できますか？
+      </div>
+<p class="faq-answer">
+       はい、
+       <strong>
+        カスタムデータ識別子
+       </strong>
+       を作成できます。正規表現を使用して、社員番号や独自の識別子など、AWS が提供するマネージドデータ識別子では検出できないパターンを定義できます。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       パフォーマンスへの影響はありますか？
+      </div>
+<p class="faq-answer">
+       データ保護ポリシーはログの取り込み時にスキャンを行うため、わずかな処理オーバーヘッドが発生します。ただし、一般的なユースケースでは体感できるほどの遅延は発生しません。大量のログを処理する場合は、コストと合わせてパフォーマンスの監視を行うことを推奨します。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       どのリージョンで利用できますか？
+      </div>
+<p class="faq-answer">
+       データ保護ポリシーは、東京（ap-northeast-1）を含む主要なAWSリージョンで利用可能です。ただし、一部のリージョンでは利用できない場合があります。最新の対応状況は AWS のリージョン表をご確認ください。
+      </p>
+</div>
+</div>
+</section>
+<!-- まとめ -->
+<section class="summary-section">
+<h2 id="まとめ">
+     📝 まとめ
+    </h2>
+<p class="summary-text">
+     CloudWatch Logs データ保護ポリシーは、
+     <br/>
+     ログに含まれる機密情報を自動で検出・保護する強力な機能です
+    </p>
+<div class="summary-points">
+<span class="summary-point">
+      🔍 150種類以上の自動検出
+     </span>
+<span class="summary-point">
+      🎭 自動マスキング
+     </span>
+<span class="summary-point">
+      📋 監査ログ記録
+     </span>
+<span class="summary-point">
+      ⚖️ コンプライアンス対応
+     </span>
+</div>
+<p class="summary-footer">
+     個人情報保護が重要な現代において、
+     <br/>
+<strong>
+      「うっかり機密情報がログに残ってしまった！」
+     </strong>
+     を防ぐ
+     <br/>
+     セーフティネットとしてぜひ活用してください 🛡️
+    </p>
+</section>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="ec2-image-builder-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">39</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">41</span>
+    </div>
+    <a href="../compute-applications/opscenter-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<!-- フッター -->
+<footer class="footer">
+<div class="footer-links">
+<a class="footer-link" href="https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/logs/mask-sensitive-log-data.html" target="_blank">
+     📄 AWS公式ドキュメント
+    </a>
+<a class="footer-link" href="https://aws.amazon.com/jp/cloudwatch/pricing/" target="_blank">
+     💰 料金ページ
+    </a>
+</div>
+<p>
+    CloudWatch Logs データ保護ポリシー完全ガイド | 2025年版
+   </p>
+</footer>
+<script>
+   // 読書進捗インジケーター
+    window.addEventListener('scroll', function() {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        const progressBar = document.getElementById('readingProgressBar');
+        const progressContainer = document.getElementById('readingProgress');
+        if (progressBar) {
+            progressBar.style.width = scrolled + '%';
+            progressContainer.setAttribute('aria-valuenow', Math.round(scrolled));
+        }
+        if (winScroll > 100) {
+            progressContainer.classList.add('show');
+        } else {
+            progressContainer.classList.remove('show');
+        }
+    });
+
+    // トップに戻るボタン
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    window.addEventListener('scroll', function() {
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+            scrollToTopBtn.classList.add('show');
+        } else {
+            scrollToTopBtn.classList.remove('show');
+        }
+    });
+    scrollToTopBtn.addEventListener('click', function() {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+  </script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

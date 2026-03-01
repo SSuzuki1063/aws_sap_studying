@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド</title>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #232f3e 0%, #1a365d 25%, #2c5282 50%, #3182ce 75%, #4299e1 100%);
+            padding: 20px;
+            line-height: 1.6;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #c53030 0%, #742a2a 50%, #232f3e 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '⚠️';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 2.6em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファースト */
+        .conclusion-first {
+            background: linear-gradient(135deg, #c53030 0%, #9b2c2c 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .conclusion-first::before {
+            content: '🚨';
+            position: absolute;
+            font-size: 10em;
+            opacity: 0.1;
+            top: -20px;
+            right: 20px;
+        }
+        
+        .conclusion-first h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #fbd38d;
+            text-align: center;
+        }
+        
+        .key-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .key-point {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .key-point:hover {
+            transform: translateY(-8px);
+            background: rgba(255,255,255,0.25);
+            border-color: #fbd38d;
+        }
+        
+        .key-point-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .key-point-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fbd38d;
+            margin-bottom: 10px;
+        }
+        
+        .key-point-desc {
+            font-size: 0.95em;
+            opacity: 0.95;
+            line-height: 1.7;
+        }
+        
+        /* セクションタイトル */
+        .section-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin: 50px 0 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .analogy-title {
+            color: #92400e;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-intro {
+            text-align: center;
+            font-size: 1.2em;
+            color: #78350f;
+            margin-bottom: 40px;
+            line-height: 1.8;
+        }
+        
+        /* VIPラウンジ図解 */
+        .lounge-diagram {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        .hotel-building {
+            background: linear-gradient(to bottom, #2d3748 0%, #4a5568 100%);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .hotel-header {
+            background: #1a202c;
+            padding: 15px 30px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+            color: #fbd38d;
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+        
+        .hotel-floors {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .floor-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .floor-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+        
+        .floor-name {
+            font-size: 1.3em;
+            color: #2d3748;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .floor-aws {
+            background: #dc7600;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        .floor-desc {
+            color: #4a5568;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        /* 問題シナリオ */
+        .scenario-section {
+            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #c53030;
+        }
+        
+        .scenario-title {
+            color: #742a2a;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .scenario-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .scenario-step {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #c53030, #9b2c2c);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-size: 1.2em;
+            color: #742a2a;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .step-desc {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        
+        .step-result {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .result-allow {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .result-deny {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .result-problem {
+            background: #fbd38d;
+            color: #744210;
+        }
+        
+        /* 評価ロジック図解 */
+        .logic-section {
+            background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .logic-title {
+            color: #2c5282;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .logic-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .logic-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .logic-box {
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: bold;
+            min-width: 200px;
+        }
+        
+        .box-iam {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .box-resource {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+        }
+        
+        .box-result-allow {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+        
+        .box-result-deny {
+            background: linear-gradient(135deg, #eb3349, #f45c43);
+            color: white;
+        }
+        
+        .logic-arrow {
+            font-size: 2em;
+            color: #4a5568;
+        }
+        
+        .logic-operator {
+            background: #4a5568;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        /* 比較表 */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #232f3e, #374151);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        .comparison-table td {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .comparison-table tr:hover {
+            background: #ebf8ff;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .badge-allow {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .badge-deny {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .badge-conditional {
+            background: #fef3c7;
+            color: #744210;
+        }
+        
+        /* 解決策セクション */
+        .solution-section {
+            background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #38a169;
+        }
+        
+        .solution-title {
+            color: #22543d;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .solution-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .solution-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-top: 5px solid #38a169;
+        }
+        
+        .solution-card-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .solution-card-title {
+            font-size: 1.3em;
+            color: #22543d;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .solution-card-desc {
+            color: #4a5568;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        
+        /* コードブロック */
+        .code-block {
+            background: #1a202c;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .code-title {
+            color: #fbd38d;
+            font-weight: bold;
+        }
+        
+        .code-lang {
+            background: #4a5568;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+        
+        .code-content {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+        
+        .code-comment {
+            color: #68d391;
+        }
+        
+        .code-key {
+            color: #63b3ed;
+        }
+        
+        .code-value {
+            color: #fc8181;
+        }
+        
+        .code-string {
+            color: #fbd38d;
+        }
+        
+        /* 警告ボックス */
+        .warning-box {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border-left: 5px solid #f59e0b;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .warning-icon {
+            font-size: 2.5em;
+            flex-shrink: 0;
+        }
+        
+        .warning-content h4 {
+            color: #92400e;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .warning-content p {
+            color: #78350f;
+            line-height: 1.7;
+        }
+        
+        /* 成功ボックス */
+        .success-box {
+            background: linear-gradient(135deg, #c6f6d5, #9ae6b4);
+            border-left: 5px solid #38a169;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .success-icon {
+            font-size: 2.5em;
+            flex-shrink: 0;
+        }
+        
+        .success-content h4 {
+            color: #22543d;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .success-content p {
+            color: #276749;
+            line-height: 1.7;
+        }
+        
+        /* ビジュアル比較 */
+        .visual-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .compare-panel {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .compare-header {
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .compare-bad .compare-header {
+            background: linear-gradient(135deg, #c53030, #9b2c2c);
+            color: white;
+        }
+        
+        .compare-good .compare-header {
+            background: linear-gradient(135deg, #38a169, #2f855a);
+            color: white;
+        }
+        
+        .compare-body {
+            background: white;
+            padding: 25px;
+            padding-top: 70px;}
+        
+        .compare-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .compare-bad .compare-item {
+            background: #fed7d7;
+        }
+        
+        .compare-good .compare-item {
+            background: #c6f6d5;
+        }
+        
+        .compare-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .compare-icon {
+            font-size: 1.5em;
+        }
+        
+        /* フローチャート */
+        .flowchart {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin: 30px 0;
+        }
+        
+        .flowchart-title {
+            text-align: center;
+            font-size: 1.5em;
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 700px;
+        }
+        
+        .flow-node {
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            flex: 1;
+        }
+        
+        .node-start {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .node-check {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+        }
+        
+        .node-allow {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+        
+        .node-deny {
+            background: linear-gradient(135deg, #fc8181, #f56565);
+            color: white;
+        }
+        
+        .flow-arrow {
+            font-size: 1.5em;
+            color: #4a5568;
+            text-align: center;
+        }
+        
+        .flow-branch {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 700px;
+        }
+        
+        .branch-path {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .branch-label {
+            background: #e2e8f0;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+        
+        /* FAQ セクション */
+        .faq-section {
+            margin: 50px 0;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #edf2f7, #e2e8f0);
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .faq-q-icon {
+            background: #4299e1;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .faq-answer {
+            padding: 25px;
+            color: #4a5568;
+            line-height: 1.8;
+        }
+        
+        /* ベストプラクティス */
+        .best-practices {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .practice-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-top: 4px solid;
+            transition: transform 0.3s ease;
+        }
+        
+        .practice-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .practice-card:nth-child(1) { border-color: #4299e1; }
+        .practice-card:nth-child(2) { border-color: #48bb78; }
+        .practice-card:nth-child(3) { border-color: #ed8936; }
+        .practice-card:nth-child(4) { border-color: #9f7aea; }
+        
+        .practice-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .practice-title {
+            font-size: 1.1em;
+            color: #2d3748;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .practice-desc {
+            color: #718096;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        /* まとめセクション */
+        .summary-section {
+            background: linear-gradient(135deg, #232f3e 0%, #374151 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .summary-title {
+            font-size: 2em;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #fbd38d;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .summary-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-point {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fbd38d;
+        }
+        
+        .summary-desc {
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+            
+            .hotel-floors {
+                grid-template-columns: 1fr;
+            }
+            
+            .visual-compare {
+                grid-template-columns: 1fr;
+            }
+            
+            .logic-row {
+                flex-direction: column;
+            }
+            
+            .scenario-step {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }
+
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#⚡-結論ファースト-これだけは覚えて！">⚡ 結論ファースト：これだけは覚えて！</a></li>
+            <li class="toc-h2"><a href="#たとえ話-高級ホテルのVIPラウンジ">🏨 たとえ話：高級ホテルのVIPラウンジ</a></li>
+            <li class="toc-h2"><a href="#❌-問題のシナリオ-なぜタグ条件が効かない？">❌ 問題のシナリオ：なぜタグ条件が効かない？</a></li>
+            <li class="toc-h2"><a href="#AWSポリシー評価の仕組み">🧮 AWSポリシー評価の仕組み</a></li>
+            <li class="toc-h3"><a href="#IAM-×-リソースポリシーの評価フロー">IAM × リソースポリシーの評価フロー</a></li>
+            <li class="toc-h2"><a href="#✅-解決策-明示的Denyを追加する">✅ 解決策：明示的Denyを追加する</a></li>
+            <li class="toc-h3"><a href="#明示的Denyの効果">明示的Denyの効果</a></li>
+            <li class="toc-h2"><a href="#完全なポリシー設定例">📋 完全なポリシー設定例</a></li>
+            <li class="toc-h2"><a href="#ベストプラクティス">🎯 ベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ-3つの鉄則">📚 まとめ：3つの鉄則</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+
+    <!-- ブレッドクラムナビゲーション -->
+    <nav class="breadcrumb-nav">
+        <a href="../index.html" class="breadcrumb-home">🏠 ホーム</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">セキュリティ・ガバナンス</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item">IAM & 認証・認可</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-current">Iam Resource Policy Deny Guide</span>
+    </nav>
+<!-- ヘッダー -->
+<div class="header">
+<h1>🔐 IAMポリシー vs リソースポリシー</h1>
+<p>〜 タグ条件が効かない？明示的Denyの重要性を完全図解 〜</p>
+</div>
+<div class="content">
+<!-- 結論ファースト -->
+<div class="conclusion-first">
+<h2 id="⚡-結論ファースト-これだけは覚えて！">⚡ 結論ファースト：これだけは覚えて！</h2>
+<div class="key-points">
+<div class="key-point">
+<div class="key-point-icon">🔓</div>
+<div class="key-point-title">IAMのAllowは強力</div>
+<div class="key-point-desc">IAMポリシーでAllowされていると、リソースポリシーで明示的にDenyしない限り<strong>アクセスが許可される</strong></div>
+</div>
+<div class="key-point">
+<div class="key-point-icon">🚫</div>
+<div class="key-point-title">Denyは明示的に書く</div>
+<div class="key-point-desc">タグ条件を確実に適用するには、バケットポリシーに<strong>「条件を満たさない場合はDeny」</strong>のルールが必須</div>
+</div>
+<div class="key-point">
+<div class="key-point-icon">⚠️</div>
+<div class="key-point-title">Allow + Allowは危険</div>
+<div class="key-point-desc">IAMでPutObject許可 ＋ バケットポリシーにDenyなし = <strong>タグ条件が無視される</strong></div>
+</div>
+</div>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="たとえ話-高級ホテルのVIPラウンジ">🏨 たとえ話：高級ホテルのVIPラウンジ</h2>
+<p class="analogy-intro">
+                    AWSのポリシー評価を「ホテルのセキュリティシステム」に例えて理解しましょう！<br/>
+                    社員証（IAMポリシー）と各部屋のロック（リソースポリシー）の関係がポイントです。
+                </p>
+<div class="lounge-diagram">
+<div class="hotel-building">
+<div class="hotel-header">🏨 AWS リゾートホテル</div>
+<div class="hotel-floors">
+<div class="floor-section">
+<div class="floor-icon">🪪</div>
+<div class="floor-name">社員証（IAMポリシー）</div>
+<div class="floor-aws">IAM Policy</div>
+<div class="floor-desc">
+                                    入社時に発行される「基本アクセス権」<br/><br/>
+                                    例：「この人は従業員なので、<br/>S3バケットにファイルをアップロードできます」<br/><br/>
+                                    👤 ユーザー・ロールに紐付く
+                                </div>
+</div>
+<div class="floor-section">
+<div class="floor-icon">🚪</div>
+<div class="floor-name">各部屋のロック（リソースポリシー）</div>
+<div class="floor-aws">S3 Bucket Policy</div>
+<div class="floor-desc">
+                                    各部屋に設置された「追加のセキュリティ」<br/><br/>
+                                    例：「VIPラウンジには<br/>VIPタグがある人だけ入れます」<br/><br/>
+                                    📦 リソース（S3等）に紐付く
+                                </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 問題シナリオ -->
+<div class="scenario-section">
+<h2 class="scenario-title" id="❌-問題のシナリオ-なぜタグ条件が効かない？">❌ 問題のシナリオ：なぜタグ条件が効かない？</h2>
+<div class="scenario-flow">
+<div class="scenario-step">
+<div class="step-number">1</div>
+<div class="step-content">
+<div class="step-title">👤 田中さんが来館（IAMユーザー）</div>
+<div class="step-desc">田中さんは「Project=Alpha」タグを持つユーザーです。<br/>「Project=Beta」のファイルをアップロードしようとしています。</div>
+</div>
+</div>
+<div class="scenario-step">
+<div class="step-number">2</div>
+<div class="step-content">
+<div class="step-title">🪪 社員証チェック（IAMポリシー評価）</div>
+<div class="step-desc">IAMポリシー：<code>"Action": "s3:PutObject", "Effect": "Allow"</code><br/>「田中さんは従業員なので、S3へのアップロードOK！」</div>
+</div>
+<div class="step-result result-allow">✅ Allow</div>
+</div>
+<div class="scenario-step">
+<div class="step-number">3</div>
+<div class="step-content">
+<div class="step-title">🚪 VIPラウンジのドアチェック（バケットポリシー評価）</div>
+<div class="step-desc">バケットポリシー：「VIPタグがある人は入れます」（Allowのみ）<br/><strong>「VIPタグがない人はダメ」というDenyルールがない！</strong></div>
+</div>
+<div class="step-result result-problem">⚠️ Denyなし</div>
+</div>
+<div class="scenario-step">
+<div class="step-number">4</div>
+<div class="step-content">
+<div class="step-title">🚨 結果：タグが違うのに入れてしまった！</div>
+<div class="step-desc">IAMでAllowされているため、バケットポリシーにDenyがなければ<br/><strong>タグ条件を満たさなくてもアクセスが許可されてしまう</strong></div>
+</div>
+<div class="step-result result-allow">✅ 許可（意図しない）</div>
+</div>
+</div>
+</div>
+<!-- ポリシー評価ロジック -->
+<h2 class="section-title" id="AWSポリシー評価の仕組み">🧮 AWSポリシー評価の仕組み</h2>
+<div class="logic-section">
+<h3 class="logic-title" id="IAM-×-リソースポリシーの評価フロー">IAM × リソースポリシーの評価フロー</h3>
+<div class="warning-box">
+<div class="warning-icon">💡</div>
+<div class="warning-content">
+<h4>重要な原則：「明示的Deny」が最優先</h4>
+<p>AWSでは<strong>「明示的なDenyは常に最優先」</strong>ですが、逆に言うと<strong>Denyがなければ、どちらかがAllowすればアクセス可能</strong>になります。これが落とし穴の原因です！</p>
+</div>
+</div>
+<div class="flowchart">
+<div class="flowchart-title">📊 同一アカウント内のポリシー評価フロー</div>
+<div class="flow-steps">
+<div class="flow-step">
+<div class="flow-node node-start">🔍 アクセスリクエスト発生</div>
+</div>
+<div class="flow-arrow">⬇️</div>
+<div class="flow-node node-check">明示的<br/>Deny?</div>
+<div class="flow-branch">
+<div class="branch-path">
+<div class="branch-label">Yes（どちらかにDenyあり）</div>
+<div class="flow-arrow">⬇️</div>
+<div class="flow-node node-deny">🚫 アクセス拒否</div>
+</div>
+<div class="branch-path">
+<div class="branch-label">No（Denyなし）</div>
+<div class="flow-arrow">⬇️</div>
+<div class="flow-node node-check">IAMか<br/>リソースで<br/>Allow?</div>
+</div>
+</div>
+<div class="flow-branch">
+<div class="branch-path">
+<div class="branch-label">Yes（どちらかでAllow）</div>
+<div class="flow-arrow">⬇️</div>
+<div class="flow-node node-allow">✅ アクセス許可</div>
+</div>
+<div class="branch-path">
+<div class="branch-label">No（両方とも沈黙）</div>
+<div class="flow-arrow">⬇️</div>
+<div class="flow-node node-deny">🚫 暗黙の拒否</div>
+</div>
+</div>
+</div>
+</div>
+<table class="comparison-table">
+<tr>
+<th>IAMポリシー</th>
+<th>リソースポリシー</th>
+<th>最終結果</th>
+<th>説明</th>
+</tr>
+<tr>
+<td><span class="badge badge-allow">Allow</span></td>
+<td><span class="badge badge-allow">Allow</span></td>
+<td><span class="badge badge-allow">✅ Allow</span></td>
+<td>両方許可 → アクセス可能</td>
+</tr>
+<tr>
+<td><span class="badge badge-allow">Allow</span></td>
+<td><span class="badge badge-conditional">条件なし（沈黙）</span></td>
+<td><span class="badge badge-allow">✅ Allow</span></td>
+<td>⚠️ <strong>IAMのAllowだけで通る！</strong></td>
+</tr>
+<tr>
+<td><span class="badge badge-allow">Allow</span></td>
+<td><span class="badge badge-deny">Deny</span></td>
+<td><span class="badge badge-deny">🚫 Deny</span></td>
+<td>明示的Denyが優先</td>
+</tr>
+<tr>
+<td><span class="badge badge-conditional">条件なし</span></td>
+<td><span class="badge badge-allow">Allow</span></td>
+<td><span class="badge badge-allow">✅ Allow</span></td>
+<td>リソースポリシーのAllowで通る</td>
+</tr>
+<tr>
+<td><span class="badge badge-deny">Deny</span></td>
+<td><span class="badge badge-allow">Allow</span></td>
+<td><span class="badge badge-deny">🚫 Deny</span></td>
+<td>明示的Denyが優先</td>
+</tr>
+</table>
+</div>
+<!-- 解決策 -->
+<div class="solution-section">
+<h2 class="solution-title" id="✅-解決策-明示的Denyを追加する">✅ 解決策：明示的Denyを追加する</h2>
+<div class="visual-compare">
+<div class="compare-panel compare-bad">
+<div class="compare-header">❌ NG：Allowのみのバケットポリシー</div>
+<div class="compare-body">
+<div class="compare-item">
+<span class="compare-icon">🚪</span>
+<span>「VIPの人は入れます」</span>
+</div>
+<div class="compare-item">
+<span class="compare-icon">🤔</span>
+<span>VIPじゃない人はどうする？→ 規定なし</span>
+</div>
+<div class="compare-item">
+<span class="compare-icon">😱</span>
+<span>社員証があれば誰でも入れてしまう！</span>
+</div>
+</div>
+</div>
+<div class="compare-panel compare-good">
+<div class="compare-header">✅ OK：明示的Denyありのバケットポリシー</div>
+<div class="compare-body">
+<div class="compare-item">
+<span class="compare-icon">🚪</span>
+<span>「VIPの人は入れます」</span>
+</div>
+<div class="compare-item">
+<span class="compare-icon">🚫</span>
+<span>「VIPじゃない人は絶対入れません」</span>
+</div>
+<div class="compare-item">
+<span class="compare-icon">✅</span>
+<span>明示的Denyにより確実にブロック！</span>
+</div>
+</div>
+</div>
+</div>
+<div class="solution-cards">
+<div class="solution-card">
+<div class="solution-card-icon">📝</div>
+<div class="solution-card-title">NGパターン：Allowのみ</div>
+<div class="solution-card-desc">タグが一致する場合のみAllowを書いても、IAMポリシーでAllowされていると素通りしてしまいます。</div>
+<div class="code-block">
+<div class="code-header">
+<span class="code-title">❌ 効果が薄いバケットポリシー</span>
+<span class="code-lang">JSON</span>
+</div>
+<div class="code-content">{
+  <span class="code-key">"Effect"</span>: <span class="code-string">"Allow"</span>,
+  <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+  <span class="code-key">"Action"</span>: <span class="code-string">"s3:PutObject"</span>,
+  <span class="code-key">"Resource"</span>: <span class="code-string">"arn:aws:s3:::my-bucket/*"</span>,
+  <span class="code-key">"Condition"</span>: {
+    <span class="code-key">"StringEquals"</span>: {
+      <span class="code-comment">// タグ一致時にAllowするだけ</span>
+<span class="code-key">"s3:RequestObjectTag/Project"</span>: <span class="code-string">"${aws:PrincipalTag/Project}"</span>
+    }
+  }
+}</div>
+</div>
+</div>
+<div class="solution-card">
+<div class="solution-card-icon">🛡️</div>
+<div class="solution-card-title">OKパターン：明示的Deny追加</div>
+<div class="solution-card-desc">タグが一致しない場合は明示的にDenyすることで、IAMのAllowを上書きしてブロックできます。</div>
+<div class="code-block">
+<div class="code-header">
+<span class="code-title">✅ 安全なバケットポリシー</span>
+<span class="code-lang">JSON</span>
+</div>
+<div class="code-content">{
+  <span class="code-key">"Effect"</span>: <span class="code-value">"Deny"</span>,
+  <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+  <span class="code-key">"Action"</span>: <span class="code-string">"s3:PutObject"</span>,
+  <span class="code-key">"Resource"</span>: <span class="code-string">"arn:aws:s3:::my-bucket/*"</span>,
+  <span class="code-key">"Condition"</span>: {
+    <span class="code-key">"StringNotEquals"</span>: {
+      <span class="code-comment">// タグ不一致時は明示的にDeny！</span>
+<span class="code-key">"s3:RequestObjectTag/Project"</span>: <span class="code-string">"${aws:PrincipalTag/Project}"</span>
+    }
+  }
+}</div>
+</div>
+</div>
+</div>
+<div class="success-box">
+<div class="success-icon">✅</div>
+<div class="success-content">
+<h3 id="明示的Denyの効果">明示的Denyの効果</h3>
+<p>明示的Denyは<strong>すべてのAllowより優先</strong>されます。IAMポリシーでどれだけAllowしていても、リソースポリシーの明示的Denyは必ず勝ちます。これにより、タグベースのアクセス制御を確実に実施できます。</p>
+</div>
+</div>
+</div>
+<!-- 完全なポリシー例 -->
+<h2 class="section-title" id="完全なポリシー設定例">📋 完全なポリシー設定例</h2>
+<div class="code-block">
+<div class="code-header">
+<span class="code-title">🔒 タグベースアクセス制御の完全なバケットポリシー</span>
+<span class="code-lang">JSON</span>
+</div>
+<div class="code-content">{
+  <span class="code-key">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+  <span class="code-key">"Statement"</span>: [
+    {
+      <span class="code-comment">// ステートメント1：タグ不一致時の明示的Deny（最重要！）</span>
+<span class="code-key">"Sid"</span>: <span class="code-string">"DenyMismatchedProjectTag"</span>,
+      <span class="code-key">"Effect"</span>: <span class="code-value">"Deny"</span>,
+      <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+      <span class="code-key">"Action"</span>: <span class="code-string">"s3:PutObject"</span>,
+      <span class="code-key">"Resource"</span>: <span class="code-string">"arn:aws:s3:::project-data-bucket/*"</span>,
+      <span class="code-key">"Condition"</span>: {
+        <span class="code-key">"StringNotEquals"</span>: {
+          <span class="code-comment">// ユーザーのProjectタグとオブジェクトのProjectタグが一致しない場合</span>
+<span class="code-key">"s3:RequestObjectTag/Project"</span>: <span class="code-string">"${aws:PrincipalTag/Project}"</span>
+        }
+      }
+    },
+    {
+      <span class="code-comment">// ステートメント2：タグなしアップロードの拒否（オプション推奨）</span>
+<span class="code-key">"Sid"</span>: <span class="code-string">"DenyNoProjectTag"</span>,
+      <span class="code-key">"Effect"</span>: <span class="code-value">"Deny"</span>,
+      <span class="code-key">"Principal"</span>: <span class="code-string">"*"</span>,
+      <span class="code-key">"Action"</span>: <span class="code-string">"s3:PutObject"</span>,
+      <span class="code-key">"Resource"</span>: <span class="code-string">"arn:aws:s3:::project-data-bucket/*"</span>,
+      <span class="code-key">"Condition"</span>: {
+        <span class="code-key">"Null"</span>: {
+          <span class="code-comment">// オブジェクトにProjectタグがない場合は拒否</span>
+<span class="code-key">"s3:RequestObjectTag/Project"</span>: <span class="code-string">"true"</span>
+        }
+      }
+    }
+  ]
+}</div>
+</div>
+<!-- ベストプラクティス -->
+<h2 class="section-title" id="ベストプラクティス">🎯 ベストプラクティス</h2>
+<div class="best-practices">
+<div class="practice-card">
+<div class="practice-icon">🛡️</div>
+<div class="practice-title">Denyファースト設計</div>
+<div class="practice-desc">タグベースのアクセス制御では、必ず「条件を満たさない場合のDeny」から書き始める。Allowだけでは不十分。</div>
+</div>
+<div class="practice-card">
+<div class="practice-icon">🏷️</div>
+<div class="practice-title">タグ必須ポリシー</div>
+<div class="practice-desc">オブジェクトにタグがない場合もDenyする。タグ付け漏れによるセキュリティホールを防止。</div>
+</div>
+<div class="practice-card">
+<div class="practice-icon">🔍</div>
+<div class="practice-title">IAMポリシーの見直し</div>
+<div class="practice-desc">IAMポリシーで広範なAllowを与えている場合は特に注意。最小権限の原則を再確認。</div>
+</div>
+<div class="practice-card">
+<div class="practice-icon">🧪</div>
+<div class="practice-title">テスト環境で検証</div>
+<div class="practice-desc">Policy Simulatorや実際のテストで、タグ不一致時にアクセスが拒否されることを必ず確認。</div>
+</div>
+</div>
+<!-- FAQ -->
+<h2 class="section-title" id="❓-よくある質問">❓ よくある質問</h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<div class="faq-q-icon">Q</div>
+                        なぜAllowだけではタグ条件が効かないのですか？
+                    </div>
+<div class="faq-answer">
+                        同一アカウント内では、<strong>IAMポリシーかリソースポリシーのどちらかがAllowすればアクセス可能</strong>になります。バケットポリシーに「タグ一致時のみAllow」と書いても、IAMポリシーで既にAllowされていれば、バケットポリシーの条件は評価されずに通過してしまいます。明示的Denyのみがこれを阻止できます。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<div class="faq-q-icon">Q</div>
+                        クロスアカウントアクセスでも同じ問題が起きますか？
+                    </div>
+<div class="faq-answer">
+                        いいえ、クロスアカウントアクセスでは事情が異なります。クロスアカウントの場合は<strong>両方のポリシーでAllowが必要</strong>です。しかし、明示的Denyを書くのはベストプラクティスとして推奨されます。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<div class="faq-q-icon">Q</div>
+                        SCPやPermissions Boundaryでも同様のことが起きますか？
+                    </div>
+<div class="faq-answer">
+                        SCP（Service Control Policy）やPermissions Boundaryは「許可の上限」として機能します。これらにAllowがなければ、IAMポリシーでAllowしてもアクセスできません。ただし、これらもDenyは明示的に書く必要があり、同様の注意が必要です。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<div class="faq-q-icon">Q</div>
+                        どうやってポリシーをテストすればいいですか？
+                    </div>
+<div class="faq-answer">
+<strong>IAM Policy Simulator</strong>を使用するか、テスト用のIAMユーザー/ロールで実際にアクセスを試みます。タグが一致するケース・一致しないケースの両方をテストし、期待通りに許可/拒否されることを確認してください。
+                    </div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary-section">
+<h2 class="summary-title" id="まとめ-3つの鉄則">📚 まとめ：3つの鉄則</h2>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">1️⃣</div>
+<div class="summary-point">IAMのAllowは強力</div>
+<div class="summary-desc">IAMポリシーでAllowされていると、リソースポリシーで明示的にDenyしない限りアクセス可能になる</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">2️⃣</div>
+<div class="summary-point">必ず明示的Denyを書く</div>
+<div class="summary-desc">タグ条件を確実に適用するには「条件を満たさない場合はDeny」のルールが必須</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">3️⃣</div>
+<div class="summary-point">テストで確認する</div>
+<div class="summary-desc">タグ不一致時にアクセスが拒否されることを必ずテストで検証する</div>
+</div>
+</div>
+</div>
+<!-- フッター -->
+<div style="text-align: center; color: #718096; padding: 30px 0; border-top: 1px solid #e2e8f0; margin-top: 50px;">
+<p>🔐 AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド</p>
+<p style="font-size: 0.9em; margin-top: 10px;">このガイドがAWSセキュリティの理解に役立てば幸いです！</p>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="cloudtrail-operations-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">58</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">71</span>
+    </div>
+    <a href="inspector-lambda-scan-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

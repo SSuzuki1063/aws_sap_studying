@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Amazon VPC CNI 完全ガイド</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --primary: #0066FF;
+    --secondary: #FF6B35;
+    --accent: #00C48C;
+    --purple: #7C3AED;
+    --yellow: #FFB800;
+    --bg: #F8F9FC;
+    --card: #FFFFFF;
+    --text: #1A1F36;
+    --muted: #6B7280;
+    --border: #E5E7EB;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 20px;
+    line-height: 1.6;
+            padding-top: 70px;}
+
+  /* ── HEADER ── */
+  .hero {
+    background: linear-gradient(135deg, #0A1628 0%, #0D2B6B 50%, #1652B8 100%);
+    padding: 60px 40px 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(0,102,255,0.3) 0%, transparent 60%),
+                radial-gradient(circle at 80% 50%, rgba(124,58,237,0.2) 0%, transparent 60%);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #A5C8FF;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 8px 24px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .hero h1 span { color: #60A5FA; }
+  .hero p {
+    font-size: 22px;
+    color: rgba(255,255,255,0.75);
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-icons {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 40px;
+    position: relative;
+  }
+  .hero-icon {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  /* ── CONCLUSION FIRST ── */
+  .conclusion-bar {
+    background: linear-gradient(90deg, #0066FF, #7C3AED);
+    color: white;
+    padding: 28px 40px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .conclusion-bar span { opacity: 0.8; font-weight: 400; }
+
+  /* ── SECTION ── */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+  .section-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--primary);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .section-desc {
+    font-size: 20px;
+    color: var(--muted);
+    margin-bottom: 48px;
+    max-width: 700px;
+  }
+
+  /* ── ANALOGY CARD ── */
+  .analogy-wrap {
+    background: linear-gradient(135deg, #FFF7ED, #FFF);
+    border: 2px solid #FDDCB5;
+    border-radius: 24px;
+    padding: 48px;
+    margin-bottom: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .analogy-wrap::before {
+    content: '💡';
+    position: absolute;
+    top: 24px; right: 32px;
+    font-size: 48px;
+    opacity: 0.2;
+  }
+  .analogy-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--secondary);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .analogy-heading {
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+  .analogy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 700px) { .analogy-grid { grid-template-columns: 1fr; } }
+  .analogy-col { }
+  .analogy-col h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    display: inline-block;
+  }
+  .analogy-col.building h4 { background: #FEF3C7; color: #92400E; }
+  .analogy-col.aws h4 { background: #DBEAFE; color: #1E40AF; }
+  .analogy-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    font-size: 20px;
+  }
+  .analogy-emoji { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .analogy-text strong { display: block; font-weight: 700; color: var(--text); }
+  .analogy-text span { color: var(--muted); font-size: 18px; }
+
+  /* ── DIAGRAM ── */
+  .diagram-section {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 24px;
+    padding: 48px;
+    margin-bottom: 60px;
+  }
+  .diagram-title {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 36px;
+    text-align: center;
+  }
+
+  /* VPC Box */
+  .vpc-box {
+    border: 3px dashed #93C5FD;
+    border-radius: 20px;
+    padding: 32px;
+    background: #F0F7FF;
+    position: relative;
+  }
+  .vpc-label {
+    position: absolute;
+    top: -18px; left: 24px;
+    background: #2563EB;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 6px 20px;
+    border-radius: 100px;
+    letter-spacing: 1px;
+  }
+  .vpc-cidr {
+    text-align: right;
+    font-size: 16px;
+    color: #2563EB;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  /* Node */
+  .node-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .node-box {
+    border: 2px solid #A78BFA;
+    border-radius: 16px;
+    background: #FAF5FF;
+    padding: 24px;
+    position: relative;
+  }
+  .node-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #6D28D9;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .node-ip {
+    font-size: 15px;
+    color: #6D28D9;
+    background: #EDE9FE;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-weight: 700;
+  }
+
+  /* Pod */
+  .pods-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .pod {
+    background: white;
+    border: 2px solid #6EE7B7;
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .pod-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #065F46;
+    margin-bottom: 6px;
+  }
+  .pod-ip {
+    font-size: 15px;
+    font-family: monospace;
+    font-weight: 700;
+    color: #059669;
+    background: #ECFDF5;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  /* ENI tag */
+  .eni-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #FEF3C7;
+    border: 1px solid #FCD34D;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #92400E;
+    margin-bottom: 12px;
+  }
+
+  /* Arrow */
+  .flow-arrow {
+    text-align: center;
+    font-size: 28px;
+    color: var(--primary);
+    margin: 20px 0;
+  }
+
+  /* ── FEATURE CARDS (Equal Grid) ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 60px;
+  }
+  @media (max-width: 900px) { .feature-grid { grid-template-columns: 1fr; } }
+  .feature-card {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 28px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+  }
+  .feature-card.blue::before { background: var(--primary); }
+  .feature-card.green::before { background: var(--accent); }
+  .feature-card.purple::before { background: var(--purple); }
+  .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+  .feature-icon {
+    font-size: 40px;
+    margin-bottom: 20px;
+    display: block;
+  }
+  .feature-card h3 {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 12px;
+  }
+  .feature-card p {
+    font-size: 20px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── HOW IT WORKS FLOW ── */
+  .flow-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-bottom: 60px;
+    position: relative;
+  }
+  @media (max-width: 900px) { .flow-steps { grid-template-columns: 1fr 1fr; gap: 16px; } }
+  .flow-step {
+    text-align: center;
+    padding: 32px 20px;
+    position: relative;
+    background: white;
+    border: 2px solid var(--border);
+  }
+  .flow-step:first-child { border-radius: 16px 0 0 16px; }
+  .flow-step:last-child { border-radius: 0 16px 16px 0; }
+  .flow-step:not(:last-child)::after {
+    content: '→';
+    position: absolute;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 28px;
+    color: var(--primary);
+    z-index: 2;
+    background: var(--bg);
+    width: 32px;
+    text-align: center;
+  }
+  .step-num {
+    width: 44px; height: 44px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 900;
+    margin: 0 auto 16px;
+  }
+  .flow-step h4 { font-size: 20px; font-weight: 900; margin-bottom: 10px; }
+  .flow-step p { font-size: 18px; color: var(--muted); }
+
+  /* ── COMPARISON TABLE ── */
+  .compare-section {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+    margin-bottom: 60px;
+  }
+  .compare-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    background: #1A1F36;
+    color: white;
+  }
+  .compare-header div {
+    padding: 20px 24px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .compare-header div:first-child { text-align: left; color: #94A3B8; }
+  .compare-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    border-top: 1px solid var(--border);
+  }
+  .compare-row:nth-child(even) { background: #F8F9FC; }
+  .compare-row div {
+    padding: 18px 24px;
+    font-size: 19px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .compare-row div:first-child { text-align: left; justify-content: flex-start; font-weight: 700; color: var(--text); }
+  .badge-yes { background: #DCFCE7; color: #166534; padding: 4px 14px; border-radius: 100px; font-size: 16px; font-weight: 700; }
+  .badge-no { background: #FEE2E2; color: #991B1B; padding: 4px 14px; border-radius: 100px; font-size: 16px; font-weight: 700; }
+  .badge-partial { background: #FEF9C3; color: #713F12; padding: 4px 14px; border-radius: 100px; font-size: 16px; font-weight: 700; }
+
+  /* ── SECURITY HIGHLIGHT ── */
+  .security-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 60px;
+  }
+  @media (max-width: 700px) { .security-grid { grid-template-columns: 1fr; } }
+  .sec-card {
+    border-radius: 20px;
+    padding: 36px;
+    border: 2px solid transparent;
+  }
+  .sec-card.sg {
+    background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+    border-color: #93C5FD;
+  }
+  .sec-card.acl {
+    background: linear-gradient(135deg, #F5F3FF, #EDE9FE);
+    border-color: #C4B5FD;
+  }
+  .sec-card h3 { font-size: 22px; font-weight: 900; margin-bottom: 12px; }
+  .sec-card p { font-size: 20px; color: #374151; line-height: 1.6; }
+  .sec-icon { font-size: 40px; margin-bottom: 16px; display: block; }
+
+  /* ── TIP BOX ── */
+  .tip-box {
+    background: linear-gradient(135deg, #0066FF, #7C3AED);
+    border-radius: 20px;
+    padding: 40px;
+    color: white;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 60px;
+  }
+  .tip-icon { font-size: 48px; }
+  .tip-box h3 { font-size: 24px; font-weight: 900; margin-bottom: 8px; }
+  .tip-box p { font-size: 20px; opacity: 0.9; line-height: 1.6; }
+
+  /* ── FAQ ── */
+  .faq-list { margin-bottom: 60px; }
+  .faq-item {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .faq-q {
+    padding: 24px 28px;
+    font-size: 21px;
+    font-weight: 700;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .faq-q-icon { color: var(--primary); font-size: 24px; flex-shrink: 0; }
+  .faq-a {
+    padding: 0 28px 24px 68px;
+    font-size: 20px;
+    color: #374151;
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: #1A1F36;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+  }
+  .footer span { color: rgba(255,255,255,0.9); font-weight: 700; }
+
+  /* ── DIVIDER ── */
+  .divider { border: none; border-top: 2px solid var(--border); margin: 0; }
+
+  /* ── EXTERNAL TRAFFIC POLICY ── */
+  .etp-section {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 24px;
+    padding: 48px;
+    margin-bottom: 60px;
+  }
+  .etp-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-top: 36px;
+  }
+  @media (max-width: 700px) { .etp-compare { grid-template-columns: 1fr; } }
+  .etp-card {
+    border-radius: 18px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .etp-card.cluster {
+    background: linear-gradient(135deg, #FFF7ED, #FFEDD5);
+    border: 2px solid #FB923C;
+  }
+  .etp-card.local {
+    background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
+    border: 2px solid #4ADE80;
+  }
+  .etp-badge {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+  .etp-card.cluster .etp-badge { background: #FB923C; color: white; }
+  .etp-card.local .etp-badge { background: #16A34A; color: white; }
+  .etp-card h3 { font-size: 24px; font-weight: 900; margin-bottom: 12px; }
+  .etp-card.cluster h3 { color: #9A3412; }
+  .etp-card.local h3 { color: #166534; }
+  .etp-card p { font-size: 20px; line-height: 1.7; color: #374151; }
+
+  /* Diagram inside ETP */
+  .etp-diagram {
+    margin-top: 20px;
+    border-radius: 12px;
+    padding: 20px;
+    font-size: 15px;
+  }
+  .etp-card.cluster .etp-diagram { background: rgba(251,146,60,0.1); }
+  .etp-card.local .etp-diagram { background: rgba(74,222,128,0.1); }
+  .etp-node {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .etp-node-box {
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .etp-card.cluster .etp-node-box { background: #FED7AA; color: #7C2D12; border: 1px solid #FB923C; }
+  .etp-card.local .etp-node-box { background: #BBF7D0; color: #14532D; border: 1px solid #4ADE80; }
+  .etp-pod-box {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .etp-card.cluster .etp-pod-box { background: white; color: #7C2D12; border: 1px dashed #FB923C; }
+  .etp-card.local .etp-pod-box { background: white; color: #14532D; border: 1px dashed #4ADE80; }
+  .etp-arrow { font-size: 18px; color: #9CA3AF; margin: 4px 0 4px 20px; }
+  .etp-nat-tag {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-left: 8px;
+  }
+  .nat-yes { background: #FEE2E2; color: #991B1B; }
+  .nat-no { background: #DCFCE7; color: #166534; }
+
+  .etp-summary {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 700px) { .etp-summary { grid-template-columns: 1fr; } }
+  .etp-sum-item {
+    background: #F8F9FC;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+  .etp-sum-item .label { font-size: 16px; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+  .etp-sum-item .cluster-val { font-size: 20px; font-weight: 900; color: #EA580C; }
+  .etp-sum-item .local-val { font-size: 20px; font-weight: 900; color: #16A34A; }
+
+  /* ── ANIMATION ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section { animation: fadeUp 0.5s ease both; }
+</style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#マンションの部屋番号に例えると…">マンションの部屋番号に例えると…</a></li>
+            <li class="toc-h3"><a href="#マンションの世界">🏢 マンションの世界</a></li>
+            <li class="toc-h2"><a href="#PodとIPアドレスの関係を視覚化">PodとIPアドレスの関係を視覚化</a></li>
+            <li class="toc-h2"><a href="#PodにIPが割り当たるまでの4ステップ">PodにIPが割り当たるまでの4ステップ</a></li>
+            <li class="toc-h3"><a href="#Pod作成要求">Pod作成要求</a></li>
+            <li class="toc-h2"><a href="#VPC-CNIが実現すること">VPC CNIが実現すること</a></li>
+            <li class="toc-h3"><a href="#一意のIPアドレス">一意のIPアドレス</a></li>
+            <li class="toc-h3"><a href="#直接アクセス可能">直接アクセス可能</a></li>
+            <li class="toc-h3"><a href="#VPCセキュリティ制御">VPCセキュリティ制御</a></li>
+            <li class="toc-h2"><a href="#Podレベルのネットワーク制御">Podレベルのネットワーク制御</a></li>
+            <li class="toc-h3"><a href="#セキュリティグループSG">セキュリティグループ（SG）</a></li>
+            <li class="toc-h3"><a href="#ネットワークACLNACL">ネットワークACL（NACL）</a></li>
+            <li class="toc-h2"><a href="#他のCNIプラグインとの違い">他のCNIプラグインとの違い</a></li>
+            <li class="toc-h3"><a href="#IPアドレス枯渇に注意！">IPアドレス枯渇に注意！</a></li>
+            <li class="toc-h2"><a href="#externalTrafficPolicy">externalTrafficPolicy</a></li>
+            <li class="toc-h3"><a href="#クラスター全体に分散">🌐 クラスター全体に分散</a></li>
+            <li class="toc-h3"><a href="#Podがあるノードに限定">📍 Podがあるノードに限定</a></li>
+            <li class="toc-h2"><a href="#FAQ">FAQ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation">
+<a href="/aws_sap_studying/profile.html">
+      自己紹介
+     </a>
+<a href="/aws_sap_studying/learning-resources.html">
+      学習リソース集
+     </a>
+<a href="/aws_sap_studying/knowledge-base.html">
+      ナレッジベース
+     </a>
+<a href="/aws_sap_studying/quiz.html">
+      クイズ
+     </a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<!-- HERO -->
+<div class="hero">
+<div class="hero-badge">AWS NETWORKING</div>
+<h1>Amazon <span>VPC CNI</span><br/>完全ガイド</h1>
+<p>KubernetesのPodがVPCのIPアドレスを持つ仕組みを、たとえ話でやさしく解説</p>
+<div class="hero-icons">
+<div class="hero-icon">🏢</div>
+<div class="hero-icon">🌐</div>
+<div class="hero-icon">🐳</div>
+<div class="hero-icon">🔌</div>
+</div>
+</div>
+<!-- CONCLUSION FIRST -->
+<div class="conclusion-bar">
+  🎯 結論：VPC CNIを使うと、KubernetesのPodが<strong>普通のEC2インスタンスと同じように</strong>VPC内でIPを持ち、直接通信できる
+  <span>— NATなし・追加ルーティングなし・シンプル！</span>
+</div>
+<!-- ANALOGY -->
+<div class="section">
+<div class="section-label">たとえ話で理解する</div>
+<h2 class="section-title" id="マンションの部屋番号に例えると…">マンションの部屋番号に例えると…</h2>
+<p class="section-desc">複雑なネットワーク設定も、マンション管理に例えるとスッキリ理解できます</p>
+<div class="analogy-wrap">
+<div class="analogy-title">🏠 アナロジー</div>
+<div class="analogy-heading">「各Podは独立した部屋を持つマンション住人」</div>
+<div class="analogy-grid">
+<div class="analogy-col building">
+<h3 id="マンションの世界">🏢 マンションの世界</h3>
+<div class="analogy-row">
+<span class="analogy-emoji">🏙️</span>
+<div class="analogy-text">
+<strong>都市（VPC）</strong>
+<span>すべての建物と住人が属する大きなエリア</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🏢</span>
+<div class="analogy-text">
+<strong>マンション（Node/EC2）</strong>
+<span>複数の部屋を持つ建物</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🚪</span>
+<div class="analogy-text">
+<strong>部屋（Pod）</strong>
+<span>独立した住居スペース</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">📮</span>
+<div class="analogy-text">
+<strong>部屋番号（IPアドレス）</strong>
+<span>住人への郵便が届く一意の番号</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🔑</span>
+<div class="analogy-text">
+<strong>管理人（VPC CNI）</strong>
+<span>新しい住人に部屋番号を割り当てる</span>
+</div>
+</div>
+</div>
+<div class="analogy-col aws">
+<h4>☁️ AWSの世界</h4>
+<div class="analogy-row">
+<span class="analogy-emoji">🌐</span>
+<div class="analogy-text">
+<strong>VPC（Virtual Private Cloud）</strong>
+<span>独自のIPアドレス空間（例: 10.0.0.0/16）</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🖥️</span>
+<div class="analogy-text">
+<strong>EC2インスタンス（EKS Node）</strong>
+<span>Podが動作する物理サーバー相当</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🐳</span>
+<div class="analogy-text">
+<strong>Pod（コンテナグループ）</strong>
+<span>アプリが動くKubernetesの最小単位</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🔢</span>
+<div class="analogy-text">
+<strong>VPC内IPアドレス（例: 10.0.1.42）</strong>
+<span>VPC CIDRから割り当てられる一意のIP</span>
+</div>
+</div>
+<div class="analogy-row">
+<span class="analogy-emoji">🔌</span>
+<div class="analogy-text">
+<strong>Amazon VPC CNI Plugin</strong>
+<span>PodにVPC IPを自動で割り当てるプラグイン</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- DIAGRAM -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">アーキテクチャ図</div>
+<h2 class="section-title" id="PodとIPアドレスの関係を視覚化">PodとIPアドレスの関係を視覚化</h2>
+<p class="section-desc">VPC CNIにより、PodはVPC CIDRから直接IPアドレスを割り当てられます</p>
+<div class="diagram-section">
+<div class="diagram-title">VPC 10.0.0.0/16 内のEKSクラスター構成</div>
+<div class="vpc-box">
+<div class="vpc-label">🌐 VPC — 10.0.0.0/16</div>
+<div class="vpc-cidr">全Podのアドレスはこの範囲から</div>
+<div class="node-grid">
+<!-- Node 1 -->
+<div class="node-box">
+<div class="node-label">
+            🖥️ Node 1 (EC2)
+            <span class="node-ip">10.0.1.10</span>
+</div>
+<div class="eni-tag">🔌 ENI (ネットワークカード)</div>
+<div class="pods-row">
+<div class="pod">
+<div class="pod-name">🐳 Pod A</div>
+<div class="pod-ip">10.0.1.41</div>
+</div>
+<div class="pod">
+<div class="pod-name">🐳 Pod B</div>
+<div class="pod-ip">10.0.1.42</div>
+</div>
+</div>
+<div style="margin-top: 12px; font-size: 15px; color: #6B7280; text-align: center;">
+            ↑ VPC CIDRから直接割り当て
+          </div>
+</div>
+<!-- Node 2 -->
+<div class="node-box">
+<div class="node-label">
+            🖥️ Node 2 (EC2)
+            <span class="node-ip">10.0.2.10</span>
+</div>
+<div class="eni-tag">🔌 ENI (ネットワークカード)</div>
+<div class="pods-row">
+<div class="pod">
+<div class="pod-name">🐳 Pod C</div>
+<div class="pod-ip">10.0.2.55</div>
+</div>
+<div class="pod">
+<div class="pod-name">🐳 Pod D</div>
+<div class="pod-ip">10.0.2.56</div>
+</div>
+</div>
+<div style="margin-top: 12px; font-size: 15px; color: #6B7280; text-align: center;">
+            ↑ VPC CIDRから直接割り当て
+          </div>
+</div>
+</div>
+<div class="flow-arrow" style="margin-top: 24px;">⬇️</div>
+<div style="background: #E0F2FE; border: 2px dashed #38BDF8; border-radius: 14px; padding: 20px 28px; text-align: center;">
+<div style="font-size: 18px; font-weight: 700; color: #0C4A6E; margin-bottom: 8px;">✅ Pod A → Pod C への直接通信</div>
+<div style="font-size: 17px; color: #075985;">10.0.1.41 → 10.0.2.55　NATなし・追加ルーティングなし・シンプル！</div>
+</div>
+</div>
+</div>
+</div>
+<!-- HOW IT WORKS -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">仕組みを追う</div>
+<h2 class="section-title" id="PodにIPが割り当たるまでの4ステップ">PodにIPが割り当たるまでの4ステップ</h2>
+<p class="section-desc">CNIプラグインが裏側で何をしているか、順番に見てみましょう</p>
+<div class="flow-steps">
+<div class="flow-step">
+<div class="step-num">1</div>
+<h3 id="Pod作成要求">Pod作成要求</h3>
+<p>KubernetesがNodeにPodをスケジュール</p>
+</div>
+<div class="flow-step">
+<div class="step-num">2</div>
+<h4>CNI呼び出し</h4>
+<p>kubeletがCNIプラグイン（VPC CNI）を呼び出し</p>
+</div>
+<div class="flow-step">
+<div class="step-num">3</div>
+<h4>ENIからIP取得</h4>
+<p>NodeのENIからVPC CIDRのIPを確保</p>
+</div>
+<div class="flow-step">
+<div class="step-num">4</div>
+<h4>Pod起動完了</h4>
+<p>PodはVPC IPを持ち通信可能に！</p>
+</div>
+</div>
+</div>
+<!-- FEATURES -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">3つの主要な特徴</div>
+<h2 class="section-title" id="VPC-CNIが実現すること">VPC CNIが実現すること</h2>
+<p class="section-desc">Podに直接VPC IPを付与することで、以下3つのメリットが生まれます</p>
+<div class="feature-grid">
+<div class="feature-card blue">
+<span class="feature-icon">🔢</span>
+<h3 id="一意のIPアドレス">一意のIPアドレス</h3>
+<p>各PodはVPCのCIDR範囲内から一意のIPを持ちます。同じVPC内のEC2インスタンスやRDSと同様に扱えます。</p>
+</div>
+<div class="feature-card green">
+<span class="feature-icon">🌐</span>
+<h3 id="直接アクセス可能">直接アクセス可能</h3>
+<p>NATや特別なルーティング設定なしに、VPC内の他リソースからPodへ直接通信できます。</p>
+</div>
+<div class="feature-card purple">
+<span class="feature-icon">🔒</span>
+<h3 id="VPCセキュリティ制御">VPCセキュリティ制御</h3>
+<p>セキュリティグループやネットワークACLをPodレベルで適用可能。きめ細かいアクセス制御が実現できます。</p>
+</div>
+</div>
+</div>
+<!-- SECURITY -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">セキュリティ</div>
+<h2 class="section-title" id="Podレベルのネットワーク制御">Podレベルのネットワーク制御</h2>
+<p class="section-desc">VPCの強力なセキュリティ機能をそのままPodに適用できます</p>
+<div class="security-grid">
+<div class="sec-card sg">
+<span class="sec-icon">🛡️</span>
+<h3 id="セキュリティグループSG">セキュリティグループ（SG）</h3>
+<p>EC2と同様に、Pod単位でインバウンド・アウトバウンドのトラフィックルールを定義できます。<br/><br/>例：WebサーバーPodはポート80/443のみ許可、DBは3306のみ。</p>
+</div>
+<div class="sec-card acl">
+<span class="sec-icon">📋</span>
+<h3 id="ネットワークACLNACL">ネットワークACL（NACL）</h3>
+<p>サブネットレベルで適用されるステートレスなファイアウォール。Pod が配置されたサブネットのNACLルールが自動的に適用されます。<br/><br/>例：特定のCIDRブロックからのアクセスをサブネット全体で拒否。</p>
+</div>
+</div>
+</div>
+<!-- COMPARISON TABLE -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">比較表</div>
+<h2 class="section-title" id="他のCNIプラグインとの違い">他のCNIプラグインとの違い</h2>
+<p class="section-desc">VPC CNIが他プラグインと何が違うのか、主要ポイントで比較</p>
+<div class="compare-section">
+<div class="compare-header">
+<div>比較ポイント</div>
+<div>🔵 VPC CNI</div>
+<div>⚪️ 他のCNI</div>
+</div>
+<div class="compare-row">
+<div>VPC IPの直接割り当て</div>
+<div><span class="badge-yes">✅ あり</span></div>
+<div><span class="badge-no">❌ なし</span></div>
+</div>
+<div class="compare-row">
+<div>NATなしで通信可能</div>
+<div><span class="badge-yes">✅ 可能</span></div>
+<div><span class="badge-no">❌ NATが必要</span></div>
+</div>
+<div class="compare-row">
+<div>セキュリティグループをPodに適用</div>
+<div><span class="badge-yes">✅ 対応</span></div>
+<div><span class="badge-no">❌ 非対応</span></div>
+</div>
+<div class="compare-row">
+<div>AWSサービスとの統合</div>
+<div><span class="badge-yes">✅ ネイティブ</span></div>
+<div><span class="badge-partial">△ 追加設定必要</span></div>
+</div>
+<div class="compare-row">
+<div>オーバーレイネットワーク</div>
+<div><span class="badge-no">❌ 不使用（シンプル）</span></div>
+<div><span class="badge-yes">✅ 使用</span></div>
+</div>
+<div class="compare-row">
+<div>EKSデフォルト採用</div>
+<div><span class="badge-yes">✅ デフォルト</span></div>
+<div><span class="badge-no">❌ 追加インストール</span></div>
+</div>
+</div>
+</div>
+<!-- TIP -->
+<div class="section" style="padding-top: 0;">
+<div class="tip-box">
+<div class="tip-icon">⚡</div>
+<div>
+<h3 id="IPアドレス枯渇に注意！">IPアドレス枯渇に注意！</h3>
+<p>VPC CNIはPodごとにVPC IPを消費します。大規模クラスターでは、適切なVPC CIDRサイズの設計が重要です。例えば /21 サブネット（2,048 IP）でも、大量のPodを動かすと枯渇する場合があります。<strong>CIDR設計は余裕を持って</strong>計画しましょう。</p>
+</div>
+</div>
+</div>
+<!-- EXTERNAL TRAFFIC POLICY -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">トラフィック制御</div>
+<h2 class="section-title" id="externalTrafficPolicy">externalTrafficPolicy</h2>
+<p class="section-desc">Kubernetesサービスの設定パラメータで、外部トラフィックの処理方法を定義します。<code style="background:#E0E7FF;color:#3730A3;padding:3px 10px;border-radius:6px;font-size:18px;">Cluster</code> と <code style="background:#DCFCE7;color:#166534;padding:3px 10px;border-radius:6px;font-size:18px;">Local</code> の2つの値があります。</p>
+<div class="etp-section">
+<div style="font-size:20px;color:var(--muted);margin-bottom:4px;">🔑 ポイント：<strong style="color:var(--text);">ソースNATが発生するかどうか</strong>が最大の違いです</div>
+<div class="etp-compare">
+<!-- CLUSTER -->
+<div class="etp-card cluster">
+<div class="etp-badge">Cluster</div>
+<h3 id="クラスター全体に分散">🌐 クラスター全体に分散</h3>
+<p>トラフィックはクラスター内の<strong>任意のノード</strong>に分散されます。ノード間でのトラフィック転送時に<strong>ソースNATが発生</strong>し、クライアントのIPが書き換えられます。</p>
+<div class="etp-diagram">
+<div style="font-size:14px;font-weight:700;color:#9A3412;margin-bottom:12px;">📦 通信フロー（ソースNAT発生）</div>
+<div class="etp-node">
+<div class="etp-node-box">🌍 外部クライアント</div>
+</div>
+<div class="etp-arrow">↓ 接続先NodeB（Podなし）</div>
+<div class="etp-node" style="margin-left:20px;">
+<div class="etp-node-box">🖥️ Node B</div>
+<span class="etp-nat-tag nat-yes">🔀 ソースNAT発生</span>
+</div>
+<div class="etp-arrow" style="margin-left:20px;">↓ 転送（ノード間ホッピング）</div>
+<div class="etp-node" style="margin-left:40px;">
+<div class="etp-node-box">🖥️ Node A</div>
+<span class="etp-pod-box">🐳 Pod</span>
+</div>
+<div style="margin-top:12px;font-size:14px;color:#9A3412;">⚠️ 元のクライアントIPが失われる</div>
+</div>
+</div>
+<!-- LOCAL -->
+<div class="etp-card local">
+<div class="etp-badge">Local</div>
+<h3 id="Podがあるノードに限定">📍 Podがあるノードに限定</h3>
+<p>トラフィックは<strong>ターゲットPodがあるノードにのみ</strong>送信されます。ノード間転送が不要なためソースNATが<strong>発生せず</strong>、クライアントIPを保持できます。</p>
+<div class="etp-diagram">
+<div style="font-size:14px;font-weight:700;color:#166534;margin-bottom:12px;">📦 通信フロー（ダイレクト配送）</div>
+<div class="etp-node">
+<div class="etp-node-box">🌍 外部クライアント</div>
+</div>
+<div class="etp-arrow">↓ 直接 Node A へ（Podあり）</div>
+<div class="etp-node" style="margin-left:20px;">
+<div class="etp-node-box">🖥️ Node A</div>
+<span class="etp-pod-box">🐳 Pod</span>
+<span class="etp-nat-tag nat-no">✅ NAT不要</span>
+</div>
+<div style="margin-top:12px;font-size:14px;color:#166534;">✅ クライアントIPがそのまま保持される</div>
+</div>
+</div>
+</div>
+<!-- 3-col summary -->
+<div class="etp-summary">
+<div class="etp-sum-item">
+<div class="label">📊 負荷分散</div>
+<div class="cluster-val">Cluster：均等分散</div>
+<div style="height:8px;"></div>
+<div class="local-val">Local：Podのあるノードのみ</div>
+</div>
+<div class="etp-sum-item">
+<div class="label">🔀 ソースNAT</div>
+<div class="cluster-val">Cluster：発生する</div>
+<div style="height:8px;"></div>
+<div class="local-val">Local：発生しない</div>
+</div>
+<div class="etp-sum-item">
+<div class="label">💡 主なユースケース</div>
+<div class="cluster-val">Cluster：一般的なWebアプリ</div>
+<div style="height:8px;"></div>
+<div class="local-val">Local：クライアントIP取得が必要なアプリ</div>
+</div>
+</div>
+</div>
+</div>
+<!-- FAQ -->
+<div class="section" style="padding-top: 0;">
+<div class="section-label">よくある質問</div>
+<h2 class="section-title" id="FAQ">FAQ</h2>
+<p class="section-desc">初心者がつまずきやすいポイントをまとめました</p>
+<div class="faq-list">
+<div class="faq-item">
+<div class="faq-q">
+<span class="faq-q-icon">Q</span>
+        VPC CNIはEKSで必ず使わないといけないの？
+      </div>
+<div class="faq-a">
+        AWSの Amazon EKS ではデフォルトでVPC CNIが採用されています。他のCNI（Calico, Ciliumnなど）も技術的には使用できますが、AWSとのネイティブ統合（セキュリティグループのPod適用など）を活用したい場合はVPC CNIが最適です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">
+<span class="faq-q-icon">Q</span>
+        ENI（Elastic Network Interface）って何ですか？
+      </div>
+<div class="faq-a">
+        ENIはEC2インスタンスの「ネットワークカード」に相当します。1枚のネットワークカードに複数のIPを割り当てられるイメージです。VPC CNIはEC2インスタンスのENIから「セカンダリIPアドレス」を取り出して、各Podに割り当てています。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">
+<span class="faq-q-icon">Q</span>
+        1つのNodeに配置できるPodの数に制限はありますか？
+      </div>
+<div class="faq-a">
+        はい、あります。EC2インスタンスタイプによってアタッチできるENIの数と、1ENIあたりのIPアドレス数が異なるため、Node当たりの最大Pod数が決まります。例えばm5.largeは最大29個のPodが目安です。これは設計時の重要な制約です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">
+<span class="faq-q-icon">Q</span>
+        Podが別のAZのリソースに通信できますか？
+      </div>
+<div class="faq-a">
+        はい、VPC内であれば別のアベイラビリティゾーン（AZ）のリソースとも直接通信できます。ただし、AZ間通信にはデータ転送料金が発生する場合があるため、パフォーマンスとコストのバランスを考慮した設計が推奨されます。
+      </div>
+</div>
+</div>
+</div>
+<!-- FOOTER -->
+<div class="footer">
+<p>📚 <span>Amazon VPC CNI</span> 完全ガイド　|　AWS初心者向けインフォグラフィック</p>
+<p style="margin-top: 8px;">公式ドキュメント: <span>docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html</span></p>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="aws-hyperplane-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">40</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">48</span>
+    </div>
+    <a href="bgp-route-selection-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</body>
+</html>
