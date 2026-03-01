@@ -21,22 +21,55 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 1. **Always Use Skills for Resource Integration** — `/skill resource` (unified entry point). Never manually run integration scripts.
 2. **Three-Place Update Rule** — When adding resources, update `data.js` resources array + `data.js` updateHistory + `index.js` searchData. Details: `.claude/rules/data-navigation.md`
 3. **GitHub Pages Path Prefix** — All paths MUST include `/aws_sap_studying/`. Details: `.claude/rules/html-standards.md`
-4. **W3C Validation Required** — All HTML must pass validation before commit. `python3 scripts/ci/validate_html_w3c.py --pr-mode`
+4. **W3C Validation Required** — All HTML must pass validation before commit. `python3 scripts/ci/validate_html_w3c.py --pr-mode`. CSS files also require W3C validation: `npm run qa:css-validate:pr`.
 5. **Immediate Push After Commit** — `git add <files> && git commit -m "feat: ..." && git push origin gh-pages`
 6. **Use `<h2>` for Section Headings** — `add_sidebar_toc.py` only recognizes `<h2>`/`<h3>`. Details: `.claude/rules/html-standards.md`
 
 ## Quick Start
 
 ```bash
+# Python (HTML generation, validation scripts)
 uv venv && source .venv/bin/activate
 uv pip install beautifulsoup4 lxml html5lib requests
 python3 server.py  # → http://localhost:8080/
+
+# Node.js (Playwright E2E tests + QA system)
+npm ci
 ```
 
 ## Environment
 
 - Use `uv` instead of `pip` for Python package management
 - Always create/activate a virtual environment before installing packages
+
+## Testing & QA
+
+### Playwright E2E tests (concept-map.html)
+```bash
+npm run test:e2e:chromium          # run existing concept-map specs (chromium only)
+npx playwright test --project=qa   # run QA spec suite only
+```
+
+### CSS & HTML validation (before committing)
+```bash
+python3 scripts/ci/validate_html_w3c.py --pr-mode   # HTML: changed files only
+npm run qa:css-validate:pr                           # CSS W3C: changed files only
+```
+
+### Full QA pipeline (after starting server)
+```bash
+python3 server.py &
+npm run qa:all   # css-validate + css-runtime + unified report → qa-reports/index.html
+```
+
+### Playwright QA architecture
+`tests/` has two distinct layers:
+- **`tests/e2e/concept-map/`** — existing interactive specs (tabs, filters, accessibility, DOM)
+- **`tests/e2e/qa/`** — QA specs that read JSON reports: `css-validation.spec.ts` (asserts on static analysis output), `css-runtime.spec.ts` (getComputedStyle + BoundingRect checks)
+- **`tests/modules/`** — Shared TypeScript modules: `types/`, `validators/`, `runtime/`, `accessibility/`, `dom/`, `ui-regression/`, `report/`
+- **`tests/config/css-runtime-expectations.json`** — Per-page CSS property expectations (desktop + mobile viewports)
+
+CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no browser) → runtime-validation (Playwright) → visual-regression (`if: false`, pending baselines) → publish-report.
 
 ## Documentation Reference
 
@@ -59,6 +92,8 @@ python3 server.py  # → http://localhost:8080/
 | Coding Standards | `docs/CODING_STANDARDS.md` |
 | CI/CD Pipeline | `docs/CI_CD_GUIDE.md` |
 | Accessibility | `docs/WCAG21_GUIDELINES.md` |
+| QA CI workflow (CSS + runtime) | `.github/workflows/qa-unified.yml` |
+| QA shared types | `tests/modules/types/index.ts` |
 
 ## Deployment
 
