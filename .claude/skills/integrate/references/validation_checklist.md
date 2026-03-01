@@ -2,6 +2,16 @@
 
 ## Pre-Commit Validation (REQUIRED)
 
+### W3C CSS Validation（CSSファイルを変更した場合）
+
+```bash
+npm run qa:css-validate:pr   # 変更されたCSSファイルのみ W3C CSS API で検証
+```
+
+- 出力: `qa-reports/css-validation.json`
+- Exit code 1 = エラーあり（コミット前に修正必須）
+- **なぜ重要か**: ブラウザはCSS構文エラーで**サイレントに残りのルールをスキップ**する。W3C HTML Validator はCSS内部エラーを検出しない。
+
 ### W3C HTML Validation
 
 **CRITICAL:** All HTML files MUST pass W3C validation before committing.
@@ -103,7 +113,8 @@ Use this checklist when adding new HTML learning resources:
 - [ ] File follows naming convention: `aws-[service]-[topic].html`
 - [ ] HTML includes `<!DOCTYPE html>` declaration
 - [ ] HTML includes `<html lang="ja">` tag
-- [ ] **W3C validation passed** (no errors at https://validator.w3.org/)
+- [ ] **HTML W3C validation passed** (no errors at https://validator.w3.org/)
+- [ ] **CSS W3C validation passed** (if CSS modified): `npm run qa:css-validate:pr`
 
 ### Content Quality
 

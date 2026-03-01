@@ -76,9 +76,14 @@ python3 scripts/html_management/update_counts.py
 python3 scripts/ci/post_integration_check.py
 python3 scripts/ci/post_integration_check.py --verbose
 
-# 個別W3C検証
+# HTML W3C検証
 python3 scripts/ci/validate_html_w3c.py --files networking/foo.html
-python3 scripts/ci/validate_html_w3c.py --pr-mode  # 全ファイル
+python3 scripts/ci/validate_html_w3c.py --pr-mode  # 変更HTMLファイルのみ
+
+# CSS W3C検証（CSSファイルを変更した場合は必須）
+npm run qa:css-validate:pr    # 変更CSSファイルのみ（PRモード）
+npm run qa:css-validate       # 全CSSファイル（フルスキャン）
+# 出力: qa-reports/css-validation.json
 
 # パンくず・TOC・ボタンの個別実行
 python3 scripts/html_management/add_breadcrumbs.py

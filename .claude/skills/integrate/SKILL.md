@@ -64,7 +64,8 @@ git add quiz-data-extended.js && git commit -m "feat: クイズ追加" && git pu
 ```bash
 python3 scripts/html_management/update_counts.py        # カウント同期
 python3 scripts/ci/post_integration_check.py [--verbose] # 統合後確認
-python3 scripts/ci/validate_html_w3c.py --pr-mode        # W3C全体検証
+python3 scripts/ci/validate_html_w3c.py --pr-mode        # HTML W3C検証（変更ファイルのみ）
+npm run qa:css-validate:pr                               # CSS W3C検証（変更ファイルのみ）
 ```
 
 → 全スクリプトリファレンス: **[automation_workflow.md](references/automation_workflow.md)**
@@ -80,9 +81,14 @@ python3 scripts/ci/validate_html_w3c.py --pr-mode        # W3C全体検証
 
 ## Repository Constraints
 
-- ❌ NO backend, database, build process, Node.js/npm, external dependencies, CDNs
+**Deployed site (GitHub Pages):**
+- ❌ NO backend, database, build process, external dependencies, CDNs
 - ✅ Pure HTML/CSS/JavaScript, all resources inline or local, works offline
 - ✅ GitHub Pages paths must include `/aws_sap_studying/` prefix
+
+**Dev tooling (local / CI only):**
+- ✅ Node.js/npm — Playwright E2E + QA (`npm ci`, `tsx`, `qa:css-validate:pr`)
+- ✅ Python (`uv venv`) — HTML integration scripts, W3C validation
 
 ## Troubleshooting
 
