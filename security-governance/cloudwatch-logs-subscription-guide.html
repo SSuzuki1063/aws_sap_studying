@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   CloudWatch Logs 集中集約完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/cloudwatch-logs-subscription-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#全国チェーン店の報告書システムで理解する！">🏢 全国チェーン店の報告書システムで理解する！</a></li>
+            <li class="toc-h2"><a href="#3つの重要コンポーネント">🎯 3つの重要コンポーネント</a></li>
+            <li class="toc-h3"><a href="#CloudWatch-Logs">CloudWatch Logs</a></li>
+            <li class="toc-h3"><a href="#Subscription-Filter">Subscription Filter</a></li>
+            <li class="toc-h3"><a href="#Destination">Destination</a></li>
+            <li class="toc-h2"><a href="#️-レストランチェーンの報告フロー">🍽️ レストランチェーンの報告フロー</a></li>
+            <li class="toc-h3"><a href="#各店舗で日報を作成">各店舗で日報を作成</a></li>
+            <li class="toc-h2"><a href="#️-アーキテクチャの全体像">🏗️ アーキテクチャの全体像</a></li>
+            <li class="toc-h2"><a href="#⚙️-セットアップ手順クロスアカウント">⚙️ セットアップ手順（クロスアカウント）</a></li>
+            <li class="toc-h2"><a href="#2つの集約パターン">🔄 2つの集約パターン</a></li>
+            <li class="toc-h3"><a href="#同一アカウント内集約">同一アカウント内集約</a></li>
+            <li class="toc-h3"><a href="#クロスアカウント集約">クロスアカウント集約</a></li>
+            <li class="toc-h2"><a href="#実際のユースケース">💼 実際のユースケース</a></li>
+            <li class="toc-h3"><a href="#セキュリティ監視の集中化">セキュリティ監視の集中化</a></li>
+            <li class="toc-h2"><a href="#✨-集中集約の6大メリット">✨ 集中集約の6大メリット</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+            <li class="toc-h3"><a href="#全国チェーン店の報告システム">🏢 全国チェーン店の報告システム</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<div class="header">
+<h1>
+     📊 CloudWatch Logs 集中集約
+    </h1>
+<p>
+     Subscription Filter &amp; Destination で実現する全社ログ管理
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="全国チェーン店の報告書システムで理解する！">
+      🏢 全国チェーン店の報告書システムで理解する！
+     </h2>
+<p class="intro-text">
+<strong>
+       CloudWatch Logs の集中集約 = 全国の店舗から本社への報告システム
+      </strong>
+<br/>
+<br/>
+      全国に100店舗あるレストランチェーン。各店舗で毎日発生する売上、在庫、トラブル情報...
+      <br/>
+      これらを
+      <strong>
+       本社で一元管理
+      </strong>
+      したい！でも、全部は要らない。
+      <br/>
+<strong>
+       重要な情報だけフィルタリング
+      </strong>
+      して、効率よく集めたい。
+      <br/>
+<br/>
+      それが
+      <strong>
+       Subscription Filter &amp; Destination
+      </strong>
+      の仕組みです✨
+      <br/>
+<br/>
+      📝 各店舗の日報 = CloudWatch Logs
+      <br/>
+      🔍 重要情報のみ選別 = Subscription Filter
+      <br/>
+      📮 配送システム = Destination
+      <br/>
+      🏛️ 本社の集約データベース = 中央ログアカウント
+     </p>
+</div>
+<!-- 基本概念 -->
+<div class="concept-section">
+<h2 class="concept-title" id="3つの重要コンポーネント">
+      🎯 3つの重要コンポーネント
+     </h2>
+<div class="concept-grid">
+<div class="concept-card">
+<div class="concept-icon">
+        📝
+       </div>
+<h3 id="CloudWatch-Logs">
+        CloudWatch Logs
+       </h3>
+<div class="concept-description">
+<strong>
+         各店舗の日報
+        </strong>
+<br/>
+<br/>
+        各AWSアカウント/リージョンで発生するログ。アプリケーションログ、システムログ、セキュリティログなど、すべての活動記録。
+       </div>
+</div>
+<div class="concept-card">
+<div class="concept-icon">
+        🔍
+       </div>
+<h3 id="Subscription-Filter">
+        Subscription Filter
+       </h3>
+<div class="concept-description">
+<strong>
+         重要情報の選別係
+        </strong>
+<br/>
+<br/>
+        ログの中から特定のパターンにマッチするものだけを抽出。「ERROR」や「CRITICAL」など、重要なログのみを次へ送る。
+       </div>
+</div>
+<div class="concept-card">
+<div class="concept-icon">
+        📮
+       </div>
+<h3 id="Destination">
+        Destination
+       </h3>
+<div class="concept-description">
+<strong>
+         配送先の指定
+        </strong>
+<br/>
+<br/>
+        フィルタされたログの送信先。Kinesis Data Streams、Lambda、別アカウントのCloudWatch Logsなどを指定可能。
+       </div>
+</div>
+</div>
+</div>
+<!-- たとえ話のフロー -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="️-レストランチェーンの報告フロー">
+      🍽️ レストランチェーンの報告フロー
+     </h2>
+<div class="flow-diagram">
+<div class="flow-step">
+<div class="flow-number">
+        1
+       </div>
+<div class="flow-content">
+<h3 id="各店舗で日報を作成">
+         各店舗で日報を作成
+        </h3>
+<p>
+         東京店、大阪店、福岡店...それぞれの店舗で毎日の売上、在庫、顧客クレーム、設備トラブルなどを記録。
+         <br/>
+<br/>
+<strong>
+          → これが各AWSアカウントのCloudWatch Logs
+         </strong>
+</p>
+</div>
+<div class="flow-icon">
+        🏪
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-number">
+        2
+       </div>
+<div class="flow-content">
+<h4>
+         重要な報告だけを選別
+        </h4>
+<p>
+         全ての情報を本社に送ると膨大すぎる！「売上が前日比20%以上減少」「設備故障」「食中毒リスク」など、重要な報告だけを抽出。
+         <br/>
+<br/>
+<strong>
+          → これがSubscription Filterのパターンマッチング
+         </strong>
+</p>
+</div>
+<div class="flow-icon">
+        🔍
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-number">
+        3
+       </div>
+<div class="flow-content">
+<h4>
+         本社への配送システム
+        </h4>
+<p>
+         選別された重要報告を、専用の配送ルートで本社へ送信。各店舗から効率的にデータを集約。
+         <br/>
+<br/>
+<strong>
+          → これがDestination（Kinesis/Lambda経由）
+         </strong>
+</p>
+</div>
+<div class="flow-icon">
+        📮
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-number">
+        4
+       </div>
+<div class="flow-content">
+<h4>
+         本社で一元管理
+        </h4>
+<p>
+         全国の店舗から集まった重要報告を本社のデータベースで一元管理。全体の傾向分析、異常検知、レポート作成が可能に。
+         <br/>
+<br/>
+<strong>
+          → これが中央ログアカウントでの集約・分析
+         </strong>
+</p>
+</div>
+<div class="flow-icon">
+        🏛️
+       </div>
+</div>
+</div>
+</div>
+<!-- アーキテクチャ図 -->
+<div class="architecture-section">
+<h2 class="architecture-title" id="️-アーキテクチャの全体像">
+      🏗️ アーキテクチャの全体像
+     </h2>
+<div class="architecture-diagram">
+<div class="arch-row">
+<div class="arch-box source">
+<div class="arch-box-icon">
+         🏪
+        </div>
+<div class="arch-box-title">
+         各店舗（ソース）
+        </div>
+<div class="arch-box-desc">
+         アカウントA
+         <br/>
+         CloudWatch Logs
+         <br/>
+         /aws/lambda/app
+        </div>
+</div>
+<div class="arch-arrow">
+        →
+       </div>
+<div class="arch-box filter">
+<div class="arch-box-icon">
+         🔍
+        </div>
+<div class="arch-box-title">
+         フィルター
+        </div>
+<div class="arch-box-desc">
+         Subscription Filter
+         <br/>
+         Pattern: [ERROR]
+         <br/>
+         重要ログのみ抽出
+        </div>
+</div>
+</div>
+<div style="text-align: center; font-size: 2em; color: #64748B; margin: 20px 0;">
+       ⬇️
+      </div>
+<div class="arch-row">
+<div class="arch-box destination">
+<div class="arch-box-icon">
+         📮
+        </div>
+<div class="arch-box-title">
+         配送システム
+        </div>
+<div class="arch-box-desc">
+         Destination
+         <br/>
+         Kinesis Data Streams
+         <br/>
+         または Lambda
+        </div>
+</div>
+<div class="arch-arrow">
+        →
+       </div>
+<div class="arch-box target">
+<div class="arch-box-icon">
+         🏛️
+        </div>
+<div class="arch-box-title">
+         本社（集約先）
+        </div>
+<div class="arch-box-desc">
+         中央ログアカウント
+         <br/>
+         CloudWatch Logs
+         <br/>
+         全社統合分析
+        </div>
+</div>
+</div>
+</div>
+<div style="background: #f0f9ff; padding: 25px; border-radius: 12px; margin-top: 30px; border-left: 4px solid #0284c7;">
+<p style="color: #0c4a6e; line-height: 1.8;">
+<strong>
+        💡 ポイント：
+       </strong>
+<br/>
+       • 複数のソースアカウントから1つの集約先へ送信可能
+       <br/>
+       • 各ソースで異なるフィルターパターンを設定可能
+       <br/>
+       • クロスアカウント/クロスリージョンに対応
+       <br/>
+       • リアルタイムでログが転送される
+      </p>
+</div>
+</div>
+<!-- セットアップ手順 -->
+<div class="setup-section">
+<h2 class="setup-title" id="⚙️-セットアップ手順クロスアカウント">
+      ⚙️ セットアップ手順（クロスアカウント）
+     </h2>
+<div class="setup-step">
+<div class="setup-step-header">
+<div class="setup-step-number">
+        1
+       </div>
+<div class="setup-step-title">
+        集約先（本社）でDestinationを作成
+       </div>
+</div>
+<div class="setup-step-content">
+<strong>
+        🏛️ 中央ログアカウントで実施：
+       </strong>
+<br/>
+<br/>
+       Kinesisストリームを作成し、CloudWatch Logs Destinationを設定。
+       <br/>
+       他のアカウントからログを受け取る「受け皿」を準備。
+       <br/>
+<br/>
+<div class="code-box">
+        # Kinesis Data Streamを作成
+aws kinesis create-stream \
+  --stream-name central-log-stream \
+  --shard-count 2
+
+# Destinationを作成
+aws logs put-destination \
+  --destination-name CentralLogDestination \
+  --target-arn arn:aws:kinesis:region:account:stream/central-log-stream \
+  --role-arn arn:aws:iam::account:role/CloudWatchToKinesisRole
+       </div>
+<strong>
+        📝 やっていること：
+       </strong>
+<br/>
+       • 全国の店舗からの報告を受け取る「本社の窓口」を開設
+       <br/>
+       • 配送トラックが荷物を届けられる「集約センター」を建設
+      </div>
+</div>
+<div class="setup-step">
+<div class="setup-step-header">
+<div class="setup-step-number">
+        2
+       </div>
+<div class="setup-step-title">
+        Destinationにアクセスポリシー設定
+       </div>
+</div>
+<div class="setup-step-content">
+<strong>
+        🔐 どのアカウントからの送信を許可するか定義：
+       </strong>
+<br/>
+<br/>
+       Destinationに対して、ソースアカウントからのログ送信を許可するポリシーを設定。
+       <br/>
+<br/>
+<div class="code-box">
+        # Destination Policyを設定
+aws logs put-destination-policy \
+  --destination-name CentralLogDestination \
+  --access-policy '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": ["111111111111", "222222222222"]
+      },
+      "Action": "logs:PutSubscriptionFilter",
+      "Resource": "arn:aws:logs:region:account:destination:CentralLogDestination"
+    }]
+  }'
+       </div>
+<strong>
+        📝 やっていること：
+       </strong>
+<br/>
+       • 「東京店」「大阪店」など、認証された店舗だけが報告を送信できるよう制限
+       <br/>
+       • セキュリティゲートで身分証明を確認してから荷物を受け取る
+      </div>
+</div>
+<div class="setup-step">
+<div class="setup-step-header">
+<div class="setup-step-number">
+        3
+       </div>
+<div class="setup-step-title">
+        各ソース（店舗）でSubscription Filterを作成
+       </div>
+</div>
+<div class="setup-step-content">
+<strong>
+        🏪 各店舗アカウントで実施：
+       </strong>
+<br/>
+<br/>
+       ログストリームにSubscription Filterを設定し、重要なログだけを本社へ送信。
+       <br/>
+<br/>
+<div class="code-box">
+        # Subscription Filterを作成
+aws logs put-subscription-filter \
+  --log-group-name /aws/lambda/my-app \
+  --filter-name SendErrorsToCentral \
+  --filter-pattern "[ERROR]" \
+  --destination-arn arn:aws:logs:region:central-account:destination:CentralLogDestination
+       </div>
+<strong>
+        🔍 Filter Patternの例：
+       </strong>
+<br/>
+       •
+       <code>
+        [ERROR]
+       </code>
+       → ERRORを含むログ
+       <br/>
+       •
+       <code>
+        [WARN]
+       </code>
+       → 警告ログ
+       <br/>
+       •
+       <code>
+        [level=ERROR]
+       </code>
+       → JSONの特定フィールド
+       <br/>
+       •
+       <code>
+        [..., status_code=5*]
+       </code>
+       → 500番台エラー
+       <br/>
+<br/>
+<strong>
+        📝 やっていること：
+       </strong>
+<br/>
+       • 各店舗で「重大な問題」「緊急報告」だけを選別
+       <br/>
+       • 日常業務の記録は店舗で保管、重要事項だけ本社へ送信
+      </div>
+</div>
+<div class="setup-step">
+<div class="setup-step-header">
+<div class="setup-step-number">
+        4
+       </div>
+<div class="setup-step-title">
+        集約先でログを受信・保存
+       </div>
+</div>
+<div class="setup-step-content">
+<strong>
+        📊 中央アカウントで実施：
+       </strong>
+<br/>
+<br/>
+       Kinesisから受け取ったログを、Lambda or Kinesis Firehose経由でCloudWatch LogsやS3に保存。
+       <br/>
+<br/>
+<strong>
+        オプション1: Lambda → CloudWatch Logs
+       </strong>
+<div class="code-box">
+        # Lambdaでログを受け取り、CloudWatch Logsへ
+def lambda_handler(event, context):
+    for record in event['Records']:
+        # Kinesisからデコード
+        payload = base64.b64decode(record['kinesis']['data'])
+        log_data = json.loads(payload)
+        
+        # CloudWatch Logsへ書き込み
+        logs_client.put_log_events(
+            logGroupName='/central/aggregated-logs',
+            logStreamName=log_data['source_account'],
+            logEvents=[{
+                'timestamp': log_data['timestamp'],
+                'message': log_data['message']
+            }]
+        )
+       </div>
+<strong>
+        オプション2: Kinesis Firehose → S3
+       </strong>
+<br/>
+       長期保存やコスト削減にはS3へ直接保存も可能。
+       <br/>
+<br/>
+<strong>
+        📝 やっていること：
+       </strong>
+<br/>
+       • 本社で受け取った報告を、部門別・日付別にファイリング
+       <br/>
+       • すぐに参照できる形で整理し、長期保存用にもアーカイブ
+      </div>
+</div>
+</div>
+<!-- 同一アカウント vs クロスアカウント -->
+<div class="comparison-section">
+<h2 class="comparison-title" id="2つの集約パターン">
+      🔄 2つの集約パターン
+     </h2>
+<div class="comparison-grid">
+<div class="comparison-card">
+<div class="comparison-icon">
+        🏢
+       </div>
+<h3 id="同一アカウント内集約">
+        同一アカウント内集約
+       </h3>
+<div class="comparison-feature">
+<strong>
+         📝 シナリオ：
+        </strong>
+        1つのAWSアカウント内で、複数のリージョンやログストリームを1か所に集約したい。
+       </div>
+<div class="comparison-feature">
+<strong>
+         🎯 ユースケース：
+        </strong>
+        • 東京リージョンと大阪リージョンのログを統合
+        <br/>
+        • 複数のLambda関数のログを1つのログストリームに
+        <br/>
+        • 開発環境と本番環境のログを分けて管理
+       </div>
+<div class="comparison-feature">
+<strong>
+         ✨ メリット：
+        </strong>
+        • セットアップが簡単（IAMポリシー設定が不要）
+        <br/>
+        • クロスアカウントアクセスの管理不要
+        <br/>
+        • コストが低い
+       </div>
+<div class="comparison-feature">
+<strong>
+         ⚙️ 設定：
+        </strong>
+        Destinationポリシー不要。
+        <br/>
+        直接Subscription Filterを作成するだけ。
+       </div>
+</div>
+<div class="comparison-card">
+<div class="comparison-icon">
+        🌐
+       </div>
+<h3 id="クロスアカウント集約">
+        クロスアカウント集約
+       </h3>
+<div class="comparison-feature">
+<strong>
+         📝 シナリオ：
+        </strong>
+        複数のAWSアカウントからログを1つの中央アカウントに集約したい。
+       </div>
+<div class="comparison-feature">
+<strong>
+         🎯 ユースケース：
+        </strong>
+        • 開発・ステージング・本番アカウントを統合
+        <br/>
+        • 部門ごとのアカウントからセキュリティチームへ
+        <br/>
+        • 子会社の複数アカウントを親会社で一元管理
+       </div>
+<div class="comparison-feature">
+<strong>
+         ✨ メリット：
+        </strong>
+        • 組織全体のログを一元管理
+        <br/>
+        • セキュリティ監視の集中化
+        <br/>
+        • コンプライアンス対応が容易
+        <br/>
+        • アカウント間の分析・比較が可能
+       </div>
+<div class="comparison-feature">
+<strong>
+         ⚙️ 設定：
+        </strong>
+        Destinationポリシーで
+        <br/>
+        アクセス許可の設定が必要。
+        <br/>
+        各ソースアカウントで個別設定。
+       </div>
+</div>
+</div>
+</div>
+<!-- ユースケース -->
+<div class="use-case-section">
+<h2 class="use-case-title" id="実際のユースケース">
+      💼 実際のユースケース
+     </h2>
+<div class="use-case-grid">
+<div class="use-case-card">
+<div class="use-case-icon">
+        🔒
+       </div>
+<h3 id="セキュリティ監視の集中化">
+        セキュリティ監視の集中化
+       </h3>
+<div class="use-case-description">
+<strong>
+         課題：
+        </strong>
+<br/>
+        全アカウントのセキュリティイベント（不正アクセス試行、権限変更など）をセキュリティチームが監視したい。
+        <br/>
+<br/>
+<strong>
+         解決策：
+        </strong>
+<br/>
+        • 各アカウントからCloudTrailログを抽出
+        <br/>
+        • Filter:
+        <code>
+         [userIdentity, eventName=DeleteUser]
+        </code>
+<br/>
+        • セキュリティアカウントに集約
+        <br/>
+        • リアルタイムアラート設定
+        <br/>
+<br/>
+<strong>
+         効果：
+        </strong>
+<br/>
+        セキュリティインシデントを即座に検知し、全社的な対応が可能に。
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🐛
+       </div>
+<h4>
+        マルチアカウントのエラー追跡
+       </h4>
+<div class="use-case-description">
+<strong>
+         課題：
+        </strong>
+<br/>
+        開発・ステージング・本番の3環境でアプリケーションエラーを統合的に追跡したい。
+        <br/>
+<br/>
+<strong>
+         解決策：
+        </strong>
+<br/>
+        • 各環境のアプリケーションログを収集
+        <br/>
+        • Filter:
+        <code>
+         [ERROR] [CRITICAL] [level=error]
+        </code>
+<br/>
+        • 運用アカウントに集約
+        <br/>
+        • 環境ごとにタグ付けして分類
+        <br/>
+<br/>
+<strong>
+         効果：
+        </strong>
+<br/>
+        全環境のエラーを1つのダッシュボードで監視。環境間の問題の関連性も把握可能。
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        📊
+       </div>
+<h4>
+        コンプライアンス監査
+       </h4>
+<div class="use-case-description">
+<strong>
+         課題：
+        </strong>
+<br/>
+        全アカウントのログを7年間保存し、監査に対応できる体制を構築したい。
+        <br/>
+<br/>
+<strong>
+         解決策：
+        </strong>
+<br/>
+        • 全アカウントのログを中央アカウントに集約
+        <br/>
+        • Kinesis Firehose → S3 Glacierへアーカイブ
+        <br/>
+        • ライフサイクルポリシーで自動移行
+        <br/>
+        • Athenaで過去ログを検索可能に
+        <br/>
+<br/>
+<strong>
+         効果：
+        </strong>
+<br/>
+        低コストで長期保存を実現。監査時に必要なログをすぐに取り出せる。
+       </div>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        ⚡
+       </div>
+<h4>
+        リアルタイムアラート統合
+       </h4>
+<div class="use-case-description">
+<strong>
+         課題：
+        </strong>
+<br/>
+        複数のアカウントで発生する重大エラーを、1つのSlackチャンネルに通知したい。
+        <br/>
+<br/>
+<strong>
+         解決策：
+        </strong>
+<br/>
+        • 各アカウントから重大ログを抽出
+        <br/>
+        • 中央アカウントのLambdaで受信
+        <br/>
+        • Lambda → SNS → Slack統合
+        <br/>
+        • アカウント情報を含めて通知
+        <br/>
+<br/>
+<strong>
+         効果：
+        </strong>
+<br/>
+        どのアカウントで問題が起きても、1つのチャンネルで把握。対応漏れを防止。
+       </div>
+</div>
+</div>
+</div>
+<!-- メリット -->
+<div class="concept-section">
+<h2 class="concept-title" id="✨-集中集約の6大メリット">
+      ✨ 集中集約の6大メリット
+     </h2>
+<div class="benefits-grid">
+<div class="benefit-card">
+<div class="benefit-icon">
+        🎯
+       </div>
+<div class="benefit-title">
+        一元管理
+       </div>
+<div class="benefit-desc">
+        全アカウント・全リージョンのログを1か所で管理。ログインし直す必要なし。
+       </div>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        💰
+       </div>
+<div class="benefit-title">
+        コスト削減
+       </div>
+<div class="benefit-desc">
+        重要なログのみを転送することで、ストレージコストとネットワークコストを最適化。
+       </div>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        🔍
+       </div>
+<div class="benefit-title">
+        横断検索
+       </div>
+<div class="benefit-desc">
+        複数のソースから集約されたログを、1回の検索で調査可能。
+       </div>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        🚨
+       </div>
+<div class="benefit-title">
+        統合アラート
+       </div>
+<div class="benefit-desc">
+        全社的な異常を1つのダッシュボードで監視。アラート設定も一元化。
+       </div>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        🔒
+       </div>
+<div class="benefit-title">
+        セキュリティ強化
+       </div>
+<div class="benefit-desc">
+        セキュリティログを専用アカウントで保護。改ざん防止と監査証跡の確保。
+       </div>
+</div>
+<div class="benefit-card">
+<div class="benefit-icon">
+        📈
+       </div>
+<div class="benefit-title">
+        トレンド分析
+       </div>
+<div class="benefit-desc">
+        組織全体のログから傾向を分析。問題の予兆を早期発見。
+       </div>
+</div>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       実装のベストプラクティス
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. フィルターパターンは慎重に設計：
+      </strong>
+<br/>
+      • 広すぎるパターンは転送量が膨大に（コスト増）
+      <br/>
+      • 狭すぎると重要なログを見逃す
+      <br/>
+      • まずは ERROR と CRITICAL から始めて、徐々に調整
+      <br/>
+<br/>
+<strong>
+       2. Kinesisのシャード数を適切に設定：
+      </strong>
+<br/>
+      • 1シャードあたり 1MB/秒、1000レコード/秒
+      <br/>
+      • ログの発生量に応じてスケールアップ
+      <br/>
+      • Auto Scalingの活用を検討
+      <br/>
+<br/>
+<strong>
+       3. ログの保持期間を設定：
+      </strong>
+<br/>
+      • ソース側: 短期保持（1-7日）でコスト削減
+      <br/>
+      • 集約先: 長期保持（30-365日以上）
+      <br/>
+      • S3へのアーカイブも併用
+      <br/>
+<br/>
+<strong>
+       4. メトリクスフィルターで監視：
+      </strong>
+<br/>
+      • 集約先でメトリクスフィルターを設定
+      <br/>
+      • エラー率、警告数などを可視化
+      <br/>
+      • CloudWatch Alarmsで自動通知
+      <br/>
+<br/>
+<strong>
+       5. タグとメタデータを活用：
+      </strong>
+<br/>
+      • ログに送信元アカウント情報を追加
+      <br/>
+      • 環境名（dev/stg/prod）をタグ付け
+      <br/>
+      • 後からの検索・分析が容易に
+      <br/>
+<br/>
+<strong>
+       6. 段階的にロールアウト：
+      </strong>
+<br/>
+      • まず1つのテストアカウントで検証
+      <br/>
+      • 問題なければ徐々に他のアカウントへ展開
+      <br/>
+      • 各フェーズでコストと転送量を監視
+      <br/>
+<br/>
+<strong>
+       7. バックアップと冗長性：
+      </strong>
+<br/>
+      • 集約先は複数リージョンでバックアップ
+      <br/>
+      • ソース側でも一定期間ログを保持
+      <br/>
+      • Kinesis Firehose の障害対策を検討
+     </div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="全国チェーン店の報告システム" style="font-size: 1.8em; margin-bottom: 15px;">
+        🏢 全国チェーン店の報告システム
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        CloudWatch Logs Subscription Filter &amp; Destination は
+        <br/>
+<strong>
+         全店舗から本社への効率的な報告システム
+        </strong>
+        と同じ！
+        <br/>
+<br/>
+        重要な情報だけをフィルタリングして、
+        <br/>
+        中央で一元管理することで、
+        <br/>
+        組織全体の可視性とセキュリティが向上します✨
+       </p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         📝
+        </div>
+<strong style="font-size: 1.2em;">
+         Logs
+        </strong>
+<br/>
+<br/>
+        各アカウントで
+        <br/>
+        発生するログ
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🔍
+        </div>
+<strong style="font-size: 1.2em;">
+         Filter
+        </strong>
+<br/>
+<br/>
+        重要なログだけ
+        <br/>
+        を抽出
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         📮
+        </div>
+<strong style="font-size: 1.2em;">
+         Destination
+        </strong>
+<br/>
+<br/>
+        効率的な
+        <br/>
+        配送システム
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🏛️
+        </div>
+<strong style="font-size: 1.2em;">
+         Central
+        </strong>
+<br/>
+<br/>
+        本社での
+        <br/>
+        一元管理
+       </div>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+<p style="font-size: 1.3em; line-height: 1.8;">
+<strong>
+         🎯 すぐに始められる3ステップ：
+        </strong>
+<br/>
+<br/>
+<span style="font-size: 1.05em;">
+         1️⃣ 集約先アカウントで Destination を作成
+         <br/>
+         2️⃣ 送信元アカウントで Subscription Filter を設定
+         <br/>
+         3️⃣ 集約されたログを CloudWatch Insights で分析開始！
+         <br/>
+<br/>
+</span>
+</p>
+</div>
+<p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+       マルチアカウント環境でのログ管理は
+       <br/>
+<strong>
+        最初の設計が重要
+       </strong>
+       です。
+       <br/>
+       フィルターパターンとアーキテクチャを慎重に設計して、
+       <br/>
+       効率的で安全なログ基盤を構築しましょう！🎉
+      </p>
+</div>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="storage-gateway-refreshcache-automation-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">31</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">71</span>
+    </div>
+    <a href="aws-control-tower-guardrails.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

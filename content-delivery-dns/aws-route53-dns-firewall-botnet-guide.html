@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<style>
+    /* ===== リセット & ベース ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: #F0F4F8;
+      color: #1E293B;
+      line-height: 1.7;
+      font-size: 15px;
+            padding-top: 70px;}
+
+    /* ===== ページヘッダー ===== */
+    .page-header {
+      background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0F172A 100%);
+      color: #fff;
+      padding: 56px 40px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(99,179,237,0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 50%, rgba(239,68,68,0.10) 0%, transparent 60%);
+    }
+    .page-header .service-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(99,179,237,0.2);
+      border: 1px solid rgba(99,179,237,0.4);
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-size: 0.82em;
+      font-weight: 600;
+      color: #93C5FD;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .page-header h1 {
+      font-size: 2.4em;
+      font-weight: 800;
+      line-height: 1.2;
+      position: relative;
+      margin-bottom: 12px;
+    }
+    .page-header h1 .accent { color: #FBB040; }
+    .page-header .subtitle {
+      font-size: 1.05em;
+      color: #94A3B8;
+      position: relative;
+      max-width: 700px;
+      margin: 0 auto 30px;
+    }
+    .header-meta {
+      display: flex; justify-content: center; gap: 24px;
+      position: relative;
+    }
+    .header-meta .meta-item {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 8px 16px;
+      font-size: 0.88em; color: #CBD5E1;
+    }
+
+    /* ===== コンテンツラッパー ===== */
+    .wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* ===== セクション共通 ===== */
+    .section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+    .section-title {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 1.35em; font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #E2E8F0;
+    }
+    .section-title .icon-wrap {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2em; flex-shrink: 0;
+    }
+
+    /* ===== 結論カード ===== */
+    .conclusion-box {
+      background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%);
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .conclusion-box::before {
+      content: '💡';
+      position: absolute; right: 40px; top: 30px;
+      font-size: 5em; opacity: 0.08;
+    }
+    .conclusion-box .label {
+      display: inline-block;
+      background: #FBB040;
+      color: #0F172A;
+      font-size: 0.78em; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 999px;
+      margin-bottom: 16px;
+    }
+    .conclusion-box h2 {
+      font-size: 1.55em; font-weight: 700;
+      line-height: 1.3; margin-bottom: 16px;
+      color: #E2E8F0;
+    }
+    .conclusion-box h2 .hl { color: #FBB040; }
+    .conclusion-points {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin-top: 20px;
+    }
+    .conclusion-point {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 14px 18px;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .conclusion-point .cp-icon { font-size: 1.4em; flex-shrink: 0; }
+    .conclusion-point .cp-text { font-size: 0.9em; color: #CBD5E1; line-height: 1.5; }
+    .conclusion-point .cp-text strong { color: #fff; display: block; margin-bottom: 2px; }
+
+    /* ===== 均等グリッド ===== */
+    .equal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .equal-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    .equal-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+
+    /* ===== たとえ話カード ===== */
+    .analogy-card {
+      border-radius: 12px; padding: 22px;
+      border: 2px solid;
+    }
+    .analogy-card.real {
+      background: #FFF7ED; border-color: #FED7AA;
+    }
+    .analogy-card.aws {
+      background: #EFF6FF; border-color: #BFDBFE;
+    }
+    .analogy-card .ac-label {
+      font-size: 0.72em; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px;
+      display: inline-block; margin-bottom: 10px;
+    }
+    .analogy-card.real .ac-label { background: #FED7AA; color: #92400E; }
+    .analogy-card.aws .ac-label { background: #BFDBFE; color: #1E40AF; }
+    .analogy-card h4 { font-size: 1.05em; font-weight: 700; margin-bottom: 8px; }
+    .analogy-card p { font-size: 0.9em; color: #475569; line-height: 1.6; }
+
+    /* ===== フロー図 ===== */
+    .flow-diagram {
+      position: relative;
+    }
+    .flow-row {
+      display: flex; align-items: stretch;
+      gap: 0; margin-bottom: 0;
+    }
+    .flow-node {
+      flex: 1; border-radius: 12px; padding: 18px 16px;
+      text-align: center; position: relative;
+    }
+    .flow-node .fn-icon { font-size: 2em; margin-bottom: 8px; display: block; }
+    .flow-node .fn-label { font-size: 0.78em; font-weight: 700; line-height: 1.3; }
+    .flow-node .fn-sub { font-size: 0.68em; color: #64748B; margin-top: 4px; }
+    .flow-arrow {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; flex-shrink: 0; color: #94A3B8; font-size: 1.3em;
+    }
+
+    .attack-flow {
+      background: linear-gradient(135deg, #FEF2F2 0%, #FFF7ED 100%);
+      border: 2px solid #FECACA; border-radius: 16px; padding: 28px 28px 28px;
+      overflow: visible;
+    }
+    .attack-flow .af-title {
+      color: #B91C1C; font-weight: 700; font-size: 0.9em;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ===== 保護フロー ===== */
+    .protect-flow {
+      background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+      border: 2px solid #BBF7D0; border-radius: 16px; padding: 28px 28px 28px;
+      overflow: visible;
+    }
+    .protect-flow .pf-title {
+      color: #15803D; font-weight: 700; font-size: 0.9em;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ===== フロー共通ステップ ===== */
+    .af-steps {
+      display: flex; align-items: stretch; gap: 0;
+      padding-top: 18px; /* バッジの上はみ出し分を確保 */
+    }
+    .af-step {
+      flex: 1; min-width: 0;
+      background: #fff; border-radius: 10px; padding: 14px 8px 14px;
+      text-align: center; border: 2px solid #FECACA;
+      position: relative;
+    }
+    .af-step .step-num {
+      position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+      background: #EF4444; color: #fff;
+      width: 26px; height: 26px; border-radius: 50%;
+      font-size: 0.75em; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(239,68,68,0.4);
+    }
+    .af-step .step-icon { font-size: 1.6em; margin: 6px 0 6px; display: block; }
+    .af-step .step-text { font-size: 0.75em; font-weight: 600; line-height: 1.3; color: #374151; }
+    .af-step .step-detail { font-size: 0.65em; color: #6B7280; margin-top: 4px; line-height: 1.4; }
+    .af-arrow {
+      color: #EF4444; font-size: 1.1em;
+      padding: 0 4px; flex-shrink: 0;
+      display: flex; align-items: center; padding-top: 14px;
+    }
+
+    /* ===== コンポーネントカード ===== */
+    .comp-card {
+      border-radius: 12px; padding: 22px;
+      border: 2px solid; position: relative;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .comp-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    .comp-card .cc-icon { font-size: 2em; margin-bottom: 10px; display: block; }
+    .comp-card h4 { font-size: 1em; font-weight: 700; margin-bottom: 6px; }
+    .comp-card p { font-size: 0.85em; line-height: 1.55; }
+    .comp-card.blue { background: #EFF6FF; border-color: #93C5FD; }
+    .comp-card.blue h4 { color: #1D4ED8; }
+    .comp-card.purple { background: #F5F3FF; border-color: #C4B5FD; }
+    .comp-card.purple h4 { color: #6D28D9; }
+    .comp-card.green { background: #F0FDF4; border-color: #86EFAC; }
+    .comp-card.green h4 { color: #15803D; }
+    .comp-card.orange { background: #FFF7ED; border-color: #FDB96D; }
+    .comp-card.orange h4 { color: #C2410C; }
+
+    /* ===== アクション比較 ===== */
+    .action-card {
+      border-radius: 12px; padding: 24px;
+      border: 2px solid; text-align: center;
+    }
+    .action-card .ac2-icon { font-size: 2.5em; margin-bottom: 10px; display: block; }
+    .action-card h4 { font-size: 1.05em; font-weight: 800; margin-bottom: 8px; }
+    .action-card .ac2-code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em; font-weight: 700;
+      padding: 4px 12px; border-radius: 6px;
+      display: inline-block; margin-bottom: 10px;
+    }
+    .action-card p { font-size: 0.84em; color: #475569; line-height: 1.5; }
+    .action-card .ac2-example {
+      margin-top: 12px; padding: 10px;
+      border-radius: 8px; font-size: 0.8em;
+      font-style: italic;
+    }
+    .action-card.block { background: #FEF2F2; border-color: #FCA5A5; }
+    .action-card.block h4 { color: #B91C1C; }
+    .action-card.block .ac2-code { background: #FEE2E2; color: #B91C1C; }
+    .action-card.block .ac2-example { background: #FEE2E2; color: #991B1B; }
+    .action-card.alert { background: #FFFBEB; border-color: #FCD34D; }
+    .action-card.alert h4 { color: #92400E; }
+    .action-card.alert .ac2-code { background: #FEF3C7; color: #92400E; }
+    .action-card.alert .ac2-example { background: #FEF3C7; color: #78350F; }
+    .action-card.override { background: #EFF6FF; border-color: #93C5FD; }
+    .action-card.override h4 { color: #1D4ED8; }
+    .action-card.override .ac2-code { background: #DBEAFE; color: #1D4ED8; }
+    .action-card.override .ac2-example { background: #DBEAFE; color: #1E40AF; }
+
+    /* ===== ドメインリスト比較 ===== */
+    .domain-list-card {
+      border-radius: 12px; padding: 24px;
+      border: 2px solid;
+    }
+    .domain-list-card h4 { font-size: 1.05em; font-weight: 700; margin-bottom: 10px; }
+    .domain-list-card .dl-badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 999px; font-size: 0.75em; font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .domain-list-card ul { list-style: none; padding: 0; }
+    .domain-list-card ul li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 0.85em; color: #475569;
+      padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .domain-list-card ul li:last-child { border-bottom: none; }
+    .domain-list-card.managed { background: #F5F3FF; border-color: #C4B5FD; }
+    .domain-list-card.managed h4 { color: #5B21B6; }
+    .domain-list-card.managed .dl-badge { background: #DDD6FE; color: #5B21B6; }
+    .domain-list-card.custom { background: #FFF7ED; border-color: #FDB96D; }
+    .domain-list-card.custom h4 { color: #C2410C; }
+    .domain-list-card.custom .dl-badge { background: #FED7AA; color: #9A3412; }
+
+    /* ===== アーキテクチャ図 ===== */
+    .arch-diagram {
+      background: #F8FAFC; border: 2px solid #E2E8F0;
+      border-radius: 16px; padding: 32px;
+    }
+    .arch-vpc {
+      border: 3px dashed #3B82F6; border-radius: 14px;
+      padding: 24px; margin-bottom: 20px;
+      position: relative;
+    }
+    .arch-vpc::before {
+      content: '🌐 VPC';
+      position: absolute; top: -13px; left: 20px;
+      background: #3B82F6; color: #fff;
+      font-size: 0.78em; font-weight: 700;
+      padding: 3px 12px; border-radius: 999px;
+    }
+    .arch-subnet {
+      background: #EFF6FF; border: 2px solid #93C5FD;
+      border-radius: 10px; padding: 16px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 32px; flex-wrap: wrap;
+    }
+    .arch-ec2 {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px;
+    }
+    .arch-ec2 .ec2-icon {
+      width: 64px; height: 64px; border-radius: 12px;
+      background: #DBEAFE; border: 2px solid #60A5FA;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8em;
+    }
+    .arch-ec2 .ec2-label { font-size: 0.78em; font-weight: 600; color: #1E40AF; }
+    .arch-middle {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 20px;
+    }
+    .arch-firewall {
+      flex: 1; background: linear-gradient(135deg, #1E3A5F, #0F172A);
+      border-radius: 14px; padding: 20px 24px;
+      text-align: center; color: #fff;
+    }
+    .arch-firewall .fw-icon { font-size: 2.2em; margin-bottom: 8px; display: block; }
+    .arch-firewall h4 { font-size: 1em; font-weight: 700; margin-bottom: 4px; color: #FBB040; }
+    .arch-firewall p { font-size: 0.8em; color: #94A3B8; }
+    .arch-internet {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .arch-server {
+      border-radius: 10px; padding: 14px 18px;
+      text-align: center; min-width: 130px;
+    }
+    .arch-server.good { background: #F0FDF4; border: 2px solid #86EFAC; }
+    .arch-server.bad { background: #FEF2F2; border: 2px solid #FCA5A5; }
+    .arch-server .srv-icon { font-size: 1.6em; margin-bottom: 4px; display: block; }
+    .arch-server .srv-label { font-size: 0.78em; font-weight: 700; }
+    .arch-server.good .srv-label { color: #15803D; }
+    .arch-server.bad .srv-label { color: #B91C1C; }
+    .arch-log {
+      background: #FFFBEB; border: 2px solid #FCD34D;
+      border-radius: 10px; padding: 16px 20px;
+    }
+    .arch-log h5 { font-size: 0.85em; font-weight: 700; color: #92400E; margin-bottom: 8px; }
+    .arch-log .log-items {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .log-item {
+      display: flex; align-items: center; gap: 6px;
+      background: #fff; border-radius: 8px; padding: 6px 12px;
+      font-size: 0.78em; color: #374151; border: 1px solid #FDE68A;
+    }
+
+    /* ===== ステップ実装 ===== */
+    .impl-steps { counter-reset: step; }
+    .impl-step {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 20px 0; border-bottom: 1px solid #F1F5F9;
+    }
+    .impl-step:last-child { border-bottom: none; }
+    .impl-step .step-num-wrap {
+      width: 40px; height: 40px; flex-shrink: 0;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1E3A5F, #3B82F6);
+      color: #fff; font-weight: 800; font-size: 1em;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .impl-step h4 { font-size: 1em; font-weight: 700; margin-bottom: 6px; }
+    .impl-step p { font-size: 0.88em; color: #475569; line-height: 1.55; }
+    .impl-step .code-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1E293B; color: #7DD3FC;
+      font-family: 'Courier New', monospace; font-size: 0.8em;
+      padding: 6px 12px; border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    /* ===== ベストプラクティス ===== */
+    .bp-card {
+      background: #F8FAFC; border: 1px solid #E2E8F0;
+      border-left: 4px solid; border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .bp-card h4 { font-size: 0.95em; font-weight: 700; margin-bottom: 6px; }
+    .bp-card p { font-size: 0.85em; color: #475569; line-height: 1.5; }
+    .bp-card.bp-blue { border-left-color: #3B82F6; }
+    .bp-card.bp-blue h4 { color: #1D4ED8; }
+    .bp-card.bp-green { border-left-color: #10B981; }
+    .bp-card.bp-green h4 { color: #065F46; }
+    .bp-card.bp-orange { border-left-color: #F59E0B; }
+    .bp-card.bp-orange h4 { color: #92400E; }
+    .bp-card.bp-red { border-left-color: #EF4444; }
+    .bp-card.bp-red h4 { color: #B91C1C; }
+
+    /* ===== GuardDuty 連携バナー ===== */
+    .integration-banner {
+      background: linear-gradient(135deg, #4C1D95, #1E3A5F);
+      border-radius: 14px; padding: 28px 32px;
+      color: #fff; margin-top: 28px;
+      display: flex; align-items: center; gap: 24px;
+    }
+    .integration-banner .ib-icon { font-size: 3em; flex-shrink: 0; }
+    .integration-banner h4 { font-size: 1.15em; font-weight: 700; margin-bottom: 6px; color: #E9D5FF; }
+    .integration-banner p { font-size: 0.88em; color: #C4B5FD; line-height: 1.6; }
+    .integration-banner .ib-flow {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 12px; flex-wrap: wrap;
+    }
+    .ib-chip {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 6px 14px;
+      font-size: 0.82em; font-weight: 600; color: #E9D5FF;
+    }
+    .ib-arrow { color: #A78BFA; }
+
+    /* ===== 注意・補足 ===== */
+    .note-box {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: #F0F9FF; border: 1px solid #BAE6FD;
+      border-radius: 10px; padding: 16px 20px;
+      margin-top: 20px;
+    }
+    .note-box .nb-icon { font-size: 1.3em; flex-shrink: 0; }
+    .note-box p { font-size: 0.86em; color: #0369A1; line-height: 1.55; }
+
+    /* ===== FAQ ===== */
+    .faq-item {
+      border-bottom: 1px solid #F1F5F9; padding: 16px 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-weight: 700; font-size: 0.95em; color: #0F172A; margin-bottom: 8px; display: flex; gap: 10px; }
+    .faq-q::before { content: 'Q'; color: #3B82F6; font-size: 1.1em; flex-shrink: 0; }
+    .faq-a { font-size: 0.88em; color: #475569; line-height: 1.6; padding-left: 22px; }
+
+    /* ===== フッター ===== */
+    .page-footer {
+      text-align: center; padding: 32px;
+      color: #94A3B8; font-size: 0.82em;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 768px) {
+      .page-header { padding: 40px 20px 30px; }
+      .page-header h1 { font-size: 1.7em; }
+      .wrapper { padding: 24px 16px 60px; }
+      .section { padding: 24px 20px; }
+      .equal-grid-2, .equal-grid-3, .equal-grid-4 { grid-template-columns: 1fr; }
+      .conclusion-points { grid-template-columns: 1fr; }
+      .header-meta { flex-direction: column; align-items: center; gap: 10px; }
+      .af-steps { flex-direction: column; }
+      .af-arrow { transform: rotate(90deg); }
+      .integration-banner { flex-direction: column; }
+      .arch-middle { flex-direction: column; }
+    }
+  
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }
+
+    </style>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#DNS-Firewallは電話帳の番号を照合する門番">DNS Firewallは「電話帳の番号を照合する門番」</a></li>
+            <li class="toc-h3"><a href="#会社のPCが乗っ取られた場面">会社のPCが乗っ取られた場面</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">🏠 ホーム</a>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-item">コンテンツ配信・DNS</span>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-item">Route53 &amp; DNS管理</span>
+<span class="breadcrumb-separator">›</span>
+<span class="breadcrumb-current">Aws Route53 Dns Firewall Botnet Guide</span>
+</nav>
+<!-- ===== ページヘッダー ===== -->
+<header class="page-header">
+<div class="service-badge">🛡️ AWS Security  |  Route 53 Resolver DNS Firewall</div>
+<h1>EC2を守る<span class="accent">DNS防御壁</span></h1>
+<p class="subtitle">ボットネットのコマンド＆コントロール通信を、DNSレイヤーで遮断する</p>
+<div class="header-meta">
+<div class="meta-item">📚 AWS初心者向け</div>
+<div class="meta-item">🎯 Security &amp; Networking</div>
+<div class="meta-item">⏱ 読了目安 10〜15分</div>
+</div>
+</header>
+<div class="wrapper">
+<!-- ===== 結論ファースト ===== -->
+<div class="conclusion-box">
+<span class="label">💡 結論ファースト</span>
+<h2 id="DNS-Firewallは電話帳の番号を照合する門番">DNS Firewallは<span class="hl">「電話帳の番号を照合する門番」</span></h2>
+<p style="color:#94A3B8; font-size:0.95em; line-height:1.65;">
+      マルウェアに感染したEC2インスタンスは、外部の犯罪者サーバー（C&amp;Cサーバー）に
+      「電話」をかけようとします。その際、必ずDNSで「電話番号（IPアドレス）」を調べます。
+      Route 53 Resolver DNS Firewallは、<strong style="color:#FBB040;">その「電話帳検索」の段階で悪意あるドメインを検知・遮断</strong>します。
+    </p>
+<div class="conclusion-points">
+<div class="conclusion-point">
+<span class="cp-icon">🚫</span>
+<div class="cp-text"><strong>DNS解決を遮断</strong>悪意あるドメインへのDNSクエリをVPC内でブロックし、C&amp;Cサーバーへの到達を防ぐ</div>
+</div>
+<div class="conclusion-point">
+<span class="cp-icon">📋</span>
+<div class="cp-text"><strong>マネージドリストで即戦力</strong>AWSが管理する最新の脅威インテリジェンスドメインリストをすぐ利用可能</div>
+</div>
+<div class="conclusion-point">
+<span class="cp-icon">📊</span>
+<div class="cp-text"><strong>全DNSクエリをロギング</strong>BLOCK・ALERT・OVERRIDEの3アクションで柔軟に対応し、CloudWatchに記録</div>
+</div>
+<div class="conclusion-point">
+<span class="cp-icon">🔗</span>
+<div class="cp-text"><strong>GuardDutyと連携</strong>GuardDutyが検出した脅威をDNS Firewallに自動フィードし多層防御を実現</div>
+</div>
+</div>
+</div>
+<!-- ===== セクション1: たとえ話で理解 ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#FEF9C3;">📖</div>
+      まず「たとえ話」で理解する
+    </div>
+<div class="equal-grid-2" style="margin-bottom:24px;">
+<div class="analogy-card real">
+<span class="ac-label">🏢 現実世界のたとえ</span>
+<h3 id="会社のPCが乗っ取られた場面">会社のPCが乗っ取られた場面</h3>
+<p>
+          社員の一人が怪しいメールを開き、PCがマルウェアに感染。
+          そのマルウェアは、犯罪組織の「指令センター（C&amp;Cサーバー）」に連絡を取ろうとします。<br/><br/>
+          でも連絡するには、まず指令センターの<strong>住所（IPアドレス）</strong>を
+          <strong>電話帳（DNS）</strong>で調べなければなりません。<br/><br/>
+          ここで、会社の電話帳係が「その宛先は危険リストにある！」と気づいて
+          調べることを拒否すれば、犯罪組織に繋がることはありません。
+        </p>
+</div>
+<div class="analogy-card aws">
+<span class="ac-label">☁️ AWSの世界</span>
+<h4>EC2インスタンスとDNS Firewall</h4>
+<p>
+          EC2インスタンスがマルウェアに感染すると、外部のC&amp;Cサーバーへ
+          通信しようとします。その際、必ず<strong>Route 53 Resolverを通じてDNS解決</strong>を行います。<br/><br/>
+<strong>Route 53 Resolver DNS Firewall</strong>は、この「電話帳係」の役割を担い、
+          悪意あるドメインへのDNSクエリを検知・ブロックします。<br/><br/>
+          通信の一番最初のステップで遮断するため、
+          ファイアウォールやIDSよりも「前段」での防御が可能です。
+        </p>
+</div>
+</div>
+<div class="note-box">
+<span class="nb-icon">💡</span>
+<p><strong>なぜDNSレイヤーが重要なのか？</strong>
+        インターネット通信のほぼ100%はDNS名前解決から始まります。IPアドレスを直打ちして通信するマルウェアは少数派です。
+        つまりDNSを制御することは、<strong>通信の「出口」ではなく「始まり」を制御すること</strong>—最も効率的な防御ポイントです。</p>
+</div>
+</div>
+<!-- ===== セクション2: 攻撃の仕組み ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#FEE2E2;">⚠️</div>
+      ボットネットC&amp;C通信の仕組みと脅威
+    </div>
+<div class="attack-flow" style="margin-bottom:24px;">
+<div class="af-title">🔴 DNS Firewallなしの場合：攻撃が成立してしまう流れ</div>
+<div class="af-steps">
+<div class="af-step">
+<span class="step-num">1</span>
+<span class="step-icon">📧</span>
+<div class="step-text">マルウェア侵入</div>
+<div class="step-detail">フィッシングメールや脆弱性を通じてEC2に感染</div>
+</div>
+<div class="af-arrow">▶</div>
+<div class="af-step">
+<span class="step-num">2</span>
+<span class="step-icon">🔍</span>
+<div class="step-text">DNS解決要求</div>
+<div class="step-detail">C&amp;Cドメイン<br/>evil.badactor.com<br/>を名前解決</div>
+</div>
+<div class="af-arrow">▶</div>
+<div class="af-step">
+<span class="step-num">3</span>
+<span class="step-icon">📞</span>
+<div class="step-text">IPアドレス取得</div>
+<div class="step-detail">203.0.113.99<br/>などのIPを取得し接続試行</div>
+</div>
+<div class="af-arrow">▶</div>
+<div class="af-step">
+<span class="step-num">4</span>
+<span class="step-icon">🤝</span>
+<div class="step-text">C&amp;Cサーバー接続</div>
+<div class="step-detail">攻撃者の指令サーバーと通信確立</div>
+</div>
+<div class="af-arrow">▶</div>
+<div class="af-step">
+<span class="step-num">5</span>
+<span class="step-icon">💀</span>
+<div class="step-text">被害発生</div>
+<div class="step-detail">データ窃取・ランサムウェア・DDoS参加 etc.</div>
+</div>
+</div>
+</div>
+<!-- 3列均等：被害の種類 -->
+<div class="equal-grid-3">
+<div class="comp-card" style="background:#FEF2F2;border-color:#FCA5A5;">
+<span class="cc-icon">🔐</span>
+<h4 style="color:#B91C1C;">データ窃取・漏洩</h4>
+<p style="color:#6B7280;">機密データ・認証情報・AWS認証キーがC&amp;Cサーバーに送信される。インサイダー脅威と見分けがつかないケースも。</p>
+</div>
+<div class="comp-card" style="background:#FEF2F2;border-color:#FCA5A5;">
+<span class="cc-icon">💰</span>
+<h4 style="color:#B91C1C;">ランサムウェア</h4>
+<p style="color:#6B7280;">C&amp;C経由で暗号化キーを受信。S3・RDSなどAWSリソース全体を暗号化される可能性がある。</p>
+</div>
+<div class="comp-card" style="background:#FEF2F2;border-color:#FCA5A5;">
+<span class="cc-icon">🤖</span>
+<h4 style="color:#B91C1C;">ボットネット参加・DDoS</h4>
+<p style="color:#6B7280;">感染EC2が踏み台になり、他サービスへのDDoS攻撃の加害者になる。AWSポリシー違反にもなりうる。</p>
+</div>
+</div>
+</div>
+<!-- ===== セクション3: DNS Firewallの仕組み ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#DBEAFE;">🛡️</div>
+      Route 53 Resolver DNS Firewallの仕組み
+    </div>
+<div class="protect-flow" style="margin-bottom:28px;">
+<div class="pf-title">🟢 DNS Firewallありの場合：C&amp;C通信を根本から遮断</div>
+<div class="af-steps" style="padding-top:18px;">
+<div class="af-step" style="border-color:#BBF7D0; background:#fff;">
+<span class="step-num" style="background:#16A34A; box-shadow:0 2px 6px rgba(22,163,74,0.4);">1</span>
+<span class="step-icon">🦠</span>
+<div class="step-text">マルウェア侵入</div>
+<div class="step-detail">EC2がマルウェアに感染（感染自体は防げない）</div>
+</div>
+<div class="af-arrow" style="color:#16A34A; padding-top:14px;">▶</div>
+<div class="af-step" style="border-color:#BBF7D0; background:#fff;">
+<span class="step-num" style="background:#16A34A; box-shadow:0 2px 6px rgba(22,163,74,0.4);">2</span>
+<span class="step-icon">🔍</span>
+<div class="step-text">DNS解決要求</div>
+<div class="step-detail">C&amp;Cドメインをルートリゾルバーに問い合わせ</div>
+</div>
+<div class="af-arrow" style="color:#16A34A; padding-top:14px;">▶</div>
+<div class="af-step" style="border-color:#16A34A; background:#F0FDF4;">
+<span class="step-num" style="background:#16A34A; box-shadow:0 2px 6px rgba(22,163,74,0.4);">3</span>
+<span class="step-icon">🛡️</span>
+<div class="step-text" style="color:#15803D;">DNS Firewallが検知！</div>
+<div class="step-detail">ドメインリストと照合。BLOCK/ALERT/OVERRIDEを実行</div>
+</div>
+<div class="af-arrow" style="color:#16A34A; padding-top:14px;">▶</div>
+<div class="af-step" style="border-color:#BBF7D0; background:#fff;">
+<span class="step-num" style="background:#16A34A; box-shadow:0 2px 6px rgba(22,163,74,0.4);">4</span>
+<span class="step-icon">📊</span>
+<div class="step-text">ログ記録</div>
+<div class="step-detail">CloudWatch / S3 にDNSクエリログを送信</div>
+</div>
+<div class="af-arrow" style="color:#16A34A; padding-top:14px;">▶</div>
+<div class="af-step" style="border-color:#BBF7D0; background:#fff;">
+<span class="step-num" style="background:#16A34A; box-shadow:0 2px 6px rgba(22,163,74,0.4);">5</span>
+<span class="step-icon">✅</span>
+<div class="step-text">被害を防止</div>
+<div class="step-detail">IPアドレスが返らずC&amp;C通信が確立できない</div>
+</div>
+</div>
+</div>
+<!-- アーキテクチャ図 -->
+<div class="arch-diagram">
+<p style="font-weight:700; font-size:0.9em; color:#374151; margin-bottom:20px; text-align:center;">
+        🏗️ Route 53 Resolver DNS Firewall — アーキテクチャ全体像
+      </p>
+<div class="arch-vpc">
+<div class="arch-subnet">
+<div class="arch-ec2">
+<div class="ec2-icon">🖥️</div>
+<div class="ec2-label">EC2 (感染)</div>
+</div>
+<div style="font-size:1.4em;color:#94A3B8;">→</div>
+<div class="arch-ec2">
+<div class="ec2-icon">🖥️</div>
+<div class="ec2-label">EC2 (正常)</div>
+</div>
+<div style="font-size:1.4em;color:#94A3B8;">→</div>
+<div class="arch-ec2">
+<div class="ec2-icon" style="background:#F0FDF4;border-color:#86EFAC;">🔎</div>
+<div class="ec2-label" style="color:#15803D;">Route 53<br/>Resolver</div>
+</div>
+</div>
+</div>
+<div class="arch-middle">
+<div style="flex:1; text-align:center; color:#94A3B8; font-size:0.85em;">
+          ⬇️ DNSクエリ
+        </div>
+<div class="arch-firewall">
+<span class="fw-icon">🛡️</span>
+<h4>DNS Firewall</h4>
+<p>ルールグループ評価<br/>BLOCK / ALERT / OVERRIDE</p>
+</div>
+<div style="flex:1; text-align:center; color:#94A3B8; font-size:0.85em;">
+          ⬇️ 結果を返す
+        </div>
+</div>
+<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+<div class="arch-internet" style="flex:1; min-width:200px;">
+<div class="arch-server good">
+<span class="srv-icon">✅</span>
+<div class="srv-label">正規サーバー<br/>(許可)</div>
+</div>
+<div style="color:#16A34A;font-size:0.8em;font-weight:600;">DNSレスポンス返却</div>
+<div class="arch-server bad">
+<span class="srv-icon">☠️</span>
+<div class="srv-label">C&amp;Cサーバー<br/>(遮断 / ブロック)</div>
+</div>
+<div style="color:#DC2626;font-size:0.8em;font-weight:600;">NXDOMAINまたは代替IP</div>
+</div>
+<div class="arch-log" style="flex:1; min-width:200px;">
+<h5>📋 ログ出力先（全クエリ記録）</h5>
+<div class="log-items">
+<div class="log-item">📊 CloudWatch Logs</div>
+<div class="log-item">🗄️ S3バケット</div>
+<div class="log-item">🔥 Kinesis Firehose</div>
+</div>
+<p style="font-size:0.78em;color:#92400E;margin-top:10px;">
+            ✅ SecurityHubへの自動転送も可能
+          </p>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== セクション4: 主要コンポーネント（4列均等） ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#E9D5FF;">🧩</div>
+      主要コンポーネント（4つの構成要素）
+    </div>
+<div class="equal-grid-4">
+<div class="comp-card blue">
+<span class="cc-icon">📁</span>
+<h4>ルールグループ<br/>(Rule Group)</h4>
+<p>ルールをまとめた入れ物。VPCに紐付けることで効力を発揮。1つのVPCに複数のグループを割り当て可能。優先度順に評価。</p>
+</div>
+<div class="comp-card purple">
+<span class="cc-icon">📝</span>
+<h4>ファイアウォールルール<br/>(Firewall Rule)</h4>
+<p>「このドメインリストに一致したら、このアクションを実行」という1件のルール定義。ドメインリストとアクションをセットで指定。</p>
+</div>
+<div class="comp-card green">
+<span class="cc-icon">📋</span>
+<h4>ドメインリスト<br/>(Domain List)</h4>
+<p>照合するドメイン名の一覧。AWSマネージドリストと自分で作るカスタムリストの2種類がある。ワイルドカード(*)も指定可能。</p>
+</div>
+<div class="comp-card orange">
+<span class="cc-icon">⚡</span>
+<h4>アクション<br/>(Action)</h4>
+<p>一致したドメインへの処理。BLOCK（遮断）・ALERT（通知のみ）・OVERRIDE（偽のIPを返す）の3種類から選択。</p>
+</div>
+</div>
+</div>
+<!-- ===== セクション5: アクション詳細（3列均等） ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#FEE2E2;">⚡</div>
+      3つのアクション — 何をするか決める
+    </div>
+<div class="equal-grid-3">
+<div class="action-card block">
+<span class="ac2-icon">🚫</span>
+<h4>ブロック</h4>
+<span class="ac2-code">BLOCK</span>
+<p>DNSクエリへの応答を返さず、EC2インスタンスがIPアドレスを取得できないようにする。通信自体を根本から防ぐ最強の対策。</p>
+<div class="ac2-example">
+          「悪い番号へは繋ぎません」と電話帳係が拒否するイメージ
+        </div>
+</div>
+<div class="action-card alert">
+<span class="ac2-icon">🔔</span>
+<h4>アラート（監視モード）</h4>
+<span class="ac2-code">ALERT</span>
+<p>DNSクエリには応答する（通信は許可）が、CloudWatchにアラートログを記録する。まず「様子見」したい段階に有効。</p>
+<div class="ac2-example">
+          「電話は繋ぐが、その番号に電話したことを上司に報告する」
+        </div>
+</div>
+<div class="action-card override">
+<span class="ac2-icon">🎭</span>
+<h4>オーバーライド</h4>
+<span class="ac2-code">OVERRIDE</span>
+<p>悪意あるドメインへのクエリに対して、<strong>自分で用意した偽のIPアドレス</strong>を返す。ハニーポットへの誘導などに使用。</p>
+<div class="ac2-example">
+          「犯罪組織の住所の代わりに警察署の住所を教える」
+        </div>
+</div>
+</div>
+<div class="note-box" style="margin-top:20px;">
+<span class="nb-icon">🔍</span>
+<p><strong>導入フェーズのベストプラクティス：</strong>最初はALERTモードで数週間運用し、正規の業務トラフィックに影響が出ないかを確認。問題なければBLOCKへ移行する「フェーズドロールアウト」が推奨されます。</p>
+</div>
+</div>
+<!-- ===== セクション6: ドメインリスト比較 ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#F5F3FF;">📋</div>
+      ドメインリストの2種類
+    </div>
+<div class="equal-grid-2">
+<div class="domain-list-card managed">
+<span class="dl-badge">🤖 自動更新・管理不要</span>
+<h4>🛡️ AWSマネージドドメインリスト</h4>
+<p style="font-size:0.85em;color:#475569;margin-bottom:12px;">AWSが脅威インテリジェンスに基づき継続的に更新するリスト。自分でメンテナンスする必要なし。</p>
+<ul>
+<li><span>🦠</span>マルウェアドメインリスト（C&amp;Cサーバー等）</li>
+<li><span>🎣</span>フィッシングサイトリスト</li>
+<li><span>📡</span>スパムボットネットリスト</li>
+<li><span>💊</span>仮想通貨マイニングリスト</li>
+<li><span>✅</span>常に最新の脅威情報を反映（自動更新）</li>
+<li><span>📌</span>追加料金なし（DNS Firewallの利用料内）</li>
+</ul>
+</div>
+<div class="domain-list-card custom">
+<span class="dl-badge">✏️ 自分で管理・柔軟対応</span>
+<h4>🏢 カスタムドメインリスト</h4>
+<p style="font-size:0.85em;color:#475569;margin-bottom:12px;">自社のポリシーや特定の業務要件に合わせて作成するリスト。許可リスト・拒否リストの両方に使用可。</p>
+<ul>
+<li><span>🚫</span>社内ポリシーで禁止するサービス（SNS等）</li>
+<li><span>✅</span>ホワイトリスト（信頼するドメインを明示）</li>
+<li><span>🎯</span>競合他社ドメインへのアクセス制限</li>
+<li><span>🔧</span>独自テナントの社内ドメインの管理</li>
+<li><span>🌟</span>ワイルドカード指定（*.malicious.com）対応</li>
+<li><span>📤</span>テキストファイル・CSV形式でインポート可能</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- ===== セクション7: 実装ステップ ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#D1FAE5;">🚀</div>
+      実装ステップ（AWSコンソール操作）
+    </div>
+<div class="impl-steps">
+<div class="impl-step">
+<div class="step-num-wrap">1</div>
+<div>
+<h4>Route 53コンソール → 「DNS Firewall」を開く</h4>
+<p>AWSコンソールから「Route 53」を開き、左サイドバーの「DNS Firewall」を選択。リゾルバーを通過するすべてのVPCのDNSクエリを制御できます。</p>
+<div class="code-chip">🖱️ Route 53 → Resolver → DNS Firewall</div>
+</div>
+</div>
+<div class="impl-step">
+<div class="step-num-wrap">2</div>
+<div>
+<h4>ルールグループを作成する</h4>
+<p>「ルールグループの作成」をクリック。グループ名（例：<code>production-botnet-protection</code>）とリージョンを指定。ルールグループはVPCに関連付けることで動作します。</p>
+<div class="code-chip">📝 名前 → リージョン選択 → 作成</div>
+</div>
+</div>
+<div class="impl-step">
+<div class="step-num-wrap">3</div>
+<div>
+<h4>ドメインリストを追加・選択する</h4>
+<p>AWSマネージドリスト（ボットネット・マルウェア等）をドメインリストとして追加。または「新しいドメインリストを作成」からカスタムリストを作成してドメインを登録。</p>
+<div class="code-chip">🛡️ AWSマネージドリスト → ボットネットコマンド＆コントロールを選択</div>
+</div>
+</div>
+<div class="impl-step">
+<div class="step-num-wrap">4</div>
+<div>
+<h4>ルールを作成しアクションを設定する</h4>
+<p>ドメインリストを選択後、アクションを設定。初期はALERT（監視）から始めることを推奨。本番適用後はBLOCKに変更する。優先度は数字が小さいほど先に評価されます。</p>
+<div class="code-chip">⚡ アクション：ALERT（最初）→ BLOCK（本番）</div>
+</div>
+</div>
+<div class="impl-step">
+<div class="step-num-wrap">5</div>
+<div>
+<h4>VPCにルールグループを関連付ける</h4>
+<p>作成したルールグループを保護したいVPCに「関連付け（Associate）」することで有効になります。複数のVPCへの適用も可能で、マルチアカウント環境はAWS Firewallマネージャーと組み合わせると効率的です。</p>
+<div class="code-chip">🌐 VPC関連付け → 適用完了</div>
+</div>
+</div>
+<div class="impl-step">
+<div class="step-num-wrap">6</div>
+<div>
+<h4>DNS Queryロギングを有効化する</h4>
+<p>Route 53 Resolverの「クエリログ記録」を有効化。CloudWatch Logsへの転送を設定することで、どのEC2インスタンスがどのドメインに問い合わせたか全履歴を記録できます。</p>
+<div class="code-chip">📊 Resolver → クエリログ記録 → CloudWatch転送設定</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== セクション8: ベストプラクティス（2列均等） ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#FEF9C3;">⭐</div>
+      ベストプラクティス
+    </div>
+<div class="equal-grid-2">
+<div class="bp-card bp-blue">
+<h4>🔵 フェーズドロールアウト（段階的適用）</h4>
+<p>最初はALERTモードで1〜2週間運用し、正規業務トラフィックへの影響をCloudWatchで確認。問題がなければBLOCKモードに切り替える。急いでBLOCKにすると正規通信が止まるリスクあり。</p>
+</div>
+<div class="bp-card bp-green">
+<h4>🟢 AWSマネージドリストを最優先で利用</h4>
+<p>自前でC&amp;Cドメインリストを作成・維持するのは困難。AWSがリアルタイムで更新するマネージドリスト（ボットネット・マルウェア）を優先的に使用し、その上にカスタムルールを重ねる構成が効率的。</p>
+</div>
+<div class="bp-card bp-orange">
+<h4>🟡 GuardDutyと組み合わせて多層防御</h4>
+<p>GuardDutyが検出した悪意あるドメインを、Lambda経由でDNS FirewallのカスタムリストにAPIで追加する自動化が有効。Detection（検知）とPrevention（防止）を自動連携させる。</p>
+</div>
+<div class="bp-card bp-red">
+<h4>🔴 AWS Firewall Managerでマルチアカウント一元管理</h4>
+<p>複数のAWSアカウント・複数VPCがある環境では、Firewall ManagerとOrganizationsを使い、全アカウントに同一のDNS Firewallポリシーを一括適用する。個別管理によるポリシーの抜け漏れを防止。</p>
+</div>
+</div>
+<!-- GuardDuty連携バナー -->
+<div class="integration-banner">
+<span class="ib-icon">🤝</span>
+<div>
+<h4>GuardDuty × DNS Firewall 自動連携アーキテクチャ</h4>
+<p>GuardDutyが脅威を検出したら、自動的にDNS Firewallに反映させる仕組みで防御力を最大化できます。</p>
+<div class="ib-flow">
+<span class="ib-chip">🔍 GuardDuty<br/>脅威検出</span>
+<span class="ib-arrow">→</span>
+<span class="ib-chip">📢 EventBridge<br/>イベント発火</span>
+<span class="ib-arrow">→</span>
+<span class="ib-chip">⚡ Lambda<br/>自動処理</span>
+<span class="ib-arrow">→</span>
+<span class="ib-chip">📋 DNS Firewall<br/>カスタムリスト更新</span>
+<span class="ib-arrow">→</span>
+<span class="ib-chip">🚫 次回から<br/>自動ブロック</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== セクション9: FAQ ===== -->
+<div class="section">
+<div class="section-title">
+<div class="icon-wrap" style="background:#E0F2FE;">❓</div>
+      よくある質問（FAQ）
+    </div>
+<div class="faq-item">
+<div class="faq-q">DNS FirewallはEC2のマルウェア感染を防いでくれるの？</div>
+<div class="faq-a">
+        いいえ、感染自体は防ぎません。DNS Firewallは「感染後のC&amp;C通信確立」を防ぐサービスです。感染を防ぐには、AWS InspectorによるEC2脆弱性スキャンや、Security Groupによるアクセス制限と組み合わせた多層防御が必要です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">通常のALB・CloudFrontを通じたWebトラフィックにも適用される？</div>
+<div class="faq-a">
+        DNS Firewallが対象とするのは、VPC内のRoute 53 Resolverを通じたDNSクエリです。EC2インスタンス自身が発生させるDNSクエリが対象。ALBやCloudFront経由の受信トラフィックを制御したい場合はAWS WAFを使います。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">DNS Firewallを有効化すると、今の業務システムが止まることはある？</div>
+<div class="faq-a">
+        BLOCKモードを使用する場合、正規業務で使うドメインが誤ってブロックリストに含まれると影響が出ます。そのため、まずALERTモードで実際のDNSクエリをCloudWatch Logsで確認し、問題ないことを確認してからBLOCKに切り替えることを強く推奨します。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">マネージドリストにないゼロデイC&amp;Cドメインはどうする？</div>
+<div class="faq-a">
+        GuardDutyのDNS分析機能を有効化することで、既知リストにないドメインでも行動分析で異常を検出できます。GuardDutyが検出した新たな脅威をLambda経由でカスタムドメインリストに自動追加する仕組みを構築するのが推奨アーキテクチャです。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-q">Lambda・ECS・RDSなど他のサービスも保護対象になる？</div>
+<div class="faq-a">
+        はい。VPC内でRoute 53 Resolverを通じてDNSクエリを発生させるすべてのリソース（EC2・Lambda・ECS・RDS・他のVPCサービス）がDNS Firewallの保護対象になります。VPC単位での適用なので、VPC内のすべてのリソースに一括適用できます。
+      </div>
+</div>
+</div>
+</div>
+<footer class="page-footer">
+<p>🛡️ Route 53 Resolver DNS Firewall — AWS初心者向け学習ガイド</p>
+<p style="margin-top:6px;">AWS Security | Networking | Threat Protection</p>
+</footer>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="route53-dnssec-100.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">19</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">19</span>
+    </div>
+    <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

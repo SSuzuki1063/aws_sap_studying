@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   EC2 Auto Scaling SNS通知完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  <!-- ページ固有CSSファイル -->
+  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/ec2-autoscaling-notifications-guide.css" rel="stylesheet"/>
+  
+  
+
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#️-レストランの人員管理で例えると超わかりやすい!">🍽️ レストランの人員管理で例えると超わかりやすい!</a></li>
+            <li class="toc-h2"><a href="#通知の流れ---どうやって届く？">📊 通知の流れ - どうやって届く？</a></li>
+            <li class="toc-h2"><a href="#実際のシナリオで理解しよう">🎬 実際のシナリオで理解しよう</a></li>
+            <li class="toc-h2"><a href="#⚖️-成功通知-vs-エラー通知">⚖️ 成功通知 vs エラー通知</a></li>
+            <li class="toc-h3"><a href="#✅-成功通知良いニュース">✅ 成功通知（良いニュース）</a></li>
+            <li class="toc-h3"><a href="#❌-エラー通知要対応">❌ エラー通知（要対応）</a></li>
+            <li class="toc-h3"><a href="#実際の活用例">💼 実際の活用例</a></li>
+            <li class="toc-h2"><a href="#⚙️-設定方法">⚙️ 設定方法</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+            <li class="toc-h3"><a href="#️-レストランの人員管理-=-Auto-Scaling通知">🍽️ レストランの人員管理 = Auto Scaling通知</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     コンピュート・アプリケーション
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     EC2 &amp; インスタンス管理
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Ec2 Autoscaling Notifications Guide
+    </span>
+</nav>
+<div class="header">
+<h1>
+     🔔 EC2 Auto Scaling SNS通知
+    </h1>
+
+<p>
+     レストランの人員管理で理解する！4つの通知イベント完全ガイド
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="️-レストランの人員管理で例えると超わかりやすい!">
+      🍽️ レストランの人員管理で例えると超わかりやすい!
+     </h2>
+<p class="intro-text">
+<strong>
+       Auto Scaling = レストランの自動人員調整システム
+      </strong>
+<br/>
+<br/>
+      お客様が増えたらスタッフを増やし、減ったらスタッフを減らす。
+      <br/>
+      このとき、マネージャー（あなた）に
+      <strong>
+       リアルタイムで通知
+      </strong>
+      が届きます。
+      <br/>
+<br/>
+<strong>
+       4つの通知イベント
+      </strong>
+      で、スタッフの出勤・退勤状況を完全把握！
+      <br/>
+      成功も失敗も、すべて通知されるので安心です✨
+     </p>
+</div>
+<!-- 4つの通知カード -->
+<div class="notification-grid">
+<!-- LAUNCH -->
+<div class="notification-card card-launch">
+<div class="card-icon">
+       ✅
+      </div>
+<div class="card-title">
+       INSTANCE_LAUNCH
+      </div>
+<div class="card-event-name">
+       autoscaling:EC2_INSTANCE_LAUNCH
+      </div>
+<div class="card-subtitle">
+       インスタンスが正常に起動した
+      </div>
+<div class="analogy-box">
+<div class="analogy-title">
+<span>
+         🍽️
+        </span>
+<span>
+         レストランのたとえ
+        </span>
+</div>
+<div class="analogy-content">
+<strong>
+         「新しいスタッフが無事に出勤しました！」
+        </strong>
+<br/>
+<br/>
+        お客様が増えてきたので、予備のスタッフを呼び出し。
+        <br/>
+        スタッフは無事に到着し、制服に着替えて、準備完了！
+        <br/>
+        すぐにサービスを開始できる状態になりました。
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        📋 いつ通知される？
+       </div>
+<div class="info-content">
+        • EC2インスタンスが正常に起動
+        <br/>
+        • ヘルスチェックに合格
+        <br/>
+        • Auto Scaling グループに追加完了
+        <br/>
+        • トラフィックを受け取る準備完了
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        💡 この通知でできること
+       </div>
+<div class="info-content">
+        • 新インスタンスのIPアドレスを記録
+        <br/>
+        • モニタリングツールに自動登録
+        <br/>
+        • Slackに「スケールアウト成功」を通知
+        <br/>
+        • ログ管理システムへの登録
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        🎯 重要ポイント
+       </div>
+<div class="info-content">
+<strong>
+         良いニュース！
+        </strong>
+        キャパシティが増加しました。
+        <br/>
+        システムが正常に拡張されたことを確認できます。
+       </div>
+</div>
+</div>
+<!-- LAUNCH_ERROR -->
+<div class="notification-card card-launch-error">
+<div class="card-icon">
+       ❌
+      </div>
+<div class="card-title">
+       INSTANCE_LAUNCH_ERROR
+      </div>
+<div class="card-event-name">
+       autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+      </div>
+<div class="card-subtitle">
+       インスタンスの起動に失敗した
+      </div>
+<div class="analogy-box">
+<div class="analogy-title">
+<span>
+         🍽️
+        </span>
+<span>
+         レストランのたとえ
+        </span>
+</div>
+<div class="analogy-content">
+<strong>
+         「スタッフが出勤できませんでした！」
+        </strong>
+<br/>
+<br/>
+        お客様が増えたので予備スタッフを呼んだけど...
+        <br/>
+        • 体調不良で来れなかった（インスタンス起動失敗）
+        <br/>
+        • 制服が見つからない（AMIの問題）
+        <br/>
+        • 交通手段がない（ネットワークエラー）
+        <br/>
+<br/>
+<strong>
+         ⚠️ 人手不足のまま！緊急対応が必要！
+        </strong>
+</div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        📋 いつ通知される？
+       </div>
+<div class="info-content">
+        • EC2インスタンスの起動に失敗
+        <br/>
+        • AMIが見つからない/削除されている
+        <br/>
+        • インスタンスタイプが利用不可
+        <br/>
+        • サブネットに空きIPがない
+        <br/>
+        • IAMロールの権限不足
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        💡 この通知でできること
+       </div>
+<div class="info-content">
+        • 緊急アラートをPagerDutyに送信
+        <br/>
+        • オンコールエンジニアに即座に通知
+        <br/>
+        • 自動でインシデントチケット作成
+        <br/>
+        • ロールバックの検討開始
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        🚨 重要ポイント
+       </div>
+<div class="info-content">
+<strong>
+         緊急事態！
+        </strong>
+        即座の対応が必要です。
+        <br/>
+        キャパシティが予定より少ない状態が続きます。
+        <br/>
+        根本原因を特定し、設定を修正しましょう。
+       </div>
+</div>
+</div>
+<!-- TERMINATE -->
+<div class="notification-card card-terminate">
+<div class="card-icon">
+       👋
+      </div>
+<div class="card-title">
+       INSTANCE_TERMINATE
+      </div>
+<div class="card-event-name">
+       autoscaling:EC2_INSTANCE_TERMINATE
+      </div>
+<div class="card-subtitle">
+       インスタンスが正常に終了した
+      </div>
+<div class="analogy-box">
+<div class="analogy-title">
+<span>
+         🍽️
+        </span>
+<span>
+         レストランのたとえ
+        </span>
+</div>
+<div class="analogy-content">
+<strong>
+         「スタッフが無事に退勤しました！」
+        </strong>
+<br/>
+<br/>
+        お客様が減ってきたので、余剰スタッフに退勤指示。
+        <br/>
+        スタッフは引継ぎを完了し、制服を返却して、
+        <br/>
+        きちんと挨拶してから帰宅しました。
+        <br/>
+<br/>
+        次のシフトに備えて、しっかり休んでもらいます。
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        📋 いつ通知される？
+       </div>
+<div class="info-content">
+        • スケールイン（縮小）が実行された
+        <br/>
+        • インスタンスが正常にシャットダウン
+        <br/>
+        • ELBから正常に切り離された
+        <br/>
+        • リソースが正常に解放された
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        💡 この通知でできること
+       </div>
+<div class="info-content">
+        • モニタリングツールから削除
+        <br/>
+        • ログを永久保存場所にアーカイブ
+        <br/>
+        • コスト削減を確認・記録
+        <br/>
+        • インベントリ管理システムを更新
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        🎯 重要ポイント
+       </div>
+<div class="info-content">
+<strong>
+         正常な動作！
+        </strong>
+        スケールインが成功しました。
+        <br/>
+        不要なリソースが適切に削減され、コスト最適化されています。
+       </div>
+</div>
+</div>
+<!-- TERMINATE_ERROR -->
+<div class="notification-card card-terminate-error">
+<div class="card-icon">
+       ⚠️
+      </div>
+<div class="card-title">
+       INSTANCE_TERMINATE_ERROR
+      </div>
+<div class="card-event-name">
+       autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+      </div>
+<div class="card-subtitle">
+       インスタンスの終了に失敗した
+      </div>
+<div class="analogy-box">
+<div class="analogy-title">
+<span>
+         🍽️
+        </span>
+<span>
+         レストランのたとえ
+        </span>
+</div>
+<div class="analogy-content">
+<strong>
+         「スタッフが退勤できませんでした！」
+        </strong>
+<br/>
+<br/>
+        余剰スタッフに退勤指示を出したけど...
+        <br/>
+        • 重要な作業が終わってない（接続が残っている）
+        <br/>
+        • ロッカーの鍵が開かない（終了保護がON）
+        <br/>
+        • 引継ぎが完了してない（ドレイン中）
+        <br/>
+<br/>
+<strong>
+         ⚠️ 予定より人員が多いまま！コスト増加！
+        </strong>
+</div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        📋 いつ通知される？
+       </div>
+<div class="info-content">
+        • インスタンスの終了保護がON
+        <br/>
+        • ELBからの切り離しに失敗
+        <br/>
+        • スナップショット作成中
+        <br/>
+        • ライフサイクルフックでタイムアウト
+        <br/>
+        • AWS側のサービス障害
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        💡 この通知でできること
+       </div>
+<div class="info-content">
+        • インスタンスの状態を手動確認
+        <br/>
+        • 終了保護の設定を確認
+        <br/>
+        • 強制終了の検討
+        <br/>
+        • コスト超過アラートを発行
+       </div>
+</div>
+<div class="info-section">
+<div class="info-title">
+        🚨 重要ポイント
+       </div>
+<div class="info-content">
+<strong>
+         要注意！
+        </strong>
+        不要なリソースが残り続けます。
+        <br/>
+        予定外のコストが発生する可能性があります。
+        <br/>
+        手動での介入が必要な場合もあります。
+       </div>
+</div>
+</div>
+</div>
+<!-- 通知フロー図 -->
+<div class="notification-flow">
+<h2 class="flow-title" id="通知の流れ---どうやって届く？">
+      📊 通知の流れ - どうやって届く？
+     </h2>
+<div class="flow-diagram">
+<div class="flow-box">
+<div class="flow-icon">
+        ⚙️
+       </div>
+<div class="flow-label">
+        Auto Scaling
+       </div>
+<div style="color: #64748b; font-size: 0.9em;">
+        イベント発生
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-box">
+<div class="flow-icon">
+        📢
+       </div>
+<div class="flow-label">
+        Amazon SNS
+       </div>
+<div style="color: #64748b; font-size: 0.9em;">
+        トピックに配信
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-box">
+<div class="flow-icon">
+        📧
+       </div>
+<div class="flow-label">
+        サブスクライバー
+       </div>
+<div style="color: #64748b; font-size: 0.9em;">
+        Email/Lambda/SQS
+       </div>
+</div>
+<div class="flow-arrow">
+       →
+      </div>
+<div class="flow-box">
+<div class="flow-icon">
+        👤
+       </div>
+<div class="flow-label">
+        あなた
+       </div>
+<div style="color: #64748b; font-size: 0.9em;">
+        通知を受信
+       </div>
+</div>
+</div>
+</div>
+<!-- シナリオ -->
+<div class="timeline-section">
+<h2 class="timeline-title" id="実際のシナリオで理解しよう">
+      🎬 実際のシナリオで理解しよう
+     </h2>
+<div class="scenario">
+<div class="scenario-title">
+       📈 シナリオ1: ランチタイムの急な混雑
+      </div>
+<div class="scenario-steps">
+<div class="step">
+<div class="step-number">
+         1
+        </div>
+<div class="step-content">
+<div class="step-title">
+          🍽️ 午前11時: お客様が急増
+         </div>
+<div class="step-desc">
+          Webサイトへのアクセスが急増。CPU使用率が70%を超える。
+          <br/>
+<strong>
+           レストラン:
+          </strong>
+          ランチタイムでお客様が殺到！
+         </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+         2
+        </div>
+<div class="step-content">
+<div class="step-title">
+          ⚙️ Auto Scalingが起動
+         </div>
+<div class="step-desc">
+          Auto Scalingが負荷を検知し、新しいインスタンスを2台起動することを決定。
+          <br/>
+<strong>
+           レストラン:
+          </strong>
+          マネージャーが「スタッフ2名を追加で呼んで！」
+         </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+         3
+        </div>
+<div class="step-content">
+<div class="step-title">
+          ✅ INSTANCE_LAUNCH 通知
+         </div>
+<div class="step-desc">
+          1台目が正常に起動！SNS経由でメール受信。
+          <br/>
+<strong>
+           「i-0abc123が起動しました。ELBに追加されました」
+          </strong>
+<br/>
+<strong>
+           レストラン:
+          </strong>
+          「太郎さんが到着！制服に着替えてサービス開始！」
+         </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+         4
+        </div>
+<div class="step-content">
+<div class="step-title">
+          ❌ INSTANCE_LAUNCH_ERROR 通知
+         </div>
+<div class="step-desc">
+          2台目の起動に失敗！AMIが見つからないエラー。
+          <br/>
+<strong>
+           「i-0def456の起動に失敗しました。ImageId 'ami-xxx' が見つかりません」
+          </strong>
+<br/>
+<strong>
+           レストラン:
+          </strong>
+          「花子さんが来れない！制服が無くなってる！」
+          <br/>
+          → 緊急対応が必要！
+         </div>
+</div>
+</div>
+</div>
+</div>
+<div class="scenario">
+<div class="scenario-title">
+       📉 シナリオ2: 深夜の静かな時間
+      </div>
+<div class="scenario-steps">
+<div class="step">
+<div class="step-number">
+         1
+        </div>
+<div class="step-content">
+<div class="step-title">
+          🌙 午前2時: お客様が減少
+         </div>
+<div class="step-desc">
+          アクセスが大幅に減少。CPU使用率が20%まで低下。
+          <br/>
+<strong>
+           レストラン:
+          </strong>
+          深夜でお客様がほとんどいない。
+         </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+         2
+        </div>
+<div class="step-content">
+<div class="step-title">
+          ⚙️ スケールイン決定
+         </div>
+<div class="step-desc">
+          Auto Scalingが余剰インスタンスを検知し、2台を終了することを決定。
+          <br/>
+<strong>
+           レストラン:
+          </strong>
+          「スタッフ2名、退勤してOKです」
+         </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+         3
+        </div>
+<div class="step-content">
+<div class="step-title">
+          👋 INSTANCE_TERMINATE 通知
+         </div>
+<div class="step-desc">
+          1台目が正常に終了！SNS経由でメール受信。
+          <br/>
+<strong>
+           「i-0abc123が正常に終了しました」
+          </strong>
+<br/>
+<strong>
+           レストラン:
+          </strong>
+          「太郎さんが引継ぎ完了して退勤しました」
+         </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+         4
+        </div>
+<div class="step-content">
+<div class="step-title">
+          ⚠️ INSTANCE_TERMINATE_ERROR 通知
+         </div>
+<div class="step-desc">
+          2台目の終了に失敗！終了保護がONになっていた。
+          <br/>
+<strong>
+           「i-0def456の終了に失敗。終了保護が有効です」
+          </strong>
+<br/>
+<strong>
+           レストラン:
+          </strong>
+          「花子さんがまだ重要な作業中で帰れない！」
+          <br/>
+          → コストが増加し続ける！手動確認が必要！
+         </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 成功 vs エラー比較 -->
+<div class="comparison-section">
+<h2 class="comparison-title" id="⚖️-成功通知-vs-エラー通知">
+      ⚖️ 成功通知 vs エラー通知
+     </h2>
+<div class="comparison-grid">
+<div class="comparison-card">
+<h3 id="✅-成功通知良いニュース">
+        ✅ 成功通知（良いニュース）
+       </h3>
+<div class="comparison-items">
+<div class="comparison-item success-item">
+<strong>
+          INSTANCE_LAUNCH
+         </strong>
+<br/>
+         • システムが正常に拡張された
+         <br/>
+         • キャパシティ増加
+         <br/>
+         • 負荷に対応できる状態
+         <br/>
+         • 🍽️ スタッフが増えた！
+        </div>
+<div class="comparison-item success-item">
+<strong>
+          INSTANCE_TERMINATE
+         </strong>
+<br/>
+         • 不要なリソースを削減
+         <br/>
+         • コスト最適化達成
+         <br/>
+         • 適切なスケールイン
+         <br/>
+         • 🍽️ 余剰スタッフが減った！
+        </div>
+</div>
+</div>
+<div class="comparison-card">
+<h3 id="❌-エラー通知要対応">
+        ❌ エラー通知（要対応）
+       </h3>
+<div class="comparison-items">
+<div class="comparison-item error-item">
+<strong>
+          INSTANCE_LAUNCH_ERROR
+         </strong>
+<br/>
+         • キャパシティ不足が続く
+         <br/>
+         • パフォーマンス低下のリスク
+         <br/>
+         • 即座の対応が必要
+         <br/>
+         • 🍽️ 人手不足！緊急事態！
+        </div>
+<div class="comparison-item error-item">
+<strong>
+          INSTANCE_TERMINATE_ERROR
+         </strong>
+<br/>
+         • 不要なリソースが残る
+         <br/>
+         • コスト増加が続く
+         <br/>
+         • 手動介入が必要
+         <br/>
+         • 🍽️ 余剰人員が残ってる！
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- ユースケース -->
+<div class="use-case-section">
+<h3 class="use-case-title" id="実際の活用例">
+      💼 実際の活用例
+     </h3>
+<div class="use-case-grid">
+<div class="use-case-card">
+<div class="use-case-icon">
+        📧
+       </div>
+<h4>
+        メール通知
+       </h4>
+<p style="color: #475569; line-height: 1.7; margin: 15px 0;">
+<strong>
+         使い方:
+        </strong>
+<br/>
+        SNSトピックにメールアドレスをサブスクライブ。
+        <br/>
+        全イベントをメールで受信。
+        <br/>
+<br/>
+<strong>
+         こんな人に:
+        </strong>
+<br/>
+        • 小規模チーム
+        <br/>
+        • シンプルな監視
+        <br/>
+        • 手動対応が中心
+       </p>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        💬
+       </div>
+<h4>
+        Slack/Teams連携
+       </h4>
+<p style="color: #475569; line-height: 1.7; margin: 15px 0;">
+<strong>
+         使い方:
+        </strong>
+<br/>
+        Lambda関数でSNSメッセージを整形してSlackに投稿。
+        <br/>
+<br/>
+<strong>
+         こんな人に:
+        </strong>
+<br/>
+        • チャットツール中心の運用
+        <br/>
+        • リアルタイムな情報共有
+        <br/>
+        • 複数人での監視
+       </p>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🤖
+       </div>
+<h4>
+        自動対応システム
+       </h4>
+<p style="color: #475569; line-height: 1.7; margin: 15px 0;">
+<strong>
+         使い方:
+        </strong>
+<br/>
+        Lambda関数で自動対応。
+        <br/>
+        • LAUNCH → モニタリング登録
+        <br/>
+        • LAUNCH_ERROR → 再試行
+        <br/>
+        • TERMINATE → ログ保存
+        <br/>
+<br/>
+<strong>
+         こんな人に:
+        </strong>
+<br/>
+        • 大規模運用
+        <br/>
+        • 完全自動化
+        <br/>
+        • 24時間監視
+       </p>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        📊
+       </div>
+<h4>
+        ログ分析・監視
+       </h4>
+<p style="color: #475569; line-height: 1.7; margin: 15px 0;">
+<strong>
+         使い方:
+        </strong>
+<br/>
+        SNS → SQS → データ分析基盤
+        <br/>
+        スケーリングパターンを分析。
+        <br/>
+<br/>
+<strong>
+         こんな人に:
+        </strong>
+<br/>
+        • データドリブンな運用
+        <br/>
+        • コスト最適化
+        <br/>
+        • パターン分析
+       </p>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        🚨
+       </div>
+<h4>
+        PagerDuty連携
+       </h4>
+<p style="color: #475569; line-height: 1.7; margin: 15px 0;">
+<strong>
+         使い方:
+        </strong>
+<br/>
+        エラー通知だけをPagerDutyに送信。
+        <br/>
+        オンコールエンジニアに即座にエスカレーション。
+        <br/>
+<br/>
+<strong>
+         こんな人に:
+        </strong>
+<br/>
+        • エンタープライズ運用
+        <br/>
+        • 24/7サポート体制
+        <br/>
+        • インシデント管理
+       </p>
+</div>
+<div class="use-case-card">
+<div class="use-case-icon">
+        📝
+       </div>
+<h4>
+        チケット自動作成
+       </h4>
+<p style="color: #475569; line-height: 1.7; margin: 15px 0;">
+<strong>
+         使い方:
+        </strong>
+<br/>
+        エラー通知をJira/ServiceNowと連携。
+        <br/>
+        自動でインシデントチケット作成。
+        <br/>
+<br/>
+<strong>
+         こんな人に:
+        </strong>
+<br/>
+        • ITIL準拠の運用
+        <br/>
+        • トラッキング重視
+        <br/>
+        • 大規模組織
+       </p>
+</div>
+</div>
+</div>
+<!-- 設定例 -->
+<div style="margin: 50px 0;">
+<h2 id="⚙️-設定方法" style="text-align: center; font-size: 2.5em; color: #1e293b; margin-bottom: 40px;">
+      ⚙️ 設定方法
+     </h2>
+<div class="code-example">
+<div class="code-title">
+       📋 AWS CLIでの設定例
+      </div>
+<pre># 1. SNSトピックを作成
+aws sns create-topic --name autoscaling-notifications
+
+# 2. メールアドレスをサブスクライブ
+aws sns subscribe \
+  --topic-arn arn:aws:sns:ap-northeast-1:123456789012:autoscaling-notifications \
+  --protocol email \
+  --notification-endpoint your-email@example.com
+
+# 3. Auto Scaling グループに通知設定を追加
+aws autoscaling put-notification-configuration \
+  --auto-scaling-group-name my-asg \
+  --topic-arn arn:aws:sns:ap-northeast-1:123456789012:autoscaling-notifications \
+  --notification-types \
+      "autoscaling:EC2_INSTANCE_LAUNCH" \
+      "autoscaling:EC2_INSTANCE_LAUNCH_ERROR" \
+      "autoscaling:EC2_INSTANCE_TERMINATE" \
+      "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"</pre>
+</div>
+<div class="code-example">
+<div class="code-title">
+       📋 CloudFormationでの設定例
+      </div>
+<pre>Resources:
+  # SNSトピック
+  AutoScalingNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: autoscaling-notifications
+      Subscription:
+        - Endpoint: your-email@example.com
+          Protocol: email
+
+  # Auto Scaling グループ
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: my-asg
+      MinSize: 1
+      MaxSize: 10
+      DesiredCapacity: 2
+      NotificationConfigurations:
+        - TopicARN: !Ref AutoScalingNotificationTopic
+          NotificationTypes:
+            - autoscaling:EC2_INSTANCE_LAUNCH
+            - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+            - autoscaling:EC2_INSTANCE_TERMINATE
+            - autoscaling:EC2_INSTANCE_TERMINATE_ERROR</pre>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       通知設定のベストプラクティス
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. 最初は全通知を有効にしよう：
+      </strong>
+<br/>
+      まずは4つ全ての通知タイプを有効にして、システムの動きを理解しましょう。
+      <br/>
+      慣れてきたら、必要な通知だけに絞り込むこともできます。
+      <br/>
+<br/>
+<strong>
+       2. エラー通知は必須：
+      </strong>
+<br/>
+      LAUNCH_ERRORとTERMINATE_ERRORは必ず設定してください。
+      <br/>
+      これらは即座の対応が必要な重大イベントです。
+      <br/>
+<br/>
+<strong>
+       3. 通知先を使い分ける：
+      </strong>
+<br/>
+      • 成功通知 → 情報共有用のSlackチャンネル
+      <br/>
+      • エラー通知 → 緊急対応チームのPagerDuty
+      <br/>
+      複数のSNSトピックを使い分けることで、適切な通知ルーティングができます。
+      <br/>
+<br/>
+<strong>
+       4. Lambda関数で通知を整形：
+      </strong>
+<br/>
+      SNSからの生メッセージは読みにくいので、Lambda関数で整形すると便利です。
+      <br/>
+      • インスタンスID
+      <br/>
+      • 発生時刻
+      <br/>
+      • エラー理由
+      <br/>
+      • 推奨アクション
+      <br/>
+      これらを見やすくフォーマットして通知しましょう。
+      <br/>
+<br/>
+<strong>
+       5. 通知の重複に注意：
+      </strong>
+<br/>
+      複数のAuto Scaling グループが同じSNSトピックを使う場合、
+      <br/>
+      どのASGからの通知か分かるように、グループ名を明確にしましょう。
+      <br/>
+<br/>
+<strong>
+       6. テストを忘れずに：
+      </strong>
+<br/>
+      設定後は必ず手動でスケールアウト/インを実行して、
+      <br/>
+      通知が正しく届くことを確認しましょう！
+     </div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="️-レストランの人員管理-=-Auto-Scaling通知" style="font-size: 1.8em; margin-bottom: 15px;">
+        🍽️ レストランの人員管理 = Auto Scaling通知
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        スタッフの出勤・退勤をリアルタイムで把握するように、
+        <br/>
+        EC2インスタンスの起動・終了を即座に知ることができます
+       </p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         ✅
+        </div>
+<strong style="font-size: 1.3em;">
+         LAUNCH
+        </strong>
+<br/>
+<br/>
+        新スタッフ出勤
+        <br/>
+        キャパシティ増加
+        <br/>
+        良いニュース！
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         ❌
+        </div>
+<strong style="font-size: 1.3em;">
+         LAUNCH_ERROR
+        </strong>
+<br/>
+<br/>
+        スタッフ来れず
+        <br/>
+        人手不足継続
+        <br/>
+        緊急対応必要！
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         👋
+        </div>
+<strong style="font-size: 1.3em;">
+         TERMINATE
+        </strong>
+<br/>
+<br/>
+        スタッフ退勤
+        <br/>
+        コスト最適化
+        <br/>
+        正常な動作！
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         ⚠️
+        </div>
+<strong style="font-size: 1.3em;">
+         TERMINATE_ERROR
+        </strong>
+<br/>
+<br/>
+        退勤できず
+        <br/>
+        コスト増加
+        <br/>
+        手動確認必要！
+       </div>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+<p style="font-size: 1.3em; line-height: 1.8;">
+<strong>
+         🎯 重要なポイント：
+        </strong>
+<br/>
+<br/>
+<span style="font-size: 1.1em;">
+         ✅
+         <strong>
+          成功通知
+         </strong>
+         = 情報共有・記録用
+         <br/>
+         ❌
+         <strong>
+          エラー通知
+         </strong>
+         = 即座の対応が必要
+         <br/>
+<br/>
+         エラー通知は必ず見逃さないように、
+         <br/>
+         適切なアラートシステムに連携させましょう！
+        </span>
+</p>
+</div>
+<p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+       Auto Scaling通知を適切に設定することで、
+       <br/>
+<strong>
+        システムの健全性を常に把握
+       </strong>
+       し、
+       <br/>
+<strong>
+        問題に素早く対応
+       </strong>
+       できるようになります！🎉
+      </p>
+</div>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="autoscaling-safe-os-update-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">9</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">41</span>
+    </div>
+    <a href="ec2-log-backup-before-termination-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

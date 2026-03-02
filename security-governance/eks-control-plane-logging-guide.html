@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   EKS コントロールプレーンログ &amp; CloudTrail 監査ログ 完全図解ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/eks-control-plane-logging-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論ファースト-30秒でわかるポイント">🎯 結論ファースト：30秒でわかるポイント</a></li>
+            <li class="toc-h2"><a href="#たとえ話で理解しよう">🏢 たとえ話で理解しよう</a></li>
+            <li class="toc-h2"><a href="#5つのコントロールプレーンログ">📊 5つのコントロールプレーンログ</a></li>
+            <li class="toc-h2"><a href="#⚖️-2つの監視システムの違い">⚖️ 2つの監視システムの違い</a></li>
+            <li class="toc-h3"><a href="#使い分けのポイント">🎯 使い分けのポイント</a></li>
+            <li class="toc-h2"><a href="#ログの流れを理解しよう">🔄 ログの流れを理解しよう</a></li>
+            <li class="toc-h3"><a href="#ログストリームの命名規則">📋 ログストリームの命名規則</a></li>
+            <li class="toc-h2"><a href="#⚙️-有効化の方法">⚙️ 有効化の方法</a></li>
+            <li class="toc-h3"><a href="#重要-デフォルトでは無効！">重要：デフォルトでは無効！</a></li>
+            <li class="toc-h2"><a href="#便利なログ分析クエリ">🔍 便利なログ分析クエリ</a></li>
+            <li class="toc-h2"><a href="#✅-ベストプラクティス">✅ ベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<div class="header">
+<h1>
+     📋 EKS コントロールプレーンログ
+     <br/>
+     &amp; CloudTrail 監査ログ
+    </h1>
+<p>
+     Kubernetes APIサーバーのログとAWS監査ログを完全理解！
+    </p>
+</div>
+<div class="content">
+<!-- 結論ファースト -->
+<div class="conclusion-first">
+<h2 id="結論ファースト-30秒でわかるポイント">
+      🎯 結論ファースト：30秒でわかるポイント
+     </h2>
+<div class="conclusion-grid">
+<div class="conclusion-card">
+<div class="conclusion-icon">
+        📹
+       </div>
+<div class="conclusion-title">
+        EKS コントロールプレーンログ
+       </div>
+<div class="conclusion-desc">
+        Kubernetes内部で何が起きているかを記録
+        <br/>
+<strong>
+         → 「社内の防犯カメラ」
+        </strong>
+<br/>
+        デフォルト：無効 ⚠️ 要設定
+       </div>
+</div>
+<div class="conclusion-card">
+<div class="conclusion-icon">
+        🏛️
+       </div>
+<div class="conclusion-title">
+        CloudTrail 監査ログ
+       </div>
+<div class="conclusion-desc">
+        AWSサービスへのAPI呼び出しを記録
+        <br/>
+<strong>
+         → 「公的機関の監視記録」
+        </strong>
+<br/>
+        デフォルト：有効 ✅
+       </div>
+</div>
+<div class="conclusion-card">
+<div class="conclusion-icon">
+        🎬
+       </div>
+<div class="conclusion-title">
+        何を記録する？
+       </div>
+<div class="conclusion-desc">
+        誰が・いつ・何を・どうしたか
+        <br/>
+<strong>
+         5種類のログで完全把握
+        </strong>
+<br/>
+        API / Audit / Auth / Controller / Scheduler
+       </div>
+</div>
+<div class="conclusion-card">
+<div class="conclusion-icon">
+        📍
+       </div>
+<div class="conclusion-title">
+        どこに保存？
+       </div>
+<div class="conclusion-desc">
+        CloudWatch Logs に自動送信
+        <br/>
+<strong>
+         /aws/eks/クラスター名/cluster
+        </strong>
+<br/>
+        S3やSIEMへの転送も可能
+       </div>
+</div>
+</div>
+</div>
+<!-- たとえ話セクション -->
+<h2 class="section-title" id="たとえ話で理解しよう">
+     🏢 たとえ話で理解しよう
+    </h2>
+<div class="analogy-section">
+<div class="analogy-title">
+      🏬 EKSクラスター = 大型商業施設
+     </div>
+<div class="building-container">
+<div class="building-box">
+<div class="building-header">
+        📹 社内監視システム
+        <br/>
+        （コントロールプレーンログ）
+       </div>
+<p style="margin-bottom: 20px; color: #64748b;">
+<strong>
+         施設内部
+        </strong>
+        で何が起きているかを記録
+       </p>
+<div class="floor-diagram">
+<div class="floor">
+<div class="floor-icon">
+          🎫
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           受付カウンター（API Server）
+          </div>
+<div class="floor-desc">
+           来訪者の要求を受け付け、対応を指示
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          📋
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           入退館記録（Audit Log）
+          </div>
+<div class="floor-desc">
+           誰がいつ何をしたか全て記録
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          🪪
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           身分証確認（Authenticator）
+          </div>
+<div class="floor-desc">
+           IDカードが本物か、権限があるか確認
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          🎛️
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           施設管理室（Controller Manager）
+          </div>
+<div class="floor-desc">
+           空調・照明・エレベーターを自動制御
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          📅
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           予約管理（Scheduler）
+          </div>
+<div class="floor-desc">
+           会議室や設備の割り当てを最適化
+          </div>
+</div>
+</div>
+</div>
+</div>
+<div class="building-box">
+<div class="building-header">
+        🏛️ 公的監査システム
+        <br/>
+        （CloudTrail）
+       </div>
+<p style="margin-bottom: 20px; color: #64748b;">
+<strong>
+         外部との取引・契約
+        </strong>
+        を公式記録
+       </p>
+<div class="floor-diagram">
+<div class="floor">
+<div class="floor-icon">
+          📝
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           施設の建設・増築申請
+          </div>
+<div class="floor-desc">
+           CreateCluster / UpdateCluster
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          🔐
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           セキュリティ設定の変更
+          </div>
+<div class="floor-desc">
+           UpdateClusterConfig
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          👥
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           従業員の採用・配置
+          </div>
+<div class="floor-desc">
+           CreateNodegroup
+          </div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-icon">
+          🗑️
+         </div>
+<div class="floor-info">
+<div class="floor-name">
+           施設の廃止
+          </div>
+<div class="floor-desc">
+           DeleteCluster
+          </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px; text-align: center;">
+<p style="font-size: 1.2em; color: #065f46;">
+<strong>
+        💡 ポイント：
+       </strong>
+<br/>
+       「社内カメラ」は
+       <strong>
+        日常業務の詳細
+       </strong>
+       を記録
+       <br/>
+       「公的記録」は
+       <strong>
+        重要な決定・変更
+       </strong>
+       を記録
+       <br/>
+<span style="color: #dc2626;">
+        両方合わせて初めて完全な監査が可能！
+       </span>
+</p>
+</div>
+</div>
+<!-- 5つのログタイプ -->
+<h2 class="section-title" id="5つのコントロールプレーンログ">
+     📊 5つのコントロールプレーンログ
+    </h2>
+<div class="log-types-section">
+<div class="log-types-grid">
+<!-- API Server -->
+<div class="log-type-card api">
+<div class="log-icon">
+        🎫
+       </div>
+<div class="log-name">
+        api
+       </div>
+<div class="log-analogy">
+<div class="log-analogy-label">
+         🏬 たとえ話
+        </div>
+        受付カウンターの対応記録
+        <br/>
+        「お客様からこんな依頼がありました」
+       </div>
+<div class="log-details">
+<strong>
+         記録内容：
+        </strong>
+<br/>
+        • kubectl コマンドの実行
+        <br/>
+        • Pod/Service等の作成・削除
+        <br/>
+        • APIサーバーの起動オプション
+       </div>
+<div class="log-examples">
+        📝 例: "kubectl get pods" が実行された
+       </div>
+</div>
+<!-- Audit -->
+<div class="log-type-card audit">
+<div class="log-icon">
+        📋
+       </div>
+<div class="log-name">
+        audit
+       </div>
+<div class="log-analogy">
+<div class="log-analogy-label">
+         🏬 たとえ話
+        </div>
+        入退館と全行動の記録
+        <br/>
+        「誰がいつ何をしたか」
+       </div>
+<div class="log-details">
+<strong>
+         記録内容：
+        </strong>
+<br/>
+        • ユーザー名とIPアドレス
+        <br/>
+        • リクエストの種類と対象
+        <br/>
+        • 成功/失敗の結果
+       </div>
+<div class="log-examples">
+        🔍 例: "user:admin が pod を削除した"
+       </div>
+</div>
+<!-- Authenticator -->
+<div class="log-type-card auth">
+<div class="log-icon">
+        🪪
+       </div>
+<div class="log-name">
+        authenticator
+       </div>
+<div class="log-analogy">
+<div class="log-analogy-label">
+         🏬 たとえ話
+        </div>
+        身分証チェックの記録
+        <br/>
+        「このIDは本物？権限は？」
+       </div>
+<div class="log-details">
+<strong>
+         記録内容：
+        </strong>
+<br/>
+        • IAMユーザー/ロールの認証
+        <br/>
+        • RBAC権限の確認
+        <br/>
+        • 認証成功/失敗
+       </div>
+<div class="log-examples">
+        🔐 例: "IAMロール X が認証成功"
+       </div>
+</div>
+<!-- Controller Manager -->
+<div class="log-type-card controller">
+<div class="log-icon">
+        🎛️
+       </div>
+<div class="log-name">
+        controllerManager
+       </div>
+<div class="log-analogy">
+<div class="log-analogy-label">
+         🏬 たとえ話
+        </div>
+        施設管理の自動処理記録
+        <br/>
+        「システムが自動で対応しました」
+       </div>
+<div class="log-details">
+<strong>
+         記録内容：
+        </strong>
+<br/>
+        • Podの自動再起動
+        <br/>
+        • ReplicaSetの調整
+        <br/>
+        • ServiceAccountの管理
+       </div>
+<div class="log-examples">
+        ⚙️ 例: "Pod X を再作成しました"
+       </div>
+</div>
+<!-- Scheduler -->
+<div class="log-type-card scheduler">
+<div class="log-icon">
+        📅
+       </div>
+<div class="log-name">
+        scheduler
+       </div>
+<div class="log-analogy">
+<div class="log-analogy-label">
+         🏬 たとえ話
+        </div>
+        部屋の割り当て記録
+        <br/>
+        「どの部屋に誰を案内したか」
+       </div>
+<div class="log-details">
+<strong>
+         記録内容：
+        </strong>
+<br/>
+        • Podの配置先ノード
+        <br/>
+        • スケジューリングの理由
+        <br/>
+        • リソース制約による判断
+       </div>
+<div class="log-examples">
+        📍 例: "Pod Y を Node-A に配置"
+       </div>
+</div>
+</div>
+</div>
+<!-- 2種類の監視比較 -->
+<h2 class="section-title" id="⚖️-2つの監視システムの違い">
+     ⚖️ 2つの監視システムの違い
+    </h2>
+<div class="comparison-section">
+<div class="comparison-title">
+      🔍 コントロールプレーンログ vs CloudTrail
+     </div>
+<div class="vs-container">
+<div class="vs-box control-plane">
+<div class="vs-header">
+<div class="vs-icon">
+         📹
+        </div>
+<div class="vs-title">
+         コントロールプレーンログ
+        </div>
+<div class="vs-subtitle">
+         Kubernetes内部の活動を監視
+        </div>
+</div>
+<ul class="vs-list">
+<li>
+<span class="vs-badge">
+          対象
+         </span>
+<span>
+          Kubernetes API への操作
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          例
+         </span>
+<span>
+          Pod作成、Deployment更新、Secret参照
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          保存先
+         </span>
+<span>
+          CloudWatch Logs
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          デフォルト
+         </span>
+<span style="color: #dc2626; font-weight: bold;">
+          ❌ 無効（要設定）
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          コスト
+         </span>
+<span>
+          CloudWatch Logs の料金
+         </span>
+</li>
+</ul>
+</div>
+<div class="vs-divider">
+       +
+      </div>
+<div class="vs-box cloudtrail">
+<div class="vs-header">
+<div class="vs-icon">
+         🏛️
+        </div>
+<div class="vs-title">
+         CloudTrail
+        </div>
+<div class="vs-subtitle">
+         AWS API への操作を監視
+        </div>
+</div>
+<ul class="vs-list">
+<li>
+<span class="vs-badge">
+          対象
+         </span>
+<span>
+          AWS API への操作
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          例
+         </span>
+<span>
+          CreateCluster、UpdateNodegroup、DeleteCluster
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          保存先
+         </span>
+<span>
+          S3 / CloudWatch Logs
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          デフォルト
+         </span>
+<span style="color: #16a34a; font-weight: bold;">
+          ✅ 有効（90日間保持）
+         </span>
+</li>
+<li>
+<span class="vs-badge">
+          コスト
+         </span>
+<span>
+          基本無料（長期保存は有料）
+         </span>
+</li>
+</ul>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+<h3 id="使い分けのポイント" style="color: #92400e; text-align: center; margin-bottom: 15px;">
+       🎯 使い分けのポイント
+      </h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+<div style="padding: 15px; background: #dbeafe; border-radius: 10px;">
+<strong style="color: #1e40af;">
+         📹 コントロールプレーンログを見る時
+        </strong>
+<ul style="margin-top: 10px; padding-left: 20px;">
+<li>
+          「誰がPodを削除した？」
+         </li>
+<li>
+          「なぜPodがスケジュールされない？」
+         </li>
+<li>
+          「認証エラーの原因は？」
+         </li>
+</ul>
+</div>
+<div style="padding: 15px; background: #fef3c7; border-radius: 10px;">
+<strong style="color: #92400e;">
+         🏛️ CloudTrailを見る時
+        </strong>
+<ul style="margin-top: 10px; padding-left: 20px;">
+<li>
+          「クラスターを作成したのは誰？」
+         </li>
+<li>
+          「ノードグループの設定変更履歴」
+         </li>
+<li>
+          「IRSAでどのAWS APIが呼ばれた？」
+         </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- ログの流れ -->
+<h2 class="section-title" id="ログの流れを理解しよう">
+     🔄 ログの流れを理解しよう
+    </h2>
+<div class="flow-section">
+<div class="flow-title">
+      📊 EKSログが保存されるまで
+     </div>
+<div class="flow-diagram">
+<div class="flow-row">
+<div class="flow-box" style="border: 3px solid #3b82f6;">
+<div class="flow-box-icon">
+         👤
+        </div>
+<div class="flow-box-title">
+         ユーザー操作
+        </div>
+<div class="flow-box-desc">
+         kubectl / API / Console
+        </div>
+</div>
+<div class="flow-arrow">
+        →
+       </div>
+<div class="flow-box" style="border: 3px solid #10b981;">
+<div class="flow-box-icon">
+         ☸️
+        </div>
+<div class="flow-box-title">
+         EKS Control Plane
+        </div>
+<div class="flow-box-desc">
+         5種類のコンポーネント
+        </div>
+</div>
+<div class="flow-arrow">
+        →
+       </div>
+<div class="flow-box" style="border: 3px solid #f59e0b;">
+<div class="flow-box-icon">
+         📊
+        </div>
+<div class="flow-box-title">
+         CloudWatch Logs
+        </div>
+<div class="flow-box-desc">
+         /aws/eks/cluster-name/cluster
+        </div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-row">
+<div class="flow-box" style="border: 3px solid #8b5cf6;">
+<div class="flow-box-icon">
+         🔍
+        </div>
+<div class="flow-box-title">
+         Logs Insights
+        </div>
+<div class="flow-box-desc">
+         クエリで分析
+        </div>
+</div>
+<div class="flow-box" style="border: 3px solid #ec4899;">
+<div class="flow-box-icon">
+         📦
+        </div>
+<div class="flow-box-title">
+         S3
+        </div>
+<div class="flow-box-desc">
+         長期保存
+        </div>
+</div>
+<div class="flow-box" style="border: 3px solid #06b6d4;">
+<div class="flow-box-icon">
+         🛡️
+        </div>
+<div class="flow-box-title">
+         SIEM
+        </div>
+<div class="flow-box-desc">
+         セキュリティ分析
+        </div>
+</div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+<h3 id="ログストリームの命名規則" style="color: #1e40af; margin-bottom: 15px;">
+       📋 ログストリームの命名規則
+      </h3>
+<div style="background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 10px; font-family: monospace; overflow-x: auto;">
+<div style="color: #10b981;">
+        // ログストリーム名の例
+       </div>
+<div>
+        kube-apiserver-
+        <span style="color: #fbbf24;">
+         ランダムID
+        </span>
+</div>
+<div>
+        kube-apiserver-audit-
+        <span style="color: #fbbf24;">
+         ランダムID
+        </span>
+</div>
+<div>
+        authenticator-
+        <span style="color: #fbbf24;">
+         ランダムID
+        </span>
+</div>
+<div>
+        kube-controller-manager-
+        <span style="color: #fbbf24;">
+         ランダムID
+        </span>
+</div>
+<div>
+        kube-scheduler-
+        <span style="color: #fbbf24;">
+         ランダムID
+        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- 有効化方法 -->
+<h2 class="section-title" id="⚙️-有効化の方法">
+     ⚙️ 有効化の方法
+    </h2>
+<div class="enable-section">
+<div class="warning-section">
+<div class="warning-icon">
+       ⚠️
+      </div>
+<div class="warning-content">
+<h3 id="重要-デフォルトでは無効！">
+        重要：デフォルトでは無効！
+       </h3>
+<p>
+        EKSコントロールプレーンログは
+        <strong>
+         デフォルトで無効
+        </strong>
+        です。
+        <br/>
+        セキュリティ監査やトラブルシューティングのために、
+        <strong>
+         必ず有効化
+        </strong>
+        しましょう！
+       </p>
+</div>
+</div>
+<div class="method-tabs">
+<div class="method-tab active">
+       🖥️ AWSコンソール
+      </div>
+<div class="method-tab">
+       💻 AWS CLI
+      </div>
+<div class="method-tab">
+       🏗️ Terraform
+      </div>
+<div class="method-tab">
+       📦 eksctl
+      </div>
+</div>
+<!-- AWS Console -->
+<div class="method-content">
+<div class="method-title">
+       🖥️ AWSコンソールでの設定手順
+      </div>
+<div style="background: #1e3a5f; padding: 20px; border-radius: 10px; margin: 15px 0;">
+<p style="color: #fbbf24; margin-bottom: 15px;">
+<strong>
+         Step 1:
+        </strong>
+        EKSコンソールを開く
+       </p>
+<p>
+        Amazon EKS → クラスター → 対象クラスターを選択
+       </p>
+</div>
+<div style="background: #1e3a5f; padding: 20px; border-radius: 10px; margin: 15px 0;">
+<p style="color: #fbbf24; margin-bottom: 15px;">
+<strong>
+         Step 2:
+        </strong>
+        Observabilityタブを選択
+       </p>
+<p>
+        「Control plane logging」セクションを探す
+       </p>
+</div>
+<div style="background: #1e3a5f; padding: 20px; border-radius: 10px; margin: 15px 0;">
+<p style="color: #fbbf24; margin-bottom: 15px;">
+<strong>
+         Step 3:
+        </strong>
+        Manage loggingをクリック
+       </p>
+<p>
+        5つのログタイプそれぞれのON/OFFを選択
+       </p>
+</div>
+<div style="background: #1e3a5f; padding: 20px; border-radius: 10px; margin: 15px 0;">
+<p style="color: #fbbf24; margin-bottom: 15px;">
+<strong>
+         Step 4:
+        </strong>
+        Save changesをクリック
+       </p>
+<p style="color: #10b981;">
+        ✅ 完了！CloudWatch Logsへの送信が開始されます
+       </p>
+</div>
+</div>
+<!-- AWS CLI -->
+<div class="method-content" style="margin-top: 20px;">
+<div class="method-title">
+       💻 AWS CLIでの設定
+      </div>
+<div class="code-block">
+<span class="code-comment">
+        # すべてのログタイプを有効化
+       </span>
+<br/>
+       aws eks update-cluster-config \
+       <br/>
+       --name
+       <span class="code-string">
+        my-cluster
+       </span>
+       \
+       <br/>
+       --logging
+       <span class="code-string">
+        '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}'
+       </span>
+</div>
+<div class="code-block">
+<span class="code-comment">
+        # 現在の設定を確認
+       </span>
+<br/>
+       aws eks describe-cluster \
+       <br/>
+       --name
+       <span class="code-string">
+        my-cluster
+       </span>
+       \
+       <br/>
+       --query
+       <span class="code-string">
+        'cluster.logging'
+       </span>
+</div>
+</div>
+<!-- Terraform -->
+<div class="method-content" style="margin-top: 20px;">
+<div class="method-title">
+       🏗️ Terraformでの設定
+      </div>
+<div class="code-block">
+<span class="code-keyword">
+        resource
+       </span>
+<span class="code-string">
+        "aws_eks_cluster"
+       </span>
+<span class="code-string">
+        "main"
+       </span>
+       {
+       <br/>
+       name     =
+       <span class="code-string">
+        "my-cluster"
+       </span>
+<br/>
+       role_arn = aws_iam_role.cluster.arn
+       <br/>
+<br/>
+<span class="code-comment">
+        # ✅ 全ログタイプを有効化
+       </span>
+<br/>
+<span class="code-value">
+        enabled_cluster_log_types
+       </span>
+       = [
+       <br/>
+<span class="code-string">
+        "api"
+       </span>
+       ,
+       <br/>
+<span class="code-string">
+        "audit"
+       </span>
+       ,
+       <br/>
+<span class="code-string">
+        "authenticator"
+       </span>
+       ,
+       <br/>
+<span class="code-string">
+        "controllerManager"
+       </span>
+       ,
+       <br/>
+<span class="code-string">
+        "scheduler"
+       </span>
+<br/>
+       ]
+       <br/>
+<br/>
+       vpc_config {
+       <br/>
+       subnet_ids = var.subnet_ids
+       <br/>
+       }
+       <br/>
+       }
+      </div>
+</div>
+<!-- eksctl -->
+<div class="method-content" style="margin-top: 20px;">
+<div class="method-title">
+       📦 eksctlでの設定
+      </div>
+<div class="code-block">
+<span class="code-comment">
+        # ClusterConfig YAMLファイル
+       </span>
+<br/>
+<span class="code-keyword">
+        apiVersion:
+       </span>
+       eksctl.io/v1alpha5
+       <br/>
+<span class="code-keyword">
+        kind:
+       </span>
+       ClusterConfig
+       <br/>
+<br/>
+<span class="code-keyword">
+        metadata:
+       </span>
+<br/>
+       name: my-cluster
+       <br/>
+       region: ap-northeast-1
+       <br/>
+<br/>
+<span class="code-keyword">
+        cloudWatch:
+       </span>
+<br/>
+<span class="code-keyword">
+        clusterLogging:
+       </span>
+<br/>
+<span class="code-value">
+        enableTypes:
+       </span>
+<br/>
+       -
+       <span class="code-string">
+        api
+       </span>
+<br/>
+       -
+       <span class="code-string">
+        audit
+       </span>
+<br/>
+       -
+       <span class="code-string">
+        authenticator
+       </span>
+<br/>
+       -
+       <span class="code-string">
+        controllerManager
+       </span>
+<br/>
+       -
+       <span class="code-string">
+        scheduler
+       </span>
+</div>
+<div class="code-block">
+<span class="code-comment">
+        # 既存クラスターに適用
+       </span>
+<br/>
+       eksctl utils update-cluster-logging \
+       <br/>
+       --cluster
+       <span class="code-string">
+        my-cluster
+       </span>
+       \
+       <br/>
+       --enable-types
+       <span class="code-string">
+        api,audit,authenticator,controllerManager,scheduler
+       </span>
+       \
+       <br/>
+       --approve
+      </div>
+</div>
+</div>
+<!-- CloudWatch Logs Insightsクエリ -->
+<h2 class="section-title" id="便利なログ分析クエリ">
+     🔍 便利なログ分析クエリ
+    </h2>
+<div class="method-content">
+<div class="method-title">
+      📊 CloudWatch Logs Insights サンプルクエリ
+     </div>
+<div style="margin: 20px 0;">
+<p style="color: #fbbf24; margin-bottom: 10px;">
+<strong>
+        🔐 aws-auth ConfigMapの変更を検出
+       </strong>
+</p>
+<div class="code-block">
+       fields @timestamp, @message
+       <br/>
+       | filter @logStream like
+       <span class="code-string">
+        "kube-apiserver-audit"
+       </span>
+<br/>
+       | filter verb in [
+       <span class="code-string">
+        "update"
+       </span>
+       ,
+       <span class="code-string">
+        "patch"
+       </span>
+       ]
+       <br/>
+       | filter objectRef.resource =
+       <span class="code-string">
+        "configmaps"
+       </span>
+<br/>
+       | filter objectRef.name =
+       <span class="code-string">
+        "aws-auth"
+       </span>
+<br/>
+       | filter objectRef.namespace =
+       <span class="code-string">
+        "kube-system"
+       </span>
+<br/>
+       | sort @timestamp desc
+      </div>
+</div>
+<div style="margin: 20px 0;">
+<p style="color: #fbbf24; margin-bottom: 10px;">
+<strong>
+        🚨 認証失敗を検出
+       </strong>
+</p>
+<div class="code-block">
+       fields @timestamp, @message
+       <br/>
+       | filter @logStream like
+       <span class="code-string">
+        "authenticator"
+       </span>
+<br/>
+       | filter @message like
+       <span class="code-string">
+        "failed"
+       </span>
+<br/>
+       | sort @timestamp desc
+       <br/>
+       | limit 50
+      </div>
+</div>
+<div style="margin: 20px 0;">
+<p style="color: #fbbf24; margin-bottom: 10px;">
+<strong>
+        🗑️ リソース削除の履歴
+       </strong>
+</p>
+<div class="code-block">
+       fields @timestamp, user.username, objectRef.resource, objectRef.name
+       <br/>
+       | filter @logStream like
+       <span class="code-string">
+        "kube-apiserver-audit"
+       </span>
+<br/>
+       | filter verb =
+       <span class="code-string">
+        "delete"
+       </span>
+<br/>
+       | sort @timestamp desc
+       <br/>
+       | limit 100
+      </div>
+</div>
+<div style="margin: 20px 0;">
+<p style="color: #fbbf24; margin-bottom: 10px;">
+<strong>
+        👤 特定ユーザーの操作履歴
+       </strong>
+</p>
+<div class="code-block">
+       fields @timestamp, verb, objectRef.resource, objectRef.name
+       <br/>
+       | filter @logStream like
+       <span class="code-string">
+        "kube-apiserver-audit"
+       </span>
+<br/>
+       | filter user.username =
+       <span class="code-string">
+        "admin"
+       </span>
+<br/>
+       | sort @timestamp desc
+       <br/>
+       | limit 100
+      </div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<h2 class="section-title" id="✅-ベストプラクティス">
+     ✅ ベストプラクティス
+    </h2>
+<div class="best-practices">
+<div class="bp-title">
+      🏆 EKSログ管理のベストプラクティス
+     </div>
+<div class="bp-grid">
+<div class="bp-card">
+<div class="bp-icon">
+        🔓
+       </div>
+<div class="bp-card-title">
+        全ログタイプを有効化
+       </div>
+<div class="bp-card-desc">
+        5つすべてのログタイプを有効にすることを推奨。後から「あの時のログがない」となるのを防ぎます。
+       </div>
+</div>
+<div class="bp-card">
+<div class="bp-icon">
+        📅
+       </div>
+<div class="bp-card-title">
+        適切な保持期間を設定
+       </div>
+<div class="bp-card-desc">
+        CloudWatch Logsのログ保持期間を設定。コンプライアンス要件に応じて90日〜1年が一般的。
+       </div>
+</div>
+<div class="bp-card">
+<div class="bp-icon">
+        🔔
+       </div>
+<div class="bp-card-title">
+        アラートを設定
+       </div>
+<div class="bp-card-desc">
+        aws-authの変更やSecretへのアクセスなど、重要なイベントにはCloudWatch Alarmsを設定。
+       </div>
+</div>
+<div class="bp-card">
+<div class="bp-icon">
+        📦
+       </div>
+<div class="bp-card-title">
+        S3に長期保存
+       </div>
+<div class="bp-card-desc">
+        サブスクリプションフィルターでS3にエクスポート。コスト効率の良い長期保存が可能。
+       </div>
+</div>
+<div class="bp-card">
+<div class="bp-icon">
+        🔗
+       </div>
+<div class="bp-card-title">
+        CloudTrailと併用
+       </div>
+<div class="bp-card-desc">
+        Kubernetes内部のログとAWS APIのログ、両方を組み合わせて完全な監査証跡を構築。
+       </div>
+</div>
+<div class="bp-card">
+<div class="bp-icon">
+        🛡️
+       </div>
+<div class="bp-card-title">
+        SIEM連携を検討
+       </div>
+<div class="bp-card-desc">
+        大規模環境ではSplunk、Datadog、Falcoなどと連携して高度なセキュリティ分析を実施。
+       </div>
+</div>
+</div>
+</div>
+<!-- コスト情報 -->
+<div class="cost-section">
+<div class="cost-title">
+      💰 コストについて
+     </div>
+<div class="cost-grid">
+<div class="cost-item">
+<div class="cost-icon">
+        📥
+       </div>
+<div class="cost-name">
+        データ取り込み
+       </div>
+<div class="cost-desc">
+        CloudWatch Logs への取り込み料金
+        <br/>
+        約 $0.50/GB
+       </div>
+</div>
+<div class="cost-item">
+<div class="cost-icon">
+        💾
+       </div>
+<div class="cost-name">
+        ストレージ
+       </div>
+<div class="cost-desc">
+        保存料金
+        <br/>
+        約 $0.03/GB/月
+       </div>
+</div>
+<div class="cost-item">
+<div class="cost-icon">
+        🔍
+       </div>
+<div class="cost-name">
+        クエリ
+       </div>
+<div class="cost-desc">
+        Logs Insights クエリ
+        <br/>
+        約 $0.005/GB スキャン
+       </div>
+</div>
+<div class="cost-item">
+<div class="cost-icon">
+        💡
+       </div>
+<div class="cost-name">
+        コスト削減のコツ
+       </div>
+<div class="cost-desc">
+        保持期間の最適化
+        <br/>
+        S3への自動エクスポート
+       </div>
+</div>
+</div>
+<div style="background: white; padding: 20px; border-radius: 12px; margin-top: 20px; text-align: center;">
+<p style="color: #7e22ce;">
+<strong>
+        ⚖️ コスト vs セキュリティのバランス
+       </strong>
+<br/>
+       ログ保存のコストは、セキュリティインシデント発生時の
+       <br/>
+       調査・復旧コストと比較すると非常に小さいものです。
+      </p>
+</div>
+</div>
+<!-- FAQ -->
+<h2 class="section-title" id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        5つのログタイプ、全部有効にすべき？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        はい、本番環境では全て有効化を推奨します。
+       </strong>
+<br/>
+       特に重要なのは「audit」と「authenticator」です。これらはセキュリティ監査に必須です。
+       <br/>
+       ただし、ログ量が多いクラスターではコストを確認しながら判断してください。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        コントロールプレーンログとCloudTrail、どっちが大事？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        両方とも重要で、役割が異なります。
+       </strong>
+<br/>
+       •
+       <strong>
+        コントロールプレーンログ
+       </strong>
+       ：Kubernetes内部の操作（Pod作成、設定変更など）
+       <br/>
+       •
+       <strong>
+        CloudTrail
+       </strong>
+       ：AWS APIの操作（クラスター作成、ノードグループ変更など）
+       <br/>
+       完全な監査には
+       <strong>
+        両方が必要
+       </strong>
+       です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        ログの有効化でクラスターに影響はある？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        パフォーマンスへの影響はほぼありません。
+       </strong>
+<br/>
+       ログはコントロールプレーン側で処理され、ワークロードには影響しません。
+       <br/>
+       ただし、設定変更中（数分間）はクラスターのステータスが「Updating」になります。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        ログが大量で分析が大変…何かいい方法は？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        いくつかの方法があります：
+       </strong>
+<br/>
+       •
+       <strong>
+        CloudWatch Logs Insights
+       </strong>
+       ：クエリで効率的にフィルタリング
+       <br/>
+       •
+       <strong>
+        Falco
+       </strong>
+       ：異常検知の自動化（OSS）
+       <br/>
+       •
+       <strong>
+        サードパーティSIEM
+       </strong>
+       ：Splunk、Datadog等との連携
+       <br/>
+       •
+       <strong>
+        CloudTrail Insights
+       </strong>
+       ：異常なAPI呼び出しを自動検出
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        監査ログの最大サイズ制限は？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        CloudWatch Logsのエントリは最大1MBです。
+       </strong>
+<br/>
+       Kubernetes API リクエストの最大サイズは1.5MiBなので、非常に大きなリクエストは切り詰められる可能性があります。
+       <br/>
+       通常の操作では問題になりません。
+      </div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ">
+      🎓 まとめ
+     </h2>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">
+        📹
+       </div>
+<div class="summary-title">
+        コントロールプレーンログ
+       </div>
+<div class="summary-desc">
+        Kubernetes内部を監視
+        <br/>
+        5種類のログタイプ
+        <br/>
+<strong>
+         デフォルト無効→要設定
+        </strong>
+</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        🏛️
+       </div>
+<div class="summary-title">
+        CloudTrail
+       </div>
+<div class="summary-desc">
+        AWS API操作を監視
+        <br/>
+        EKS管理操作を記録
+        <br/>
+<strong>
+         デフォルト有効
+        </strong>
+</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        📊
+       </div>
+<div class="summary-title">
+        CloudWatch Logs
+       </div>
+<div class="summary-desc">
+        ログの保存先
+        <br/>
+        Insights で分析
+        <br/>
+        S3/SIEM連携可能
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        🔐
+       </div>
+<div class="summary-title">
+        セキュリティ
+       </div>
+<div class="summary-desc">
+        監査証跡を確保
+        <br/>
+        インシデント調査
+        <br/>
+        コンプライアンス対応
+       </div>
+</div>
+</div>
+<div class="final-message">
+<strong>
+       🏬 商業施設にたとえると：
+      </strong>
+<br/>
+<br/>
+      📹
+      <strong>
+       コントロールプレーンログ
+      </strong>
+      = 社内の防犯カメラと入退館記録
+      <br/>
+      🏛️
+      <strong>
+       CloudTrail
+      </strong>
+      = 役所への届出・契約書の記録
+      <br/>
+<br/>
+<span style="font-size: 1.3em;">
+       両方を有効にして、EKSクラスターの完全な監査体制を構築しましょう！📋
+      </span>
+</div>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="amazon-inspector-agentless-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">48</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">71</span>
+    </div>
+    <a href="cloudtrail-events-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<script>
+   // 読書進捗インジケーター
+    window.addEventListener('scroll', function() {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        const progressBar = document.getElementById('readingProgressBar');
+        const progressContainer = document.getElementById('readingProgress');
+        if (progressBar) {
+            progressBar.style.width = scrolled + '%';
+            progressContainer.setAttribute('aria-valuenow', Math.round(scrolled));
+        }
+        if (winScroll > 100) {
+            progressContainer.classList.add('show');
+        } else {
+            progressContainer.classList.remove('show');
+        }
+    });
+
+    // トップに戻るボタン
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    window.addEventListener('scroll', function() {
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+            scrollToTopBtn.classList.add('show');
+        } else {
+            scrollToTopBtn.classList.remove('show');
+        }
+    });
+    scrollToTopBtn.addEventListener('click', function() {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+  </script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

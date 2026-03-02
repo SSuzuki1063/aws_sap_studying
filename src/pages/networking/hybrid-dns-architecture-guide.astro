@@ -1,0 +1,1686 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'ハイブリッド DNS アーキテクチャ 完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: '',
+  slug: 'hybrid-dns-architecture-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '⚡-まず結論-3つの核心ポイント', text: '⚡ まず結論：3つの核心ポイント' },
+    { level: 'h2', id: 'たとえ話で全体像をつかむ', text: 'たとえ話で全体像をつかむ' },
+    { level: 'h3', id: '２つのオフィスビルの内線電話帳', text: '🏢 ２つのオフィスビルの内線電話帳' },
+    { level: 'h2', id: '現在の構成Beforeと課題', text: '現在の構成（Before）と課題' },
+    { level: 'h3', id: 'OSS-DNS-リゾルバーの問題点', text: 'OSS DNS リゾルバーの問題点' },
+    { level: 'h3', id: 'Route-53-Resolver-に置換', text: 'Route 53 Resolver に置換' },
+    { level: 'h2', id: 'Route-53-Resolver-の-2-つのエンドポイント', text: 'Route 53 Resolver の 2 つのエンドポイント' },
+    { level: 'h3', id: 'ビルの受付窓口と外部電話回線', text: '🚪 ビルの「受付窓口」と「外部電話回線」' },
+    { level: 'h3', id: 'インバウンドエンドポイント', text: '📥 インバウンドエンドポイント' },
+    { level: 'h3', id: 'アウトバウンドエンドポイント', text: '📤 アウトバウンドエンドポイント' },
+    { level: 'h2', id: 'DNS-クエリの流れを図解する', text: 'DNS クエリの流れを図解する' },
+    { level: 'h2', id: '移行後のアーキテクチャAfter', text: '移行後のアーキテクチャ（After）' },
+    { level: 'h2', id: '構築手順-4-ステップで完成', text: '構築手順：4 ステップで完成' },
+    { level: 'h3', id: 'たとえ話-新しい交換機の設置手順', text: '🔧 たとえ話：新しい交換機の設置手順' },
+    { level: 'h2', id: 'DNS-転送ルール-まとめ表', text: 'DNS 転送ルール まとめ表' },
+    { level: 'h3', id: '最重要ポイント-転送の入口と出口', text: '🔑 最重要ポイント：転送の「入口」と「出口」' },
+    { level: 'h2', id: 'Route-53-Resolver-を使うメリット', text: 'Route 53 Resolver を使うメリット' },
+    { level: 'h3', id: 'たとえ話-自前の交換機-vs.-電話会社の交換機', text: '🏠 たとえ話：自前の交換機 vs. 電話会社の交換機' },
+    { level: 'h2', id: 'よくある質問FAQ', text: 'よくある質問（FAQ）' },
+    { level: 'h2', id: 'まとめ-覚えておくべき-3-行', text: 'まとめ：覚えておくべき 3 行' }
+  ],
+  prevPage: 'global-accelerator-vpn-performance-guide.html',
+  nextPage: 'aws-gateways.html',
+  pageNum: 34,
+  pageTotal: 40,
+};
+
+const rawContent = `<style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            line-height: 1.8;
+            padding: 20px;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 40%, #3182ce 70%, #63b3ed 100%);
+            color: #fff;
+            padding: 56px 48px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '🌐';
+            position: absolute;
+            font-size: 16em;
+            opacity: 0.07;
+            top: -30px;
+            right: -20px;
+        }
+
+        .header::after {
+            content: '🏢';
+            position: absolute;
+            font-size: 10em;
+            opacity: 0.06;
+            bottom: -20px;
+            left: 20px;
+        }
+
+        .header-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 40px;
+            padding: 6px 22px;
+            font-size: 0.85em;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            margin-bottom: 18px;
+            backdrop-filter: blur(4px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 2.6em;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 14px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.15em;
+            opacity: 0.92;
+            max-width: 750px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            font-weight: 300;
+        }
+
+        /* ===== CONTENT ===== */
+        .content {
+            padding: 48px;
+        }
+
+        /* ===== CONCLUSION FIRST ===== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #ebf8ff 0%, #e6f6ff 100%);
+            border: 2px solid #90cdf4;
+            border-radius: 16px;
+            padding: 36px;
+            margin-bottom: 48px;
+            position: relative;
+        }
+
+        .conclusion-first::before {
+            content: '💡';
+            position: absolute;
+            top: -18px;
+            left: 24px;
+            font-size: 2em;
+            background: #fff;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .conclusion-first h2 {
+            color: #2b6cb0;
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .conclusion-first p {
+            font-size: 1.02em;
+            color: #2d3748;
+            margin-bottom: 12px;
+        }
+
+        .conclusion-points {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .conclusion-point {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+        }
+
+        .conclusion-point .cp-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .conclusion-point .cp-title {
+            font-weight: 700;
+            color: #2b6cb0;
+            font-size: 0.92em;
+            margin-bottom: 4px;
+        }
+
+        .conclusion-point .cp-desc {
+            font-size: 0.82em;
+            color: #718096;
+        }
+
+        /* ===== SECTION ===== */
+        .section {
+            margin-bottom: 48px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #e2e8f0;
+        }
+
+        .section-number {
+            background: linear-gradient(135deg, #2b6cb0, #3182ce);
+            color: #fff;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1em;
+            flex-shrink: 0;
+        }
+
+        .section-header h2 {
+            font-size: 1.55em;
+            font-weight: 700;
+            color: #1a365d;
+        }
+
+        /* ===== ANALOGY BOX ===== */
+        .analogy-box {
+            background: linear-gradient(135deg, #fffff0 0%, #fefcbf 100%);
+            border: 2px solid #ecc94b;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 28px;
+            position: relative;
+        }
+
+        .analogy-box::before {
+            content: '🏠 たとえ話';
+            position: absolute;
+            top: -14px;
+            left: 20px;
+            background: #ecc94b;
+            color: #744210;
+            font-size: 0.82em;
+            font-weight: 700;
+            padding: 3px 14px;
+            border-radius: 20px;
+        }
+
+        .analogy-box h3 {
+            color: #975a16;
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            margin-top: 6px;
+        }
+
+        .analogy-box p {
+            color: #744210;
+            font-size: 0.95em;
+        }
+
+        /* ===== DIAGRAM CONTAINERS ===== */
+        .diagram-container {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 32px;
+            margin: 24px 0;
+            overflow-x: auto;
+        }
+
+        .diagram-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.15em;
+            color: #2d3748;
+            margin-bottom: 24px;
+        }
+
+        /* ===== ARCHITECTURE DIAGRAM ===== */
+        .arch-diagram {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            min-height: 420px;
+        }
+
+        .env-zone {
+            flex: 1;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .env-onprem {
+            background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #d69e2e;
+            margin-right: 0;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .env-bridge {
+            width: 120px;
+            flex-shrink: 0;
+            background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e0 100%);
+            border-top: 2px solid #a0aec0;
+            border-bottom: 2px solid #a0aec0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .env-aws {
+            background: linear-gradient(180deg, #ebf8ff 0%, #bee3f8 100%);
+            border: 2px solid #3182ce;
+            margin-left: 0;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        .env-label {
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.1em;
+            margin-bottom: 16px;
+            padding: 8px 16px;
+            border-radius: 10px;
+        }
+
+        .env-onprem .env-label {
+            background: #d69e2e;
+            color: #fff;
+        }
+
+        .env-aws .env-label {
+            background: #2b6cb0;
+            color: #fff;
+        }
+
+        .component-box {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 0.88em;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .component-box .comp-icon {
+            font-size: 1.5em;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .component-box.highlight {
+            border: 2px solid #e53e3e;
+            background: #fff5f5;
+        }
+
+        .component-box.highlight::after {
+            content: '← 置換対象';
+            position: absolute;
+            right: -80px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.72em;
+            color: #e53e3e;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .component-box.new-service {
+            border: 2px solid #38a169;
+            background: #f0fff4;
+        }
+
+        .component-box.new-service::before {
+            content: '✨ NEW';
+            position: absolute;
+            top: -8px;
+            right: 8px;
+            font-size: 0.6em;
+            background: #38a169;
+            color: #fff;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .bridge-arrow {
+            font-size: 1.6em;
+            color: #4a5568;
+            font-weight: 700;
+        }
+
+        .bridge-label {
+            font-size: 0.7em;
+            color: #4a5568;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        /* ===== FLOW DIAGRAM ===== */
+        .flow-scenario {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .flow-scenario-title {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 1.05em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .flow-step {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 130px;
+            max-width: 180px;
+            font-size: 0.82em;
+            position: relative;
+            border: 2px solid #e2e8f0;
+        }
+
+        .flow-step .fs-icon {
+            font-size: 1.6em;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .flow-step .fs-label {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 0.92em;
+        }
+
+        .flow-step .fs-desc {
+            font-size: 0.78em;
+            color: #718096;
+            margin-top: 2px;
+        }
+
+        .flow-step.step-onprem {
+            background: #fffff0;
+            border-color: #d69e2e;
+        }
+
+        .flow-step.step-aws {
+            background: #ebf8ff;
+            border-color: #3182ce;
+        }
+
+        .flow-step.step-resolver {
+            background: #f0fff4;
+            border-color: #38a169;
+        }
+
+        .flow-arrow {
+            font-size: 1.4em;
+            color: #a0aec0;
+            margin: 0 6px;
+            flex-shrink: 0;
+        }
+
+        /* ===== ENDPOINT COMPARISON ===== */
+        .endpoint-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        .endpoint-card {
+            border-radius: 16px;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .endpoint-card.inbound {
+            background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+            border: 2px solid #48bb78;
+        }
+
+        .endpoint-card.outbound {
+            background: linear-gradient(135deg, #ebf4ff 0%, #c3dafe 100%);
+            border: 2px solid #667eea;
+        }
+
+        .endpoint-card .ep-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.78em;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .endpoint-card.inbound .ep-badge {
+            background: #38a169;
+            color: #fff;
+        }
+
+        .endpoint-card.outbound .ep-badge {
+            background: #5a67d8;
+            color: #fff;
+        }
+
+        .endpoint-card h3 {
+            font-size: 1.25em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .endpoint-card.inbound h3 { color: #276749; }
+        .endpoint-card.outbound h3 { color: #434190; }
+
+        .endpoint-card p {
+            font-size: 0.92em;
+            color: #4a5568;
+            margin-bottom: 12px;
+        }
+
+        .ep-direction {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 0.88em;
+            font-weight: 600;
+            margin-top: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+
+        .ep-direction .dir-arrow {
+            font-size: 1.3em;
+        }
+
+        .ep-analogy {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 10px;
+            font-size: 0.82em;
+            color: #718096;
+            font-style: italic;
+        }
+
+        /* ===== INFO-BOX ===== */
+        .info-box {
+            background: #f7fafc;
+            border-left: 5px solid #3182ce;
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+
+        .info-box.warning {
+            background: #fffaf0;
+            border-left-color: #dd6b20;
+        }
+
+        .info-box.success {
+            background: #f0fff4;
+            border-left-color: #38a169;
+        }
+
+        .info-box strong {
+            color: #2d3748;
+        }
+
+        /* ===== BEFORE/AFTER ===== */
+        .before-after {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        .ba-card {
+            border-radius: 14px;
+            padding: 24px;
+            position: relative;
+        }
+
+        .ba-card.before {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+        }
+
+        .ba-card.after {
+            background: #f0fff4;
+            border: 2px solid #68d391;
+        }
+
+        .ba-card .ba-label {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.78em;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+        }
+
+        .ba-card.before .ba-label { background: #e53e3e; }
+        .ba-card.after .ba-label { background: #38a169; }
+
+        .ba-card h3 {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .ba-card.before h3 { color: #c53030; }
+        .ba-card.after h3 { color: #276749; }
+
+        .ba-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            color: #4a5568;
+        }
+
+        .ba-item .ba-icon {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* ===== STEPS ===== */
+        .steps-container {
+            margin: 24px 0;
+        }
+
+        .step-block {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2em;
+            color: #fff;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #2b6cb0, #3182ce);
+        }
+
+        .step-content {
+            flex: 1;
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .step-content h4 {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: #1a365d;
+            margin-bottom: 8px;
+        }
+
+        .step-content p {
+            font-size: 0.92em;
+            color: #4a5568;
+        }
+
+        /* ===== CODE BLOCK ===== */
+        .code-block {
+            background: #1a202c;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 16px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 0.68em;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82em;
+            color: #e2e8f0;
+            line-height: 1.7;
+            white-space: pre;
+        }
+
+        .code-block .comment { color: #718096; }
+        .code-block .keyword { color: #63b3ed; }
+        .code-block .string { color: #68d391; }
+        .code-block .value { color: #fbd38d; }
+
+        /* ===== FORWARDING RULE TABLE ===== */
+        .rule-table-wrap {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .rule-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9em;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .rule-table th {
+            background: linear-gradient(135deg, #2b6cb0, #3182ce);
+            color: #fff;
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .rule-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        .rule-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .rule-table tr:nth-child(even) td {
+            background: #f7fafc;
+        }
+
+        .rule-table tr:hover td {
+            background: #ebf8ff;
+        }
+
+        .domain-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88em;
+            font-weight: 600;
+        }
+
+        .domain-badge.onprem {
+            background: #fefcbf;
+            color: #975a16;
+            border: 1px solid #ecc94b;
+        }
+
+        .domain-badge.aws {
+            background: #ebf8ff;
+            color: #2b6cb0;
+            border: 1px solid #90cdf4;
+        }
+
+        /* ===== BENEFITS GRID ===== */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin: 20px 0;
+        }
+
+        .benefit-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 22px;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        }
+
+        .benefit-card .bf-icon {
+            font-size: 1.8em;
+            flex-shrink: 0;
+        }
+
+        .benefit-card .bf-title {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 0.95em;
+            margin-bottom: 4px;
+        }
+
+        .benefit-card .bf-desc {
+            font-size: 0.84em;
+            color: #718096;
+        }
+
+        /* ===== FAQ ===== */
+        .faq-item {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 14px;
+        }
+
+        .faq-q {
+            font-weight: 700;
+            color: #2b6cb0;
+            font-size: 1em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .faq-a {
+            font-size: 0.92em;
+            color: #4a5568;
+            padding-left: 28px;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: #1a365d;
+            color: #fff;
+            text-align: center;
+            padding: 28px 48px;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .content { padding: 24px; }
+            .header { padding: 36px 24px; }
+            .header h1 { font-size: 1.8em; }
+            .conclusion-points { grid-template-columns: 1fr; }
+            .endpoint-grid { grid-template-columns: 1fr; }
+            .before-after { grid-template-columns: 1fr; }
+            .benefits-grid { grid-template-columns: 1fr; }
+            .arch-diagram { flex-direction: column; }
+            .env-onprem,
+            .env-aws {
+                border-radius: 16px;
+            }
+            .env-bridge {
+                width: 100%;
+                height: 60px;
+                flex-direction: row;
+            }
+            .flow-steps { flex-direction: column; align-items: stretch; }
+            .flow-step { max-width: 100%; }
+            .flow-arrow { transform: rotate(90deg); text-align: center; }
+        }
+
+        /* ===== DOMAIN LABEL ===== */
+        .domain-visual {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin: 10px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .domain-visual .dv-icon {
+            font-size: 2em;
+        }
+
+        .domain-visual .dv-domain {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .domain-visual .dv-desc {
+            font-size: 0.82em;
+            color: #718096;
+        }
+
+        /* ===== KEY CONCEPT BOX ===== */
+        .key-concept {
+            background: linear-gradient(135deg, #faf5ff 0%, #e9d8fd 100%);
+            border: 2px solid #b794f4;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+
+        .key-concept h3, .key-concept h4 {
+            color: #553c9a;
+            font-size: 1.05em;
+            margin-bottom: 8px;
+        }
+
+        .key-concept p {
+            color: #553c9a;
+            font-size: 0.92em;
+        }
+
+        /* ===== MINI DIAGRAM ===== */
+        .mini-diagram {
+            text-align: center;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            line-height: 1.9;
+            color: #2d3748;
+        }
+
+        .mini-diagram .highlight-text {
+            color: #2b6cb0;
+            font-weight: 700;
+        }
+
+        .mini-diagram .highlight-green {
+            color: #38a169;
+            font-weight: 700;
+        }
+
+        .mini-diagram .highlight-orange {
+            color: #d69e2e;
+            font-weight: 700;
+        }
+
+        .mini-diagram .arrow-line {
+            color: #a0aec0;
+        }</style>
+<!-- ===== HEADER ===== -->
+        <div class="header">
+            <div class="header-badge">AWS Networking &amp; Content Delivery</div>
+            <h1>🌐 ハイブリッド DNS アーキテクチャ</h1>
+            <p>オンプレミスと AWS の名前解決を Route 53 Resolver で統合する仕組みを、たとえ話と図解で徹底解説</p>
+        </div>
+
+        <div class="content">
+
+            <!-- ===== 結論ファースト ===== -->
+            <div class="conclusion-first">
+                <h2 id="⚡-まず結論-3つの核心ポイント">⚡ まず結論：3つの核心ポイント</h2>
+                <p>ハイブリッド DNS とは「2つのオフィスにある内線電話帳を、交換機で相互接続する」仕組みです。Route 53 Resolver のインバウンド＆アウトバウンドエンドポイントを設置し、DNS クエリ転送ルールを設定するだけで、オンプレミス↔AWS 間の名前解決がマネージドで実現します。</p>
+                <div class="conclusion-points">
+                    <div class="conclusion-point">
+                        <div class="cp-icon">📥</div>
+                        <div class="cp-title">インバウンド EP</div>
+                        <div class="cp-desc">オンプレ → AWS への<br>DNS クエリ受け口</div>
+                    </div>
+                    <div class="conclusion-point">
+                        <div class="cp-icon">📤</div>
+                        <div class="cp-title">アウトバウンド EP</div>
+                        <div class="cp-desc">AWS → オンプレへの<br>DNS クエリ転送口</div>
+                    </div>
+                    <div class="conclusion-point">
+                        <div class="cp-icon">📋</div>
+                        <div class="cp-title">転送ルール</div>
+                        <div class="cp-desc">ドメインごとに<br>問い合わせ先を振り分け</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Section 1: たとえ話で理解 ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">1</div>
+                    <h2 id="たとえ話で全体像をつかむ">たとえ話で全体像をつかむ</h2>
+                </div>
+
+                <div class="analogy-box">
+                    <h3 id="２つのオフィスビルの内線電話帳">🏢 ２つのオフィスビルの内線電話帳</h3>
+                    <p>
+                        ある大企業が<strong>「東京本社ビル」（= オンプレミス）</strong>と<strong>「大阪支社ビル」（= AWS クラウド）</strong>を持っていると想像してください。
+                        それぞれのビルには独自の<strong>内線電話帳（= DNS）</strong>があります。
+                    </p>
+                    <p style="margin-top: 10px;">
+                        東京の社員が大阪の「田中さん（内線 2051）」に電話したいとき、東京の電話帳には大阪の情報が載っていません。
+                        そこで必要なのが、<strong>2 つのビルをつなぐ交換機（= Route 53 Resolver エンドポイント）</strong>と、
+                        <strong>「大阪の番号は大阪に聞いてね」という転送ルール</strong>です。
+                    </p>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">📞 たとえ話：内線電話帳の相互接続</div>
+                    <div class="arch-diagram">
+                        <!-- オンプレ側 -->
+                        <div class="env-zone env-onprem">
+                            <div class="env-label">🏢 東京本社ビル（オンプレミス）</div>
+                            <div class="component-box">
+                                <span class="comp-icon">📒</span>
+                                東京の内線電話帳<br>
+                                <small style="color:#975a16">corp.example.com</small>
+                            </div>
+                            <div class="component-box">
+                                <span class="comp-icon">👨‍💼</span>
+                                東京の社員<br>
+                                <small style="color:#718096">「大阪の田中さんに電話したい」</small>
+                            </div>
+                            <div class="component-box">
+                                <span class="comp-icon">📞</span>
+                                東京の交換手<br>
+                                <small style="color:#718096">オンプレ DNS リゾルバー</small>
+                            </div>
+                        </div>
+
+                        <!-- ブリッジ -->
+                        <div class="env-bridge">
+                            <div class="bridge-label">大阪の番号?<br>→ 大阪に転送</div>
+                            <div class="bridge-arrow">⇄</div>
+                            <div class="bridge-label">東京の番号?<br>→ 東京に転送</div>
+                        </div>
+
+                        <!-- AWS 側 -->
+                        <div class="env-zone env-aws">
+                            <div class="env-label">☁️ 大阪支社ビル（AWS）</div>
+                            <div class="component-box">
+                                <span class="comp-icon">📒</span>
+                                大阪の内線電話帳<br>
+                                <small style="color:#2b6cb0">aws.example.com</small>
+                            </div>
+                            <div class="component-box">
+                                <span class="comp-icon">👩‍💻</span>
+                                大阪の社員<br>
+                                <small style="color:#718096">「東京の鈴木さんに電話したい」</small>
+                            </div>
+                            <div class="component-box new-service">
+                                <span class="comp-icon">📞</span>
+                                大阪の交換機<br>
+                                <small style="color:#276749">Route 53 Resolver</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Section 2: 現在のアーキテクチャ ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">2</div>
+                    <h2 id="現在の構成Beforeと課題">現在の構成（Before）と課題</h2>
+                </div>
+
+                <p style="margin-bottom: 20px;">現在は、AWS 側に<strong>オープンソースの再帰 DNS リゾルバー</strong>を EC2 上に構築して、オンプレミスとの名前解決を実現しています。これには運用上の課題があります。</p>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">🔄 現在の DNS 構成（Before）</div>
+                    <div class="arch-diagram">
+                        <div class="env-zone env-onprem">
+                            <div class="env-label">🏢 オンプレミス環境</div>
+                            <div class="domain-visual">
+                                <div class="dv-icon">📁</div>
+                                <div>
+                                    <div class="dv-domain">corp.example.com</div>
+                                    <div class="dv-desc">オンプレミスのドメイン</div>
+                                </div>
+                            </div>
+                            <div class="component-box">
+                                <span class="comp-icon">🖥️</span>
+                                オンプレ DNS リゾルバー
+                            </div>
+                        </div>
+
+                        <div class="env-bridge">
+                            <div class="bridge-label">Direct Connect<br>/ VPN</div>
+                            <div class="bridge-arrow">⇄</div>
+                            <div class="bridge-label">DNS クエリ<br>相互転送</div>
+                        </div>
+
+                        <div class="env-zone env-aws">
+                            <div class="env-label">☁️ AWS 環境（VPC）</div>
+                            <div class="domain-visual">
+                                <div class="dv-icon">📁</div>
+                                <div>
+                                    <div class="dv-domain">aws.example.com</div>
+                                    <div class="dv-desc">Route 53 プライベートホストゾーン</div>
+                                </div>
+                            </div>
+                            <div class="component-box highlight" style="margin-right: 90px;">
+                                <span class="comp-icon">⚙️</span>
+                                OSS 再帰 DNS リゾルバー<br>
+                                <small style="color:#e53e3e">（EC2 上で自己管理）</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="before-after">
+                    <div class="ba-card before">
+                        <div class="ba-label">❌ 現在の課題（Before）</div>
+                        <h3 id="OSS-DNS-リゾルバーの問題点">OSS DNS リゾルバーの問題点</h3>
+                        <div class="ba-item"><span class="ba-icon">🔧</span>EC2 インスタンスの OS / ソフトウェアの<strong>パッチ適用が必要</strong></div>
+                        <div class="ba-item"><span class="ba-icon">🔄</span>冗長構成を<strong>自分で設計・維持</strong>しなければならない</div>
+                        <div class="ba-item"><span class="ba-icon">📈</span>トラフィック増加時の<strong>スケーリングが手動</strong></div>
+                        <div class="ba-item"><span class="ba-icon">💰</span>EC2 運用コスト＋人的メンテナンスコスト</div>
+                        <div class="ba-item"><span class="ba-icon">🛑</span>障害時の復旧対応も<strong>自己責任</strong></div>
+                    </div>
+                    <div class="ba-card after">
+                        <div class="ba-label">✅ 移行後のメリット（After）</div>
+                        <h3 id="Route-53-Resolver-に置換">Route 53 Resolver に置換</h3>
+                        <div class="ba-item"><span class="ba-icon">🎯</span>AWS がインフラを<strong>フルマネージド</strong>で提供</div>
+                        <div class="ba-item"><span class="ba-icon">🔁</span><strong>高可用性</strong>（複数 AZ に自動配置）が標準搭載</div>
+                        <div class="ba-item"><span class="ba-icon">📊</span>負荷に応じた<strong>自動スケーリング</strong></div>
+                        <div class="ba-item"><span class="ba-icon">💵</span>EC2 管理コスト<strong>削減</strong>、運用負荷大幅軽減</div>
+                        <div class="ba-item"><span class="ba-icon">🔌</span>Route 53 の他機能と<strong>ネイティブ統合</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Section 3: Route 53 Resolver エンドポイント ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">3</div>
+                    <h2 id="Route-53-Resolver-の-2-つのエンドポイント">Route 53 Resolver の 2 つのエンドポイント</h2>
+                </div>
+
+                <div class="analogy-box">
+                    <h3 id="ビルの受付窓口と外部電話回線">🚪 ビルの「受付窓口」と「外部電話回線」</h3>
+                    <p>
+                        <strong>インバウンドエンドポイント</strong>は、ビルの<strong>正面受付</strong>のようなもの。外部（オンプレ）からの電話（DNS クエリ）を受け付ける窓口です。<br>
+                        <strong>アウトバウンドエンドポイント</strong>は、<strong>外線電話機</strong>のようなもの。ビル内（AWS）から外部（オンプレ）に電話をかけるための回線です。
+                    </p>
+                </div>
+
+                <div class="endpoint-grid">
+                    <div class="endpoint-card inbound">
+                        <div class="ep-badge">INBOUND（受信用）</div>
+                        <h3 id="インバウンドエンドポイント">📥 インバウンドエンドポイント</h3>
+                        <p>オンプレミス環境からの DNS クエリを VPC 内で受信するための ENI（ネットワークインターフェース）です。</p>
+                        <div class="ep-direction">
+                            <span class="dir-arrow">🏢</span>
+                            <span>オンプレミス → <strong>AWS</strong></span>
+                        </div>
+                        <div class="ep-analogy">💡 たとえ話：大阪支社の<strong>正面受付</strong>。東京から電話がかかってきたら「はい、大阪支社です」と応答する。</div>
+                    </div>
+
+                    <div class="endpoint-card outbound">
+                        <div class="ep-badge">OUTBOUND（送信用）</div>
+                        <h3 id="アウトバウンドエンドポイント">📤 アウトバウンドエンドポイント</h3>
+                        <p>VPC 内の DNS クエリをオンプレミスの DNS リゾルバーへ転送するための ENI です。転送ルールと組み合わせて使います。</p>
+                        <div class="ep-direction">
+                            <span class="dir-arrow">☁️</span>
+                            <span>AWS → <strong>オンプレミス</strong></span>
+                        </div>
+                        <div class="ep-analogy">💡 たとえ話：大阪支社の<strong>外線電話機</strong>。「東京本社の鈴木さんの内線番号を教えて」と東京に問い合わせる。</div>
+                    </div>
+                </div>
+
+                <div class="key-concept">
+                    <h4>🔑 覚えるコツ：「誰が聞きたいか」で判断</h4>
+                    <p>
+                        <strong>オンプレの人が AWS の名前を知りたい</strong>
+                        → オンプレからクエリが<strong>入ってくる</strong>
+                        → <strong>インバウンド</strong>エンドポイント<br>
+                        <strong>AWS の人がオンプレの名前を知りたい</strong>
+                        → AWS からクエリが<strong>出ていく</strong>
+                        → <strong>アウトバウンド</strong>エンドポイント
+                    </p>
+                </div>
+            </div>
+
+            <!-- ===== Section 4: DNS クエリフロー ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">4</div>
+                    <h2 id="DNS-クエリの流れを図解する">DNS クエリの流れを図解する</h2>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">シナリオ A：オンプレミスから AWS リソースの名前解決</div>
+                    <div class="flow-scenario">
+                        <div class="flow-scenario-title">
+                            🏢→☁️ 「オンプレのサーバーが <span class="domain-badge aws">db.aws.example.com</span> にアクセスしたい」
+                        </div>
+                        <div class="flow-steps">
+                            <div class="flow-step step-onprem">
+                                <span class="fs-icon">🖥️</span>
+                                <span class="fs-label">オンプレサーバー</span>
+                                <span class="fs-desc">DNS クエリ発行</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-onprem">
+                                <span class="fs-icon">📞</span>
+                                <span class="fs-label">オンプレ DNS</span>
+                                <span class="fs-desc">転送ルールに一致</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-resolver">
+                                <span class="fs-icon">📥</span>
+                                <span class="fs-label">インバウンド EP</span>
+                                <span class="fs-desc">VPC で受信</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-aws">
+                                <span class="fs-icon">📒</span>
+                                <span class="fs-label">Route 53 PHZ</span>
+                                <span class="fs-desc">名前を解決</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-aws">
+                                <span class="fs-icon">✅</span>
+                                <span class="fs-label">IP アドレス返却</span>
+                                <span class="fs-desc">10.0.1.50</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">シナリオ B：AWS からオンプレミスリソースの名前解決</div>
+                    <div class="flow-scenario">
+                        <div class="flow-scenario-title">
+                            ☁️→🏢 「EC2 インスタンスが <span class="domain-badge onprem">mail.corp.example.com</span> にアクセスしたい」
+                        </div>
+                        <div class="flow-steps">
+                            <div class="flow-step step-aws">
+                                <span class="fs-icon">🖥️</span>
+                                <span class="fs-label">EC2 インスタンス</span>
+                                <span class="fs-desc">DNS クエリ発行</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-aws">
+                                <span class="fs-icon">📋</span>
+                                <span class="fs-label">転送ルール照合</span>
+                                <span class="fs-desc">corp.example.com に一致</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-resolver">
+                                <span class="fs-icon">📤</span>
+                                <span class="fs-label">アウトバウンド EP</span>
+                                <span class="fs-desc">オンプレへ転送</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-onprem">
+                                <span class="fs-icon">📞</span>
+                                <span class="fs-label">オンプレ DNS</span>
+                                <span class="fs-desc">名前を解決</span>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step step-onprem">
+                                <span class="fs-icon">✅</span>
+                                <span class="fs-label">IP アドレス返却</span>
+                                <span class="fs-desc">192.168.1.25</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <strong>📌 ポイント：</strong>
+                    どちらのシナリオでも、ネットワーク接続（Direct Connect または Site-to-Site VPN）が前提です。DNS クエリはこのネットワーク経路を経由して転送されます。
+                </div>
+            </div>
+
+            <!-- ===== Section 5: 移行後のアーキテクチャ ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">5</div>
+                    <h2 id="移行後のアーキテクチャAfter">移行後のアーキテクチャ（After）</h2>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">✅ Route 53 Resolver を使った新しい DNS 構成</div>
+                    <div class="arch-diagram">
+                        <div class="env-zone env-onprem">
+                            <div class="env-label">🏢 オンプレミス環境</div>
+                            <div class="domain-visual">
+                                <div class="dv-icon">📁</div>
+                                <div>
+                                    <div class="dv-domain">corp.example.com</div>
+                                    <div class="dv-desc">オンプレのドメイン</div>
+                                </div>
+                            </div>
+                            <div class="component-box">
+                                <span class="comp-icon">🖥️</span>
+                                オンプレ DNS リゾルバー
+                            </div>
+                            <div class="info-box" style="font-size:0.82em; margin-top:10px;">
+                                <strong>転送設定：</strong><br>
+                                aws.example.com → インバウンド EP の IP へ転送
+                            </div>
+                        </div>
+
+                        <div class="env-bridge">
+                            <div class="bridge-label">Direct Connect<br>/ VPN</div>
+                            <div class="bridge-arrow">⇄</div>
+                            <div class="bridge-label">DNS 相互<br>転送</div>
+                        </div>
+
+                        <div class="env-zone env-aws">
+                            <div class="env-label">☁️ AWS 環境（VPC）</div>
+                            <div class="domain-visual">
+                                <div class="dv-icon">📁</div>
+                                <div>
+                                    <div class="dv-domain">aws.example.com</div>
+                                    <div class="dv-desc">Route 53 プライベートホストゾーン</div>
+                                </div>
+                            </div>
+                            <div class="component-box new-service">
+                                <span class="comp-icon">📥</span>
+                                インバウンドエンドポイント<br>
+                                <small style="color:#276749">オンプレ→AWS のクエリ受信</small>
+                            </div>
+                            <div class="component-box new-service">
+                                <span class="comp-icon">📤</span>
+                                アウトバウンドエンドポイント<br>
+                                <small style="color:#276749">AWS→オンプレのクエリ転送</small>
+                            </div>
+                            <div class="info-box success" style="font-size:0.82em; margin-top:10px;">
+                                <strong>転送ルール：</strong><br>
+                                corp.example.com → オンプレ DNS の IP へ転送
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Section 6: 構築手順 ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">6</div>
+                    <h2 id="構築手順-4-ステップで完成">構築手順：4 ステップで完成</h2>
+                </div>
+
+                <div class="analogy-box">
+                    <h3 id="たとえ話-新しい交換機の設置手順">🔧 たとえ話：新しい交換機の設置手順</h3>
+                    <p>
+                        ① 受付窓口（インバウンド EP）を設置 → ② 外線電話機（アウトバウンド EP）を設置 → ③ 転送先リスト（ルール）を作成 → ④ 東京本社にも「大阪の番号はこの受付に聞いて」と伝達。古い交換機（OSS リゾルバー）は撤去！
+                    </p>
+                </div>
+
+                <div class="steps-container">
+                    <div class="step-block">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <h4>📥 インバウンドエンドポイントの作成</h4>
+                            <p>VPC 内にインバウンドエンドポイントを作成します。少なくとも 2 つの AZ に ENI を配置して高可用性を確保します。</p>
+                            <div class="code-block" data-lang="AWS CLI">
+                                <code><span class="keyword">aws</span> route53resolver create-resolver-endpoint \\
+    <span class="keyword">--name</span> <span class="string">"hybrid-inbound-ep"</span> \\
+    <span class="keyword">--direction</span> <span class="value">INBOUND</span> \\
+    <span class="keyword">--security-group-ids</span> <span class="string">"sg-0abc1234def56789"</span> \\
+    <span class="keyword">--ip-addresses</span> \\
+        SubnetId=<span class="string">subnet-aaaa1111</span>,Ip=<span class="value">10.0.1.10</span> \\
+        SubnetId=<span class="string">subnet-bbbb2222</span>,Ip=<span class="value">10.0.2.10</span></code>
+                            </div>
+                            <div class="info-box warning" style="font-size:0.85em;">
+                                <strong>⚠️ セキュリティグループ：</strong>DNS 通信（TCP/UDP ポート 53）をオンプレミスの IP 範囲から許可する必要があります。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <h4>📤 アウトバウンドエンドポイントの作成</h4>
+                            <p>VPC からオンプレミスへ DNS クエリを転送するためのエンドポイントを作成します。</p>
+                            <div class="code-block" data-lang="AWS CLI">
+                                <code><span class="keyword">aws</span> route53resolver create-resolver-endpoint \\
+    <span class="keyword">--name</span> <span class="string">"hybrid-outbound-ep"</span> \\
+    <span class="keyword">--direction</span> <span class="value">OUTBOUND</span> \\
+    <span class="keyword">--security-group-ids</span> <span class="string">"sg-0abc1234def56789"</span> \\
+    <span class="keyword">--ip-addresses</span> \\
+        SubnetId=<span class="string">subnet-aaaa1111</span> \\
+        SubnetId=<span class="string">subnet-bbbb2222</span></code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <h4>📋 転送ルールの作成（AWS → オンプレ）</h4>
+                            <p><span class="domain-badge onprem">corp.example.com</span> ドメインの DNS クエリをオンプレミスの DNS リゾルバーに転送するルールを作成します。</p>
+                            <div class="code-block" data-lang="AWS CLI">
+                                <code><span class="keyword">aws</span> route53resolver create-resolver-rule \\
+    <span class="keyword">--name</span> <span class="string">"forward-to-onprem"</span> \\
+    <span class="keyword">--rule-type</span> <span class="value">FORWARD</span> \\
+    <span class="keyword">--domain-name</span> <span class="string">"corp.example.com"</span> \\
+    <span class="keyword">--resolver-endpoint-id</span> <span class="string">"rslvr-out-xxxxxxxxxxxx"</span> \\
+    <span class="keyword">--target-ips</span> \\
+        Ip=<span class="value">192.168.1.10</span>,Port=<span class="value">53</span> \\
+        Ip=<span class="value">192.168.1.11</span>,Port=<span class="value">53</span></code>
+                            </div>
+                            <div class="info-box" style="font-size:0.85em;">
+                                <strong>📌 TargetIps：</strong>オンプレミスの DNS サーバーの IP アドレスを指定します。冗長性のため 2 つ以上推奨です。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <div class="step-num">4</div>
+                        <div class="step-content">
+                            <h4>🏢 オンプレミス DNS の転送設定変更</h4>
+                            <p>オンプレミスの DNS サーバーで <span class="domain-badge aws">aws.example.com</span> ドメインの条件付き転送先を、作成したインバウンドエンドポイントの IP アドレスに設定します。</p>
+                            <div class="code-block" data-lang="BIND 設定例">
+                                <code><span class="comment">// named.conf - 条件付き転送設定</span>
+<span class="keyword">zone</span> <span class="string">"aws.example.com"</span> {
+    <span class="keyword">type</span> forward;
+    <span class="keyword">forwarders</span> {
+        <span class="value">10.0.1.10</span>;  <span class="comment">// Inbound EP - AZ-a</span>
+        <span class="value">10.0.2.10</span>;  <span class="comment">// Inbound EP - AZ-c</span>
+    };
+};</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Section 7: 転送ルール一覧表 ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">7</div>
+                    <h2 id="DNS-転送ルール-まとめ表">DNS 転送ルール まとめ表</h2>
+                </div>
+
+                <div class="rule-table-wrap">
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>方向</th>
+                                <th>クエリ対象ドメイン</th>
+                                <th>設定場所</th>
+                                <th>転送先</th>
+                                <th>使用エンドポイント</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>🏢 → ☁️</strong></td>
+                                <td><span class="domain-badge aws">aws.example.com</span></td>
+                                <td>オンプレ DNS</td>
+                                <td>インバウンド EP の IP</td>
+                                <td>📥 インバウンド</td>
+                            </tr>
+                            <tr>
+                                <td><strong>☁️ → 🏢</strong></td>
+                                <td><span class="domain-badge onprem">corp.example.com</span></td>
+                                <td>Route 53 Resolver ルール</td>
+                                <td>オンプレ DNS の IP</td>
+                                <td>📤 アウトバウンド</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="key-concept">
+                    <h3 id="最重要ポイント-転送の入口と出口">🔑 最重要ポイント：転送の「入口」と「出口」</h3>
+                    <p>
+                        オンプレ側から見ると「AWS の名前が知りたい → AWS に<strong>入れてもらう</strong> = インバウンド EP」。<br>
+                        AWS 側から見ると「オンプレの名前が知りたい → AWS から<strong>出ていく</strong> = アウトバウンド EP + 転送ルール」。<br>
+                        <strong>常に「AWS 視点」で IN / OUT を考えると間違えません。</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- ===== Section 8: マネージドサービスのメリット ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">8</div>
+                    <h2 id="Route-53-Resolver-を使うメリット">Route 53 Resolver を使うメリット</h2>
+                </div>
+
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <div class="bf-icon">🛡️</div>
+                        <div>
+                            <div class="bf-title">高可用性</div>
+                            <div class="bf-desc">複数 AZ にまたがるエンドポイントで、1 つの AZ に障害が起きてもサービスが継続します。</div>
+                        </div>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="bf-icon">📈</div>
+                        <div>
+                            <div class="bf-title">自動スケーリング</div>
+                            <div class="bf-desc">DNS クエリ量が増えても、AWS 側で自動的にキャパシティが調整されます。</div>
+                        </div>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="bf-icon">🔧</div>
+                        <div>
+                            <div class="bf-title">メンテナンスフリー</div>
+                            <div class="bf-desc">OS パッチやソフトウェアアップデートは不要。AWS が裏側で管理します。</div>
+                        </div>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="bf-icon">🔗</div>
+                        <div>
+                            <div class="bf-title">ネイティブ統合</div>
+                            <div class="bf-desc">Route 53 プライベートホストゾーン、CloudWatch、RAM（ルール共有）とシームレスに連携。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analogy-box">
+                    <h3 id="たとえ話-自前の交換機-vs.-電話会社の交換機">🏠 たとえ話：自前の交換機 vs. 電話会社の交換機</h3>
+                    <p>
+                        OSS DNS リゾルバーは「自分でビルの地下室に交換機を置いて自分で管理する」状態。故障したら夜中でも修理に行かなきゃいけません。
+                        Route 53 Resolver は「電話会社（AWS）が提供する交換サービスに切り替える」こと。メンテナンスも障害対応もプロにお任せ、あなたは電話帳（DNS レコード）を管理するだけです。
+                    </p>
+                </div>
+            </div>
+
+            <!-- ===== Section 9: よくある質問 ===== -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">9</div>
+                    <h2 id="よくある質問FAQ">よくある質問（FAQ）</h2>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">❓ インバウンドとアウトバウンド、両方必要ですか？</div>
+                    <div class="faq-a">双方向の名前解決が必要な場合は<strong>両方必要</strong>です。オンプレ → AWS だけなら インバウンドのみ、AWS → オンプレだけならアウトバウンド+転送ルールのみでも構いません。今回のシナリオでは双方向なので両方作成します。</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">❓ エンドポイントはどの AZ に配置すべき？</div>
+                    <div class="faq-a">高可用性のため、<strong>最低 2 つの異なる AZ</strong> にエンドポイント ENI を配置するのがベストプラクティスです。Direct Connect / VPN の接続先 AZ も考慮してください。</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">❓ 転送ルールを複数の VPC で共有できますか？</div>
+                    <div class="faq-a">はい。<strong>AWS Resource Access Manager（RAM）</strong>を使って、同じ AWS Organizations 内の他のアカウントや VPC にルールを共有できます。マルチアカウント環境で非常に便利です。</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">❓ 料金はどのくらいかかりますか？</div>
+                    <div class="faq-a">エンドポイント 1 つの ENI あたり時間課金＋ DNS クエリ数に応じた従量課金です。EC2 インスタンスの運用と比較すると、管理コスト含め多くの場合コスト最適化できます。最新の料金は AWS 公式サイトをご確認ください。</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">❓ セキュリティグループの設定で注意点は？</div>
+                    <div class="faq-a">インバウンド EP のセキュリティグループで<strong>TCP/UDP ポート 53</strong> をオンプレの IP レンジから許可してください。アウトバウンド EP はオンプレ DNS の IP への送信を許可する必要があります。不要なアクセスは必ず制限しましょう。</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-q">❓ VPC の AmazonProvidedDNS（.2 リゾルバー）との関係は？</div>
+                    <div class="faq-a">Route 53 Resolver はVPC の .2 リゾルバーと連携します。転送ルールに一致しないクエリは通常どおり .2 リゾルバーが処理します。つまり、既存の VPC 内 DNS 解決に影響を与えずにハイブリッド DNS を追加できます。</div>
+                </div>
+            </div>
+
+            <!-- ===== Section 10: まとめ ===== -->
+            <div class="section" style="margin-bottom: 0;">
+                <div class="section-header">
+                    <div class="section-number">✓</div>
+                    <h2 id="まとめ-覚えておくべき-3-行">まとめ：覚えておくべき 3 行</h2>
+                </div>
+
+                <div class="diagram-container" style="text-align:center; padding: 36px;">
+                    <div style="font-size: 1.3em; font-weight: 700; color: #1a365d; margin-bottom: 20px;">ハイブリッド DNS = 「2 つの電話帳をつなぐ交換機」</div>
+                    <div class="mini-diagram">
+                        <span class="highlight-orange">オンプレ (corp.example.com)</span>
+                        <span class="arrow-line"> ──→ </span>
+                        <span class="highlight-green">📥 インバウンド EP</span>
+                        <span class="arrow-line"> ──→ </span>
+                        <span class="highlight-text">Route 53 PHZ (aws.example.com)</span>
+                        <br>
+                        <span class="highlight-text">EC2 / Lambda (VPC内)</span>
+                        <span class="arrow-line"> ──→ </span>
+                        <span class="highlight-green">📤 アウトバウンド EP</span>
+                        <span class="arrow-line"> ──→ </span>
+                        <span class="highlight-orange">オンプレ DNS (corp.example.com)</span>
+                    </div>
+                    <div style="margin-top: 24px; font-size: 0.95em; color: #4a5568;">
+                        <strong>①</strong> インバウンド EP を作ってオンプレからのクエリを受信<br>
+                        <strong>②</strong> アウトバウンド EP + 転送ルールでオンプレへクエリを送信<br>
+                        <strong>③</strong> OSS リゾルバーを廃止して、マネージドサービスの恩恵を受ける
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            ハイブリッド DNS アーキテクチャ 完全ガイド ｜ Route 53 Resolver を活用したオンプレミス↔AWS DNS 統合
+        </div>
+
+    
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

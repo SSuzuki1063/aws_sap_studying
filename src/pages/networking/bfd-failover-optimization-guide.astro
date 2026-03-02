@@ -1,0 +1,1219 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: '',
+  slug: 'bfd-failover-optimization-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '結論-BFDを使えばフェイルオーバーが劇的に速くなる！', text: '🎯 結論：BFDを使えばフェイルオーバーが劇的に速くなる！' },
+    { level: 'h2', id: '病院の緊急通報システムでたとえると...', text: '🏥 病院の緊急通報システムでたとえると...' },
+    { level: 'h3', id: '❌-BGPだけの場合', text: '❌ BGPだけの場合' },
+    { level: 'h3', id: '✅-BFD併用の場合', text: '✅ BFD併用の場合' },
+    { level: 'h2', id: 'BFDの仕組みを図解', text: '🔧 BFDの仕組みを図解' },
+    { level: 'h2', id: 'フェイルオーバー時間を徹底比較', text: '📊 フェイルオーバー時間を徹底比較' },
+    { level: 'h3', id: '❌-BGPのみBFDなし', text: '❌ BGPのみ（BFDなし）' },
+    { level: 'h3', id: '✅-BGP-+-BFD', text: '✅ BGP + BFD' },
+    { level: 'h2', id: 'BFD有効化の3ステップ', text: '🚀 BFD有効化の3ステップ' },
+    { level: 'h3', id: 'AWS側は自動有効', text: 'AWS側は自動有効' },
+    { level: 'h2', id: '⚙️-BFDの主要パラメータ', text: '⚙️ BFDの主要パラメータ' },
+    { level: 'h2', id: '⚠️-導入時の注意点', text: '⚠️ 導入時の注意点' },
+    { level: 'h3', id: 'オンプレミス設定必須', text: '🔧 オンプレミス設定必須' },
+    { level: 'h2', id: 'まとめ', text: '🎓 まとめ' }
+  ],
+  prevPage: 'direct-connect-bgp-routing-guide.html',
+  nextPage: 'macsec-lag-implementation-guide.html',
+  pageNum: 7,
+  pageTotal: 40,
+};
+
+const rawContent = `<style>* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            padding: 20px;
+            line-height: 1.6;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3d7ab5 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '⚡';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.1;
+            top: -40px;
+            right: -30px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファーストセクション */
+        .conclusion-first {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            border-left: 8px solid #2e7d32;
+            position: relative;
+        }
+        
+        .conclusion-first::before {
+            content: '🎯';
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 4em;
+            opacity: 0.3;
+        }
+        
+        .conclusion-first h2 {
+            color: #1b5e20;
+            font-size: 2em;
+            margin-bottom: 25px;
+        }
+        
+        .conclusion-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .conclusion-highlight {
+            font-size: 1.8em;
+            color: #2e7d32;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .conclusion-detail {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 25px;
+        }
+        
+        .conclusion-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(to bottom, #f1f8e9 0%, white 100%);
+            border-radius: 12px;
+            border-top: 4px solid #4caf50;
+        }
+        
+        .conclusion-item .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        
+        .conclusion-item .label {
+            color: #558b2f;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ff9800;
+        }
+        
+        .analogy-title {
+            color: #e65100;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .analogy-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .analogy-card {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .analogy-card.before {
+            border-top: 6px solid #ef5350;
+        }
+        
+        .analogy-card.after {
+            border-top: 6px solid #66bb6a;
+        }
+        
+        .analogy-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card h3 {
+            font-size: 1.5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .analogy-card.before h3 {
+            color: #c62828;
+        }
+        
+        .analogy-card.after h3 {
+            color: #2e7d32;
+        }
+        
+        .analogy-story {
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 10px;
+            color: #555;
+            line-height: 1.8;
+        }
+        
+        .analogy-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .analogy-card.before .analogy-result {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .analogy-card.after .analogy-result {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        /* 仕組み図解セクション */
+        .mechanism-section {
+            background: linear-gradient(to bottom, #f5f5f5 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .mechanism-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #1e3a5f;
+            margin-bottom: 40px;
+        }
+        
+        .bfd-diagram {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .diagram-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .diagram-endpoint {
+            width: 200px;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .endpoint-onprem {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+        }
+        
+        .endpoint-aws {
+            background: linear-gradient(135deg, #ff9900 0%, #ec7211 100%);
+            color: white;
+        }
+        
+        .diagram-endpoint .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .diagram-endpoint .name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .diagram-connection {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 30px;
+        }
+        
+        .connection-line {
+            position: relative;
+            width: 100%;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .bfd-packet {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            padding: 8px 15px;
+            border-radius: 20px;
+            position: relative;
+        }
+        
+        .packet-outgoing {
+            background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
+            color: white;
+        }
+        
+        .packet-incoming {
+            background: linear-gradient(270deg, #2196f3 0%, #03a9f4 100%);
+            color: white;
+        }
+        
+        .packet-arrow {
+            margin: 0 10px;
+        }
+        
+        .connection-label {
+            text-align: center;
+            background: #e3f2fd;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-top: 15px;
+            color: #1565c0;
+            font-weight: 600;
+        }
+        
+        .bfd-features {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .bfd-feature {
+            background: linear-gradient(to bottom, #e3f2fd 0%, white 100%);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            border-top: 4px solid #1976d2;
+            transition: all 0.3s ease;
+        }
+        
+        .bfd-feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(25, 118, 210, 0.2);
+        }
+        
+        .bfd-feature .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .bfd-feature .feature-title {
+            font-weight: bold;
+            color: #1565c0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .bfd-feature .feature-desc {
+            color: #546e7a;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        /* 比較セクション */
+        .comparison-section {
+            background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .comparison-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #283593;
+            margin-bottom: 40px;
+        }
+        
+        .comparison-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .comparison-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-box.without-bfd {
+            border-top: 6px solid #ef5350;
+        }
+        
+        .comparison-box.with-bfd {
+            border-top: 6px solid #4caf50;
+        }
+        
+        .comparison-box h3 {
+            text-align: center;
+            font-size: 1.4em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .comparison-box.without-bfd h3 {
+            color: #c62828;
+        }
+        
+        .comparison-box.with-bfd h3 {
+            color: #2e7d32;
+        }
+        
+        .timeline-bar {
+            height: 50px;
+            border-radius: 25px;
+            position: relative;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .without-bfd .timeline-bar {
+            background: linear-gradient(90deg, #ef5350 0%, #ef5350 100%);
+            width: 100%;
+        }
+        
+        .with-bfd .timeline-bar {
+            background: linear-gradient(90deg, #4caf50 0%, #4caf50 100%);
+            width: 10%;
+        }
+        
+        .timeline-label {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .with-bfd .timeline-label {
+            right: auto;
+            left: calc(10% + 15px);
+            color: #2e7d32;
+        }
+        
+        .comparison-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .without-bfd .stat-item {
+            background: #ffebee;
+        }
+        
+        .with-bfd .stat-item {
+            background: #e8f5e9;
+        }
+        
+        .stat-item .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .without-bfd .stat-value {
+            color: #c62828;
+        }
+        
+        .with-bfd .stat-value {
+            color: #2e7d32;
+        }
+        
+        .stat-item .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* 実装手順セクション */
+        .implementation-section {
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .implementation-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: #880e4f;
+            margin-bottom: 40px;
+        }
+        
+        .implementation-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+        }
+        
+        .implementation-step {
+            flex: 1;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ec407a 0%, #ad1457 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(173, 20, 87, 0.4);
+        }
+        
+        .implementation-step h3, .implementation-step h4 {
+            text-align: center;
+            color: #880e4f;
+            margin: 20px 0 15px 0;
+            font-size: 1.2em;
+        }
+        
+        .step-icon {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .step-content {
+            background: #fce4ec;
+            padding: 15px;
+            border-radius: 10px;
+            color: #6d0936;
+            line-height: 1.7;
+        }
+        
+        .step-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: #ec407a;
+            padding: 0 10px;
+        }
+        
+        /* 注意事項セクション */
+        .warning-section {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ff8f00;
+        }
+        
+        .warning-title {
+            color: #e65100;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .warning-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+        
+        .warning-item {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+        }
+        
+        .warning-item h3, .warning-item h4 {
+            color: #e65100;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .warning-item p {
+            color: #5d4037;
+            line-height: 1.7;
+        }
+        
+        /* パラメータ表 */
+        .params-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .params-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e3a5f;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            color: white;
+            padding: 18px;
+            text-align: left;
+            font-size: 1.05em;
+        }
+        
+        th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+        
+        td {
+            padding: 18px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .param-name {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+        
+        .param-value {
+            font-family: 'Courier New', monospace;
+            background: #e3f2fd;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: #1565c0;
+        }
+        
+        /* まとめセクション */
+        .summary-section {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3d7ab5 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .summary-section h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        
+        .summary-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .summary-highlight {
+            background: rgba(255,255,255,0.15);
+            padding: 35px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+        
+        .summary-highlight p {
+            font-size: 1.3em;
+            line-height: 1.8;
+        }
+        
+        .summary-points {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .summary-point {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-point .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-point .title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .summary-point .desc {
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 1024px) {
+            .analogy-comparison,
+            .comparison-visual,
+            .warning-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bfd-features {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .implementation-flow {
+                flex-direction: column;
+            }
+            
+            .step-arrow {
+                transform: rotate(90deg);
+                padding: 15px 0;
+            }
+            
+            .conclusion-detail,
+            .summary-points {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .bfd-features {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-row {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .diagram-endpoint {
+                width: 100%;
+            }
+            
+            .diagram-connection {
+                padding: 20px 0;
+            }
+        }</style>
+<div class="header">
+            <h1>⚡ BFD完全ガイド</h1>
+            <p>AWS Direct Connectのフェイルオーバー時間を<strong>90%以上短縮</strong>する魔法のプロトコル</p>
+        </div>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <div class="conclusion-first">
+                <h2 id="結論-BFDを使えばフェイルオーバーが劇的に速くなる！">🎯 結論：BFDを使えばフェイルオーバーが劇的に速くなる！</h2>
+                
+                <div class="conclusion-box">
+                    <div class="conclusion-highlight">
+                        BGPだけ：30〜90秒 → BFD併用：1〜3秒
+                    </div>
+                    <p style="text-align: center; color: #555; margin-bottom: 20px;">
+                        BFD（Bidirectional Forwarding Detection）は、ネットワーク障害を<strong>ミリ秒単位</strong>で検出し、<br>
+                        BGPのフェイルオーバーを<strong>最大90%以上高速化</strong>する軽量プロトコルです。
+                    </p>
+                    
+                    <div class="conclusion-detail">
+                        <div class="conclusion-item">
+                            <div class="number">1〜3秒</div>
+                            <div class="label">BFD使用時のフェイルオーバー</div>
+                        </div>
+                        <div class="conclusion-item">
+                            <div class="number">ミリ秒</div>
+                            <div class="label">障害検出の精度</div>
+                        </div>
+                        <div class="conclusion-item">
+                            <div class="number">自動有効</div>
+                            <div class="label">AWS側でのBFD設定</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- たとえ話セクション -->
+            <div class="analogy-section">
+                <h2 id="病院の緊急通報システムでたとえると..." class="analogy-title">🏥 病院の緊急通報システムでたとえると...</h2>
+                
+                <div class="analogy-comparison">
+                    <div class="analogy-card before">
+                        <div class="analogy-icon">🏥</div>
+                        <h3 id="❌-BGPだけの場合">❌ BGPだけの場合</h3>
+                        <div class="analogy-story">
+                            <strong>「1日3回の定期巡回」方式</strong><br><br>
+                            看護師が患者の部屋を<strong>定期的に巡回</strong>して様子を確認。<br><br>
+                            もし巡回の間に患者の容態が急変しても、<br>
+                            <strong>次の巡回まで気づかない</strong>。<br><br>
+                            最悪の場合、<strong>30分〜1時間以上</strong>発見が遅れることも...
+                        </div>
+                        <div class="analogy-result">
+                            ⏱️ 障害検出まで 30〜90秒
+                        </div>
+                    </div>
+                    
+                    <div class="analogy-card after">
+                        <div class="analogy-icon">🚨</div>
+                        <h3 id="✅-BFD併用の場合">✅ BFD併用の場合</h3>
+                        <div class="analogy-story">
+                            <strong>「24時間監視モニター」方式</strong><br><br>
+                            患者に<strong>心電図モニター</strong>を装着して24時間監視。<br><br>
+                            心拍に異常があれば<strong>瞬時にアラーム</strong>が鳴り、<br>
+                            医療チームが<strong>すぐに駆けつけられる</strong>！<br><br>
+                            <strong>数秒以内</strong>に異常を検知・対応開始。
+                        </div>
+                        <div class="analogy-result">
+                            ⚡ 障害検出まで 1〜3秒
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BFDの仕組み図解 -->
+            <div class="mechanism-section">
+                <h2 id="BFDの仕組みを図解" class="mechanism-title">🔧 BFDの仕組みを図解</h2>
+                
+                <div class="bfd-diagram">
+                    <div class="diagram-row">
+                        <div class="diagram-endpoint endpoint-onprem">
+                            <div class="icon">🏢</div>
+                            <div class="name">オンプレミス<br>ルーター</div>
+                        </div>
+                        
+                        <div class="diagram-connection">
+                            <div class="connection-line">
+                                <div class="bfd-packet packet-outgoing">
+                                    <span class="packet-arrow">→</span>
+                                    BFDパケット送信（300ms間隔）
+                                </div>
+                                <div class="bfd-packet packet-incoming">
+                                    BFDパケット受信（300ms間隔）
+                                    <span class="packet-arrow">←</span>
+                                </div>
+                            </div>
+                            <div class="connection-label">
+                                🔄 双方向で常に「生存確認」を交換
+                            </div>
+                        </div>
+                        
+                        <div class="diagram-endpoint endpoint-aws">
+                            <div class="icon">☁️</div>
+                            <div class="name">AWS<br>Direct Connect</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bfd-features">
+                    <div class="bfd-feature">
+                        <div class="feature-icon">⏱️</div>
+                        <div class="feature-title">高速障害検出</div>
+                        <div class="feature-desc">
+                            ミリ秒単位の間隔で制御パケットを交換し、瞬時に障害を検知
+                        </div>
+                    </div>
+                    
+                    <div class="bfd-feature">
+                        <div class="feature-icon">🤝</div>
+                        <div class="feature-title">BGPとの連携</div>
+                        <div class="feature-desc">
+                            BFDが障害を検知すると、即座にBGPに通知してルート切替を実行
+                        </div>
+                    </div>
+                    
+                    <div class="bfd-feature">
+                        <div class="feature-icon">↔️</div>
+                        <div class="feature-title">非同期モード</div>
+                        <div class="feature-desc">
+                            各方向に独立したBFDセッションを確立し、双方向の監視を実現
+                        </div>
+                    </div>
+                    
+                    <div class="bfd-feature">
+                        <div class="feature-icon">🪶</div>
+                        <div class="feature-title">軽量プロトコル</div>
+                        <div class="feature-desc">
+                            CPUやネットワーク負荷が低く、既存システムへの影響が最小限
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 比較セクション -->
+            <div class="comparison-section">
+                <h2 id="フェイルオーバー時間を徹底比較" class="comparison-title">📊 フェイルオーバー時間を徹底比較</h2>
+                
+                <div class="comparison-visual">
+                    <div class="comparison-box without-bfd">
+                        <h3 id="❌-BGPのみBFDなし">❌ BGPのみ（BFDなし）</h3>
+                        <div class="timeline-bar">
+                            <span class="timeline-label">30〜90秒</span>
+                        </div>
+                        <p style="text-align: center; color: #666; margin: 15px 0;">
+                            BGPのKeep-Alive/Hold Timerに依存
+                        </p>
+                        <div class="comparison-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">90秒</div>
+                                <div class="stat-label">デフォルトHold Timer</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">30秒</div>
+                                <div class="stat-label">最小設定時</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="comparison-box with-bfd">
+                        <h3 id="✅-BGP-+-BFD">✅ BGP + BFD</h3>
+                        <div style="position: relative;">
+                            <div class="timeline-bar"></div>
+                            <span class="timeline-label">1〜3秒</span>
+                        </div>
+                        <p style="text-align: center; color: #666; margin: 15px 0;">
+                            BFDのミリ秒単位検出が即座にBGPに通知
+                        </p>
+                        <div class="comparison-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">300ms</div>
+                                <div class="stat-label">BFD検出間隔</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">3回</div>
+                                <div class="stat-label">検出までのミス回数</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 実装手順 -->
+            <div class="implementation-section">
+                <h2 id="BFD有効化の3ステップ" class="implementation-title">🚀 BFD有効化の3ステップ</h2>
+                
+                <div class="implementation-flow">
+                    <div class="implementation-step">
+                        <div class="step-number">1</div>
+                        <div class="step-icon">☁️</div>
+                        <h3 id="AWS側は自動有効">AWS側は自動有効</h3>
+                        <div class="step-content">
+                            AWS Direct ConnectのVIFでは、<strong>BFDが自動的に有効化</strong>されています。<br><br>
+                            追加設定は不要！
+                        </div>
+                    </div>
+                    
+                    <div class="step-arrow">→</div>
+                    
+                    <div class="implementation-step">
+                        <div class="step-number">2</div>
+                        <div class="step-icon">🏢</div>
+                        <h4>オンプレミス側を設定</h4>
+                        <div class="step-content">
+                            オンプレミスルーターでBFDを有効化：<br><br>
+                            • BFDセッションの作成<br>
+                            • 検出間隔の設定<br>
+                            • BGPとの関連付け
+                        </div>
+                    </div>
+                    
+                    <div class="step-arrow">→</div>
+                    
+                    <div class="implementation-step">
+                        <div class="step-number">3</div>
+                        <div class="step-icon">✅</div>
+                        <h4>セッション確立を確認</h4>
+                        <div class="step-content">
+                            BFDセッションが「Up」状態であることを確認：<br><br>
+                            • 双方向の通信確認<br>
+                            • BGP連携の確認<br>
+                            • フェイルオーバーテスト
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- パラメータ表 -->
+            <div class="params-section">
+                <h2 id="⚙️-BFDの主要パラメータ" class="params-title">⚙️ BFDの主要パラメータ</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>パラメータ</th>
+                            <th>AWS Direct Connect</th>
+                            <th>説明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="param-name">Min TX Interval</td>
+                            <td><span class="param-value">300ms</span></td>
+                            <td>BFDパケットの最小送信間隔</td>
+                        </tr>
+                        <tr>
+                            <td class="param-name">Min RX Interval</td>
+                            <td><span class="param-value">300ms</span></td>
+                            <td>BFDパケットの最小受信間隔</td>
+                        </tr>
+                        <tr>
+                            <td class="param-name">Detect Multiplier</td>
+                            <td><span class="param-value">3</span></td>
+                            <td>障害判定までのパケットミス回数</td>
+                        </tr>
+                        <tr>
+                            <td class="param-name">Detection Time</td>
+                            <td><span class="param-value">約900ms</span></td>
+                            <td>300ms × 3 = 障害検出までの時間</td>
+                        </tr>
+                        <tr>
+                            <td class="param-name">モード</td>
+                            <td><span class="param-value">非同期</span></td>
+                            <td>各方向に独立したセッションを確立</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 注意事項 -->
+            <div class="warning-section">
+                <h2 id="⚠️-導入時の注意点" class="warning-title">⚠️ 導入時の注意点</h2>
+                
+                <div class="warning-grid">
+                    <div class="warning-item">
+                        <h3 id="オンプレミス設定必須">🔧 オンプレミス設定必須</h3>
+                        <p>
+                            AWS側は自動有効ですが、<strong>オンプレミス側での設定がないとBFDは機能しません</strong>。
+                            必ず両端でBFDを有効化してください。
+                        </p>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <h4>📋 ルーター互換性確認</h4>
+                        <p>
+                            オンプレミスルーターがBFDに対応しているか確認が必要です。
+                            <strong>非同期モード</strong>をサポートしていることを確認してください。
+                        </p>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <h4>⏱️ タイマー値の調整</h4>
+                        <p>
+                            ネットワーク状況によっては、<strong>検出間隔を調整</strong>する必要があります。
+                            不安定なリンクでは間隔を長めに設定することを検討してください。
+                        </p>
+                    </div>
+                    
+                    <div class="warning-item">
+                        <h4>🧪 事前テスト推奨</h4>
+                        <p>
+                            本番環境への導入前に、<strong>フェイルオーバーテスト</strong>を実施して
+                            期待通りの動作を確認することを強く推奨します。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div class="summary-section">
+                <h2 id="まとめ">🎓 まとめ</h2>
+                
+                <div class="summary-content">
+                    <div class="summary-highlight">
+                        <p>
+                            <strong>BFDは、AWS Direct Connectのフェイルオーバー時間を<br>
+                            劇的に短縮するための「必須」プロトコル</strong><br><br>
+                            BGPのみの30〜90秒から、BFD併用で<strong>1〜3秒</strong>へ！<br>
+                            AWS側は自動有効、オンプレミス側の設定を忘れずに！
+                        </p>
+                    </div>
+                    
+                    <div class="summary-points">
+                        <div class="summary-point">
+                            <div class="icon">⚡</div>
+                            <div class="title">高速検出</div>
+                            <div class="desc">ミリ秒単位で障害を検知し、瞬時にBGPに通知</div>
+                        </div>
+                        
+                        <div class="summary-point">
+                            <div class="icon">🤝</div>
+                            <div class="title">BGP連携</div>
+                            <div class="desc">BFDがBGPの「目」となり、高速フェイルオーバーを実現</div>
+                        </div>
+                        
+                        <div class="summary-point">
+                            <div class="icon">🔧</div>
+                            <div class="title">設定は片側だけ</div>
+                            <div class="desc">AWS側は自動有効、オンプレミス側の設定のみでOK</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

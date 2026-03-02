@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 EC2インスタンスのネットワークMTU完全ガイド - 宅配便で理解するパケットサイズ</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            color: #374151;
+            line-height: 1.8;
+            padding: 20px;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* ヒーローセクション */
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+            border-radius: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(35, 47, 62, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 153, 0, 0.15) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 2.8em;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #FF9900 0%, #FFB84D 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.4em;
+            color: #a8d8ff;
+            margin-bottom: 30px;
+        }
+
+        .hero p {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* 結論ファーストボックス */
+        .conclusion-box {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 184, 148, 0.3);
+            color: white;
+        }
+
+        .conclusion-box h2 {
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+        }
+
+        .conclusion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .conclusion-item {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .conclusion-item h3 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .conclusion-item p {
+            font-size: 0.95em;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        /* セクション共通 */
+        .section {
+            background: white;
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 40px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #FF9900;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #232F3E;
+        }
+
+        /* アナロジーセクション */
+        .analogy-container {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .analogy-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .analogy-header h3 {
+            font-size: 1.5em;
+            color: #232F3E;
+            margin-bottom: 10px;
+        }
+
+        .analogy-header p {
+            color: #6c757d;
+        }
+
+        .analogy-visual {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 25px;
+        }
+
+        .analogy-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid #e5e7eb;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .analogy-card:hover {
+            transform: translateY(-5px);
+            border-color: #FF9900;
+            box-shadow: 0 10px 30px rgba(255, 153, 0, 0.15);
+        }
+
+        .box-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .box-standard {
+            color: #0984e3;
+        }
+
+        .box-jumbo {
+            color: #FF9900;
+        }
+
+        .analogy-card h4 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #232F3E;
+        }
+
+        .analogy-card .mtu-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .analogy-card .mtu-standard {
+            color: #0984e3;
+        }
+
+        .analogy-card .mtu-jumbo {
+            color: #FF9900;
+        }
+
+        .analogy-card ul {
+            text-align: left;
+            font-size: 0.9em;
+            color: #6c757d;
+            padding-left: 20px;
+        }
+
+        .analogy-card li {
+            margin-bottom: 5px;
+        }
+
+        /* 比較表 */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 0.95em;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(255, 153, 0, 0.08);
+        }
+
+        .comparison-table .highlight-row {
+            background: rgba(0, 184, 148, 0.15);
+        }
+
+        /* AWSサービス別MTU */
+        .service-mtu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .service-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .service-card.mtu-9001 {
+            border-color: #00b894;
+        }
+
+        .service-card.mtu-8500 {
+            border-color: #0984e3;
+        }
+
+        .service-card.mtu-1500 {
+            border-color: #fdcb6e;
+        }
+
+        .service-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .service-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #232F3E;
+        }
+
+        .service-mtu {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .mtu-9001 .service-mtu { color: #00b894; }
+        .mtu-8500 .service-mtu { color: #0984e3; }
+        .mtu-1500 .service-mtu { color: #e17055; }
+
+        .service-card p {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        /* パケットロスのビジュアル */
+        .packet-flow {
+            background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+            color: white;
+        }
+
+        .packet-flow h3 {
+            text-align: center;
+            color: #ff6b6b;
+            margin-bottom: 25px;
+        }
+
+        .packet-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .packet-node {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .packet-node .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .packet-arrow {
+            font-size: 2em;
+            color: #74b9ff;
+            padding: 0 10px;
+        }
+
+        .packet-arrow.blocked {
+            color: #ff6b6b;
+        }
+
+        /* コマンドボックス */
+        .command-section {
+            margin: 25px 0;
+        }
+
+        .command-section h3 {
+            color: #232F3E;
+            margin-bottom: 20px;
+        }
+
+        .command-box {
+            background: #1e272e;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #00d2d3;
+            position: relative;
+        }
+
+        .command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .command-label {
+            color: #00d2d3;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .command-os {
+            background: rgba(0, 210, 211, 0.2);
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: transparent;
+            color: #a4b0be;
+            padding: 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        code {
+            color: #74b9ff;
+        }
+
+        .command-output {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 3px solid #ffeaa7;
+        }
+
+        .command-output-label {
+            color: #ffeaa7;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 注意ボックス */
+        .warning-box {
+            background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%);
+            border: 2px solid #fca5a5;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .warning-box h4 {
+            color: #dc2626;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-box p {
+            color: #7f1d1d;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 2px solid #93c5fd;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .info-box h4 {
+            color: #1d4ed8;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-box p {
+            color: #1e3a5f;
+        }
+
+        .success-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #6ee7b7;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .success-box h4 {
+            color: #059669;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ユースケースカード */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .usecase-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .usecase-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .usecase-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .usecase-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #232F3E;
+            margin-bottom: 15px;
+        }
+
+        .usecase-recommendation {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .recommend-jumbo {
+            background: rgba(0, 184, 148, 0.2);
+            color: #059669;
+        }
+
+        .recommend-standard {
+            background: rgba(253, 203, 110, 0.3);
+            color: #b45309;
+        }
+
+        .usecase-card p {
+            color: #6c757d;
+            font-size: 0.95em;
+        }
+
+        .usecase-card > div:last-child {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        /* ステップガイド */
+        .step-container {
+            margin: 25px 0;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #FF9900 0%, #EC7211 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            flex-shrink: 0;
+            color: white;
+        }
+
+        .step-content {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .step-content h3, .step-content h4 {
+            color: #232F3E;
+            margin-bottom: 10px;
+        }
+
+        .step-content p {
+            color: #6c757d;
+        }
+
+        /* FAQ */
+        .faq-item {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid #a29bfe;
+        }
+
+        .faq-question {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #6c5ce7;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .faq-answer {
+            padding-left: 30px;
+            color: #4b5563;
+        }
+
+        /* フローチャート */
+        .flowchart {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .flow-title {
+            text-align: center;
+            font-size: 1.3em;
+            margin-bottom: 25px;
+            color: #232F3E;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 30px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .flow-box.decision {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 2px solid #fdba74;
+        }
+
+        .flow-box.action {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #6ee7b7;
+        }
+
+        .flow-box.warning-flow {
+            background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%);
+            border: 2px solid #fca5a5;
+        }
+
+        .flow-arrow {
+            font-size: 1.5em;
+            color: #6c757d;
+        }
+
+        .flow-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2em;
+            }
+
+            .section {
+                padding: 25px 15px;
+            }
+
+            .analogy-visual {
+                grid-template-columns: 1fr;
+            }
+
+            .packet-diagram {
+                flex-direction: column;
+            }
+
+            .packet-arrow {
+                transform: rotate(90deg);
+            }
+
+            .step-item {
+                flex-direction: column;
+            }
+
+            .step-number {
+                margin-bottom: 10px;
+            }
+        }
+
+        /* アニメーション */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        /* トラブルシューティングカード */
+        .troubleshoot-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%);
+            border: 1px solid #fca5a5;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 15px 0;
+        }
+
+        .troubleshoot-symptom {
+            color: #dc2626;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .troubleshoot-cause {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            color: #7f1d1d;
+        }
+
+        .troubleshoot-solution {
+            background: rgba(0, 184, 148, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 3px solid #00b894;
+            color: #065f46;
+        }
+
+        .troubleshoot-solution ol {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        /* まとめセクション */
+        .summary-section {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 2px solid #fdba74;
+        }
+
+        /* フッター */
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: #0984e3;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* AWS接続パス図解 */
+        .connection-diagram {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .diagram-title {
+            text-align: center;
+            font-size: 1.3em;
+            margin-bottom: 30px;
+            color: #232F3E;
+        }
+
+        .diagram-source {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .diagram-source-box {
+            display: inline-block;
+            background: linear-gradient(135deg, #e879f9 0%, #d946ef 100%);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(217, 70, 239, 0.3);
+        }
+
+        .diagram-paths {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .diagram-paths {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .diagram-path {
+            text-align: center;
+        }
+
+        .path-arrow {
+            font-size: 2em;
+            color: #6c757d;
+            margin: 15px 0;
+        }
+
+        .path-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 10px;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .path-gateway {
+            padding: 20px;
+            border-radius: 15px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .path-gateway.success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid #34d399;
+            color: #065f46;
+        }
+
+        .path-gateway.fail {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #f87171;
+            color: #991b1b;
+        }
+
+        .path-result {
+            margin-top: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .path-result.success {
+            background: #059669;
+            color: white;
+        }
+
+        .path-result.fail {
+            background: #dc2626;
+            color: white;
+        }
+
+        .diagram-destination {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .diagram-destination-box {
+            display: inline-block;
+            background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+            color: #3730a3;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-weight: 600;
+        }
+
+        .df-flag-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .df-flag-box h3 {
+            color: #b45309;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .df-flag-box p {
+            color: #78350f;
+        }
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#3分でわかる！MTUの結論">🎯 3分でわかる！MTUの結論</a></li>
+            <li class="toc-h3"><a href="#MTUとは？">📦 MTUとは？</a></li>
+            <li class="toc-h3"><a href="#EC2の標準MTU">📊 EC2の標準MTU</a></li>
+            <li class="toc-h3"><a href="#⚡-ジャンボフレームのメリット">⚡ ジャンボフレームのメリット</a></li>
+            <li class="toc-h3"><a href="#⚠️-注意すべきポイント">⚠️ 注意すべきポイント</a></li>
+            <li class="toc-h2"><a href="#MTUを宅配便で理解しよう！">📦 MTUを宅配便で理解しよう！</a></li>
+            <li class="toc-h3"><a href="#ネットワーク通信-=-宅配便配送">🚚 ネットワーク通信 = 宅配便配送</a></li>
+            <li class="toc-h2"><a href="#️-AWS各サービスのMTU制限マップ">🗺️ AWS各サービスのMTU制限マップ</a></li>
+            <li class="toc-h3"><a href="#⚠️-MTU不一致によるパケットドロップの仕組み">⚠️ MTU不一致によるパケットドロップの仕組み</a></li>
+            <li class="toc-h2"><a href="#AWS-ネットワークサービスと-MTU-の関係">🔌 AWS ネットワークサービスと MTU の関係</a></li>
+            <li class="toc-h3"><a href="#Don">🚩 Don't Fragment（DF）フラグとは？</a></li>
+            <li class="toc-h3"><a href="#接続経路別-MTU-詳細比較">📋 接続経路別 MTU 詳細比較</a></li>
+            <li class="toc-h2"><a href="#MTU確認-設定コマンド集">💻 MTU確認・設定コマンド集</a></li>
+            <li class="toc-h3"><a href="#現在のMTU値を確認する">📊 現在のMTU値を確認する</a></li>
+            <li class="toc-h3"><a href="#パスMTUを確認する">🔄 パスMTUを確認する</a></li>
+            <li class="toc-h3"><a href="#⚙️-MTUを変更する">⚙️ MTUを変更する</a></li>
+            <li class="toc-h2"><a href="#ユースケース別-MTU推奨設定">🎯 ユースケース別 MTU推奨設定</a></li>
+            <li class="toc-h2"><a href="#トラブルシューティング">🔧 トラブルシューティング</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問FAQ">❓ よくある質問（FAQ）</a></li>
+            <li class="toc-h2"><a href="#まとめ-MTU設定のベストプラクティス">📝 まとめ：MTU設定のベストプラクティス</a></li>
+            <li class="toc-h3"><a href="#通信経路を把握する">通信経路を把握する</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+    <div class="container">
+        <!-- ヒーローセクション -->
+        <header class="hero">
+            <div class="hero-content">
+                <h1>📦 EC2 ネットワーク MTU 完全ガイド</h1>
+                <p class="hero-subtitle">Maximum Transmission Unit を宅配便で理解する</p>
+                <p style="font-size: 1.1em;">
+                    「ネットワークの段ボールサイズ」で、データ転送の効率が劇的に変わる！
+                </p>
+            </div>
+        </header>
+
+        <!-- 結論ファースト -->
+        <div class="conclusion-box">
+            <h2 id="3分でわかる！MTUの結論">🎯 3分でわかる！MTUの結論</h2>
+            <div class="conclusion-grid">
+                <div class="conclusion-item">
+                    <h3 id="MTUとは？">📦 MTUとは？</h3>
+                    <p>1回の通信で送れる<strong>最大パケットサイズ</strong>（バイト数）。宅配便の段ボールサイズに相当します。</p>
+                </div>
+                <div class="conclusion-item">
+                    <h3 id="EC2の標準MTU">📊 EC2の標準MTU</h3>
+                    <p><strong>1500バイト</strong>（標準フレーム）と <strong>9001バイト</strong>（ジャンボフレーム）の2種類。現行世代は両方対応！</p>
+                </div>
+                <div class="conclusion-item">
+                    <h3 id="⚡-ジャンボフレームのメリット">⚡ ジャンボフレームのメリット</h3>
+                    <p>1回で<strong>6倍</strong>のデータ送信！オーバーヘッド削減でCPU効率アップ、スループット向上！</p>
+                </div>
+                <div class="conclusion-item">
+                    <h3 id="⚠️-注意すべきポイント">⚠️ 注意すべきポイント</h3>
+                    <p>インターネット通信は<strong>1500限定</strong>。Transit Gatewayは<strong>8500</strong>。経路によってMTUが異なります！</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MTUとは？たとえ話で理解 -->
+        <section class="section">
+            <h2 id="MTUを宅配便で理解しよう！" class="section-title">📦 MTUを宅配便で理解しよう！</h2>
+            
+            <div class="analogy-container">
+                <div class="analogy-header">
+                    <h3 id="ネットワーク通信-=-宅配便配送">🚚 ネットワーク通信 = 宅配便配送</h3>
+                    <p>データを送る作業は、荷物を段ボールに詰めて配送するのと同じです！</p>
+                </div>
+
+                <div class="analogy-visual">
+                    <div class="analogy-card">
+                        <span class="box-icon box-standard">📦</span>
+                        <h4>標準フレーム（Standard Frame）</h4>
+                        <div class="mtu-value mtu-standard">1,500 バイト</div>
+                        <p style="color: #0984e3; margin-bottom: 15px;">🏪 コンビニサイズの段ボール</p>
+                        <ul>
+                            <li>どこでも受け取り可能</li>
+                            <li>インターネット標準サイズ</li>
+                            <li>小さい荷物を何度も送る</li>
+                            <li>配送回数が多くなる</li>
+                        </ul>
+                    </div>
+
+                    <div class="analogy-card">
+                        <span class="box-icon box-jumbo">📦📦📦</span>
+                        <h4>ジャンボフレーム（Jumbo Frame）</h4>
+                        <div class="mtu-value mtu-jumbo">9,001 バイト</div>
+                        <p style="color: #FF9900; margin-bottom: 15px;">🏭 業務用大型段ボール</p>
+                        <ul>
+                            <li>大容量で効率的</li>
+                            <li>VPC内部の高速通信に最適</li>
+                            <li>1回で大量のデータ送信</li>
+                            <li>対応ルートのみ使用可能</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="info-box" style="margin-top: 25px;">
+                    <h4>💡 具体的な数値で比較</h4>
+                    <p>同じ<strong>100MBのデータ</strong>を送信する場合：</p>
+                    <table class="comparison-table" style="margin-top: 15px;">
+                        <tr>
+                            <th>MTU</th>
+                            <th>必要パケット数</th>
+                            <th>オーバーヘッド</th>
+                            <th>効率</th>
+                        </tr>
+                        <tr>
+                            <td>1,500 (標準)</td>
+                            <td>約 69,906 パケット</td>
+                            <td>約 2.8MB</td>
+                            <td>97.3%</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td>9,001 (ジャンボ)</td>
+                            <td>約 11,654 パケット</td>
+                            <td>約 0.5MB</td>
+                            <td>99.5%</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- AWS各サービスのMTU -->
+        <section class="section">
+            <h2 id="️-AWS各サービスのMTU制限マップ" class="section-title">🗺️ AWS各サービスのMTU制限マップ</h2>
+            
+            <p style="margin-bottom: 25px; color: #6c757d;">
+                経路によってMTUが異なります。<strong style="color: #232F3E;">通信経路全体で最も小さいMTU</strong>に合わせる必要があります！
+            </p>
+
+            <div class="service-mtu-grid">
+                <div class="service-card mtu-9001">
+                    <div class="service-icon">🖥️</div>
+                    <div class="service-name">EC2 ↔ EC2（同一VPC内）</div>
+                    <div class="service-mtu">9,001</div>
+                    <p>最大MTU。高速通信に最適！</p>
+                </div>
+
+                <div class="service-card mtu-9001">
+                    <div class="service-icon">🔗</div>
+                    <div class="service-name">VPC Peering（同一リージョン）</div>
+                    <div class="service-mtu">9,001</div>
+                    <p>ジャンボフレーム対応！</p>
+                </div>
+
+                <div class="service-card mtu-8500">
+                    <div class="service-icon">🔀</div>
+                    <div class="service-name">Transit Gateway</div>
+                    <div class="service-mtu">8,500</div>
+                    <p>Path MTU Discovery サポート</p>
+                </div>
+
+                <div class="service-card mtu-8500">
+                    <div class="service-icon">🌐</div>
+                    <div class="service-name">Direct Connect（Transit VIF）</div>
+                    <div class="service-mtu">8,500</div>
+                    <p>Transit Gateway経由時</p>
+                </div>
+
+                <div class="service-card mtu-9001">
+                    <div class="service-icon">📡</div>
+                    <div class="service-name">Direct Connect（Private VIF）</div>
+                    <div class="service-mtu">9,001</div>
+                    <p>プライベートVIF時</p>
+                </div>
+
+                <div class="service-card mtu-1500">
+                    <div class="service-icon">🌍</div>
+                    <div class="service-name">Internet Gateway</div>
+                    <div class="service-mtu">1,500</div>
+                    <p>インターネット標準</p>
+                </div>
+
+                <div class="service-card mtu-1500">
+                    <div class="service-icon">🔒</div>
+                    <div class="service-name">VPN Connection</div>
+                    <div class="service-mtu">1,500</div>
+                    <p>暗号化オーバーヘッドあり</p>
+                </div>
+
+                <div class="service-card mtu-1500">
+                    <div class="service-icon">🔗</div>
+                    <div class="service-name">VPC Peering（クロスリージョン）</div>
+                    <div class="service-mtu">1,500</div>
+                    <p>リージョン間は標準</p>
+                </div>
+            </div>
+
+            <!-- パケットロスの危険性 -->
+            <div class="packet-flow">
+                <h3 id="⚠️-MTU不一致によるパケットドロップの仕組み">
+                    ⚠️ MTU不一致によるパケットドロップの仕組み
+                </h3>
+                
+                <div class="packet-diagram">
+                    <div class="packet-node">
+                        <div class="icon">🖥️</div>
+                        <div>EC2 (VPC A)</div>
+                        <div style="color: #00b894; font-weight: bold;">MTU 9001</div>
+                    </div>
+                    <div class="packet-arrow">➡️</div>
+                    <div class="packet-node" style="background: rgba(255,107,107,0.2); border: 2px solid rgba(255,107,107,0.5);">
+                        <div class="icon">🔀</div>
+                        <div>Transit Gateway</div>
+                        <div style="color: #ff6b6b; font-weight: bold;">MTU 8500</div>
+                    </div>
+                    <div class="packet-arrow blocked">❌</div>
+                    <div class="packet-node">
+                        <div class="icon">🖥️</div>
+                        <div>EC2 (VPC B)</div>
+                        <div style="color: #00b894; font-weight: bold;">MTU 9001</div>
+                    </div>
+                </div>
+
+                <div class="warning-box" style="margin-top: 20px;">
+                    <h4>⚠️ VPC Peering → Transit Gateway 移行時の注意</h4>
+                    <p>VPC Peering（MTU 9001）からTransit Gateway（MTU 8500）に移行する際、<strong>非対称ルーティング</strong>が発生すると8500バイトを超えるパケットがドロップされる可能性があります。</p>
+                    <p style="margin-top: 10px;"><strong>対策：</strong>両方のVPCのルートテーブルを<strong>同時に切り替える</strong>か、事前にEC2のMTUを8500に設定しておきましょう。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- AWS接続パスとMTUの関係 -->
+        <section class="section">
+            <h2 id="AWS-ネットワークサービスと-MTU-の関係" class="section-title">🔌 AWS ネットワークサービスと MTU の関係</h2>
+            
+            <p style="margin-bottom: 25px; color: #6c757d;">
+                EC2インスタンスから外部へ接続する際、<strong style="color: #232F3E;">接続経路によってMTUが異なります</strong>。
+                特に<strong style="color: #dc2626;">Don't Fragment（DF）フラグ</strong>が設定されている場合、MTUを超えるパケットはドロップされます。
+            </p>
+
+            <div class="connection-diagram">
+                <div class="diagram-title">📊 EC2からの接続経路別 MTU と通信結果</div>
+                
+                <!-- 送信元 -->
+                <div class="diagram-source">
+                    <div class="diagram-source-box">
+                        🖥️ EC2 インスタンス<br>
+                        <span style="font-size: 0.9em;">ジャンボフレーム対応 MTU 9001</span>
+                    </div>
+                </div>
+
+                <!-- 3つの接続パス -->
+                <div class="diagram-paths">
+                    <!-- Direct Connect -->
+                    <div class="diagram-path">
+                        <div class="path-label">大きなファイル<br>Don't Fragment フラグ設定</div>
+                        <div class="path-arrow">⬇️</div>
+                        <div class="path-gateway success">
+                            📡 Direct Connect<br>
+                            <span style="font-size: 1.3em; color: #059669;">MTU 9001</span>
+                        </div>
+                        <div class="path-arrow">⬇️</div>
+                        <div class="path-result success">
+                            ✅ 成功<br>
+                            <span style="font-size: 0.85em;">MTU 9001 サポート</span>
+                        </div>
+                    </div>
+
+                    <!-- Site-to-Site VPN -->
+                    <div class="diagram-path">
+                        <div class="path-label">大きなファイル<br>Don't Fragment フラグ設定</div>
+                        <div class="path-arrow">⬇️</div>
+                        <div class="path-gateway fail">
+                            🔒 Site-to-Site VPN<br>
+                            <span style="font-size: 1.3em; color: #dc2626;">MTU 1500</span>
+                        </div>
+                        <div class="path-arrow">⬇️</div>
+                        <div class="path-result fail">
+                            ❌ 失敗<br>
+                            <span style="font-size: 0.85em;">MTU 1500 制限</span>
+                        </div>
+                    </div>
+
+                    <!-- Internet Gateway -->
+                    <div class="diagram-path">
+                        <div class="path-label">大きなファイル<br>Don't Fragment フラグ設定</div>
+                        <div class="path-arrow">⬇️</div>
+                        <div class="path-gateway fail">
+                            🌍 インターネット<br>ゲートウェイ<br>
+                            <span style="font-size: 1.3em; color: #dc2626;">MTU 1500</span>
+                        </div>
+                        <div class="path-arrow">⬇️</div>
+                        <div class="path-result fail">
+                            ❌ 失敗<br>
+                            <span style="font-size: 0.85em;">MTU 1500 制限</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 宛先 -->
+                <div class="diagram-destination">
+                    <div class="diagram-destination-box">
+                        👤 クライアント / オンプレミス
+                    </div>
+                </div>
+            </div>
+
+            <!-- DFフラグの説明 -->
+            <div class="df-flag-box">
+                <h3 id="Don't-FragmentDFフラグとは？">🚩 Don't Fragment（DF）フラグとは？</h3>
+                <p>
+                    IPヘッダに設定できるフラグで、<strong>「このパケットを分割しないでください」</strong>という指示です。
+                </p>
+                <ul style="margin-top: 15px; padding-left: 25px; color: #78350f;">
+                    <li><strong>DFフラグ ON：</strong>MTUを超えるパケットは分割されず、<strong style="color: #dc2626;">ドロップ</strong>される（ICMP エラーが返る）</li>
+                    <li><strong>DFフラグ OFF：</strong>MTUを超えるパケットは<strong style="color: #059669;">フラグメント化</strong>（分割）されて転送される</li>
+                </ul>
+                <p style="margin-top: 15px;">
+                    <strong>💡 ポイント：</strong>Path MTU Discovery（PMTUD）はDFフラグを利用して経路上の最小MTUを検出します。
+                    セキュリティグループでICMPをブロックしているとPMTUDが機能せず、通信障害の原因になることがあります。
+                </p>
+            </div>
+
+            <!-- 接続経路別の詳細比較表 -->
+            <h3 id="接続経路別-MTU-詳細比較" style="color: #232F3E; margin: 30px 0 20px;">📋 接続経路別 MTU 詳細比較</h3>
+            <table class="comparison-table">
+                <tr>
+                    <th>接続経路</th>
+                    <th>MTU</th>
+                    <th>ジャンボフレーム</th>
+                    <th>用途・特徴</th>
+                </tr>
+                <tr>
+                    <td>📡 Direct Connect（Private VIF）</td>
+                    <td style="color: #059669; font-weight: bold;">9001</td>
+                    <td>✅ 対応</td>
+                    <td>専用線接続。高帯域・低遅延</td>
+                </tr>
+                <tr>
+                    <td>📡 Direct Connect（Transit VIF）</td>
+                    <td style="color: #0284c7; font-weight: bold;">8500</td>
+                    <td>✅ 対応</td>
+                    <td>Transit Gateway経由の専用線</td>
+                </tr>
+                <tr>
+                    <td>🔒 Site-to-Site VPN</td>
+                    <td style="color: #dc2626; font-weight: bold;">1500</td>
+                    <td>❌ 非対応</td>
+                    <td>暗号化オーバーヘッドあり</td>
+                </tr>
+                <tr>
+                    <td>🌍 Internet Gateway</td>
+                    <td style="color: #dc2626; font-weight: bold;">1500</td>
+                    <td>❌ 非対応</td>
+                    <td>インターネット標準</td>
+                </tr>
+                <tr>
+                    <td>🔀 Transit Gateway</td>
+                    <td style="color: #0284c7; font-weight: bold;">8500</td>
+                    <td>⚠️ 制限あり</td>
+                    <td>VPC間接続のハブ</td>
+                </tr>
+                <tr>
+                    <td>🔗 VPC Peering（同一リージョン）</td>
+                    <td style="color: #059669; font-weight: bold;">9001</td>
+                    <td>✅ 対応</td>
+                    <td>VPC間直接接続</td>
+                </tr>
+                <tr>
+                    <td>🔗 VPC Peering（クロスリージョン）</td>
+                    <td style="color: #dc2626; font-weight: bold;">1500</td>
+                    <td>❌ 非対応</td>
+                    <td>リージョン間は標準MTU</td>
+                </tr>
+            </table>
+
+            <div class="info-box" style="margin-top: 25px;">
+                <h4>💡 実務でのポイント</h4>
+                <ul style="padding-left: 25px; color: #1e3a5f;">
+                    <li><strong>オンプレミス接続でジャンボフレームを使いたい場合</strong> → Direct Connect（Private VIF）を選択</li>
+                    <li><strong>VPN経由の通信が遅い場合</strong> → MTU 1500の制限を考慮し、アプリケーション側でパケットサイズを調整</li>
+                    <li><strong>大容量ファイル転送で問題が発生する場合</strong> → DFフラグの設定とPath MTU Discoveryの動作を確認</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- MTU確認・設定コマンド -->
+        <section class="section">
+            <h2 id="MTU確認-設定コマンド集" class="section-title">💻 MTU確認・設定コマンド集</h2>
+
+            <div class="command-section">
+                <h3 id="現在のMTU値を確認する" style="margin-bottom: 20px;">📊 現在のMTU値を確認する</h3>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-label">
+                            🐧 <span class="command-os">Linux</span>
+                        </span>
+                    </div>
+                    <pre><code># プライマリネットワークインターフェイスのMTU確認
+ip link show eth0
+
+# または
+cat /sys/class/net/eth0/mtu</code></pre>
+                    <div class="command-output">
+                        <div class="command-output-label">📤 出力例</div>
+                        <pre>2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; <strong style="color:#00b894;">mtu 9001</strong> qdisc pfifo_fast state UP
+    link/ether 02:90:c0:b7:9e:d1 brd ff:ff:ff:ff:ff:ff</pre>
+                    </div>
+                </div>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-label">
+                            🪟 <span class="command-os">Windows</span>
+                        </span>
+                    </div>
+                    <pre><code># PowerShellでMTU確認
+Get-NetAdapterAdvancedProperty -Name "*" -RegistryKeyword "*JumboPacket"
+
+# または
+netsh interface ipv4 show interfaces</code></pre>
+                    <div class="command-output">
+                        <div class="command-output-label">📤 出力例</div>
+                        <pre>Name     : Ethernet
+Property : Jumbo Packet
+Value    : <strong style="color:#00b894;">9015</strong>  ← ジャンボフレーム有効</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-section">
+                <h3 id="パスMTUを確認する" style="margin-bottom: 20px;">🔄 パスMTUを確認する</h3>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-label">
+                            🐧 <span class="command-os">Linux</span>
+                        </span>
+                    </div>
+                    <pre><code># 宛先へのパスMTUを確認
+tracepath <宛先IPアドレス>
+
+# 例：別のEC2インスタンスへのパスMTU
+tracepath 10.0.2.100</code></pre>
+                    <div class="command-output">
+                        <div class="command-output-label">📤 出力例</div>
+                        <pre> 1?: [LOCALHOST]                      pmtu 9001
+ 1:  ip-10-0-2-100.ec2.internal       0.512ms reached
+     Resume: pmtu 9001 hops 1 back 1</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-section">
+                <h3 id="⚙️-MTUを変更する" style="margin-bottom: 20px;">⚙️ MTUを変更する</h3>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-label">
+                            🐧 <span class="command-os">Linux - 一時的な変更</span>
+                        </span>
+                    </div>
+                    <pre><code># MTUを1500に一時変更（再起動で戻る）
+sudo ip link set dev eth0 mtu 1500
+
+# 変更を確認
+ip link show eth0</code></pre>
+                </div>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-label">
+                            🐧 <span class="command-os">Amazon Linux 2 - 永続的な変更</span>
+                        </span>
+                    </div>
+                    <pre><code># 1. ネットワーク設定ファイルを編集
+sudo vi /etc/sysconfig/network-scripts/ifcfg-eth0
+
+# 最終行に追加
+MTU=1500
+
+# 2. DHCPクライアント設定を編集
+sudo vi /etc/dhcp/dhclient.conf
+
+# 以下を追加（DHCPからのMTU上書きを防ぐ）
+default interface-mtu 1500;
+supersede interface-mtu 1500;
+
+# 3. ネットワーク再起動
+sudo systemctl restart network</code></pre>
+                </div>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-label">
+                            🐧 <span class="command-os">Amazon Linux 2023 - 永続的な変更</span>
+                        </span>
+                    </div>
+                    <pre><code># systemd-networkdの設定ファイルを編集
+sudo vi /usr/lib/systemd/network/80-ec2.network
+
+# [Link]セクションに追加
+[Link]
+MTUBytes=1500
+
+# ネットワーク再起動
+sudo systemctl restart systemd-networkd</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ユースケース別推奨設定 -->
+        <section class="section">
+            <h2 id="ユースケース別-MTU推奨設定" class="section-title">🎯 ユースケース別 MTU推奨設定</h2>
+
+            <div class="usecase-grid">
+                <div class="usecase-card">
+                    <div class="usecase-icon">🚀</div>
+                    <div class="usecase-title">HPC / 機械学習クラスター</div>
+                    <span class="usecase-recommendation recommend-jumbo">ジャンボフレーム推奨</span>
+                    <p>
+                        クラスタープレイスメントグループ内のインスタンス間で大量のデータ転送を行う場合。最大スループットを実現。
+                    </p>
+                    <div style="background: rgba(0,184,148,0.15);">
+                        <strong>設定：</strong> MTU 9001
+                    </div>
+                </div>
+
+                <div class="usecase-card">
+                    <div class="usecase-icon">🗄️</div>
+                    <div class="usecase-title">EC2 ↔ RDS/Redshift</div>
+                    <span class="usecase-recommendation recommend-standard">標準フレーム推奨</span>
+                    <p>
+                        Redshiftとの通信でジャンボフレームを使うと接続がハングする場合があります。安定性を重視。
+                    </p>
+                    <div style="background: rgba(253,203,110,0.2);">
+                        <strong>設定：</strong> MTU 1500
+                    </div>
+                </div>
+
+                <div class="usecase-card">
+                    <div class="usecase-icon">🌍</div>
+                    <div class="usecase-title">インターネット向けサービス</div>
+                    <span class="usecase-recommendation recommend-standard">標準フレーム（自動）</span>
+                    <p>
+                        Internet Gateway経由の通信は自動的に1500に制限。特別な設定不要。
+                    </p>
+                    <div style="background: rgba(253,203,110,0.2);">
+                        <strong>設定：</strong> デフォルトでOK
+                    </div>
+                </div>
+
+                <div class="usecase-card">
+                    <div class="usecase-icon">🔀</div>
+                    <div class="usecase-title">Transit Gateway経由通信</div>
+                    <span class="usecase-recommendation recommend-jumbo">8500以下に設定</span>
+                    <p>
+                        TGW経由の場合は8500が上限。パケットドロップを避けるため調整が必要。
+                    </p>
+                    <div style="background: rgba(9,132,227,0.15);">
+                        <strong>設定：</strong> MTU 8500
+                    </div>
+                </div>
+
+                <div class="usecase-card">
+                    <div class="usecase-icon">🏢</div>
+                    <div class="usecase-title">オンプレミス ↔ AWS（VPN）</div>
+                    <span class="usecase-recommendation recommend-standard">標準フレーム推奨</span>
+                    <p>
+                        VPN接続はMTU 1500に制限。暗号化オーバーヘッドも考慮が必要。
+                    </p>
+                    <div style="background: rgba(253,203,110,0.2);">
+                        <strong>設定：</strong> MTU 1500
+                    </div>
+                </div>
+
+                <div class="usecase-card">
+                    <div class="usecase-icon">💾</div>
+                    <div class="usecase-title">EC2 ↔ S3/EBS（VPC内）</div>
+                    <span class="usecase-recommendation recommend-jumbo">ジャンボフレーム可</span>
+                    <p>
+                        VPCエンドポイント経由のS3アクセスやEBS通信はジャンボフレーム対応。
+                    </p>
+                    <div style="background: rgba(0,184,148,0.15);">
+                        <strong>設定：</strong> MTU 9001
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- トラブルシューティング -->
+        <section class="section">
+            <h2 id="トラブルシューティング" class="section-title">🔧 トラブルシューティング</h2>
+
+            <div class="troubleshoot-card">
+                <div class="troubleshoot-symptom">
+                    🚨 症状：大きなファイル転送が途中で停止する
+                </div>
+                <div class="troubleshoot-cause">
+                    <strong>原因：</strong>送信側のMTUが経路途中のMTUより大きく、パケットがドロップされている
+                </div>
+                <div class="troubleshoot-solution">
+                    <strong>✅ 解決策：</strong>
+                    <ol>
+                        <li><code>tracepath &lt;宛先&gt;</code> でパスMTUを確認</li>
+                        <li>送信側のMTUをパスMTU以下に設定</li>
+                        <li>または <code>DF</code> フラグをオフにしてフラグメンテーションを許可</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="troubleshoot-card">
+                <div class="troubleshoot-symptom">
+                    🚨 症状：Redshiftへのクエリがハングする
+                </div>
+                <div class="troubleshoot-cause">
+                    <strong>原因：</strong>EC2のMTUが9001（ジャンボフレーム）のままになっている
+                </div>
+                <div class="troubleshoot-solution">
+                    <strong>✅ 解決策：</strong>
+                    <ol>
+                        <li>EC2インスタンスのMTUを1500に変更</li>
+                        <li><code>sudo ip link set dev eth0 mtu 1500</code></li>
+                        <li>永続化のため設定ファイルも更新</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="troubleshoot-card">
+                <div class="troubleshoot-symptom">
+                    🚨 症状：Transit Gateway移行後に通信が不安定
+                </div>
+                <div class="troubleshoot-cause">
+                    <strong>原因：</strong>VPC Peering（MTU 9001）とTransit Gateway（MTU 8500）の不一致
+                </div>
+                <div class="troubleshoot-solution">
+                    <strong>✅ 解決策：</strong>
+                    <ol>
+                        <li>両方のVPCのルートテーブルを<strong>同時に切り替え</strong></li>
+                        <li>または事前にEC2のMTUを8500に設定</li>
+                        <li>切り替え完了後、必要に応じてMTU調整</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- MTU判断フローチャート -->
+            <div class="flowchart">
+                <div class="flow-title">📋 MTU設定 判断フローチャート</div>
+                
+                <div class="flow-step">
+                    <div class="flow-box decision">
+                        インターネット経由の<br>通信がある？
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 100px;">
+                    <div style="text-align: center;">
+                        <div class="flow-arrow">⬇️</div>
+                        <div class="flow-label">Yes</div>
+                        <div class="flow-box action" style="margin-top: 10px;">
+                            MTU 1500<br>（自動適用）
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div class="flow-arrow">⬇️</div>
+                        <div class="flow-label">No</div>
+                        <div class="flow-box decision" style="margin-top: 10px;">
+                            Transit Gateway<br>経由？
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 100px; margin-right: 100px;">
+                    <div style="text-align: center;">
+                        <div class="flow-arrow">⬇️</div>
+                        <div class="flow-label">Yes</div>
+                        <div class="flow-box action" style="margin-top: 10px;">
+                            MTU 8500<br>に設定
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div class="flow-arrow">⬇️</div>
+                        <div class="flow-label">No</div>
+                        <div class="flow-box action" style="margin-top: 10px; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #34d399;">
+                            MTU 9001<br>（ジャンボフレーム）
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="section">
+            <h2 id="❓-よくある質問FAQ" class="section-title">❓ よくある質問（FAQ）</h2>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    Q: ジャンボフレームは全てのEC2インスタンスで使えますか？
+                </div>
+                <div class="faq-answer">
+                    <strong>A:</strong> 現行世代のインスタンスタイプは全て9001 MTU（ジャンボフレーム）をサポートしています。ただし、古い世代（C1, CC1, T1, M1など）は1500 MTUのみの対応となります。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    Q: MTUを変更するとサービスに影響がありますか？
+                </div>
+                <div class="faq-answer">
+                    <strong>A:</strong> MTUを小さくする場合は問題ありません。大きくする場合は、経路全体がそのMTUをサポートしているか確認が必要です。サポートしていない場合、パケットがドロップされる可能性があります。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    Q: Path MTU Discovery（PMTUD）とは何ですか？
+                </div>
+                <div class="faq-answer">
+                    <strong>A:</strong> 通信経路上の最小MTUを自動的に検出する仕組みです。ICMPの「Fragmentation Needed」メッセージを使用します。Transit Gatewayはこの機能をサポートしていますが、セキュリティグループでICMPをブロックしていると動作しません。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    Q: WindowsとLinuxでMTUの扱いは異なりますか？
+                </div>
+                <div class="faq-answer">
+                    <strong>A:</strong> 基本的な概念は同じですが、設定方法とデフォルト値が異なります。Windowsではジャンボフレームがデフォルトで無効（9015で有効表示）、Linuxでは有効な場合が多いです（9001）。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    Q: NAT Gatewayを使う場合のMTUは？
+                </div>
+                <div class="faq-answer">
+                    <strong>A:</strong> NAT Gatewayは最大8500 MTUをサポートしています。ただし、インターネット向け通信の場合は最終的に1500に制限されます。VPC内部での通信には8500まで使用可能です。
+                </div>
+            </div>
+        </section>
+
+        <!-- まとめ -->
+        <section class="section summary-section">
+            <h2 id="まとめ-MTU設定のベストプラクティス" class="section-title">📝 まとめ：MTU設定のベストプラクティス</h2>
+
+            <div class="step-container">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 id="通信経路を把握する">通信経路を把握する</h3>
+                        <p>EC2から宛先までの全ての経路（Internet Gateway, NAT Gateway, Transit Gateway, VPN等）を確認し、最も小さいMTUを把握しましょう。</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>ユースケースに応じて設定</h4>
+                        <p>VPC内部の高速通信にはジャンボフレーム（9001）、インターネット経由やVPN接続には標準フレーム（1500）を使い分けましょう。</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>移行時は同時切り替え</h4>
+                        <p>VPC PeeringからTransit Gatewayへの移行など、MTUが異なる経路への切り替え時は、両端のルートテーブルを同時に更新してパケットロスを防ぎましょう。</p>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>永続化を忘れずに</h4>
+                        <p>一時的なMTU変更は再起動で元に戻ります。本番環境では設定ファイル（ifcfg-eth0, dhclient.conf等）を更新して永続化しましょう。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="success-box">
+                <h4>✅ 覚えておくべき数値</h4>
+                <table class="comparison-table" style="margin-top: 15px;">
+                    <tr>
+                        <th>経路</th>
+                        <th>MTU</th>
+                        <th>メモ</th>
+                    </tr>
+                    <tr>
+                        <td>VPC内部 / VPC Peering（同一リージョン）</td>
+                        <td style="color: #059669; font-weight: bold;">9001</td>
+                        <td>最大効率</td>
+                    </tr>
+                    <tr>
+                        <td>Transit Gateway / NAT Gateway</td>
+                        <td style="color: #0284c7; font-weight: bold;">8500</td>
+                        <td>PMTUD対応</td>
+                    </tr>
+                    <tr>
+                        <td>Internet / VPN / クロスリージョン</td>
+                        <td style="color: #d97706; font-weight: bold;">1500</td>
+                        <td>標準</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <!-- フッター -->
+        <footer>
+            <p>📦 EC2 MTU完全ガイド - AWS初心者のためのネットワーク入門</p>
+            <p style="margin-top: 10px;">参考：<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/network_mtu.html">AWS公式ドキュメント</a></p>
+        </footer>
+    <!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="jumbo-frame-mtu-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">20</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">26</span>
+    </div>
+    <a href="cidr-aggregation-prefix-list-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

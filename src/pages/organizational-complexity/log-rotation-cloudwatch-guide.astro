@@ -1,0 +1,1541 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Log Rotation Cloudwatch Guide',
+  pageTitle: 'OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド',
+  category: 'organizational-complexity',
+  categoryLabel: 'セキュリティ・ガバナンス',
+  subcategory: 'その他',
+  slug: 'log-rotation-cloudwatch-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '結論ファースト-これだけ覚えよう！', text: '🎯 結論ファースト：これだけ覚えよう！' },
+    { level: 'h3', id: '✅-推奨設定', text: '✅ 推奨設定' },
+    { level: 'h3', id: '⚠️-要注意設定', text: '⚠️ 要注意設定' },
+    { level: 'h3', id: '対処法', text: '🔧 対処法' },
+    { level: 'h3', id: '確認ポイント', text: '📍 確認ポイント' },
+    { level: 'h2', id: 'たとえ話で理解しよう', text: '📖 たとえ話で理解しよう' },
+    { level: 'h3', id: '️-図書館の日誌管理でイメージしよう！', text: '🏛️ 図書館の「日誌管理」でイメージしよう！' },
+    { level: 'h2', id: 'ログローテーション方式の比較', text: '🔄 ログローテーション方式の比較' },
+    { level: 'h3', id: 'copytruncate-方式', text: '📋 copytruncate 方式' },
+    { level: 'h3', id: 'create-方式デフォルト', text: '📄 create 方式（デフォルト）' },
+    { level: 'h2', id: '相性診断チャート', text: '🔍 相性診断チャート' },
+    { level: 'h2', id: '動作の違いを図解', text: '📐 動作の違いを図解' },
+    { level: 'h3', id: '✅-copytruncate-方式の動作', text: '✅ copytruncate 方式の動作' },
+    { level: 'h2', id: '⚙️-具体的な設定例', text: '⚙️ 具体的な設定例' },
+    { level: 'h3', id: 'etc-logrotate.d-myapp推奨設定', text: '📄 /etc/logrotate.d/myapp（推奨設定）' },
+    { level: 'h3', id: '☁️-etc-awslogs-awslogs.conf旧エージェント', text: '☁️ /etc/awslogs/awslogs.conf（旧エージェント）' },
+    { level: 'h3', id: 'opt-aws-amazon-cloudwatch-agent-etc-amazon-cloudwatch-agent.json', text: '🔧 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json' },
+    { level: 'h2', id: '✅-適合確認チェックリスト', text: '✅ 適合確認チェックリスト' },
+    { level: 'h3', id: 'logrotate側の確認', text: '📋 logrotate側の確認' },
+    { level: 'h3', id: '☁️-CloudWatch-Agent側の確認', text: '☁️ CloudWatch Agent側の確認' },
+    { level: 'h3', id: '動作テストの確認', text: '🧪 動作テストの確認' },
+    { level: 'h2', id: 'トラブルシューティング', text: '🔧 トラブルシューティング' },
+    { level: 'h3', id: 'ローテーション後にログが届かなくなった', text: '😱 ローテーション後にログが届かなくなった' },
+    { level: 'h2', id: 'ベストプラクティス', text: '🌟 ベストプラクティス' },
+    { level: 'h3', id: 'copytruncateを基本に', text: 'copytruncateを基本に' },
+    { level: 'h2', id: 'まとめ', text: '🎓 まとめ' },
+    { level: 'h3', id: 'ログローテーション', text: 'ログローテーション' }
+  ],
+  prevPage: '../security-governance/securityhub-configuration-policies-guide.html',
+  nextPage: '../continuous-improvement/aws_waf_infographic.html',
+  pageNum: 61,
+  pageTotal: 71,
+};
+
+const rawContent = `<style>* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.8;
+            color: #333;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ヘッダー */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 50px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border-radius: 30px;
+            color: white;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+        }
+
+        .header-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header-subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        /* 結論ファーストセクション */
+        .conclusion-first {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 50px;
+            color: white;
+            box-shadow: 0 15px 40px rgba(0, 184, 148, 0.3);
+        }
+
+        .conclusion-title {
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .conclusion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .conclusion-card {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .conclusion-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .conclusion-card p {
+            font-size: 1.05em;
+            line-height: 1.7;
+        }
+
+        /* たとえ話セクション */
+        .analogy-section {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #2d3436;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .analogy-intro {
+            background: linear-gradient(135deg, #fff3e6 0%, #ffe6cc 100%);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 35px;
+            border-left: 5px solid #ff9f43;
+        }
+
+        .analogy-intro h3 {
+            font-size: 1.4em;
+            color: #e17055;
+            margin-bottom: 15px;
+        }
+
+        .analogy-intro p {
+            font-size: 1.1em;
+            color: #2d3436;
+        }
+
+        /* 図書館比喩のカード */
+        .library-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .library-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .library-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .library-card.log-rotation {
+            border-color: #74b9ff;
+        }
+
+        .library-card.log-rotation::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #74b9ff, #0984e3);
+        }
+
+        .library-card.cloudwatch {
+            border-color: #fd79a8;
+        }
+
+        .library-card.cloudwatch::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #fd79a8, #e84393);
+        }
+
+        .library-card-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .library-card h4 {
+            font-size: 1.4em;
+            color: #2d3436;
+            margin-bottom: 15px;
+        }
+
+        .library-card .real-world {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            font-size: 0.95em;
+            color: #636e72;
+        }
+
+        .library-card .real-world strong {
+            color: #2d3436;
+        }
+
+        /* ログローテーション方式の比較 */
+        .rotation-methods {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+        }
+
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .method-card {
+            border-radius: 20px;
+            padding: 35px;
+            position: relative;
+        }
+
+        .method-card.copytruncate {
+            background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+        }
+
+        .method-card.create {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        }
+
+        .method-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .method-badge.recommended {
+            background: #00b894;
+            color: white;
+        }
+
+        .method-badge.caution {
+            background: #fdcb6e;
+            color: #2d3436;
+        }
+
+        .method-card h3 {
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #2d3436;
+        }
+
+        .method-analogy {
+            background: rgba(255,255,255,0.7);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .method-analogy h4 {
+            color: #6c5ce7;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .method-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.8);
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .flow-number {
+            width: 35px;
+            height: 35px;
+            background: #6c5ce7;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .method-result {
+            background: rgba(0,0,0,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .method-result h4 {
+            margin-bottom: 10px;
+            color: #2d3436;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        /* 相性診断チャート */
+        .compatibility-section {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+        }
+
+        .compatibility-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .compatibility-table th,
+        .compatibility-table td {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .compatibility-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .compatibility-table th {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .compatibility-table tbody tr {
+            background: white;
+            transition: background 0.3s ease;
+        }
+
+        .compatibility-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .compatibility-table tbody tr:hover {
+            background: #e8f4f8;
+        }
+
+        .compatibility-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .compat-yes {
+            background: #d4edda !important;
+            color: #155724;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+
+        .compat-no {
+            background: #f8d7da !important;
+            color: #721c24;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+
+        .compat-partial {
+            background: #fff3cd !important;
+            color: #856404;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+
+        /* 図解セクション */
+        .diagram-section {
+            background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .diagram-title {
+            font-size: 2em;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .diagram-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 40px;
+        }
+
+        .diagram-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .diagram-box h4 {
+            font-size: 1.3em;
+            margin-bottom: 25px;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .flow-box {
+            padding: 15px 25px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            min-width: 140px;
+        }
+
+        .flow-box.file {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .flow-box.agent {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+        }
+
+        .flow-box.action {
+            background: linear-gradient(135deg, #fdcb6e, #f39c12);
+            color: #2d3436;
+        }
+
+        .flow-box.cloudwatch {
+            background: linear-gradient(135deg, #ff9f43, #ee5a24);
+        }
+
+        .flow-box.inode {
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            font-size: 0.9em;
+        }
+
+        .flow-arrow {
+            font-size: 1.5em;
+            color: #dfe6e9;
+        }
+
+        .flow-result {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .flow-result.success {
+            background: rgba(0, 184, 148, 0.3);
+            border: 2px solid #00b894;
+        }
+
+        .flow-result.fail {
+            background: rgba(255, 118, 117, 0.3);
+            border: 2px solid #ff7675;
+        }
+
+        /* 設定例セクション */
+        .config-section {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+        }
+
+        .config-tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .config-tab {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .config-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .config-content {
+            display: none;
+        }
+
+        .config-content.active {
+            display: block;
+        }
+
+        .code-block {
+            background: #2d3436;
+            border-radius: 15px;
+            padding: 25px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .code-block pre {
+            color: #dfe6e9;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95em;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        .code-comment {
+            color: #74b9ff;
+        }
+
+        .code-keyword {
+            color: #fd79a8;
+        }
+
+        .code-value {
+            color: #55efc4;
+        }
+
+        .code-path {
+            color: #fdcb6e;
+        }
+
+        .config-note {
+            background: #fff3e6;
+            border-left: 4px solid #ff9f43;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin-top: 20px;
+        }
+
+        .config-note h4 {
+            color: #e17055;
+            margin-bottom: 10px;
+        }
+
+        /* チェックリスト */
+        .checklist-section {
+            background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .checklist-title {
+            font-size: 2em;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .checklist-card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .checklist-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin: 15px 0;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        .checklist-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        /* トラブルシューティング */
+        .troubleshoot-section {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+        }
+
+        .trouble-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .trouble-card {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .trouble-header {
+            background: linear-gradient(135deg, #ff7675, #d63031);
+            color: white;
+            padding: 20px;
+        }
+
+        .trouble-header h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+
+        .trouble-body {
+            padding: 25px;
+            background: #f8f9fa;
+            padding-top: 70px;}
+
+        .trouble-symptom {
+            margin-bottom: 20px;
+        }
+
+        .trouble-symptom h5 {
+            color: #e17055;
+            margin-bottom: 8px;
+        }
+
+        .trouble-solution {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .trouble-solution h5 {
+            color: #155724;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ベストプラクティス */
+        .best-practices {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .practices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .practice-card {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .practice-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .practice-number {
+            width: 45px;
+            height: 45px;
+            background: white;
+            color: #00b894;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .practice-card h4 {
+            font-size: 1.2em;
+            margin-bottom: 12px;
+        }
+
+        /* まとめセクション */
+        .summary-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border-radius: 25px;
+            padding: 60px;
+            color: white;
+            text-align: center;
+        }
+
+        .summary-title {
+            font-size: 2.2em;
+            margin-bottom: 40px;
+        }
+
+        .summary-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto 40px;
+        }
+
+        .summary-point {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+        }
+
+        .summary-point-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .summary-point h4 {
+            font-size: 1.3em;
+            margin-bottom: 12px;
+        }
+
+        .summary-final {
+            background: rgba(255,255,255,0.2);
+            padding: 35px;
+            border-radius: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .summary-final p {
+            font-size: 1.2em;
+            line-height: 1.9;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .section-title {
+                font-size: 1.5em;
+            }
+
+            .methods-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .diagram-container {
+                grid-template-columns: 1fr;
+            }
+
+            .flow-row {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }</style>
+<!-- ヘッダー -->
+<header class="header">
+<div class="header-icon">📚🔄☁️</div>
+<h1>OSログローテーション × CloudWatch Logs エージェント<br/>適合確認ガイド</h1>
+<p class="header-subtitle">〜 図書館の本の整理係とメモ係の連携を理解しよう 〜</p>
+</header>
+<!-- 結論ファースト -->
+<section class="conclusion-first">
+<h2 class="conclusion-title" id="結論ファースト-これだけ覚えよう！">🎯 結論ファースト：これだけ覚えよう！</h2>
+<div class="conclusion-grid">
+<div class="conclusion-card">
+<h3 id="✅-推奨設定">✅ 推奨設定</h3>
+<p><strong>copytruncate</strong> 方式を使う！<br/>CloudWatch Logsエージェントと最も相性が良い</p>
+</div>
+<div class="conclusion-card">
+<h3 id="⚠️-要注意設定">⚠️ 要注意設定</h3>
+<p><strong>create</strong> 方式はファイルが変わるため、エージェントの追跡が切れる可能性あり</p>
+</div>
+<div class="conclusion-card">
+<h3 id="対処法">🔧 対処法</h3>
+<p>create方式を使う場合は<strong>file_fingerprint_lines</strong>設定で対応可能</p>
+</div>
+<div class="conclusion-card">
+<h3 id="確認ポイント">📍 確認ポイント</h3>
+<p>logrotate.conf と CloudWatch エージェント設定の両方をチェック！</p>
+</div>
+</div>
+</section>
+<!-- たとえ話セクション -->
+<section class="analogy-section">
+<h2 class="section-title" id="たとえ話で理解しよう">📖 たとえ話で理解しよう</h2>
+<div class="analogy-intro">
+<h3 id="️-図書館の日誌管理でイメージしよう！">🏛️ 図書館の「日誌管理」でイメージしよう！</h3>
+<p>
+                    あなたは図書館の館長です。図書館では毎日の出来事を<strong>日誌</strong>に記録しています。<br/>
+                    この日誌の管理方法と、それを常に読んでメモを取る<strong>秘書さん</strong>の連携を考えてみましょう。
+                </p>
+</div>
+<div class="library-cards">
+<div class="library-card log-rotation">
+<div class="library-card-icon">📔</div>
+<h4>ログローテーション = 日誌の整理係</h4>
+<p>
+                        図書館の日誌は毎日どんどん増えていきます。<br/>
+<strong>整理係</strong>は定期的に古い日誌を片付けて、<br/>
+                        新しい日誌を用意する仕事をしています。
+                    </p>
+<div class="real-world">
+<strong>🖥️ 実際のシステムでは：</strong><br/>
+                        logrotate がこの役割。ログファイルが大きくなりすぎないように、古いログを圧縮・削除して新しいログファイルを用意します。
+                    </div>
+</div>
+<div class="library-card cloudwatch">
+<div class="library-card-icon">📝</div>
+<h4>CloudWatch Logs エージェント = メモ係の秘書</h4>
+<p>
+<strong>秘書さん</strong>は日誌を常に監視して、<br/>
+                        新しい内容が書かれるたびに<br/>
+                        すぐにクラウド上の本部にメモを送信します。
+                    </p>
+<div class="real-world">
+<strong>🖥️ 実際のシステムでは：</strong><br/>
+                        CloudWatch Logs エージェントがこの役割。ログファイルを監視して、新しいログエントリをリアルタイムでAWSのCloudWatch Logsに送信します。
+                    </div>
+</div>
+</div>
+</section>
+<!-- ログローテーション方式の比較 -->
+<section class="rotation-methods">
+<h2 class="section-title" id="ログローテーション方式の比較">🔄 ログローテーション方式の比較</h2>
+<div class="methods-grid">
+<!-- copytruncate方式 -->
+<div class="method-card copytruncate">
+<span class="method-badge recommended">✅ CloudWatchと相性◎</span>
+<h3 id="copytruncate-方式">📋 copytruncate 方式</h3>
+<div class="method-analogy">
+<h4>📖 たとえ話：「同じ日誌を使い続ける」</h4>
+<p>
+                            整理係は日誌の<strong>内容をコピー</strong>して別の場所に保管した後、<br/>
+<strong>元の日誌の中身を空にする</strong>けど、<strong>同じ日誌帳を使い続ける</strong>。<br/>
+                            秘書さんは同じ日誌を見続ければOK！
+                        </p>
+</div>
+<div class="method-flow">
+<div class="flow-step">
+<span class="flow-number">1</span>
+<span>ログファイルの内容をコピーして保存</span>
+</div>
+<div class="flow-step">
+<span class="flow-number">2</span>
+<span>元のログファイルの中身を空にする（truncate）</span>
+</div>
+<div class="flow-step">
+<span class="flow-number">3</span>
+<span>同じファイル（同じinode）を継続使用</span>
+</div>
+</div>
+<div class="method-result">
+<h4>📊 CloudWatch Logsとの相性</h4>
+<div class="result-item">
+<span>✅</span>
+<span>ファイルのinode番号が変わらない</span>
+</div>
+<div class="result-item">
+<span>✅</span>
+<span>エージェントの追跡が途切れない</span>
+</div>
+<div class="result-item">
+<span>✅</span>
+<span>設定変更なしで使える</span>
+</div>
+</div>
+</div>
+<!-- create方式 -->
+<div class="method-card create">
+<span class="method-badge caution">⚠️ 設定に注意</span>
+<h3 id="create-方式デフォルト">📄 create 方式（デフォルト）</h3>
+<div class="method-analogy">
+<h4>📖 たとえ話：「新しい日誌帳に切り替え」</h4>
+<p>
+                            整理係は古い日誌を<strong>別の棚に移動</strong>して、<br/>
+<strong>新しい日誌帳</strong>を用意する。<br/>
+                            秘書さんは「あれ？どの日誌を見ればいいの？」と迷う！
+                        </p>
+</div>
+<div class="method-flow">
+<div class="flow-step">
+<span class="flow-number">1</span>
+<span>現在のログファイルをリネーム（.1 をつける）</span>
+</div>
+<div class="flow-step">
+<span class="flow-number">2</span>
+<span>新しい空のログファイルを作成</span>
+</div>
+<div class="flow-step">
+<span class="flow-number">3</span>
+<span>新しいファイル＝新しいinode番号</span>
+</div>
+</div>
+<div class="method-result">
+<h4>📊 CloudWatch Logsとの相性</h4>
+<div class="result-item">
+<span>⚠️</span>
+<span>ファイルのinode番号が変わる</span>
+</div>
+<div class="result-item">
+<span>⚠️</span>
+<span>エージェントが古いファイルを追跡し続ける可能性</span>
+</div>
+<div class="result-item">
+<span>🔧</span>
+<span>file_fingerprint_lines設定で対応可能</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 相性診断チャート -->
+<section class="compatibility-section">
+<h2 class="section-title" id="相性診断チャート">🔍 相性診断チャート</h2>
+<table class="compatibility-table">
+<thead>
+<tr>
+<th>確認項目</th>
+<th>copytruncate</th>
+<th>create（デフォルト）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>📁 ファイルのinode保持</td>
+<td class="compat-yes">✅ 保持される</td>
+<td class="compat-no">❌ 変更される</td>
+</tr>
+<tr>
+<td>👀 エージェントの追跡継続</td>
+<td class="compat-yes">✅ 自動継続</td>
+<td class="compat-partial">⚠️ 設定が必要</td>
+</tr>
+<tr>
+<td>📊 ログの欠損リスク</td>
+<td class="compat-partial">⚠️ コピー中の書込みは欠損</td>
+<td class="compat-yes">✅ 欠損なし</td>
+</tr>
+<tr>
+<td>⚙️ 追加設定の必要性</td>
+<td class="compat-yes">✅ 不要</td>
+<td class="compat-partial">⚠️ fingerprint設定推奨</td>
+</tr>
+<tr>
+<td>🔄 ローテーション後の動作</td>
+<td class="compat-yes">✅ シームレスに継続</td>
+<td class="compat-partial">⚠️ 再検出が必要</td>
+</tr>
+<tr>
+<td>💡 推奨シナリオ</td>
+<td class="compat-yes">CloudWatch連携時に推奨</td>
+<td class="compat-partial">高精度ログが必要な時</td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- 図解セクション -->
+<section class="diagram-section">
+<h2 class="diagram-title" id="動作の違いを図解">📐 動作の違いを図解</h2>
+<div class="diagram-container">
+<!-- copytruncate の図 -->
+<div class="diagram-box">
+<h3 id="✅-copytruncate-方式の動作">✅ copytruncate 方式の動作</h3>
+<div class="flow-diagram">
+<div class="flow-row">
+<div class="flow-box file">📄 app.log<br/><small>inode: 12345</small></div>
+<span class="flow-arrow">←</span>
+<div class="flow-box agent">🔍 エージェント<br/><small>監視中</small></div>
+</div>
+<div class="flow-row">
+<span class="flow-arrow">⬇️</span>
+</div>
+<div class="flow-row">
+<div class="flow-box action">📋 コピー＆空にする</div>
+</div>
+<div class="flow-row">
+<span class="flow-arrow">⬇️</span>
+</div>
+<div class="flow-row">
+<div class="flow-box file">📄 app.log<br/><small>inode: 12345 ✨同じ</small></div>
+<span class="flow-arrow">←</span>
+<div class="flow-box agent">🔍 エージェント<br/><small>継続監視OK!</small></div>
+</div>
+<div class="flow-result success">
+                            ✅ エージェントは同じファイルを追跡し続けられる！
+                        </div>
+</div>
+</div>
+<!-- create の図 -->
+<div class="diagram-box">
+<h4>⚠️ create 方式の動作</h4>
+<div class="flow-diagram">
+<div class="flow-row">
+<div class="flow-box file">📄 app.log<br/><small>inode: 12345</small></div>
+<span class="flow-arrow">←</span>
+<div class="flow-box agent">🔍 エージェント<br/><small>監視中</small></div>
+</div>
+<div class="flow-row">
+<span class="flow-arrow">⬇️</span>
+</div>
+<div class="flow-row">
+<div class="flow-box action">📦 リネーム＆新規作成</div>
+</div>
+<div class="flow-row">
+<span class="flow-arrow">⬇️</span>
+</div>
+<div class="flow-row">
+<div class="flow-box file" style="opacity: 0.5;">📄 app.log.1<br/><small>inode: 12345</small></div>
+<div class="flow-box file">📄 app.log<br/><small>inode: 67890 🆕</small></div>
+</div>
+<div class="flow-row">
+<div class="flow-box agent" style="background: linear-gradient(135deg, #fdcb6e, #f39c12); color: #2d3436;">🤔 エージェント<br/><small>どっちを見る？</small></div>
+</div>
+<div class="flow-result fail">
+                            ⚠️ 追加設定なしだと古いファイルを追い続ける可能性
+                        </div>
+</div>
+</div>
+</div>
+</section>
+<!-- 設定例セクション -->
+<section class="config-section">
+<h2 class="section-title" id="⚙️-具体的な設定例">⚙️ 具体的な設定例</h2>
+<div class="config-tabs">
+<button class="config-tab active" onclick="showConfig('logrotate')">📄 logrotate設定</button>
+<button class="config-tab" onclick="showConfig('cwagent')">☁️ CloudWatch Agent設定</button>
+<button class="config-tab" onclick="showConfig('unified')">🔧 統合CloudWatch Agent</button>
+</div>
+<!-- logrotate設定 -->
+<div class="config-content active" id="logrotate">
+<h3 id="etc-logrotate.d-myapp推奨設定">📄 /etc/logrotate.d/myapp（推奨設定）</h3>
+<div class="code-block">
+<pre><span class="code-path">/var/log/myapp/*.log</span> {
+    <span class="code-keyword">daily</span>                    <span class="code-comment"># 毎日ローテーション</span>
+    <span class="code-keyword">rotate</span> <span class="code-value">7</span>                 <span class="code-comment"># 7世代保持</span>
+    <span class="code-keyword">compress</span>                 <span class="code-comment"># 古いログを圧縮</span>
+    <span class="code-keyword">delaycompress</span>            <span class="code-comment"># 1世代前から圧縮</span>
+    <span class="code-keyword">missingok</span>                <span class="code-comment"># ファイルがなくてもエラーにしない</span>
+    <span class="code-keyword">notifempty</span>               <span class="code-comment"># 空のファイルはローテーションしない</span>
+    <span class="code-keyword">copytruncate</span>             <span class="code-comment"># ⭐ CloudWatch連携に重要！</span>
+}</pre>
+</div>
+<div class="config-note">
+<h4>💡 ポイント</h4>
+<p>
+<strong>copytruncate</strong> を指定することで、CloudWatch Logsエージェントが
+                        同じファイルを追跡し続けられます。アプリケーションの再起動も不要です。
+                    </p>
+</div>
+</div>
+<!-- CloudWatch Agent設定 -->
+<div class="config-content" id="cwagent">
+<h3 id="☁️-etc-awslogs-awslogs.conf旧エージェント">☁️ /etc/awslogs/awslogs.conf（旧エージェント）</h3>
+<div class="code-block">
+<pre><span class="code-comment"># CloudWatch Logs Agent 設定</span>
+[<span class="code-path">/var/log/myapp/application.log</span>]
+<span class="code-keyword">datetime_format</span> = <span class="code-value">%Y-%m-%d %H:%M:%S</span>
+<span class="code-keyword">file</span> = <span class="code-path">/var/log/myapp/application.log</span>
+<span class="code-keyword">buffer_duration</span> = <span class="code-value">5000</span>
+<span class="code-keyword">log_stream_name</span> = <span class="code-value">{instance_id}</span>
+<span class="code-keyword">initial_position</span> = <span class="code-value">start_of_file</span>
+<span class="code-keyword">log_group_name</span> = <span class="code-value">/myapp/application</span>
+
+<span class="code-comment"># ⭐ create方式を使う場合は以下を追加</span>
+<span class="code-keyword">file_fingerprint_lines</span> = <span class="code-value">1-3</span>    <span class="code-comment"># ファイルの先頭1-3行で識別</span></pre>
+</div>
+<div class="config-note">
+<h4>💡 file_fingerprint_lines の役割</h4>
+<p>
+                        ファイルの先頭数行をフィンガープリント（指紋）として使用し、
+                        ローテーション後も正しいファイルを追跡できるようにします。
+                        create方式を使う場合は必ず設定しましょう。
+                    </p>
+</div>
+</div>
+<!-- 統合CloudWatch Agent設定 -->
+<div class="config-content" id="unified">
+<h3 id="opt-aws-amazon-cloudwatch-agent-etc-amazon-cloudwatch-agent.json">🔧 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json</h3>
+<div class="code-block">
+<pre>{
+  <span class="code-keyword">"logs"</span>: {
+    <span class="code-keyword">"logs_collected"</span>: {
+      <span class="code-keyword">"files"</span>: {
+        <span class="code-keyword">"collect_list"</span>: [
+          {
+            <span class="code-keyword">"file_path"</span>: <span class="code-value">"/var/log/myapp/application.log"</span>,
+            <span class="code-keyword">"log_group_name"</span>: <span class="code-value">"/myapp/application"</span>,
+            <span class="code-keyword">"log_stream_name"</span>: <span class="code-value">"{instance_id}"</span>,
+            <span class="code-keyword">"timestamp_format"</span>: <span class="code-value">"%Y-%m-%d %H:%M:%S"</span>,
+            <span class="code-comment">// ⭐ create方式対策</span>
+            <span class="code-keyword">"auto_removal"</span>: <span class="code-value">true</span>,
+            <span class="code-keyword">"retention_in_days"</span>: <span class="code-value">14</span>
+          }
+        ]
+      }
+    },
+    <span class="code-keyword">"force_flush_interval"</span>: <span class="code-value">5</span>
+  }
+}</pre>
+</div>
+<div class="config-note">
+<h4>💡 統合エージェントの利点</h4>
+<p>
+                        統合CloudWatch Agentはファイルパスベースの追跡を行うため、
+                        create方式でも比較的安定して動作します。ただし、
+                        <strong>copytruncate方式を使う方がより確実</strong>です。
+                    </p>
+</div>
+</div>
+</section>
+<!-- チェックリスト -->
+<section class="checklist-section">
+<h2 class="checklist-title" id="✅-適合確認チェックリスト">✅ 適合確認チェックリスト</h2>
+<div class="checklist-grid">
+<div class="checklist-card">
+<h3 id="logrotate側の確認">📋 logrotate側の確認</h3>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>対象ログの logrotate 設定ファイルを特定した</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>copytruncate または create のどちらか確認した</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>ローテーション間隔（daily/weekly等）を確認した</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>保持世代数を確認した</span>
+</div>
+</div>
+<div class="checklist-card">
+<h3 id="☁️-CloudWatch-Agent側の確認">☁️ CloudWatch Agent側の確認</h3>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>監視対象のファイルパスが正しい</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>create方式の場合、fingerprint設定を追加した</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>datetime_format がログ形式と一致している</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>ログストリーム名の命名規則を確認した</span>
+</div>
+</div>
+<div class="checklist-card">
+<h3 id="動作テストの確認">🧪 動作テストの確認</h3>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>手動でログローテーションを実行してテストした</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>ローテーション後もCloudWatchにログが届いている</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>ログの欠損がないことを確認した</span>
+</div>
+<div class="checklist-item">
+<span class="checklist-icon">☐</span>
+<span>エージェントのエラーログを確認した</span>
+</div>
+</div>
+</div>
+</section>
+<!-- トラブルシューティング -->
+<section class="troubleshoot-section">
+<h2 class="section-title" id="トラブルシューティング">🔧 トラブルシューティング</h2>
+<div class="trouble-cards">
+<div class="trouble-card">
+<div class="trouble-header">
+<h3 id="ローテーション後にログが届かなくなった">😱 ローテーション後にログが届かなくなった</h3>
+</div>
+<div class="trouble-body">
+<div class="trouble-symptom">
+<h4>🔍 原因</h4>
+<p>create方式でinodeが変わり、エージェントが古いファイルを追跡している</p>
+</div>
+<div class="trouble-solution">
+<h5>✅ 解決策</h5>
+<p>
+                                1. logrotateをcopytruncate方式に変更する<br/>
+                                2. または、file_fingerprint_lines設定を追加<br/>
+                                3. エージェントを再起動：<br/>
+<code>sudo systemctl restart amazon-cloudwatch-agent</code>
+</p>
+</div>
+</div>
+</div>
+<div class="trouble-card">
+<div class="trouble-header">
+<h4>😱 ログが重複して送信される</h4>
+</div>
+<div class="trouble-body">
+<div class="trouble-symptom">
+<h5>🔍 原因</h5>
+<p>エージェントの状態ファイルが破損、または複数のエージェントが同じファイルを監視</p>
+</div>
+<div class="trouble-solution">
+<h5>✅ 解決策</h5>
+<p>
+                                1. 状態ファイルを削除して再起動：<br/>
+<code>sudo rm /var/lib/awslogs/agent-state</code><br/>
+                                2. 設定を見直して重複監視を排除<br/>
+                                3. initial_positionをend_of_fileに変更
+                            </p>
+</div>
+</div>
+</div>
+<div class="trouble-card">
+<div class="trouble-header">
+<h4>😱 copytruncate でログが欠損する</h4>
+</div>
+<div class="trouble-body">
+<div class="trouble-symptom">
+<h5>🔍 原因</h5>
+<p>コピー中にログが書き込まれると、その分が失われる可能性がある</p>
+</div>
+<div class="trouble-solution">
+<h5>✅ 解決策</h5>
+<p>
+                                1. ログ出力が少ない時間帯にローテーションを実行<br/>
+                                2. 高精度が必要な場合はcreate方式 + fingerprint設定<br/>
+                                3. buffer_durationを短くしてリアルタイム性を向上
+                            </p>
+</div>
+</div>
+</div>
+<div class="trouble-card">
+<div class="trouble-header">
+<h4>😱 Permission denied エラー</h4>
+</div>
+<div class="trouble-body">
+<div class="trouble-symptom">
+<h5>🔍 原因</h5>
+<p>エージェントがログファイルにアクセスする権限がない</p>
+</div>
+<div class="trouble-solution">
+<h5>✅ 解決策</h5>
+<p>
+                                1. ログファイルの権限を確認：<br/>
+<code>ls -la /var/log/myapp/</code><br/>
+                                2. エージェントユーザーを適切なグループに追加<br/>
+                                3. logrotateでcreate設定に権限を指定
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ベストプラクティス -->
+<section class="best-practices">
+<h2 class="checklist-title" id="ベストプラクティス">🌟 ベストプラクティス</h2>
+<div class="practices-grid">
+<div class="practice-card">
+<div class="practice-number">1</div>
+<h3 id="copytruncateを基本に">copytruncateを基本に</h3>
+<p>特別な理由がなければcopytruncate方式を選択。CloudWatch Logsとの連携が最もスムーズ。</p>
+</div>
+<div class="practice-card">
+<div class="practice-number">2</div>
+<h4>ローテーション前にテスト</h4>
+<p><code>logrotate -d</code> でドライランを実行し、設定の動作を事前確認。</p>
+</div>
+<div class="practice-card">
+<div class="practice-number">3</div>
+<h4>監視アラートを設定</h4>
+<p>CloudWatch メトリクスで IncomingLogEvents を監視し、ログ停止を早期検知。</p>
+</div>
+<div class="practice-card">
+<div class="practice-number">4</div>
+<h4>ドキュメント化</h4>
+<p>logrotateとCloudWatch Agent両方の設定をドキュメント化し、チームで共有。</p>
+</div>
+<div class="practice-card">
+<div class="practice-number">5</div>
+<h4>定期的な動作確認</h4>
+<p>月1回はログ収集が正常に動作しているか確認。特にローテーション前後。</p>
+</div>
+<div class="practice-card">
+<div class="practice-number">6</div>
+<h4>適切な保持期間</h4>
+<p>OS側とCloudWatch側の両方で適切なログ保持期間を設定し、コスト最適化。</p>
+</div>
+</div>
+</section>
+<!-- まとめ -->
+<section class="summary-section">
+<h2 class="summary-title" id="まとめ">🎓 まとめ</h2>
+<div class="summary-points">
+<div class="summary-point">
+<div class="summary-point-icon">📔</div>
+<h3 id="ログローテーション">ログローテーション</h3>
+<p>日誌の整理係<br/>古いログを片付けて<br/>ディスク容量を管理</p>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">📝</div>
+<h4>CloudWatch Agent</h4>
+<p>メモ係の秘書<br/>ログを監視して<br/>クラウドに送信</p>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">🤝</div>
+<h4>相性のカギ</h4>
+<p>ファイルの識別方法<br/>inode vs ファイルパス<br/>copytruncateが安心</p>
+</div>
+</div>
+<div class="summary-final">
+<p>
+<strong>🎯 最重要ポイント：</strong><br/><br/>
+                    OSのログローテーション設定を変更する前に、<br/>
+                    必ず<strong>CloudWatch Logsエージェントとの互換性</strong>を確認しよう！<br/><br/>
+                    迷ったら <strong>copytruncate方式</strong> を選択すれば、<br/>
+                    エージェントが同じファイルを追跡し続けられるので安心です 🎉
+                </p>
+</div>
+</section>
+
+
+</div>
+<script>
+        function showConfig(configId) {
+            // すべてのコンテンツを非表示
+            document.querySelectorAll('.config-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            // すべてのタブを非アクティブ
+            document.querySelectorAll('.config-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // 選択されたコンテンツを表示
+            document.getElementById(configId).classList.add('active');
+            // クリックされたタブをアクティブ
+            event.target.classList.add('active');
+        }
+    </script>
+<script>function showConfig(configId) {
+            // すべてのコンテンツを非表示
+            document.querySelectorAll('.config-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            // すべてのタブを非アクティブ
+            document.querySelectorAll('.config-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // 選択されたコンテンツを表示
+            document.getElementById(configId).classList.add('active');
+            // クリックされたタブをアクティブ
+            event.target.classList.add('active');
+        }</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

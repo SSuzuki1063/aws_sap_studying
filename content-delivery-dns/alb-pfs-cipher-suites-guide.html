@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   ALB × PFS 暗号スイート完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/alb-pfs-cipher-suites-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#ホテルの金庫でPFSを理解する">ホテルの金庫でPFSを理解する</a></li>
+            <li class="toc-h3"><a href="#従来のマスターキー方式">従来のマスターキー方式</a></li>
+            <li class="toc-h2"><a href="#PFS-をサポートする暗号スイート">PFS をサポートする暗号スイート</a></li>
+            <li class="toc-h2"><a href="#PFS-対応セキュリティポリシー">PFS 対応セキュリティポリシー</a></li>
+            <li class="toc-h2"><a href="#PFS-の設定方法">PFS の設定方法</a></li>
+            <li class="toc-h2"><a href="#PFS-設定のベストプラクティス">PFS 設定のベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#よくある質問">よくある質問</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<!-- ヒーローセクション -->
+<section class="hero">
+<div class="hero-content">
+<div class="hero-badge">
+     🔐 AWS Security Deep Dive
+    </div>
+<h1>
+     ALB × 完全前方秘匿性 (PFS)
+     <br/>
+     暗号スイート完全ガイド
+    </h1>
+<p class="hero-subtitle">
+     「もし秘密鍵が漏洩しても、過去の通信は守られる」
+     <br/>
+     Application Load Balancer で実現する次世代のセキュリティ
+    </p>
+</div>
+</section>
+<!-- キーポイント -->
+<section class="key-points">
+<div class="key-point-card">
+<div class="key-point-icon">
+     🛡️
+    </div>
+<div class="key-point-title">
+     Perfect Forward Secrecy
+    </div>
+<div class="key-point-desc">
+     秘密鍵が漏洩しても過去の暗号化通信を解読不可能にする技術
+    </div>
+</div>
+<div class="key-point-card">
+<div class="key-point-icon">
+     🔑
+    </div>
+<div class="key-point-title">
+     ECDHE / DHE 暗号
+    </div>
+<div class="key-point-desc">
+     セッションごとに使い捨て鍵を生成するPFS対応暗号スイート
+    </div>
+</div>
+<div class="key-point-card">
+<div class="key-point-icon">
+     📋
+    </div>
+<div class="key-point-title">
+     FS ポリシー
+    </div>
+<div class="key-point-desc">
+     ELBSecurityPolicy-FS-* 系のポリシーで簡単に有効化
+    </div>
+</div>
+</section>
+<div class="container">
+<!-- セクション1: たとえ話で理解 -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      1
+     </div>
+<h2 class="section-title" id="ホテルの金庫でPFSを理解する">
+      ホテルの金庫でPFSを理解する
+     </h2>
+</div>
+<div class="analogy-container">
+<div class="analogy-title">
+<span>
+       🏨
+      </span>
+      高級ホテルの貴重品金庫システム
+     </div>
+<p style="color: var(--text-secondary); margin-bottom: 20px;">
+      PFS（完全前方秘匿性）は「使い捨て鍵システム」です。
+      <br/>
+      これを高級ホテルの貴重品金庫で例えてみましょう。
+     </p>
+<div class="comparison-grid">
+<!-- 従来の方式 -->
+<div class="comparison-card bad">
+<div class="comparison-header">
+<span class="comparison-badge">
+         ❌ PFSなし
+        </span>
+<h3 id="従来のマスターキー方式">
+         従来のマスターキー方式
+        </h3>
+</div>
+<div class="hotel-visual">
+<div class="key-icon">
+         🔐
+        </div>
+<p style="font-weight: 600; margin-bottom: 10px;">
+         1本のマスターキー
+        </p>
+<p style="font-size: 0.9em; color: var(--text-secondary);">
+         全ての金庫を開ける
+         <br/>
+         不変のマスターキー
+        </p>
+</div>
+<p class="scenario-text">
+<strong>
+         シナリオ：
+        </strong>
+        泥棒が過去1年間、宿泊客が金庫に何を入れたか監視カメラで録画していた。ある日マスターキーを盗むことに成功。
+       </p>
+<div class="result-box">
+        😱
+        <strong>
+         結果：
+        </strong>
+        過去1年分の全ての金庫の中身が分かってしまう！
+       </div>
+</div>
+<!-- PFS方式 -->
+<div class="comparison-card good">
+<div class="comparison-header">
+<span class="comparison-badge">
+         ✅ PFSあり
+        </span>
+<h4>
+         使い捨て鍵方式（ECDHE）
+        </h4>
+</div>
+<div class="hotel-visual">
+<div class="key-icon">
+         🔑✨🔑✨🔑
+        </div>
+<p style="font-weight: 600; margin-bottom: 10px;">
+         毎回新しい使い捨て鍵
+        </p>
+<p style="font-size: 0.9em; color: var(--text-secondary);">
+         チェックインごとに
+         <br/>
+         新しい鍵を発行・破棄
+        </p>
+</div>
+<p class="scenario-text">
+<strong>
+         シナリオ：
+        </strong>
+        同じく泥棒が1年間録画。今日使われる鍵を盗むことに成功。しかし…
+       </p>
+<div class="result-box">
+        😌
+        <strong>
+         結果：
+        </strong>
+        過去の鍵は全て破棄済み。録画した映像は解読不能！
+       </div>
+</div>
+</div>
+<!-- PFSの仕組み -->
+<div class="pfs-flow">
+<div class="flow-title">
+       🔄 PFS の仕組み：毎回新しい鍵を作る
+      </div>
+<div class="flow-steps">
+<div class="flow-step">
+<div class="step-icon">
+         👤
+        </div>
+<div class="step-label">
+         STEP 1
+        </div>
+<div class="step-title">
+         クライアント接続
+        </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+         🎲
+        </div>
+<div class="step-label">
+         STEP 2
+        </div>
+<div class="step-title">
+         一時的な鍵ペア生成
+        </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+         🤝
+        </div>
+<div class="step-label">
+         STEP 3
+        </div>
+<div class="step-title">
+         セッション鍵を共有
+        </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+         🔒
+        </div>
+<div class="step-label">
+         STEP 4
+        </div>
+<div class="step-title">
+         暗号化通信
+        </div>
+</div>
+<div class="flow-step">
+<div class="step-icon">
+         🗑️
+        </div>
+<div class="step-label">
+         STEP 5
+        </div>
+<div class="step-title">
+         鍵を破棄
+        </div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- セクション2: PFS対応暗号スイート -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      2
+     </div>
+<h2 class="section-title" id="PFS-をサポートする暗号スイート">
+      PFS をサポートする暗号スイート
+     </h2>
+</div>
+<div class="cipher-section">
+<div class="cipher-intro">
+<div class="cipher-type">
+<div class="cipher-type-header">
+<span class="cipher-type-icon">
+         ⚡
+        </span>
+<div>
+<div class="cipher-type-name">
+          ECDHE
+         </div>
+<span class="cipher-type-full">
+          Elliptic Curve Diffie-Hellman Ephemeral
+         </span>
+</div>
+</div>
+<p class="cipher-type-desc">
+        楕円曲線暗号を使用した高速なPFS。
+        <br/>
+        現在最も推奨される暗号鍵交換方式です。
+       </p>
+<div class="cipher-feature">
+        ✓ 高速 ✓ 高セキュリティ ✓ 推奨
+       </div>
+</div>
+<div class="cipher-type">
+<div class="cipher-type-header">
+<span class="cipher-type-icon">
+         🔧
+        </span>
+<div>
+<div class="cipher-type-name">
+          DHE
+         </div>
+<span class="cipher-type-full">
+          Diffie-Hellman Ephemeral
+         </span>
+</div>
+</div>
+<p class="cipher-type-desc">
+        従来型のDiffie-Hellman鍵交換のPFS版。
+        <br/>
+        ECDHEより計算負荷が高いですが互換性があります。
+       </p>
+<div class="cipher-feature">
+        ✓ 高互換性 ✓ レガシー対応
+       </div>
+</div>
+</div>
+<!-- 暗号スイート一覧 -->
+<div class="cipher-list-section">
+<div class="cipher-list-title">
+<span>
+        📋
+       </span>
+       ALB で使用可能な主要 PFS 暗号スイート
+      </div>
+<div class="cipher-table-wrapper">
+<table class="cipher-table">
+<thead>
+<tr>
+<th>
+           暗号スイート名
+          </th>
+<th>
+           PFS
+          </th>
+<th>
+           TLS
+          </th>
+<th>
+           強度
+          </th>
+<th>
+           用途
+          </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="cipher-name">
+           TLS_AES_128_GCM_SHA256
+          </td>
+<td>
+<span class="cipher-pfs-badge">
+            ✓ PFS
+           </span>
+</td>
+<td>
+           1.3
+          </td>
+<td>
+<div class="cipher-strength">
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+</div>
+</td>
+<td>
+           最新・推奨
+          </td>
+</tr>
+<tr>
+<td class="cipher-name">
+           TLS_AES_256_GCM_SHA384
+          </td>
+<td>
+<span class="cipher-pfs-badge">
+            ✓ PFS
+           </span>
+</td>
+<td>
+           1.3
+          </td>
+<td>
+<div class="cipher-strength">
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+</div>
+</td>
+<td>
+           最高セキュリティ
+          </td>
+</tr>
+<tr>
+<td class="cipher-name">
+           TLS_CHACHA20_POLY1305_SHA256
+          </td>
+<td>
+<span class="cipher-pfs-badge">
+            ✓ PFS
+           </span>
+</td>
+<td>
+           1.3
+          </td>
+<td>
+<div class="cipher-strength">
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+<div class="strength-bar active high">
+</div>
+</div>
+</td>
+<td>
+           モバイル向け
+          </td>
+</tr>
+<tr>
+<td class="cipher-name">
+           ECDHE-RSA-AES256-GCM-SHA384
+          </td>
+<td>
+<span class="cipher-pfs-badge">
+            ✓ PFS
+           </span>
+</td>
+<td>
+           1.2
+          </td>
+<td>
+<div class="cipher-strength">
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar">
+</div>
+</div>
+</td>
+<td>
+           TLS1.2 推奨
+          </td>
+</tr>
+<tr>
+<td class="cipher-name">
+           ECDHE-RSA-AES128-GCM-SHA256
+          </td>
+<td>
+<span class="cipher-pfs-badge">
+            ✓ PFS
+           </span>
+</td>
+<td>
+           1.2
+          </td>
+<td>
+<div class="cipher-strength">
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar">
+</div>
+</div>
+</td>
+<td>
+           バランス型
+          </td>
+</tr>
+<tr>
+<td class="cipher-name">
+           ECDHE-ECDSA-AES256-GCM-SHA384
+          </td>
+<td>
+<span class="cipher-pfs-badge">
+            ✓ PFS
+           </span>
+</td>
+<td>
+           1.2
+          </td>
+<td>
+<div class="cipher-strength">
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar active">
+</div>
+<div class="strength-bar">
+</div>
+</div>
+</td>
+<td>
+           ECDSA証明書用
+          </td>
+</tr>
+</tbody>
+</table>
+</div>
+<p style="margin-top: 20px; padding: 15px; background: rgba(168,85,247,0.1); border-radius: 10px; font-size: 0.9em; color: var(--text-secondary);">
+       💡
+       <strong style="color: var(--accent-purple);">
+        ポイント：
+       </strong>
+       TLS 1.3 では全ての暗号スイートがデフォルトでPFSをサポート。TLS 1.2 では
+       <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">
+        ECDHE_*
+       </code>
+       または
+       <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">
+        DHE_*
+       </code>
+       で始まる暗号スイートがPFS対応です。
+      </p>
+</div>
+</div>
+</section>
+<!-- セクション3: セキュリティポリシー -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      3
+     </div>
+<h2 class="section-title" id="PFS-対応セキュリティポリシー">
+      PFS 対応セキュリティポリシー
+     </h2>
+</div>
+<p style="color: var(--text-secondary); margin-bottom: 20px;">
+     AWS はPFS（Forward Secrecy）に対応した事前定義セキュリティポリシーを提供しています。
+     <br/>
+     ポリシー名に
+     <strong style="color: var(--accent-cyan);">
+      FS
+     </strong>
+     が含まれるものは明示的にPFSをサポートし、
+     <strong style="color: var(--accent-cyan);">
+      TLS13
+     </strong>
+     系のポリシーは標準でPFSに対応しています。
+    </p>
+<div class="policies-grid">
+<div class="policy-card recommended">
+<div class="policy-name">
+       ELBSecurityPolicy-TLS13-1-2-Res-2021-06
+      </div>
+<div class="policy-features">
+<span class="policy-feature-tag pfs">
+        ✓ PFS
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.3
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.2
+       </span>
+<span class="policy-feature-tag">
+        GCM only
+       </span>
+</div>
+<p class="policy-desc">
+       最新のセキュリティ要件を満たす推奨ポリシー。TLS 1.3をサポートしつつ、TLS 1.2クライアントとの互換性を維持。
+      </p>
+</div>
+<div class="policy-card">
+<div class="policy-name">
+       ELBSecurityPolicy-FS-1-2-Res-2020-10
+      </div>
+<div class="policy-features">
+<span class="policy-feature-tag pfs">
+        ✓ PFS 専用
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.2
+       </span>
+<span class="policy-feature-tag">
+        ECDHE only
+       </span>
+</div>
+<p class="policy-desc">
+       最も厳格なPFSポリシー。ECDHE暗号スイートのみを許可し、非PFS暗号を完全に排除。
+      </p>
+</div>
+<div class="policy-card">
+<div class="policy-name">
+       ELBSecurityPolicy-FS-1-2-2019-08
+      </div>
+<div class="policy-features">
+<span class="policy-feature-tag pfs">
+        ✓ PFS
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.2
+       </span>
+<span class="policy-feature-tag">
+        SHA256+
+       </span>
+</div>
+<p class="policy-desc">
+       TLS 1.2のみでPFSを強制。SHA256以上のハッシュアルゴリズムを使用。
+      </p>
+</div>
+<div class="policy-card">
+<div class="policy-name">
+       ELBSecurityPolicy-FS-1-1-2019-08
+      </div>
+<div class="policy-features">
+<span class="policy-feature-tag pfs">
+        ✓ PFS
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.2
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.1
+       </span>
+</div>
+<p class="policy-desc">
+       TLS 1.1/1.2クライアント向けのPFSポリシー。レガシーシステムとの互換性を維持しつつPFSを確保。
+      </p>
+</div>
+<div class="policy-card recommended">
+<div class="policy-name">
+       ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09
+      </div>
+<div class="policy-features">
+<span class="policy-feature-tag pfs">
+        ✓ PFS
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.3
+       </span>
+<span class="policy-feature-tag">
+        Post-Quantum
+       </span>
+</div>
+<p class="policy-desc">
+       🆕 最新のポスト量子暗号（PQ）対応ポリシー。将来の量子コンピュータ攻撃にも耐性を持つ次世代暗号。
+      </p>
+</div>
+<div class="policy-card">
+<div class="policy-name">
+       ELBSecurityPolicy-2016-08
+      </div>
+<div class="policy-features">
+<span class="policy-feature-tag">
+        デフォルト
+       </span>
+<span class="policy-feature-tag">
+        TLS 1.0-1.2
+       </span>
+<span class="policy-feature-tag">
+        ⚠️ 一部非PFS
+       </span>
+</div>
+<p class="policy-desc">
+       CLIやCloudFormationのデフォルトポリシー。互換性重視だが、非PFS暗号も含まれるため注意が必要。
+      </p>
+</div>
+</div>
+</section>
+<!-- セクション4: 設定方法 -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      4
+     </div>
+<h2 class="section-title" id="PFS-の設定方法">
+      PFS の設定方法
+     </h2>
+</div>
+<div class="config-section">
+<div class="config-tabs">
+<span class="config-tab active">
+       AWS CLI
+      </span>
+<span class="config-tab">
+       CloudFormation
+      </span>
+<span class="config-tab">
+       確認コマンド
+      </span>
+</div>
+<div class="code-block">
+<span class="code-label">
+       AWS CLI
+      </span>
+<pre><span class="code-comment"># 新規リスナー作成時にPFS対応ポリシーを指定</span>
+aws elbv2 create-listener \
+  <span class="code-keyword">--load-balancer-arn</span> <span class="code-string">"arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:loadbalancer/app/my-alb/abc123"</span> \
+  <span class="code-keyword">--protocol</span> <span class="code-string">HTTPS</span> \
+  <span class="code-keyword">--port</span> <span class="code-string">443</span> \
+  <span class="code-keyword">--certificates</span> CertificateArn=<span class="code-string">"arn:aws:acm:ap-northeast-1:123456789012:certificate/xyz789"</span> \
+  <span class="code-keyword">--ssl-policy</span> <span class="code-property">"ELBSecurityPolicy-TLS13-1-2-Res-2021-06"</span> \
+  <span class="code-keyword">--default-actions</span> Type=forward,TargetGroupArn=<span class="code-string">"arn:aws:..."</span>
+
+<span class="code-comment"># 既存リスナーのポリシーを変更</span>
+aws elbv2 modify-listener \
+  <span class="code-keyword">--listener-arn</span> <span class="code-string">"arn:aws:elasticloadbalancing:..."</span> \
+  <span class="code-keyword">--ssl-policy</span> <span class="code-property">"ELBSecurityPolicy-FS-1-2-Res-2020-10"</span></pre>
+</div>
+<div class="code-block" style="margin-top: 20px;">
+<span class="code-label">
+       CloudFormation
+      </span>
+<pre><span class="code-keyword">HTTPSListener</span>:
+  <span class="code-property">Type</span>: AWS::ElasticLoadBalancingV2::Listener
+  <span class="code-property">Properties</span>:
+    <span class="code-property">LoadBalancerArn</span>: <span class="code-string">!Ref ApplicationLoadBalancer</span>
+    <span class="code-property">Protocol</span>: <span class="code-string">HTTPS</span>
+    <span class="code-property">Port</span>: <span class="code-string">443</span>
+    <span class="code-property">Certificates</span>:
+      - <span class="code-property">CertificateArn</span>: <span class="code-string">!Ref SSLCertificateArn</span>
+    <span class="code-comment"># ✅ PFS対応ポリシーを指定</span>
+    <span class="code-property">SslPolicy</span>: <span class="code-string">"ELBSecurityPolicy-TLS13-1-2-Res-2021-06"</span>
+    <span class="code-property">DefaultActions</span>:
+      - <span class="code-property">Type</span>: <span class="code-string">forward</span>
+        <span class="code-property">TargetGroupArn</span>: <span class="code-string">!Ref TargetGroup</span></pre>
+</div>
+<div class="code-block" style="margin-top: 20px;">
+<span class="code-label">
+       確認コマンド
+      </span>
+<pre><span class="code-comment"># 現在のセキュリティポリシーを確認</span>
+aws elbv2 describe-listeners \
+  <span class="code-keyword">--load-balancer-arn</span> <span class="code-string">"arn:aws:elasticloadbalancing:..."</span> \
+  <span class="code-keyword">--query</span> <span class="code-string">'Listeners[*].[ListenerArn,SslPolicy]'</span> \
+  <span class="code-keyword">--output</span> table
+
+<span class="code-comment"># ポリシーで使用可能な暗号スイートを確認</span>
+aws elbv2 describe-ssl-policies \
+  <span class="code-keyword">--names</span> <span class="code-string">"ELBSecurityPolicy-TLS13-1-2-Res-2021-06"</span> \
+  <span class="code-keyword">--query</span> <span class="code-string">'SslPolicies[0].Ciphers[*].Name'</span>
+
+<span class="code-comment"># OpenSSL でPFSを確認（外部から）</span>
+openssl s_client -connect your-alb.elb.amazonaws.com:443 2&gt;/dev/null | grep -E "Cipher|TLS"</pre>
+</div>
+</div>
+</section>
+<!-- セクション5: ベストプラクティス -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      5
+     </div>
+<h2 class="section-title" id="PFS-設定のベストプラクティス">
+      PFS 設定のベストプラクティス
+     </h2>
+</div>
+<div class="best-practices">
+<div class="practice-card do">
+<div class="practice-header">
+<span>
+        ✅
+       </span>
+<span>
+        推奨事項
+       </span>
+</div>
+<ul class="practice-list">
+<li>
+        TLS 1.3 対応ポリシーを優先使用
+       </li>
+<li>
+        FS（Forward Secrecy）を名前に含むポリシーを選択
+       </li>
+<li>
+        定期的に最新のセキュリティポリシーに更新
+       </li>
+<li>
+        Server Order Preference を有効化
+       </li>
+<li>
+        ECDHE 暗号スイートを優先順位上位に
+       </li>
+<li>
+        セキュリティ監査で暗号強度を定期確認
+       </li>
+</ul>
+</div>
+<div class="practice-card dont">
+<div class="practice-header">
+<span>
+        ❌
+       </span>
+<span>
+        避けるべきこと
+       </span>
+</div>
+<ul class="practice-list">
+<li>
+        TLS 1.0/1.1 の使用（非推奨）
+       </li>
+<li>
+        RSA鍵交換のみの暗号スイート
+       </li>
+<li>
+        ELBSecurityPolicy-2016-08 をそのまま使用
+       </li>
+<li>
+        CBC モードの暗号スイート（脆弱性あり）
+       </li>
+<li>
+        SHA-1 ハッシュアルゴリズム
+       </li>
+<li>
+        長期間セキュリティポリシーを更新しない
+       </li>
+</ul>
+</div>
+</div>
+</section>
+<!-- セクション6: FAQ -->
+<section class="section">
+<div class="section-header">
+<div class="section-number">
+      6
+     </div>
+<h2 class="section-title" id="よくある質問">
+      よくある質問
+     </h2>
+</div>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       PFS を有効にするとパフォーマンスに影響しますか？
+      </div>
+<p class="faq-answer">
+       ECDHE暗号スイートは非常に効率的で、実際のパフォーマンス影響はほとんどありません。TLS 1.3 ではハンドシェイクが最適化され、むしろ接続が高速になるケースもあります。セキュリティとパフォーマンスのトレードオフを心配する必要はほぼありません。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       古いブラウザやクライアントとの互換性は大丈夫ですか？
+      </div>
+<p class="faq-answer">
+       主要なモダンブラウザ（Chrome、Firefox、Safari、Edge）はすべてECDHE/TLS 1.3 に対応しています。Java 7以降、iOS 9以降、Android 4.4以降もサポートしています。レガシーシステムが必要な場合は
+       <code>
+        ELBSecurityPolicy-FS-1-1-2019-08
+       </code>
+       を使用することでTLS 1.1クライアントにも対応できます。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       ALB でカスタムセキュリティポリシーは作成できますか？
+      </div>
+<p class="faq-answer">
+       いいえ、Application Load Balancer ではカスタムセキュリティポリシーの作成はサポートされていません。AWS が提供する事前定義ポリシーの中から選択する必要があります。Classic Load Balancer のみカスタムポリシーの作成が可能です。
+      </p>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       ポスト量子暗号（PQ）対応ポリシーを今すぐ使うべきですか？
+      </div>
+<p class="faq-answer">
+       将来の量子コンピュータによる攻撃に備えたい場合は、
+       <code>
+        ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09
+       </code>
+       の採用を検討してください。このポリシーは従来のTLS 1.2/1.3 クライアントとも互換性があり、PQ-TLS対応クライアントではハイブリッド鍵交換を使用します。「今から暗号化しておいて、後で量子コンピュータで解読する」攻撃への対策として有効です。
+      </p>
+</div>
+</div>
+</section>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="acm-dns-simple-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">8</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">15</span>
+    </div>
+    <a href="alb-security-policy-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<!-- フッター -->
+<footer class="footer">
+<div class="footer-links">
+<a class="footer-link" href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/describe-ssl-policies.html" target="_blank">
+     📄 AWS公式ドキュメント
+    </a>
+<a class="footer-link" href="https://aws.amazon.com/about-aws/whats-new/2019/10/application-load-balancer-and-network-load-balancer-add-new-security-policies-for-forward-secrecy-with-more-strigent-protocols-and-ciphers/" target="_blank">
+     📢 AWSブログ
+    </a>
+</div>
+<p>
+    AWS ALB × PFS 暗号スイートガイド | 2025年版
+   </p>
+</footer>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

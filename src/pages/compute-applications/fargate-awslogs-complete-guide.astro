@@ -1,0 +1,1112 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'Fargate awslogsログドライバ完全ガイド',
+  category: 'compute-applications',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: '',
+  slug: 'fargate-awslogs-complete-guide',
+  pageCss: '/aws_sap_studying/css/pages/fargate-awslogs-complete-guide.css',
+  tocItems: [
+    { level: 'h2', id: '日記帳と図書館で理解するログの世界', text: '📚 日記帳と図書館で理解するログの世界' },
+    { level: 'h2', id: 'オフィスで理解する！各要素の役割', text: '🏢 オフィスで理解する！各要素の役割' },
+    { level: 'h3', id: 'Fargateコンテナ', text: 'Fargateコンテナ' },
+    { level: 'h3', id: 'awslogs-ログドライバ', text: 'awslogs ログドライバ' },
+    { level: 'h3', id: 'CloudWatch-Logs', text: 'CloudWatch Logs' },
+    { level: 'h3', id: 'ロググループ', text: 'ロググループ' },
+    { level: 'h3', id: 'ログストリーム', text: 'ログストリーム' },
+    { level: 'h3', id: 'リテンション設定', text: 'リテンション設定' },
+    { level: 'h2', id: 'ログが記録される流れ', text: '🔄 ログが記録される流れ' },
+    { level: 'h2', id: 'ログが記録される6つのステップ', text: '🔍 ログが記録される6つのステップ' },
+    { level: 'h2', id: '⚙️-タスク定義での設定方法', text: '⚙️ タスク定義での設定方法' },
+    { level: 'h2', id: 'ロググループとログストリームの関係', text: '📚 ロググループとログストリームの関係' },
+    { level: 'h3', id: '本棚と日記帳の関係', text: '本棚と日記帳の関係' },
+    { level: 'h2', id: '知っておくべき重要設定', text: '🎯 知っておくべき重要設定' },
+    { level: 'h2', id: '⭐-ベストプラクティス', text: '⭐ ベストプラクティス' },
+    { level: 'h3', id: 'やるべきこと', text: 'やるべきこと' },
+    { level: 'h3', id: '注意すること', text: '注意すること' },
+    { level: 'h3', id: 'やってはいけないこと', text: 'やってはいけないこと' },
+    { level: 'h2', id: 'よくあるトラブルと解決法', text: '🔧 よくあるトラブルと解決法' },
+    { level: 'h2', id: '実践的な使い方', text: '💼 実践的な使い方' },
+    { level: 'h2', id: 'まとめ', text: '🎓 まとめ' },
+    { level: 'h3', id: 'awslogsログドライバ-=-自動日報提出システム', text: '📝 awslogsログドライバ = 自動日報提出システム' }
+  ],
+  prevPage: 'ec2-log-backup-before-termination-guide.html',
+  nextPage: 'warmpool-modes-infographic.html',
+  pageNum: 11,
+  pageTotal: 41,
+};
+
+const rawContent = `<div class="header">
+<h1>
+     📝 Fargate awslogs ログドライバ
+    </h1>
+
+<p>
+     コンテナの「業務日報」を自動で図書館に保管する仕組み
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="日記帳と図書館で理解するログの世界">
+      📚 日記帳と図書館で理解するログの世界
+     </h2>
+<p class="intro-text">
+<strong>
+       Fargateのログ = 毎日書く業務日報
+      </strong>
+<br/>
+<br/>
+      コンテナで動くアプリケーションは、日々の出来事（エラー、アクセス、処理内容）を記録します。
+      <br/>
+      でも、コンテナは
+      <strong>
+       「一時的な存在」
+      </strong>
+      。再起動すると記録が消えてしまう！
+      <br/>
+<br/>
+      そこで登場するのが
+      <strong>
+       「awslogsログドライバ」
+      </strong>
+      。
+      <br/>
+      これは
+      <strong>
+       自動で日報を書いて、図書館（CloudWatch Logs）に保管してくれる秘書
+      </strong>
+      のようなもの✨
+      <br/>
+<br/>
+      コンテナが消えても、図書館に保管された記録はずっと残ります！
+     </p>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="オフィスで理解する！各要素の役割">
+      🏢 オフィスで理解する！各要素の役割
+     </h2>
+<div class="analogy-grid">
+<div class="analogy-card">
+<div class="analogy-icon">
+        🖥️
+       </div>
+<h3 id="Fargateコンテナ">
+        Fargateコンテナ
+       </h3>
+<div class="analogy-description">
+<strong>
+         = オフィスの社員
+        </strong>
+<br/>
+<br/>
+        日々の業務をこなし、その記録（ログ）を残します。でも、退職したり異動したりする（コンテナが終了する）と、デスクの書類は持っていけません。
+       </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        ✍️
+       </div>
+<h3 id="awslogs-ログドライバ">
+        awslogs ログドライバ
+       </h3>
+<div class="analogy-description">
+<strong>
+         = 専属の記録係・秘書
+        </strong>
+<br/>
+<br/>
+        社員が仕事をするたびに、その内容を自動でメモして、すぐに図書館に届けてくれます。社員は仕事に集中するだけでOK！
+       </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        📚
+       </div>
+<h3 id="CloudWatch-Logs">
+        CloudWatch Logs
+       </h3>
+<div class="analogy-description">
+<strong>
+         = 会社の図書館・資料室
+        </strong>
+<br/>
+<br/>
+        全社員の業務日報を一元管理。後から「あの時何があった？」を調べられます。永久保存も、一定期間で破棄も選べます。
+       </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        📁
+       </div>
+<h3 id="ロググループ">
+        ロググループ
+       </h3>
+<div class="analogy-description">
+<strong>
+         = 部署ごとの本棚
+        </strong>
+<br/>
+<br/>
+        営業部の本棚、開発部の本棚のように、目的別に整理された保管場所。「/ecs/my-app」のような名前をつけて分類します。
+       </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        📔
+       </div>
+<h3 id="ログストリーム">
+        ログストリーム
+       </h3>
+<div class="analogy-description">
+<strong>
+         = 個人の日記帳
+        </strong>
+<br/>
+<br/>
+        各社員（各コンテナ）が書く個別の日記帳。山田さんの日記、佐藤さんの日記のように、それぞれ別々に記録されます。
+       </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        ⏰
+       </div>
+<h3 id="リテンション設定">
+        リテンション設定
+       </h3>
+<div class="analogy-description">
+<strong>
+         = 資料の保管期限
+        </strong>
+<br/>
+<br/>
+        「7日間保存」「30日間保存」「無期限保存」など、図書館に保管する期間を決められます。古い記録は自動で破棄されます。
+       </div>
+</div>
+</div>
+</div>
+<!-- 仕組みの図解 -->
+<div class="visual-diagram">
+<h2 class="diagram-title" id="ログが記録される流れ">
+      🔄 ログが記録される流れ
+     </h2>
+<div class="diagram-container">
+<div class="diagram-row">
+<div class="diagram-box container-box">
+<div class="diagram-box-icon">
+         🖥️
+        </div>
+<div class="diagram-box-title">
+         Fargateコンテナ
+        </div>
+<div class="diagram-box-desc">
+         アプリが動作
+         <br/>
+         ログを出力
+        </div>
+</div>
+<div class="diagram-arrow">
+        ➡️
+       </div>
+<div class="diagram-box driver-box">
+<div class="diagram-box-icon">
+         ✍️
+        </div>
+<div class="diagram-box-title">
+         awslogs ドライバ
+        </div>
+<div class="diagram-box-desc">
+         自動でキャッチ
+         <br/>
+         即座に送信
+        </div>
+</div>
+<div class="diagram-arrow">
+        ➡️
+       </div>
+<div class="diagram-box cloudwatch-box">
+<div class="diagram-box-icon">
+         📚
+        </div>
+<div class="diagram-box-title">
+         CloudWatch Logs
+        </div>
+<div class="diagram-box-desc">
+         永続的に保管
+         <br/>
+         検索・分析可能
+        </div>
+</div>
+</div>
+<div style="text-align: center; margin-top: 30px; padding: 20px; background: white; border-radius: 10px;">
+<strong style="color: #0c4a6e; font-size: 1.2em;">
+        📝 重要ポイント
+       </strong>
+<br/>
+<br/>
+<span style="color: #475569; line-height: 1.8;">
+        コンテナが終了しても、ログはCloudWatch Logsに残り続けます！
+        <br/>
+        まるで社員が退職しても、業務日報は図書館に残っているのと同じです。
+       </span>
+</div>
+</div>
+</div>
+<!-- 動作フロー -->
+<div class="flow-section">
+<h2 class="flow-title" id="ログが記録される6つのステップ">
+      🔍 ログが記録される6つのステップ
+     </h2>
+<div class="flow-diagram">
+<div class="flow-step">
+<div class="flow-step-number">
+        1
+       </div>
+<div class="flow-step-icon">
+        ⚙️
+       </div>
+<div class="flow-step-title">
+        タスク定義で設定
+       </div>
+<div class="flow-step-desc">
+        ECSタスク定義で「このアプリのログはCloudWatch Logsに送ってね」と指定します。
+        <br/>
+<strong>
+         たとえ：
+        </strong>
+        社員入社時に「業務日報は図書館に提出すること」と伝える
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        2
+       </div>
+<div class="flow-step-icon">
+        🚀
+       </div>
+<div class="flow-step-title">
+        コンテナ起動
+       </div>
+<div class="flow-step-desc">
+        Fargateタスクが起動すると、awslogsドライバも一緒に起動します。
+        <br/>
+<strong>
+         たとえ：
+        </strong>
+        社員の初出勤と同時に、専属秘書も配置される
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        3
+       </div>
+<div class="flow-step-icon">
+        📝
+       </div>
+<div class="flow-step-title">
+        ログ出力
+       </div>
+<div class="flow-step-desc">
+        アプリケーションが標準出力(stdout)や標準エラー出力(stderr)にログを書き込みます。
+        <br/>
+<strong>
+         たとえ：
+        </strong>
+        社員が「今日はこの仕事をしました」と口頭で報告
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        4
+       </div>
+<div class="flow-step-icon">
+        📤
+       </div>
+<div class="flow-step-title">
+        リアルタイム送信
+       </div>
+<div class="flow-step-desc">
+        awslogsドライバがログをキャッチして、即座にCloudWatch Logsへ送信します。
+        <br/>
+<strong>
+         たとえ：
+        </strong>
+        秘書が報告内容をすぐにメモして、図書館に届ける
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        5
+       </div>
+<div class="flow-step-icon">
+        💾
+       </div>
+<div class="flow-step-title">
+        保存・整理
+       </div>
+<div class="flow-step-desc">
+        CloudWatch Logsがログを受け取り、ロググループ内のログストリームに保存します。
+        <br/>
+<strong>
+         たとえ：
+        </strong>
+        図書館が日報を受け取り、適切な本棚の個人ファイルに保管
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        6
+       </div>
+<div class="flow-step-icon">
+        🔎
+       </div>
+<div class="flow-step-title">
+        閲覧・検索
+       </div>
+<div class="flow-step-desc">
+        コンソールやCLIで、いつでもログを検索・閲覧できます。コンテナが消えた後も！
+        <br/>
+<strong>
+         たとえ：
+        </strong>
+        退職した社員の過去の業務記録も、図書館で調べられる
+       </div>
+</div>
+</div>
+</div>
+<!-- 設定方法 -->
+<div class="config-section">
+<h2 class="config-title" id="⚙️-タスク定義での設定方法">
+      ⚙️ タスク定義での設定方法
+     </h2>
+<div class="code-example">
+<div class="code-title">
+       📋 ECSタスク定義（JSON形式）
+      </div>
+<pre>{
+  <span class="code-string">"family"</span>: <span class="code-string">"my-app"</span>,
+  <span class="code-string">"networkMode"</span>: <span class="code-string">"awsvpc"</span>,
+  <span class="code-string">"requiresCompatibilities"</span>: [<span class="code-string">"FARGATE"</span>],
+  <span class="code-string">"cpu"</span>: <span class="code-string">"256"</span>,
+  <span class="code-string">"memory"</span>: <span class="code-string">"512"</span>,
+  <span class="code-string">"containerDefinitions"</span>: [
+    {
+      <span class="code-string">"name"</span>: <span class="code-string">"my-container"</span>,
+      <span class="code-string">"image"</span>: <span class="code-string">"my-app:latest"</span>,
+      <span class="code-comment">// ここがログ設定の肝！</span>
+      <span class="code-string">"logConfiguration"</span>: {
+        <span class="code-string">"logDriver"</span>: <span class="code-string">"awslogs"</span>,  <span class="code-comment">← awslogsを指定</span>
+        <span class="code-string">"options"</span>: {
+          <span class="code-comment">// ロググループ名（本棚の名前）</span>
+          <span class="code-string">"awslogs-group"</span>: <span class="code-string">"/ecs/my-app"</span>,
+          
+          <span class="code-comment">// リージョン（どこの図書館？）</span>
+          <span class="code-string">"awslogs-region"</span>: <span class="code-string">"ap-northeast-1"</span>,
+          
+          <span class="code-comment">// ログストリーム名のプレフィックス（日記帳の名前）</span>
+          <span class="code-string">"awslogs-stream-prefix"</span>: <span class="code-string">"ecs"</span>,
+          
+          <span class="code-comment">// オプション: ロググループを自動作成（便利！）</span>
+          <span class="code-string">"awslogs-create-group"</span>: <span class="code-string">"true"</span>
+        }
+      }
+    }
+  ]
+}</pre>
+</div>
+<div class="tip-box">
+<div class="tip-title">
+<span>
+        💡
+       </span>
+<span>
+        設定のポイント
+       </span>
+</div>
+<div class="tip-content">
+<strong>
+        1. ロググループ名は統一的に：
+       </strong>
+<br/>
+<code>
+        /ecs/アプリケーション名
+       </code>
+       のような命名規則を決めると管理しやすい！
+       <br/>
+<br/>
+<strong>
+        2. awslogs-create-groupを活用：
+       </strong>
+<br/>
+       "true" にすると、ロググループが存在しない場合に自動作成してくれます。初めて使う時は便利！
+       <br/>
+<br/>
+<strong>
+        3. stream-prefixで識別：
+       </strong>
+<br/>
+       複数のタスクを実行する場合、プレフィックスで識別しやすくなります。
+      </div>
+</div>
+</div>
+<!-- ロググループとストリームの理解 -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="ロググループとログストリームの関係">
+      📚 ロググループとログストリームの関係
+     </h2>
+<div style="max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px;">
+<div style="text-align: center; margin-bottom: 30px;">
+<div style="font-size: 4em; margin-bottom: 15px;">
+        🏢
+       </div>
+<h3 id="本棚と日記帳の関係" style="color: #0c4a6e; font-size: 1.8em; margin-bottom: 15px;">
+        本棚と日記帳の関係
+       </h3>
+</div>
+<div style="background: #f0f9ff; padding: 30px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #0284c7;">
+<h4 style="color: #0c4a6e; font-size: 1.3em; margin-bottom: 15px;">
+        📁 ロググループ = 部署の本棚
+       </h4>
+<p style="color: #0c4a6e; line-height: 1.8;">
+        例:
+        <code style="background: white; padding: 3px 8px; border-radius: 4px;">
+         /ecs/my-web-app
+        </code>
+<br/>
+<br/>
+        • Webアプリケーション全体のログをまとめる場所
+        <br/>
+        • リテンション設定（保存期間）はロググループ単位
+        <br/>
+        • CloudWatch Logsの料金もロググループ単位で管理
+       </p>
+</div>
+<div style="text-align: center; margin: 30px 0;">
+<div style="font-size: 3em;">
+        ⬇️
+       </div>
+<p style="color: #64748b; margin-top: 10px;">
+        この中に複数のログストリームが入る
+       </p>
+</div>
+<div style="background: #fef3c7; padding: 30px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #CA8A04;">
+<h4 style="color: #92400e; font-size: 1.3em; margin-bottom: 15px;">
+        📔 ログストリーム = 個別のタスクの日記帳
+       </h4>
+<p style="color: #92400e; line-height: 1.8;">
+        例:
+        <code style="background: white; padding: 3px 8px; border-radius: 4px;">
+         ecs/my-container/abc123def456
+        </code>
+<br/>
+<br/>
+        • 1つのFargateタスク（コンテナ）につき1つ作成される
+        <br/>
+        • タスクIDが自動的に名前に含まれる
+        <br/>
+        • タスクが起動するたびに新しいログストリームが作られる
+        <br/>
+        • 各ログストリームは時系列順に記録される
+       </p>
+</div>
+<div style="background: #e0f2fe; padding: 25px; border-radius: 12px; margin-top: 30px;">
+<strong style="color: #0c4a6e; font-size: 1.2em;">
+        🎯 具体例：
+       </strong>
+<br/>
+<br/>
+<div style="color: #0c4a6e; line-height: 2;">
+        ロググループ:
+        <code style="background: white; padding: 3px 8px; border-radius: 4px;">
+         /ecs/my-web-app
+        </code>
+<br/>
+        ├─ ログストリーム:
+        <code style="background: white; padding: 3px 8px; border-radius: 4px;">
+         ecs/container/task-1-abc123
+        </code>
+        ← タスク1の記録
+        <br/>
+        ├─ ログストリーム:
+        <code style="background: white; padding: 3px 8px; border-radius: 4px;">
+         ecs/container/task-2-def456
+        </code>
+        ← タスク2の記録
+        <br/>
+        └─ ログストリーム:
+        <code style="background: white; padding: 3px 8px; border-radius: 4px;">
+         ecs/container/task-3-ghi789
+        </code>
+        ← タスク3の記録
+       </div>
+</div>
+</div>
+</div>
+<!-- 重要な設定項目 -->
+<div class="config-section">
+<h2 class="config-title" id="知っておくべき重要設定">
+      🎯 知っておくべき重要設定
+     </h2>
+<div class="feature-grid">
+<div class="feature-card">
+<div class="feature-icon">
+        ⏰
+       </div>
+<div class="feature-title">
+        リテンション設定
+       </div>
+<div class="feature-desc">
+        ログの保存期間を設定。1日〜無期限まで選択可能。長く保存するほど料金がかかります。
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-icon">
+        🔐
+       </div>
+<div class="feature-title">
+        IAM権限
+       </div>
+<div class="feature-desc">
+        タスクロールに
+        <code>
+         logs:CreateLogStream
+        </code>
+        と
+        <code>
+         logs:PutLogEvents
+        </code>
+        の権限が必要です。
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-icon">
+        💰
+       </div>
+<div class="feature-title">
+        料金の仕組み
+       </div>
+<div class="feature-desc">
+        取り込み量（GB）と保存容量（GB-月）で課金。大量ログは要注意！フィルタリングも検討を。
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-icon">
+        🔍
+       </div>
+<div class="feature-title">
+        ログインサイト
+       </div>
+<div class="feature-desc">
+        CloudWatch Logs InsightsでSQLライクなクエリで高速検索。エラー分析に便利！
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-icon">
+        📊
+       </div>
+<div class="feature-title">
+        メトリクスフィルタ
+       </div>
+<div class="feature-desc">
+        特定のログパターンを検出してメトリクス化。エラー率の監視やアラート設定が可能。
+       </div>
+</div>
+<div class="feature-card">
+<div class="feature-icon">
+        🗄️
+       </div>
+<div class="feature-title">
+        S3エクスポート
+       </div>
+<div class="feature-desc">
+        古いログをS3にエクスポートして長期保存。コスト削減と監査対応の両立。
+       </div>
+</div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<div style="margin: 50px 0;">
+<h2 id="⭐-ベストプラクティス" style="text-align: center; font-size: 2.5em; color: #1e293b; margin-bottom: 40px;">
+      ⭐ ベストプラクティス
+     </h2>
+<div class="comparison-grid">
+<div class="comparison-card">
+<div class="comparison-icon">
+        ✅
+       </div>
+<h3 id="やるべきこと" style="color: #065f46;">
+        やるべきこと
+       </h3>
+<div class="comparison-content">
+<strong>
+         1. 構造化ログを使う：
+        </strong>
+<br/>
+        JSON形式でログを出力すると、後の検索・分析が超便利！
+        <br/>
+<br/>
+<strong>
+         2. リテンション設定を適切に：
+        </strong>
+<br/>
+        本番: 30〜90日、開発: 7日程度が一般的。無期限は避けよう。
+        <br/>
+<br/>
+<strong>
+         3. ロググループを環境別に：
+        </strong>
+<br/>
+<code>
+         /ecs/prod/my-app
+        </code>
+<br/>
+<code>
+         /ecs/dev/my-app
+        </code>
+<br/>
+        のように環境ごとに分ける。
+        <br/>
+<br/>
+<strong>
+         4. メトリクスフィルタでアラート：
+        </strong>
+<br/>
+        ERRORやCRITICALが出たら即座に通知！
+       </div>
+</div>
+<div class="comparison-card">
+<div class="comparison-icon">
+        ⚠️
+       </div>
+<h3 id="注意すること" style="color: #92400e;">
+        注意すること
+       </h3>
+<div class="comparison-content">
+<strong>
+         1. 機密情報をログに出さない：
+        </strong>
+<br/>
+        パスワード、APIキー、個人情報は絶対にログに含めない！
+        <br/>
+<br/>
+<strong>
+         2. ログの出しすぎに注意：
+        </strong>
+<br/>
+        デバッグログを本番で垂れ流すと、料金が高額に...
+        <br/>
+<br/>
+<strong>
+         3. タイムゾーンに注意：
+        </strong>
+<br/>
+        CloudWatch LogsはUTC。アプリでJSTにしても、表示はUTCです。
+        <br/>
+<br/>
+<strong>
+         4. ログサイズの制限：
+        </strong>
+<br/>
+        1イベント256KB、1リクエスト1MBまで。大きなログは分割が必要。
+       </div>
+</div>
+<div class="comparison-card">
+<div class="comparison-icon">
+        ❌
+       </div>
+<h3 id="やってはいけないこと" style="color: #991b1b;">
+        やってはいけないこと
+       </h3>
+<div class="comparison-content">
+<strong>
+         1. IAM権限の付け忘れ：
+        </strong>
+<br/>
+        ログが出ない！と慌てる前に、タスクロールの権限確認を。
+        <br/>
+<br/>
+<strong>
+         2. 無制限のリテンション：
+        </strong>
+<br/>
+        「Never Expire」にすると料金が青天井に。必ず期限を設定！
+        <br/>
+<br/>
+<strong>
+         3. ログの放置：
+        </strong>
+<br/>
+        使わないロググループが溜まると料金の無駄。定期的に整理を。
+        <br/>
+<br/>
+<strong>
+         4. 本番でDEBUGログ：
+        </strong>
+<br/>
+        ログ量が爆発してパフォーマンス低下＆料金増加のダブルパンチ！
+       </div>
+</div>
+</div>
+</div>
+<!-- コスト最適化 -->
+<div class="warning-box">
+<div class="warning-title">
+<span>
+       💰
+      </span>
+<span>
+       料金を抑えるコツ
+      </span>
+</div>
+<div class="warning-content">
+<strong>
+       1. リテンション設定を見直す：
+      </strong>
+<br/>
+      開発環境は7日、本番でも30-90日で十分なことが多い。監査要件を確認して最短期間に。
+      <br/>
+<br/>
+<strong>
+       2. ログレベルを環境別に：
+      </strong>
+<br/>
+      開発: DEBUG OK → 本番: INFO or WARNING以上 にすると、ログ量が激減！
+      <br/>
+<br/>
+<strong>
+       3. 古いログはS3へ：
+      </strong>
+<br/>
+      90日以上のログはS3 Glacierに移動。CloudWatch Logsの1/10のコスト！
+      <br/>
+<br/>
+<strong>
+       4. 不要なロググループを削除：
+      </strong>
+<br/>
+      使わなくなったアプリのロググループは削除。少額でも塵も積もれば...
+      <br/>
+<br/>
+<strong>
+       5. サブスクリプションフィルタで必要なログだけ：
+      </strong>
+<br/>
+      全ログを別のサービスに送る前に、本当に必要なログだけをフィルタリング。
+     </div>
+</div>
+<!-- トラブルシューティング -->
+<div class="flow-section">
+<h2 class="flow-title" id="よくあるトラブルと解決法">
+      🔧 よくあるトラブルと解決法
+     </h2>
+<div class="flow-diagram">
+<div class="flow-step">
+<div class="flow-step-icon">
+        ❌
+       </div>
+<div class="flow-step-title">
+        ログが表示されない！
+       </div>
+<div class="flow-step-desc">
+<strong>
+         原因1: IAM権限不足
+        </strong>
+<br/>
+        → タスクロールに
+        <code>
+         logs:CreateLogStream
+        </code>
+        と
+        <code>
+         logs:PutLogEvents
+        </code>
+        を追加
+        <br/>
+<br/>
+<strong>
+         原因2: ロググループが存在しない
+        </strong>
+<br/>
+        →
+        <code>
+         awslogs-create-group: true
+        </code>
+        を設定するか、手動で作成
+        <br/>
+<br/>
+<strong>
+         原因3: リージョンの設定ミス
+        </strong>
+<br/>
+        →
+        <code>
+         awslogs-region
+        </code>
+        がタスクのリージョンと一致しているか確認
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-icon">
+        ⏱️
+       </div>
+<div class="flow-step-title">
+        ログ表示が遅い
+       </div>
+<div class="flow-step-desc">
+<strong>
+         これは正常です！
+        </strong>
+<br/>
+        CloudWatch Logsへの送信は数秒〜数十秒の遅延があります。リアルタイム性が必要な場合は、別の監視ツールも併用を。
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-icon">
+        💸
+       </div>
+<div class="flow-step-title">
+        料金が予想より高い！
+       </div>
+<div class="flow-step-desc">
+<strong>
+         チェックポイント：
+        </strong>
+<br/>
+        • ログ量が多すぎないか？（本番でDEBUGログは出していない？）
+        <br/>
+        • リテンションが長すぎない？
+        <br/>
+        • 使っていないロググループが残っていない？
+        <br/>
+        • CloudWatch Logs Insightsのクエリスキャンコストがかかっていないか？
+       </div>
+</div>
+<div class="flow-step">
+<div class="flow-step-icon">
+        🔍
+       </div>
+<div class="flow-step-title">
+        特定のログが見つからない
+       </div>
+<div class="flow-step-desc">
+<strong>
+         確認手順：
+        </strong>
+<br/>
+        1. ログストリームが正しいか確認（タスクIDで絞り込み）
+        <br/>
+        2. 時間範囲が適切か確認（UTCなので9時間ズレに注意）
+        <br/>
+        3. CloudWatch Logs Insightsでキーワード検索
+        <br/>
+        4. アプリが本当にログを出力しているか確認（ローカルテスト）
+       </div>
+</div>
+</div>
+</div>
+<!-- 実践例 -->
+<div class="config-section">
+<h2 class="config-title" id="実践的な使い方">
+      💼 実践的な使い方
+     </h2>
+<div class="code-example">
+<div class="code-title">
+       🔍 CloudWatch Logs Insightsのクエリ例
+      </div>
+<pre><span class="code-comment"># エラーログを時系列で表示</span>
+fields @timestamp, @message
+| filter @message like /ERROR/
+| sort @timestamp desc
+| limit 100
+
+<span class="code-comment"># レスポンスタイムが遅いリクエストを検索</span>
+fields @timestamp, status, duration, path
+| filter duration &gt; 1000
+| sort duration desc
+
+<span class="code-comment"># 特定のユーザーのアクションを追跡</span>
+fields @timestamp, user_id, action, @message
+| filter user_id = "12345"
+| sort @timestamp desc
+
+<span class="code-comment"># エラー発生回数を集計</span>
+fields @timestamp
+| filter @message like /ERROR/
+| stats count() by bin(5m)</pre>
+</div>
+<div class="tip-box">
+<div class="tip-title">
+<span>
+        🎓
+       </span>
+<span>
+        構造化ログのススメ
+       </span>
+</div>
+<div class="tip-content">
+<strong>
+        JSONフォーマットでログを出力すると、検索が超便利に！
+       </strong>
+<br/>
+<br/>
+       ❌ 悪い例:
+       <br/>
+<code>
+        2024-01-15 10:30:45 ERROR User 12345 failed to login
+       </code>
+<br/>
+<br/>
+       ✅ 良い例:
+       <br/>
+<code>
+        {
+        <br/>
+        "timestamp": "2024-01-15T10:30:45Z",
+        <br/>
+        "level": "ERROR",
+        <br/>
+        "user_id": "12345",
+        <br/>
+        "action": "login",
+        <br/>
+        "status": "failed",
+        <br/>
+        "ip": "192.168.1.1"
+        <br/>
+        }
+       </code>
+<br/>
+<br/>
+       JSON形式なら、
+       <code>
+        user_id
+       </code>
+       や
+       <code>
+        action
+       </code>
+       で簡単に絞り込めます！
+      </div>
+</div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="awslogsログドライバ-=-自動日報提出システム" style="font-size: 1.8em; margin-bottom: 15px;">
+        📝 awslogsログドライバ = 自動日報提出システム
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        Fargateコンテナのログを、自動的にCloudWatch Logsに送信してくれる便利な仕組み。
+        <br/>
+        コンテナが消えても、ログは図書館（CloudWatch Logs）に永続的に保管されます！
+       </p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         ⚙️
+        </div>
+<strong style="font-size: 1.3em;">
+         簡単設定
+        </strong>
+<br/>
+<br/>
+        タスク定義に
+        <br/>
+        3つのパラメータを
+        <br/>
+        追加するだけ！
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🔄
+        </div>
+<strong style="font-size: 1.3em;">
+         自動化
+        </strong>
+<br/>
+<br/>
+        ログの送信から
+        <br/>
+        保管まで
+        <br/>
+        全て自動！
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🔍
+        </div>
+<strong style="font-size: 1.3em;">
+         強力な検索
+        </strong>
+<br/>
+<br/>
+        Logs Insightsで
+        <br/>
+        高速に
+        <br/>
+        ログ分析！
+       </div>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+<p style="font-size: 1.3em; line-height: 1.8;">
+<strong>
+         🎯 覚えておくべき3つのポイント：
+        </strong>
+<br/>
+<br/>
+<span style="font-size: 1.1em;">
+         1️⃣
+         <strong>
+          ロググループ
+         </strong>
+         = アプリごとの本棚
+         <br/>
+         2️⃣
+         <strong>
+          ログストリーム
+         </strong>
+         = タスクごとの日記帳
+         <br/>
+         3️⃣
+         <strong>
+          リテンション設定
+         </strong>
+         = 保存期間の設定でコスト管理
+         <br/>
+</span>
+</p>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<p style="font-size: 1.2em; line-height: 1.8;">
+<strong>
+         ✨ これで、Fargateのログ管理はバッチリ！
+        </strong>
+<br/>
+<br/>
+        コンテナが消えても記録は残る、
+        <br/>
+        まるで図書館に保管された業務日報のように、
+        <br/>
+        いつでも過去を振り返ることができます 📚
+       </p>
+</div>
+</div>
+</div>
+</div>
+
+
+</div>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

@@ -1,0 +1,1471 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Vpn Ike Dpd Recovery Guide',
+  pageTitle: 'AWS Site-to-Site VPN IKEセッション復旧ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Direct Connect & ハイブリッドネットワーク',
+  slug: 'vpn-ike-dpd-recovery-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '結論ファースト-IKEセッション復旧の最適解', text: '🎯 結論ファースト：IKEセッション復旧の最適解' },
+    { level: 'h3', id: 'DPDタイムアウトアクション-=-Restart', text: 'DPDタイムアウトアクション = Restart' },
+    { level: 'h3', id: 'トラフィックは顧客側CGWから開始', text: 'トラフィックは顧客側（CGW）から開始' }
+  ],
+  prevPage: 'aws-site-to-site-vpn-guide.html',
+  nextPage: 'aws-vpn-asymmetric-routing-guide.html',
+  pageNum: 28,
+  pageTotal: 40,
+};
+
+const rawContent = `<style>* { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 25%, #e0f2fe 50%, #f0f9ff 75%, #f8fafc 100%);
+            padding: 20px;
+            line-height: 1.7;
+            color: #374151;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0ea5e9 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '🔐';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.07;
+            top: -40px;
+            right: -30px;
+        }
+        .header::after {
+            content: '🔗';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.06;
+            bottom: -30px;
+            left: -20px;
+        }
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+        }
+        .header p {
+            font-size: 1.25em;
+            opacity: 0.92;
+            position: relative;
+            z-index: 1;
+        }
+        .header-badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 18px;
+            position: relative;
+            z-index: 1;
+            flex-wrap: wrap;
+        }
+        .header-badge {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .content { padding: 50px; }
+
+        /* ===== CONCLUSION FIRST ===== */
+        .conclusion-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border-left: 6px solid #2563eb;
+            position: relative;
+        }
+        .conclusion-box h2 {
+            color: #1e40af;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .conclusion-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .conclusion-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border-top: 4px solid;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        .conclusion-card:nth-child(1) { border-color: #2563eb; }
+        .conclusion-card:nth-child(2) { border-color: #0ea5e9; }
+        .conclusion-icon {
+            font-size: 2.2em;
+            flex-shrink: 0;
+        }
+        .conclusion-card h3 {
+            font-size: 1.15em;
+            color: #1e3a5f;
+            margin-bottom: 8px;
+        }
+        .conclusion-card p {
+            color: #4b5563;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+        .answer-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* ===== SECTION TITLE ===== */
+        .section {
+            margin-bottom: 55px;
+        }
+        .section-title {
+            font-size: 2.2em;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        .section-subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 1.1em;
+            margin-bottom: 35px;
+        }
+
+        /* ===== ANALOGY BOX ===== */
+        .analogy-box {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 40px;
+            border: 2px solid #fde047;
+            position: relative;
+        }
+        .analogy-box::before {
+            content: '💡';
+            position: absolute;
+            top: -18px;
+            left: 28px;
+            font-size: 2em;
+            background: #fef9c3;
+            padding: 0 10px;
+            border-radius: 50%;
+        }
+        .analogy-title {
+            color: #92400e;
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .analogy-text {
+            color: #78350f;
+            font-size: 1.05em;
+            line-height: 1.8;
+        }
+
+        /* ===== DIAGRAM BOXES ===== */
+        .diagram-box {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+        .diagram-title {
+            font-size: 1.5em;
+            color: #1e3a5f;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        /* ===== VPN TUNNEL DIAGRAM ===== */
+        .tunnel-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 30px 20px;
+            flex-wrap: wrap;
+        }
+        .site-box {
+            background: white;
+            border-radius: 14px;
+            padding: 24px 30px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            text-align: center;
+            min-width: 180px;
+            border-top: 4px solid;
+        }
+        .site-box.on-prem { border-color: #10b981; }
+        .site-box.aws { border-color: #f59e0b; }
+        .site-icon { font-size: 2.8em; margin-bottom: 8px; }
+        .site-label { font-weight: 700; color: #1e293b; font-size: 1.1em; margin-bottom: 4px; }
+        .site-sub { color: #6b7280; font-size: 0.85em; }
+
+        .tunnel-line {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px;
+            position: relative;
+            min-width: 300px;
+        }
+        .tunnel-pipe {
+            width: 100%;
+            height: 36px;
+            background: linear-gradient(90deg, #10b981, #2563eb, #f59e0b);
+            border-radius: 18px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+        }
+        .tunnel-pipe span {
+            color: white;
+            font-weight: 700;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+        }
+        .tunnel-label {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        /* ===== IKE PHASE DIAGRAM ===== */
+        .phase-flow {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 0;
+            margin: 20px 0;
+        }
+        .phase-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px 24px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            flex: 1;
+            max-width: 340px;
+            text-align: center;
+            border-top: 5px solid;
+            position: relative;
+        }
+        .phase-card.phase1 { border-color: #8b5cf6; }
+        .phase-card.phase2 { border-color: #06b6d4; }
+        .phase-emoji { font-size: 2.5em; margin-bottom: 10px; }
+        .phase-name {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .phase-card.phase1 .phase-name { color: #7c3aed; }
+        .phase-card.phase2 .phase-name { color: #0891b2; }
+        .phase-desc {
+            color: #4b5563;
+            font-size: 0.92em;
+            line-height: 1.7;
+            text-align: left;
+        }
+        .phase-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2em;
+            color: #94a3b8;
+            padding: 0 12px;
+            flex-shrink: 0;
+        }
+        .phase-analogy {
+            margin-top: 12px;
+            background: #f5f3ff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88em;
+            color: #6d28d9;
+        }
+        .phase-card.phase2 .phase-analogy {
+            background: #ecfeff;
+            color: #0e7490;
+        }
+
+        /* ===== DPD SECTION ===== */
+        .dpd-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 30px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .dpd-peer {
+            text-align: center;
+            padding: 20px;
+        }
+        .dpd-peer-icon { font-size: 3em; margin-bottom: 8px; }
+        .dpd-peer-label { font-weight: 700; color: #1e293b; }
+        .dpd-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 260px;
+        }
+        .dpd-msg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 0.92em;
+            font-weight: 600;
+        }
+        .dpd-msg.request {
+            background: #dbeafe;
+            color: #1e40af;
+            flex-direction: row;
+        }
+        .dpd-msg.response {
+            background: #d1fae5;
+            color: #065f46;
+            flex-direction: row-reverse;
+        }
+        .dpd-msg.fail {
+            background: #fee2e2;
+            color: #991b1b;
+            flex-direction: row-reverse;
+        }
+        .dpd-msg-arrow { font-size: 1.2em; }
+
+        /* ===== DPD ACTION CARDS ===== */
+        .dpd-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 25px;
+        }
+        .dpd-action-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px 22px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            border-top: 5px solid;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .dpd-action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+        }
+        .dpd-action-card.none { border-color: #9ca3af; }
+        .dpd-action-card.clear { border-color: #f59e0b; }
+        .dpd-action-card.restart { border-color: #10b981; }
+        .dpd-action-icon { font-size: 2.8em; margin-bottom: 12px; }
+        .dpd-action-name {
+            font-size: 1.35em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .dpd-action-card.none .dpd-action-name { color: #6b7280; }
+        .dpd-action-card.clear .dpd-action-name { color: #d97706; }
+        .dpd-action-card.restart .dpd-action-name { color: #059669; }
+        .dpd-action-desc {
+            color: #4b5563;
+            font-size: 0.92em;
+            line-height: 1.7;
+            margin-bottom: 14px;
+        }
+        .dpd-action-analogy {
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88em;
+            line-height: 1.6;
+        }
+        .dpd-action-card.none .dpd-action-analogy { background: #f3f4f6; color: #6b7280; }
+        .dpd-action-card.clear .dpd-action-analogy { background: #fef3c7; color: #92400e; }
+        .dpd-action-card.restart .dpd-action-analogy { background: #d1fae5; color: #065f46; }
+
+        .best-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        /* ===== COMPARISON TABLE ===== */
+        .comparison-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            margin: 25px 0;
+        }
+        .comparison-table th {
+            background: linear-gradient(135deg, #1e3a5f, #2563eb);
+            color: white;
+            padding: 16px 20px;
+            font-size: 0.95em;
+            font-weight: 600;
+            text-align: center;
+        }
+        .comparison-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.93em;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .comparison-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+        .comparison-table tr:hover td {
+            background: #eff6ff;
+        }
+        .table-badge-good {
+            display: inline-block;
+            background: #d1fae5;
+            color: #065f46;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .table-badge-bad {
+            display: inline-block;
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .table-badge-warn {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        /* ===== TRAFFIC DIRECTION ===== */
+        .traffic-flow-diagram {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 0;
+            margin: 30px 0;
+        }
+        .traffic-side {
+            background: white;
+            border-radius: 14px;
+            padding: 28px 24px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            text-align: center;
+            flex: 1;
+            max-width: 260px;
+        }
+        .traffic-side.customer { border-top: 5px solid #10b981; }
+        .traffic-side.aws-side { border-top: 5px solid #f59e0b; }
+        .traffic-side-icon { font-size: 2.8em; margin-bottom: 10px; }
+        .traffic-side-label {
+            font-weight: 700;
+            font-size: 1.15em;
+            margin-bottom: 6px;
+        }
+        .traffic-side.customer .traffic-side-label { color: #059669; }
+        .traffic-side.aws-side .traffic-side-label { color: #d97706; }
+        .traffic-side-desc {
+            color: #6b7280;
+            font-size: 0.88em;
+        }
+        .traffic-arrow-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+            min-width: 200px;
+        }
+        .traffic-big-arrow {
+            font-size: 3em;
+            color: #10b981;
+            animation: pulse-arrow 2s ease-in-out infinite;
+        }
+        .traffic-arrow-label {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        @keyframes pulse-arrow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); opacity: 0.8; }
+        }
+
+        /* ===== SCENARIO FLOW ===== */
+        .scenario-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin: 25px 0;
+            position: relative;
+        }
+        .scenario-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            padding: 0 0 28px 0;
+            position: relative;
+        }
+        .scenario-step::before {
+            content: '';
+            position: absolute;
+            left: 27px;
+            top: 56px;
+            width: 3px;
+            height: calc(100% - 56px);
+            background: #cbd5e1;
+        }
+        .scenario-step:last-child::before { display: none; }
+        .step-number {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+        .step-number.red { background: #fee2e2; }
+        .step-number.blue { background: #dbeafe; }
+        .step-number.green { background: #d1fae5; }
+        .step-number.purple { background: #ede9fe; }
+        .step-content {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            flex: 1;
+            border-left: 4px solid;
+        }
+        .step-content.red-border { border-color: #ef4444; }
+        .step-content.blue-border { border-color: #3b82f6; }
+        .step-content.green-border { border-color: #10b981; }
+        .step-content.purple-border { border-color: #8b5cf6; }
+        .step-content h4 {
+            font-size: 1.1em;
+            margin-bottom: 6px;
+        }
+        .step-content p {
+            color: #4b5563;
+            font-size: 0.93em;
+            line-height: 1.7;
+        }
+
+        /* ===== BEST PRACTICE BOX ===== */
+        .best-practice-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-radius: 16px;
+            padding: 35px;
+            margin: 30px 0;
+            border: 2px solid #6ee7b7;
+            position: relative;
+        }
+        .best-practice-box::before {
+            content: '✅';
+            position: absolute;
+            top: -18px;
+            left: 28px;
+            font-size: 2em;
+            background: #d1fae5;
+            padding: 0 10px;
+            border-radius: 50%;
+        }
+        .best-practice-title {
+            color: #065f46;
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        /* ===== CONFIG CODE ===== */
+        .config-block {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        .config-label {
+            color: #94a3b8;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .config-block pre {
+            color: #e2e8f0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+        .config-block .comment { color: #64748b; }
+        .config-block .keyword { color: #7dd3fc; }
+        .config-block .value { color: #86efac; }
+        .config-block .important { color: #fbbf24; font-weight: 700; }
+
+        /* ===== WARNING BOX ===== */
+        .warning-box {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border-radius: 16px;
+            padding: 30px 35px;
+            margin: 25px 0;
+            border-left: 6px solid #ef4444;
+        }
+        .warning-title {
+            color: #991b1b;
+            font-size: 1.15em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .warning-text {
+            color: #7f1d1d;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+
+        /* ===== INFO BOX ===== */
+        .info-box {
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border-radius: 16px;
+            padding: 30px 35px;
+            margin: 25px 0;
+            border-left: 6px solid #3b82f6;
+        }
+        .info-title {
+            color: #1e40af;
+            font-size: 1.15em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .info-text {
+            color: #1e3a5f;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+
+        /* ===== FULL RECOVERY FLOW ===== */
+        .recovery-flow-container {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 40px 30px;
+            border: 1px solid #e2e8f0;
+        }
+        .recovery-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+        .recovery-node {
+            background: white;
+            border-radius: 14px;
+            padding: 20px 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            border-left: 5px solid;
+        }
+        .recovery-node.status-down { border-color: #ef4444; background: #fef2f2; }
+        .recovery-node.status-detect { border-color: #f59e0b; background: #fffbeb; }
+        .recovery-node.status-restart { border-color: #8b5cf6; background: #f5f3ff; }
+        .recovery-node.status-traffic { border-color: #06b6d4; background: #ecfeff; }
+        .recovery-node.status-up { border-color: #10b981; background: #ecfdf5; }
+        .recovery-node h4 { font-size: 1.1em; margin-bottom: 4px; }
+        .recovery-node p { font-size: 0.9em; color: #4b5563; }
+        .recovery-arrow {
+            font-size: 1.8em;
+            color: #94a3b8;
+            padding: 6px 0;
+        }
+
+        /* ===== ANALOGY VISUAL DIAGRAM ===== */
+        .analogy-diagram {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 30px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        .analogy-panel {
+            background: white;
+            border-radius: 14px;
+            padding: 28px 24px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            flex: 1;
+            min-width: 280px;
+            max-width: 400px;
+            text-align: center;
+            border-top: 4px solid;
+        }
+        .analogy-panel.real { border-color: #8b5cf6; }
+        .analogy-panel.aws { border-color: #2563eb; }
+        .analogy-panel-icon { font-size: 3em; margin-bottom: 12px; }
+        .analogy-panel-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .analogy-panel.real .analogy-panel-title { color: #7c3aed; }
+        .analogy-panel.aws .analogy-panel-title { color: #2563eb; }
+        .analogy-panel-items {
+            text-align: left;
+        }
+        .analogy-panel-item {
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            font-size: 0.92em;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .analogy-panel.real .analogy-panel-item { background: #f5f3ff; color: #5b21b6; }
+        .analogy-panel.aws .analogy-panel-item { background: #eff6ff; color: #1e40af; }
+        .analogy-mapping {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            color: #94a3b8;
+            padding: 0 10px;
+            flex-shrink: 0;
+        }
+
+        /* ===== FAQ ===== */
+        .faq-section { margin-top: 40px; }
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-left: 4px solid #2563eb;
+        }
+        .faq-q {
+            font-weight: 700;
+            color: #1e3a5f;
+            font-size: 1.05em;
+            margin-bottom: 10px;
+        }
+        .faq-a {
+            color: #4b5563;
+            font-size: 0.93em;
+            line-height: 1.8;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: linear-gradient(135deg, #1e3a5f, #2563eb);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        .footer p {
+            opacity: 0.85;
+            font-size: 0.9em;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .content { padding: 25px; }
+            .header h1 { font-size: 2em; }
+            .conclusion-grid,
+            .dpd-actions-grid { grid-template-columns: 1fr; }
+            .phase-flow,
+            .traffic-flow-diagram { flex-direction: column; align-items: center; }
+            .phase-arrow, .analogy-mapping { transform: rotate(90deg); padding: 10px 0; }
+            .tunnel-diagram { flex-direction: column; }
+            .tunnel-line { min-width: unset; width: 80%; }
+            .tunnel-pipe { height: 50px; width: 36px; min-height: 80px;
+                background: linear-gradient(180deg, #10b981, #2563eb, #f59e0b);
+            }
+            .analogy-diagram { flex-direction: column; align-items: center; }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }</style>
+<!-- ===== HEADER ===== -->
+    <div class="header">
+        <h1>🔐 AWS Site-to-Site VPN<br>IKEセッション復旧ガイド</h1>
+        <p>IKEセッションがダウンした時、どうやって復旧する？ DPD設定とトラフィック方向の最適解</p>
+        <div class="header-badges">
+            <span class="header-badge">🔑 IKE Phase 1 &amp; 2</span>
+            <span class="header-badge">📡 DPD検出</span>
+            <span class="header-badge">🔄 セッション復旧</span>
+            <span class="header-badge">🌐 Site-to-Site VPN</span>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- ===== 結論ファースト ===== -->
+        <div class="conclusion-box">
+            <h2 id="結論ファースト-IKEセッション復旧の最適解">🎯 結論ファースト：IKEセッション復旧の最適解</h2>
+            <p style="color:#1e40af; font-size:1.05em; margin-bottom:8px;">IKEセッションがダウンした場合、以下の2つの設定を組み合わせることで自動復旧を実現できます。</p>
+            <div class="conclusion-grid">
+                <div class="conclusion-card">
+                    <div class="conclusion-icon">🔄</div>
+                    <div>
+                        <span class="answer-tag">答え①</span>
+                        <h3 id="DPDタイムアウトアクション-=-Restart">DPDタイムアウトアクション = Restart</h3>
+                        <p>DPDがピアのダウンを検出したら、IKEセッションを自動的に<strong>削除→再確立</strong>する「Restart」を設定する。これにより、手動介入なしでトンネルが再構築されます。</p>
+                    </div>
+                </div>
+                <div class="conclusion-card">
+                    <div class="conclusion-icon">📤</div>
+                    <div>
+                        <span class="answer-tag">答え②</span>
+                        <h3 id="トラフィックは顧客側CGWから開始">トラフィックは顧客側（CGW）から開始</h3>
+                        <p>AWS VPNエンドポイントではなく、<strong>顧客側のカスタマーゲートウェイ（CGW）から</strong>トラフィック（=興味あるトラフィック）を送信してIKEネゴシエーションをトリガーする。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== たとえ話の全体像 ===== -->
+        <div class="analogy-box">
+            <div class="analogy-title">🏢 たとえ話：「2つのオフィスビルを結ぶ秘密の専用通路」</div>
+            <div class="analogy-text">
+                あなたの会社（オンプレミス）と取引先のビル（AWS）が、外部の人には入れない<strong>秘密の専用通路（VPNトンネル）</strong>で繋がっています。この通路を使うには、まず<strong>身分証明と合言葉の確認（IKE Phase 1）</strong>を済ませてから、<strong>書類の暗号化ルールを決める（IKE Phase 2）</strong>必要があります。定期的に警備員が「通路の向こう側に人いますか？」と確認電話（DPD）を送りますが、応答がなくなったら…通路をどうするか？が今回のテーマです。
+            </div>
+        </div>
+
+        <!-- ===== セクション1: VPN基本構成図 ===== -->
+        <div class="section">
+            <div class="section-title">📐 セクション1：Site-to-Site VPN の基本構成</div>
+            <div class="section-subtitle">オンプレミスとAWS VPCをIPsecトンネルで安全に接続する構成</div>
+
+            <div class="diagram-box">
+                <div class="diagram-title">Site-to-Site VPN 接続の全体像</div>
+                <div class="tunnel-diagram">
+                    <div class="site-box on-prem">
+                        <div class="site-icon">🏢</div>
+                        <div class="site-label">オンプレミス</div>
+                        <div class="site-sub">カスタマーゲートウェイ<br>(CGW)</div>
+                    </div>
+                    <div class="tunnel-line">
+                        <div class="tunnel-pipe"><span>🔒 IPsec VPNトンネル 🔒</span></div>
+                        <div class="tunnel-label">インターネット経由の暗号化通信<br>IKE Phase 1 → Phase 2 → データ転送</div>
+                    </div>
+                    <div class="site-box aws">
+                        <div class="site-icon">☁️</div>
+                        <div class="site-label">AWS VPC</div>
+                        <div class="site-sub">仮想プライベートゲートウェイ<br>(VGW)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- たとえ話の対照図 -->
+            <div class="analogy-diagram">
+                <div class="analogy-panel real">
+                    <div class="analogy-panel-icon">🏢</div>
+                    <div class="analogy-panel-title">たとえ話：秘密の専用通路</div>
+                    <div class="analogy-panel-items">
+                        <div class="analogy-panel-item">🏢 あなたの会社ビル = オンプレミス</div>
+                        <div class="analogy-panel-item">🏢 取引先のビル = AWS VPC</div>
+                        <div class="analogy-panel-item">🚪 あなた側の入口 = CGW</div>
+                        <div class="analogy-panel-item">🚪 取引先側の入口 = VGW</div>
+                        <div class="analogy-panel-item">🔒 秘密の通路 = VPNトンネル</div>
+                        <div class="analogy-panel-item">📞 確認電話 = DPD</div>
+                    </div>
+                </div>
+                <div class="analogy-mapping">⟷</div>
+                <div class="analogy-panel aws">
+                    <div class="analogy-panel-icon">☁️</div>
+                    <div class="analogy-panel-title">AWS の実際の構成</div>
+                    <div class="analogy-panel-items">
+                        <div class="analogy-panel-item">🏢 カスタマーデータセンター</div>
+                        <div class="analogy-panel-item">☁️ AWS VPC（仮想ネットワーク）</div>
+                        <div class="analogy-panel-item">📡 Customer Gateway (CGW)</div>
+                        <div class="analogy-panel-item">🌐 Virtual Private Gateway (VGW)</div>
+                        <div class="analogy-panel-item">🔐 IPsec VPNトンネル</div>
+                        <div class="analogy-panel-item">📡 Dead Peer Detection (DPD)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セクション2: IKEプロトコルの2フェーズ ===== -->
+        <div class="section">
+            <div class="section-title">🔑 セクション2：IKEプロトコルの2フェーズ</div>
+            <div class="section-subtitle">VPNトンネルを確立するための鍵交換プロトコル「IKE」の仕組み</div>
+
+            <div class="diagram-box">
+                <div class="diagram-title">IKE ネゴシエーションの流れ</div>
+                <div class="phase-flow">
+                    <div class="phase-card phase1">
+                        <div class="phase-emoji">🤝</div>
+                        <div class="phase-name">IKE Phase 1</div>
+                        <p style="color:#7c3aed; font-weight:600; margin-bottom:10px;">IKEセキュリティアソシエーション確立</p>
+                        <div class="phase-desc">
+                            ① <strong>相互認証</strong>：お互いが正当な通信相手であることを確認<br>
+                            ② <strong>暗号アルゴリズムのネゴシエーション</strong>：どの暗号化方式を使うか合意<br>
+                            ③ <strong>共有秘密鍵の生成</strong>：安全な通信チャネルの基盤を構築
+                        </div>
+                        <div class="phase-analogy">
+                            💡 たとえ：「身分証明書を見せ合い、合言葉を交換する」ステップ。通路に入る前の本人確認フェーズ。
+                        </div>
+                    </div>
+                    <div class="phase-arrow">➡️</div>
+                    <div class="phase-card phase2">
+                        <div class="phase-emoji">📦</div>
+                        <div class="phase-name">IKE Phase 2</div>
+                        <p style="color:#0891b2; font-weight:600; margin-bottom:10px;">IPsecセキュリティアソシエーション確立</p>
+                        <div class="phase-desc">
+                            ① <strong>IPsec SA確立</strong>：実際のデータを保護するためのルールを決定<br>
+                            ② <strong>暗号化パラメータの合意</strong>：データの暗号化・認証方式を確定<br>
+                            ③ <strong>トンネル開通</strong>：安全なデータ転送が可能に
+                        </div>
+                        <div class="phase-analogy">
+                            💡 たとえ：「書類をどんな暗号で送るかルールを決める」ステップ。通路を通る荷物の保護方法を決定。
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <div class="warning-title">⚠️ IKEセッションがダウンすると何が起きる？</div>
+                <div class="warning-text">
+                    IKEセッションがダウンすると、Phase 1で確立した信頼関係とPhase 2で決めた暗号化ルールが全て無効になります。つまり、<strong>VPNトンネルを介したすべての通信が完全に中断</strong>します。たとえ話でいえば「通路の鍵が壊れて、通行証も失効した」状態です。復旧するには、Phase 1から再度やり直す必要があります。
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セクション3: DPD（デッドピア検出） ===== -->
+        <div class="section">
+            <div class="section-title">📡 セクション3：デッドピア検出（DPD）の仕組み</div>
+            <div class="section-subtitle">「相手はまだ生きている？」を確認する監視メカニズム</div>
+
+            <div class="analogy-box">
+                <div class="analogy-title">📞 たとえ話：通路の警備員の「定期確認電話」</div>
+                <div class="analogy-text">
+                    警備員は定期的に通路の向こう側に電話をかけます。「もしもし、そちらにまだ人いますか？（R-U-THERE）」と。向こうから「はい、います！（R-U-THERE-ACK）」と返事があれば安心。しかし、<strong>何度電話しても応答がない場合</strong>、警備員は「向こう側のビルは閉鎖された」と判断し、あらかじめ決められたアクション（None / Clear / Restart）を実行します。
+                </div>
+            </div>
+
+            <div class="diagram-box">
+                <div class="diagram-title">DPD メッセージ交換の仕組み</div>
+
+                <!-- 正常パターン -->
+                <p style="text-align:center; font-weight:700; color:#059669; font-size:1.1em; margin-bottom:15px;">✅ 正常時：ピアが応答する場合</p>
+                <div class="dpd-visual">
+                    <div class="dpd-peer">
+                        <div class="dpd-peer-icon">🏢</div>
+                        <div class="dpd-peer-label">CGW（自分側）</div>
+                    </div>
+                    <div class="dpd-messages">
+                        <div class="dpd-msg request">
+                            <span class="dpd-msg-arrow">→</span>
+                            <span>📤 R-U-THERE（生きてる？）</span>
+                        </div>
+                        <div class="dpd-msg response">
+                            <span class="dpd-msg-arrow">←</span>
+                            <span>📥 R-U-THERE-ACK（生きてるよ！）</span>
+                        </div>
+                    </div>
+                    <div class="dpd-peer">
+                        <div class="dpd-peer-icon">☁️</div>
+                        <div class="dpd-peer-label">VGW（AWS側）</div>
+                    </div>
+                </div>
+
+                <!-- 異常パターン -->
+                <p style="text-align:center; font-weight:700; color:#dc2626; font-size:1.1em; margin:20px 0 15px;">❌ 異常時：ピアが応答しない場合</p>
+                <div class="dpd-visual" style="border: 2px solid #fca5a5;">
+                    <div class="dpd-peer">
+                        <div class="dpd-peer-icon">🏢</div>
+                        <div class="dpd-peer-label">CGW（自分側）</div>
+                    </div>
+                    <div class="dpd-messages">
+                        <div class="dpd-msg request">
+                            <span class="dpd-msg-arrow">→</span>
+                            <span>📤 R-U-THERE（生きてる？）</span>
+                        </div>
+                        <div class="dpd-msg fail">
+                            <span class="dpd-msg-arrow">✖</span>
+                            <span>🔇 応答なし…タイムアウト</span>
+                        </div>
+                        <div style="text-align:center; padding: 8px; background:#fef2f2; border-radius:8px; color:#991b1b; font-weight:700; font-size:0.9em;">
+                            ⚡ DPDタイムアウトアクション発動！
+                        </div>
+                    </div>
+                    <div class="dpd-peer">
+                        <div class="dpd-peer-icon" style="opacity:0.4;">☁️</div>
+                        <div class="dpd-peer-label" style="color:#9ca3af;">VGW（ダウン）</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セクション4: DPDタイムアウトアクション比較 ===== -->
+        <div class="section">
+            <div class="section-title">⚙️ セクション4：DPDタイムアウトアクション 3つの選択肢</div>
+            <div class="section-subtitle">「相手が応答しなくなった時、通路をどうするか？」の3パターン</div>
+
+            <div class="dpd-actions-grid">
+                <!-- None -->
+                <div class="dpd-action-card none">
+                    <div class="dpd-action-icon">😴</div>
+                    <div class="dpd-action-name">None（何もしない）</div>
+                    <div class="dpd-action-desc">
+                        IKEセッションを維持したまま何もしない。相手が復帰するまで「死んだトンネル」が残り続ける。
+                    </div>
+                    <div class="dpd-action-analogy">
+                        💡 たとえ：電話に出ないけど、通路の鍵はそのまま。復旧に最も時間がかかる。
+                    </div>
+                </div>
+
+                <!-- Clear -->
+                <div class="dpd-action-card clear">
+                    <div class="dpd-action-icon">🧹</div>
+                    <div class="dpd-action-name">Clear（掃除して放置）</div>
+                    <div class="dpd-action-desc">
+                        IKEセッションを削除するが、自動再確立はしない。復旧には手動またはトラフィック開始が必要。
+                    </div>
+                    <div class="dpd-action-analogy">
+                        💡 たとえ：通路を閉鎖して鍵を回収。再開するには誰かが改めて申請しに行く必要がある。
+                    </div>
+                </div>
+
+                <!-- Restart -->
+                <div class="dpd-action-card restart">
+                    <span class="best-badge">⭐ 推奨設定</span>
+                    <div class="dpd-action-icon">🔄</div>
+                    <div class="dpd-action-name">Restart（自動再起動）</div>
+                    <div class="dpd-action-desc">
+                        IKEセッションを削除し、即座に新しいセッションの確立を開始する。最も迅速な自動復旧。
+                    </div>
+                    <div class="dpd-action-analogy">
+                        💡 たとえ：通路を閉鎖→即座に新しい鍵を発行して再開。警備員が自動で全て対応する。
+                    </div>
+                </div>
+            </div>
+
+            <!-- 比較テーブル -->
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>😴 None</th>
+                        <th>🧹 Clear</th>
+                        <th>🔄 Restart</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight:600; text-align:left;">IKEセッション削除</td>
+                        <td><span class="table-badge-bad">しない</span></td>
+                        <td><span class="table-badge-good">する</span></td>
+                        <td><span class="table-badge-good">する</span></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; text-align:left;">自動再確立</td>
+                        <td><span class="table-badge-bad">しない</span></td>
+                        <td><span class="table-badge-bad">しない</span></td>
+                        <td><span class="table-badge-good">する</span></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; text-align:left;">復旧速度</td>
+                        <td><span class="table-badge-bad">最遅</span></td>
+                        <td><span class="table-badge-warn">中程度</span></td>
+                        <td><span class="table-badge-good">最速</span></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; text-align:left;">手動介入の必要性</td>
+                        <td><span class="table-badge-warn">状況による</span></td>
+                        <td><span class="table-badge-warn">必要/トラフィック待ち</span></td>
+                        <td><span class="table-badge-good">不要</span></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; text-align:left;">AWS推奨</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td><span class="table-badge-good">⭐ 推奨</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== セクション5: トラフィック方向 ===== -->
+        <div class="section">
+            <div class="section-title">📤 セクション5：トラフィックの開始方向</div>
+            <div class="section-subtitle">IKEネゴシエーションを「誰から」トリガーすべきか？</div>
+
+            <div class="info-box">
+                <div class="info-title">💡 なぜトラフィックの方向が重要なのか？</div>
+                <div class="info-text">
+                    AWS Site-to-Site VPNでは、<strong>AWSのVGW側はIKEネゴシエーションを開始できません</strong>。VGWはリスポンダー（応答者）としてのみ動作します。つまり、トンネルの再確立をトリガーするには、必ず<strong>顧客側のCGWからトラフィック（＝興味あるトラフィック/interesting traffic）を送信</strong>する必要があります。
+                </div>
+            </div>
+
+            <div class="diagram-box">
+                <div class="diagram-title">トラフィック開始方向の図解</div>
+                <div class="traffic-flow-diagram">
+                    <div class="traffic-side customer">
+                        <div class="traffic-side-icon">🏢</div>
+                        <div class="traffic-side-label">CGW（顧客側）</div>
+                        <div class="traffic-side-desc">IKEイニシエーター<br>（セッション開始側）</div>
+                        <div style="margin-top:14px; background:#d1fae5; padding:8px 12px; border-radius:8px; color:#065f46; font-size:0.85em; font-weight:600;">
+                            ✅ ここからトラフィックを送信！
+                        </div>
+                    </div>
+                    <div class="traffic-arrow-area">
+                        <div class="traffic-big-arrow">➡️</div>
+                        <div class="traffic-arrow-label">Interesting Traffic</div>
+                        <p style="font-size:0.82em; color:#6b7280; margin-top:8px; text-align:center;">トンネル経由で送るべき<br>トラフィックを送信</p>
+                    </div>
+                    <div class="traffic-side aws-side">
+                        <div class="traffic-side-icon">☁️</div>
+                        <div class="traffic-side-label">VGW（AWS側）</div>
+                        <div class="traffic-side-desc">IKEリスポンダー<br>（応答側のみ）</div>
+                        <div style="margin-top:14px; background:#fef3c7; padding:8px 12px; border-radius:8px; color:#92400e; font-size:0.85em; font-weight:600;">
+                            ⚠️ VGWからは開始できない
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                <div class="analogy-title">📞 たとえ話：「電話を掛けるのは、いつもあなたの側から」</div>
+                <div class="analogy-text">
+                    取引先のビル（AWS）には「かかってきた電話には出るが、自分からは電話しない」というルールがあります。通路が閉鎖された後に「もう一度通路を開けましょう」と提案するのは、必ず<strong>あなたの会社側から電話する（＝CGWからトラフィックを送る）</strong>必要があります。取引先側は「どうぞ、開けましょう」と応答するだけです。
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セクション6: 復旧の全体フロー ===== -->
+        <div class="section">
+            <div class="section-title">🔄 セクション6：IKEセッション復旧の全体フロー</div>
+            <div class="section-subtitle">DPD Restart + CGWからのトラフィック開始による自動復旧プロセス</div>
+
+            <div class="recovery-flow-container">
+                <div class="diagram-title">復旧フロー（DPD Restart 設定時）</div>
+                <div class="recovery-flow">
+                    <div class="recovery-node status-down">
+                        <h4>❌ Step 1：IKEセッションがダウン</h4>
+                        <p>ネットワーク障害やピアの問題でIKEセッションが切断</p>
+                    </div>
+                    <div class="recovery-arrow">⬇️</div>
+                    <div class="recovery-node status-detect">
+                        <h4>📡 Step 2：DPDがダウンを検出</h4>
+                        <p>R-U-THEREメッセージへの応答がない → タイムアウト判定</p>
+                    </div>
+                    <div class="recovery-arrow">⬇️</div>
+                    <div class="recovery-node status-restart">
+                        <h4>🔄 Step 3：Restartアクション発動</h4>
+                        <p>古いIKE SAを削除し、新しいIKEネゴシエーションを自動開始</p>
+                    </div>
+                    <div class="recovery-arrow">⬇️</div>
+                    <div class="recovery-node status-traffic">
+                        <h4>📤 Step 4：CGWからトラフィックを送信</h4>
+                        <p>顧客側CGWから興味あるトラフィックを送信 → IKEネゴシエーション開始をトリガー</p>
+                    </div>
+                    <div class="recovery-arrow">⬇️</div>
+                    <div class="recovery-node status-up">
+                        <h4>✅ Step 5：VPNトンネル復旧完了</h4>
+                        <p>IKE Phase 1 → Phase 2 → IPsecトンネル再確立 → 通信再開</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analogy-box" style="margin-top:30px;">
+                <div class="analogy-title">🏢 たとえ話：通路の復旧プロセス</div>
+                <div class="analogy-text">
+                    ① 通路が突然使えなくなる → ② 警備員が電話で確認「応答なし！」 → ③ 警備員が自動で古い鍵を破棄し、新しい鍵の準備を開始（Restart） → ④ あなたの会社側から「通路を使いたいです」と通知を送る（CGWからのトラフィック） → ⑤ 新しい鍵と通行証が発行され、通路が復旧！
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セクション7: 設定例 ===== -->
+        <div class="section">
+            <div class="section-title">⌨️ セクション7：実際の設定例</div>
+            <div class="section-subtitle">CGW側のDPD設定とトラフィック開始の実装</div>
+
+            <div class="config-block">
+                <div class="config-label">CGW側 DPD設定例（Cisco IOS）</div>
+                <pre><span class="comment">! DPDを有効化（10秒間隔、3回リトライ後にRestart）</span>
+<span class="keyword">crypto isakmp</span> keepalive <span class="value">10</span> <span class="value">3</span> <span class="important">periodic</span>
+
+<span class="comment">! IPsecプロファイルでDPDアクションを設定</span>
+<span class="keyword">crypto ipsec profile</span> AWS-VPN-PROFILE
+  <span class="keyword">set</span> isakmp-profile AWS-ISAKMP
+  <span class="keyword">set</span> transform-set AWS-TS
+  <span class="comment">! DPDタイムアウト時にセッションをRestart</span>
+  <span class="keyword">set</span> security-association lifetime seconds <span class="value">3600</span></pre>
+            </div>
+
+            <div class="config-block">
+                <div class="config-label">CGW側 DPD設定例（strongSwan / Linux）</div>
+                <pre><span class="comment"># /etc/ipsec.conf</span>
+<span class="keyword">conn</span> aws-vpn
+    <span class="keyword">left</span>=<span class="value">%defaultroute</span>
+    <span class="keyword">leftid</span>=<span class="value">203.0.113.1</span>           <span class="comment"># CGWのパブリックIP</span>
+    <span class="keyword">right</span>=<span class="value">52.xx.xx.xx</span>            <span class="comment"># AWS VPNエンドポイントIP</span>
+    <span class="keyword">type</span>=<span class="value">tunnel</span>
+    <span class="keyword">auto</span>=<span class="value">start</span>                   <span class="comment"># 自動でトンネル確立を開始</span>
+    <span class="keyword">dpdaction</span>=<span class="important">restart</span>            <span class="comment"># ★ DPDタイムアウト時にRestart</span>
+    <span class="keyword">dpddelay</span>=<span class="value">10s</span>                 <span class="comment"># 10秒ごとにDPDチェック</span>
+    <span class="keyword">dpdtimeout</span>=<span class="value">30s</span>              <span class="comment"># 30秒応答なしでタイムアウト</span>
+    <span class="keyword">keyexchange</span>=<span class="value">ikev2</span>            <span class="comment"># IKEv2を使用</span></pre>
+            </div>
+
+            <div class="config-block">
+                <div class="config-label">AWS CLI — VPN接続作成時のオプション</div>
+                <pre><span class="comment"># Site-to-Site VPN接続を作成</span>
+<span class="keyword">aws ec2</span> create-vpn-connection \\
+    --type <span class="value">ipsec.1</span> \\
+    --customer-gateway-id <span class="value">cgw-0123456789abcdef0</span> \\
+    --vpn-gateway-id <span class="value">vgw-0123456789abcdef0</span> \\
+    --options <span class="value">'{
+        "TunnelOptions": [
+            {
+                "DPDTimeoutAction": "<span class="important">restart</span>",
+                "DPDTimeoutSeconds": <span class="important">30</span>,
+                "Phase1LifetimeSeconds": 28800,
+                "Phase2LifetimeSeconds": 3600
+            }
+        ]
+    }'</span></pre>
+            </div>
+
+            <div class="best-practice-box">
+                <div class="best-practice-title">ベストプラクティスまとめ</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                        <p style="font-weight:700; color:#059669; margin-bottom:6px;">✅ DPD設定</p>
+                        <p style="font-size:0.9em; color:#374151; line-height:1.7;">dpdaction = <strong>restart</strong> を設定して、検出後に自動再確立を行う</p>
+                    </div>
+                    <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                        <p style="font-weight:700; color:#059669; margin-bottom:6px;">✅ トラフィック方向</p>
+                        <p style="font-size:0.9em; color:#374151; line-height:1.7;">必ず<strong>CGW（顧客）側から</strong>トラフィックを開始してIKEをトリガー</p>
+                    </div>
+                    <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                        <p style="font-weight:700; color:#059669; margin-bottom:6px;">✅ DPD間隔</p>
+                        <p style="font-size:0.9em; color:#374151; line-height:1.7;">10秒間隔がAWSの推奨値。短すぎると誤検知、長すぎると検出が遅れる</p>
+                    </div>
+                    <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                        <p style="font-weight:700; color:#059669; margin-bottom:6px;">✅ IKEv2の使用</p>
+                        <p style="font-size:0.9em; color:#374151; line-height:1.7;">IKEv1よりもIKEv2を推奨。再ネゴシエーションが効率的で、NATトラバーサルも標準サポート</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セクション8: FAQ ===== -->
+        <div class="section faq-section">
+            <div class="section-title">❓ よくある質問（FAQ）</div>
+
+            <div class="faq-item">
+                <div class="faq-q">Q: DPDの「None」を選んだら、トンネルはどうなりますか？</div>
+                <div class="faq-a">
+                    A: IKEセッションが「死んだ状態」のまま残り続けます。通信はできませんが、リソースは占有し続けます。復旧するには、手動でセッションをクリアするか、IKEのライフタイム期限が切れてからトラフィックを再送信する必要があり、復旧に最も時間がかかります。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Q: DPDの「Clear」と「Restart」の実用上の違いは何ですか？</div>
+                <div class="faq-a">
+                    A: 「Clear」はIKEセッションを削除するだけで止まります。トンネルを再確立するには、CGW側から新しいトラフィックを送信してIKEネゴシエーションをトリガーする必要があります。「Restart」は削除後に自動で再確立を試みるため、CGW側のトラフィック送信と組み合わせることで最速の復旧が可能です。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Q: AWS側（VGW）からIKEネゴシエーションを開始できないのはなぜ？</div>
+                <div class="faq-a">
+                    A: AWSのVGWはセキュリティ上の設計として「リスポンダーモード」で動作します。イニシエーション（接続開始）は常に顧客側のCGWが担当します。これはAWSマネージドサービスの設計方針であり、顧客側が接続のコントロールを持つためです。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Q: 「Interesting Traffic」とは具体的に何ですか？</div>
+                <div class="faq-a">
+                    A: VPNトンネルの対象となるネットワーク宛のトラフィックです。例えば、オンプレミスの 10.0.0.0/16 から AWS VPC の 172.16.0.0/16 へのpingやHTTPリクエストなど。このトラフィックがCGWを通過すると、IPsecポリシーに一致し、IKEネゴシエーションがトリガーされます。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Q: 冗長化のために2本のトンネルがあると聞きましたが、DPD設定は両方に必要？</div>
+                <div class="faq-a">
+                    A: はい。AWS Site-to-Site VPNは各接続に2本のトンネル（高可用性のため）を提供します。それぞれが独立したIKEセッションを持つため、DPD設定は両トンネルに適用する必要があります。片方がダウンした場合にもう片方にフェイルオーバーするよう、BGPやスタティックルーティングと組み合わせて設定します。
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <div class="footer">
+        <p>AWS Site-to-Site VPN IKEセッション復旧ガイド ｜ DPD Restart + CGWからのトラフィック開始 = 自動復旧の最適解</p>
+    </div>
+
+
+
+</div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

@@ -1,0 +1,1675 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'Direct Connect LAG環境でのMACsec実装ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: '',
+  slug: 'macsec-lag-implementation-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '⚡-結論ファースト-─-実装に必要な4つのステップ', text: '⚡ 結論ファースト ─ 実装に必要な4つのステップ' },
+    { level: 'h3', id: 'たとえ話で理解-─-現金輸送の護送隊にセキュリティ装甲を追加する', text: 'たとえ話で理解 ─ 「現金輸送の護送隊」にセキュリティ装甲を追加する' },
+    { level: 'h2', id: 'Before-After-─-MACsec導入前後の変化', text: 'Before / After ─ MACsec導入前後の変化' },
+    { level: 'h3', id: '専用道路だが中身は丸見え', text: '🔓 専用道路だが中身は丸見え' },
+    { level: 'h2', id: 'MACsecの暗号化範囲とレイヤー構造', text: 'MACsecの暗号化範囲とレイヤー構造' },
+    { level: 'h2', id: 'LAG内部でのMACsec構成', text: 'LAG内部でのMACsec構成' },
+    { level: 'h2', id: '鍵のハンドシェイクプロセス', text: '鍵のハンドシェイクプロセス' },
+    { level: 'h2', id: '実装ステップ-─-詳細手順', text: '実装ステップ ─ 詳細手順' },
+    { level: 'h3', id: 'CKN-CAKキーペアを生成する-─-️-合鍵を作る', text: 'CKN/CAKキーペアを生成する ─ 🗝️ 合鍵を作る' },
+    { level: 'h3', id: 'CKN-CAKをLAGに関連付ける-─-合鍵をセットする', text: 'CKN/CAKをLAGに関連付ける ─ 🔗 合鍵をセットする' },
+    { level: 'h3', id: 'LAGの暗号化モードを設定する-─-⚙️-セキュリティルールを決める', text: 'LAGの暗号化モードを設定する ─ ⚙️ セキュリティルールを決める' },
+    { level: 'h3', id: 'オンプレミスルーターを設定する-─-自社側にも合鍵を配備', text: 'オンプレミスルーターを設定する ─ 🏢 自社側にも合鍵を配備' },
+    { level: 'h2', id: '3つの暗号化モードと選択フロー', text: '3つの暗号化モードと選択フロー' },
+    { level: 'h3', id: '暗号化なし', text: '暗号化なし' },
+    { level: 'h2', id: '前提条件チェックリスト', text: '前提条件チェックリスト' },
+    { level: 'h3', id: '専用接続Dedicatedであること', text: '専用接続（Dedicated）であること' },
+    { level: 'h2', id: 'MACsec-vs-IPsec-比較表', text: 'MACsec vs IPsec 比較表' },
+    { level: 'h2', id: 'よくある落とし穴', text: 'よくある落とし穴' },
+    { level: 'h3', id: '個々の接続にMACsecを設定する', text: '🚫 個々の接続にMACsecを設定する' },
+    { level: 'h2', id: 'トラブルシューティングフロー', text: 'トラブルシューティングフロー' },
+    { level: 'h2', id: '試験で狙われるポイント', text: '試験で狙われるポイント' },
+    { level: 'h3', id: 'SAP-Advanced-Networking-出題パターン', text: '🎯 SAP / Advanced Networking 出題パターン' },
+    { level: 'h2', id: 'よくある質問', text: 'よくある質問' }
+  ],
+  prevPage: 'bfd-failover-optimization-guide.html',
+  nextPage: 'direct-connect-cloudwatch-metrics-guide.html',
+  pageNum: 8,
+  pageTotal: 40,
+};
+
+const rawContent = `<style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: #ECEEF2;
+            color: #1a1a2e;
+            line-height: 1.8;
+            padding: 24px;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            background: #FFFFFF;
+            border-radius: 24px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: linear-gradient(135deg, #1B2838 0%, #232F3E 40%, #37475A 100%);
+            color: #FFF;
+            padding: 56px 52px 48px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -100px; right: -100px;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(255,153,0,0.12) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; left: 30%;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255,153,0,0.06) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .header-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,153,0,0.18);
+            border: 1px solid rgba(255,153,0,0.28);
+            border-radius: 20px;
+            padding: 5px 16px;
+            font-size: 0.78em; font-weight: 500; letter-spacing: 0.5px;
+            margin-bottom: 18px;
+            position: relative; z-index: 1;
+        }
+        .header h1 {
+            font-size: 2.3em; font-weight: 900; line-height: 1.35;
+            margin-bottom: 10px;
+            position: relative; z-index: 1;
+        }
+        .header h1 span { color: #FF9900; }
+        .header p {
+            font-size: 1em; opacity: 0.8; font-weight: 300;
+            position: relative; z-index: 1; max-width: 680px;
+        }
+
+        /* ========== CONTENT ========== */
+        .content { padding: 52px; }
+
+        /* ========== SECTION TITLES ========== */
+        .section-title {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 24px; padding-bottom: 12px;
+            border-bottom: 2px solid #F0F2F5;
+        }
+        .section-title .icon { font-size: 1.4em; }
+        .section-title h2 { font-size: 1.4em; font-weight: 800; color: #232F3E; }
+        .section-title h2 span { color: #FF9900; }
+
+        /* ========== CONCLUSION ========== */
+        .conclusion-box {
+            background: linear-gradient(135deg, #FFFCF5 0%, #FFF8EC 100%);
+            border: 2px solid #FFDFA0;
+            border-radius: 18px;
+            padding: 36px 36px 32px;
+            margin-bottom: 52px;
+            position: relative;
+        }
+        .conclusion-box::before {
+            content: '💡';
+            position: absolute; top: -15px; left: 24px;
+            background: #FFF; border: 2px solid #FFDFA0;
+            border-radius: 50%; width: 34px; height: 34px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1em;
+        }
+        .conclusion-box h2 {
+            color: #92400E; font-size: 1.2em; font-weight: 800; margin-bottom: 8px;
+        }
+        .conclusion-box > p {
+            font-size: 0.88em; color: #78350F; margin-bottom: 20px; line-height: 1.7;
+        }
+
+        /* Conclusion flow - timeline style */
+        .conclusion-flow {
+            display: flex; align-items: stretch; gap: 0;
+            position: relative;
+        }
+        .conclusion-flow::before {
+            content: '';
+            position: absolute;
+            top: 28px; left: 40px; right: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, #FFB84D, #FF9900, #E68A00);
+            z-index: 0;
+        }
+        .cf-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .cf-num {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, #FF9900, #E68A00);
+            color: #FFF; font-weight: 800; font-size: 1.1em;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 10px;
+            box-shadow: 0 4px 14px rgba(255,153,0,0.3);
+            border: 3px solid #FFF;
+        }
+        .cf-icon { font-size: 1.6em; margin-bottom: 4px; }
+        .cf-label {
+            font-size: 0.8em; font-weight: 700; color: #374151;
+            line-height: 1.4; padding: 0 8px;
+        }
+        .cf-sub {
+            font-size: 0.7em; color: #9CA3AF; margin-top: 2px; font-weight: 400;
+        }
+
+        /* ========== ANALOGY - VISUAL ========== */
+        .analogy-section {
+            background: #F8FAFB;
+            border-radius: 18px;
+            padding: 36px;
+            margin-bottom: 52px;
+            border: 1px solid #E5E8EC;
+        }
+        .analogy-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+        }
+        .analogy-header .emoji { font-size: 1.8em; }
+        .analogy-header h3 { font-size: 1.15em; font-weight: 800; color: #334155; }
+        .analogy-header h3 span { color: #0284C7; }
+
+        /* SVG-style analogy illustration */
+        .analogy-illustration {
+            display: grid; grid-template-columns: 1fr auto 1fr;
+            gap: 0; align-items: center;
+            margin-bottom: 28px;
+            background: #FFF;
+            border-radius: 14px;
+            padding: 28px 20px;
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+        }
+        .analogy-side {
+            text-align: center; padding: 16px;
+        }
+        .analogy-side .a-big-icon { font-size: 3.2em; margin-bottom: 8px; }
+        .analogy-side .a-label { font-size: 0.85em; font-weight: 700; color: #374151; }
+        .analogy-side .a-sub { font-size: 0.75em; color: #9CA3AF; margin-top: 2px; }
+
+        .analogy-middle {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 6px; padding: 0 8px;
+            min-width: 260px;
+        }
+        .convoy-track {
+            width: 100%; height: 44px;
+            background: linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 100%);
+            border-radius: 22px; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px dashed #CBD5E1;
+        }
+        .convoy-track .truck { font-size: 1.5em; }
+        .convoy-track .shield-overlay {
+            position: absolute; inset: -2px;
+            border: 2.5px solid #F59E0B;
+            border-radius: 24px;
+            background: rgba(245,158,11,0.06);
+        }
+        .convoy-label {
+            font-size: 0.72em; font-weight: 700;
+            padding: 3px 12px; border-radius: 8px;
+        }
+        .convoy-label.encrypted {
+            background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;
+        }
+        .convoy-label.plain {
+            background: #F1F5F9; color: #64748B; border: 1px solid #CBD5E1;
+        }
+
+        /* Mapping table */
+        .mapping-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #E2E8F0;
+        }
+        .mapping-table thead th {
+            background: #334155; color: #FFF;
+            font-size: 0.8em; font-weight: 600;
+            padding: 10px 16px; text-align: left;
+        }
+        .mapping-table tbody td {
+            padding: 10px 16px; font-size: 0.82em;
+            border-bottom: 1px solid #F1F5F9;
+            vertical-align: middle;
+        }
+        .mapping-table tbody tr:last-child td { border-bottom: none; }
+        .mapping-table tbody tr:nth-child(even) { background: #FAFBFC; }
+        .mapping-table .map-emoji { font-size: 1.1em; margin-right: 6px; }
+
+        /* ========== BEFORE / AFTER ========== */
+        .before-after-section { margin-bottom: 52px; }
+        .ba-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .ba-card {
+            border-radius: 16px; padding: 28px;
+            border: 2px solid; position: relative;
+        }
+        .ba-card.before {
+            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%);
+            border-color: #D1D5DB;
+        }
+        .ba-card.after {
+            background: linear-gradient(135deg, #FEFCE8 0%, #FEF9C3 100%);
+            border-color: #FACC15;
+        }
+        .ba-badge {
+            position: absolute; top: -12px; left: 20px;
+            padding: 3px 14px; border-radius: 8px;
+            font-size: 0.75em; font-weight: 700;
+            border: 2px solid;
+        }
+        .ba-card.before .ba-badge {
+            background: #F3F4F6; color: #6B7280; border-color: #D1D5DB;
+        }
+        .ba-card.after .ba-badge {
+            background: #FEF3C7; color: #92400E; border-color: #FACC15;
+        }
+        .ba-card h3, .ba-card h4 {
+            font-size: 1em; font-weight: 700; margin: 8px 0 16px; color: #374151;
+        }
+        /* SVG-like mini diagrams inside ba cards */
+        .ba-diagram {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; margin-bottom: 16px; flex-wrap: nowrap;
+        }
+        .ba-node {
+            padding: 8px 12px; border-radius: 10px;
+            font-size: 0.78em; font-weight: 600;
+            text-align: center; min-width: 72px;
+        }
+        .ba-node.onprem { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
+        .ba-node.dxloc { background: #FFEDD5; color: #9A3412; border: 1px solid #FDBA74; }
+        .ba-node.aws { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
+
+        .ba-link {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 2px; min-width: 56px;
+        }
+        .ba-link-bar {
+            width: 100%; height: 4px; border-radius: 2px;
+        }
+        .ba-link-bar.plain { background: #D1D5DB; }
+        .ba-link-bar.enc {
+            background: linear-gradient(90deg, #F59E0B, #EF4444, #F59E0B);
+            animation: pulseBar 2s ease-in-out infinite;
+        }
+        @keyframes pulseBar { 0%,100%{ opacity:0.7; } 50%{ opacity:1; } }
+        .ba-link-label {
+            font-size: 0.65em; font-weight: 600;
+            padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+        }
+        .ba-link-label.open { background: #FEE2E2; color: #991B1B; }
+        .ba-link-label.locked { background: #FEF3C7; color: #92400E; }
+        .ba-link-label.internal { background: #F3F4F6; color: #6B7280; }
+
+        .ba-features {
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .ba-feat {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.82em; color: #475569;
+        }
+        .ba-feat .check { color: #10B981; font-weight: 700; }
+        .ba-feat .cross { color: #EF4444; font-weight: 700; }
+
+        /* ========== NETWORK DIAGRAM (SVG-enhanced) ========== */
+        .diagram-section { margin-bottom: 52px; }
+        .diagram-box {
+            background: #FAFBFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 18px;
+            padding: 32px;
+        }
+        .svg-diagram {
+            width: 100%; max-width: 900px; margin: 0 auto;
+            display: block;
+        }
+        .diagram-caption {
+            text-align: center; margin-top: 16px;
+            padding: 14px 20px;
+            background: #FFFBEB; border: 1px dashed #F59E0B;
+            border-radius: 10px;
+            font-size: 0.82em; font-weight: 600; color: #92400E;
+        }
+
+        /* ========== LAG STRUCTURE ========== */
+        .lag-section { margin-bottom: 52px; }
+        .lag-box {
+            background: #FAFBFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 18px;
+            padding: 32px;
+        }
+        .lag-svg { width: 100%; max-width: 860px; margin: 0 auto; display: block; }
+        .lag-note {
+            text-align: center; margin-top: 16px;
+            font-size: 0.82em; color: #6B7280;
+            background: #F9FAFB; padding: 12px 20px;
+            border-radius: 10px; border: 1px solid #E5E7EB;
+        }
+        .lag-note strong { color: #EF4444; }
+
+        /* ========== KEY HANDSHAKE FLOW ========== */
+        .handshake-section { margin-bottom: 52px; }
+        .handshake-flow {
+            display: flex; align-items: flex-start; gap: 0;
+            position: relative; padding: 20px 0;
+        }
+        .handshake-flow::before {
+            content: '';
+            position: absolute; top: 50px;
+            left: 48px; right: 48px;
+            height: 3px;
+            background: linear-gradient(90deg, #3B82F6, #8B5CF6, #F59E0B, #10B981);
+            z-index: 0;
+        }
+        .hs-step {
+            flex: 1; text-align: center; position: relative; z-index: 1;
+        }
+        .hs-circle {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 1.5em;
+            border: 3px solid #FFF;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+        }
+        .hs-circle.c1 { background: linear-gradient(135deg, #DBEAFE, #BFDBFE); }
+        .hs-circle.c2 { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); }
+        .hs-circle.c3 { background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
+        .hs-circle.c4 { background: linear-gradient(135deg, #D1FAE5, #A7F3D0); }
+        .hs-circle.c5 { background: linear-gradient(135deg, #FCE7F3, #FBCFE8); }
+        .hs-title {
+            font-size: 0.82em; font-weight: 700; color: #374151; margin-bottom: 4px;
+        }
+        .hs-desc {
+            font-size: 0.72em; color: #9CA3AF; line-height: 1.4; padding: 0 4px;
+        }
+
+        /* ========== IMPLEMENTATION STEPS ========== */
+        .steps-section { margin-bottom: 52px; }
+
+        .step-timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        .step-timeline::before {
+            content: '';
+            position: absolute; left: 17px; top: 0; bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #FF9900 0%, #E68A00 100%);
+            border-radius: 2px;
+        }
+
+        .step-card {
+            position: relative;
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 16px;
+            padding: 28px 28px 24px;
+            margin-bottom: 24px;
+            transition: box-shadow 0.2s;
+        }
+        .step-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+
+        .step-card::before {
+            content: '';
+            position: absolute;
+            left: -32px; top: 30px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #FF9900;
+            border: 3px solid #FFF;
+            box-shadow: 0 0 0 2px #FF9900;
+        }
+
+        .step-header {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 16px;
+        }
+        .step-num-badge {
+            background: linear-gradient(135deg, #232F3E, #37475A);
+            color: #FF9900;
+            font-weight: 900; font-size: 1em;
+            min-width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-header h3 {
+            font-size: 1.08em; font-weight: 700; color: #232F3E;
+        }
+        .step-header h3 .sub {
+            color: #9CA3AF; font-weight: 400; font-size: 0.85em;
+        }
+
+        .step-body { font-size: 0.9em; color: #475569; margin-bottom: 18px; line-height: 1.8;
+            padding-top: 70px;}
+
+        .step-visual-box {
+            background: #F8FAFC; border: 1px solid #E2E8F0;
+            border-radius: 12px; padding: 20px; margin-bottom: 14px;
+        }
+        .sv-label {
+            font-size: 0.82em; font-weight: 700; color: #374151; margin-bottom: 10px;
+        }
+        .sv-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .sv-item {
+            background: #FFF; border: 1px solid #E2E8F0; border-radius: 8px;
+            padding: 12px;
+        }
+        .sv-item h5 { font-size: 0.82em; font-weight: 700; color: #0369A1; margin-bottom: 3px; }
+        .sv-item h5.orange { color: #B45309; }
+        .sv-item p { font-size: 0.78em; color: #64748B; line-height: 1.5; }
+
+        .code-block {
+            background: #1E293B; border-radius: 10px;
+            padding: 18px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8em; color: #E2E8F0;
+            overflow-x: auto; line-height: 1.7;
+            margin-top: 10px;
+        }
+        .code-block .cmt { color: #64748B; }
+        .code-block .cmd { color: #7DD3FC; }
+        .code-block .prm { color: #FDE68A; }
+        .code-block .val { color: #86EFAC; }
+
+        .alert-box {
+            border-radius: 10px; padding: 13px 16px;
+            font-size: 0.83em; display: flex; align-items: flex-start; gap: 10px;
+            margin-top: 12px;
+        }
+        .alert-box .a-icon { font-size: 1.05em; flex-shrink: 0; margin-top: 2px; }
+        .alert-warn { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+        .alert-info { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; }
+        .alert-tip { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
+
+        /* ========== ENCRYPTION MODES ========== */
+        .enc-section { margin-bottom: 52px; }
+        .enc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .enc-card {
+            border-radius: 14px; padding: 24px; text-align: center; border: 2px solid;
+        }
+        .enc-card.no { background: #FAFAFA; border-color: #D1D5DB; }
+        .enc-card.should { background: #FFFBEB; border-color: #FDE68A; }
+        .enc-card.must { background: #FFF1F2; border-color: #FECACA; }
+        .enc-card .e-icon { font-size: 2em; margin-bottom: 8px; }
+        .enc-card h3, .enc-card h4 { font-size: 0.92em; font-weight: 700; margin-bottom: 2px; }
+        .enc-card .e-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78em; color: #6B7280; margin-bottom: 10px;
+        }
+        .enc-card p { font-size: 0.8em; color: #475569; line-height: 1.6; }
+        .enc-card .e-tag {
+            display: inline-block; margin-top: 10px;
+            padding: 3px 12px; border-radius: 8px;
+            font-size: 0.72em; font-weight: 700;
+        }
+        .enc-card.no .e-tag { background: #F3F4F6; color: #6B7280; }
+        .enc-card.should .e-tag { background: #FEF3C7; color: #92400E; }
+        .enc-card.must .e-tag { background: #FEE2E2; color: #991B1B; }
+
+        /* Decision flowchart */
+        .decision-flow {
+            background: #FFF; border: 1px solid #E5E7EB;
+            border-radius: 14px; padding: 28px;
+        }
+        .decision-flow h4 {
+            font-size: 0.95em; font-weight: 700; color: #374151;
+            margin-bottom: 16px; text-align: center;
+        }
+        .df-svg { width: 100%; max-width: 700px; margin: 0 auto; display: block; }
+
+        /* ========== COMPARISON TABLE ========== */
+        .comparison-section { margin-bottom: 52px; }
+        .comp-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            border-radius: 12px; overflow: hidden;
+            border: 1px solid #E5E7EB;
+        }
+        .comp-table thead th {
+            background: #232F3E; color: #FFF;
+            font-weight: 600; font-size: 0.83em;
+            padding: 13px 18px; text-align: left;
+        }
+        .comp-table tbody td {
+            padding: 12px 18px; font-size: 0.83em;
+            border-bottom: 1px solid #F3F4F6; vertical-align: top;
+        }
+        .comp-table tbody tr:nth-child(even) { background: #FAFBFC; }
+        .comp-table tbody tr:last-child td { border-bottom: none; }
+        .comp-table .lbl { font-weight: 600; color: #374151; background: #F9FAFB; }
+        .badge {
+            display: inline-block; padding: 2px 10px; border-radius: 6px;
+            font-size: 0.78em; font-weight: 600;
+        }
+        .badge-o { background: #FEF3C7; color: #92400E; }
+        .badge-b { background: #DBEAFE; color: #1E40AF; }
+        .badge-g { background: #DCFCE7; color: #166534; }
+        .badge-r { background: #FEE2E2; color: #991B1B; }
+
+        /* ========== PREREQUISITES ========== */
+        .prereq-section { margin-bottom: 52px; }
+        .prereq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .prereq-card {
+            background: #FFF; border: 1px solid #E5E7EB;
+            border-radius: 12px; padding: 18px;
+            display: flex; align-items: flex-start; gap: 12px;
+        }
+        .prereq-icon {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85em; flex-shrink: 0;
+            background: #FEE2E2; border: 1px solid #FCA5A5;
+        }
+        .prereq-card h3, .prereq-card h4 { font-size: 0.88em; font-weight: 700; color: #374151; margin-bottom: 3px; }
+        .prereq-card p { font-size: 0.78em; color: #6B7280; line-height: 1.5; }
+
+        /* ========== PITFALLS ========== */
+        .pitfalls-section { margin-bottom: 52px; }
+        .pitfall-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .pitfall-card {
+            background: #FFF; border-radius: 12px; padding: 22px;
+            border: 1px solid #E5E7EB; border-left: 4px solid;
+        }
+        .pitfall-card.danger { border-left-color: #EF4444; }
+        .pitfall-card.caution { border-left-color: #F59E0B; }
+        .pitfall-card h3, .pitfall-card h4 {
+            font-size: 0.88em; font-weight: 700; color: #374151;
+            margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+        }
+        .pitfall-card p { font-size: 0.8em; color: #6B7280; line-height: 1.6; }
+
+        /* ========== TROUBLESHOOTING FLOW ========== */
+        .troubleshoot-section { margin-bottom: 52px; }
+        .ts-flow {
+            background: #FAFBFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 16px;
+            padding: 32px;
+        }
+        .ts-svg { width: 100%; max-width: 800px; margin: 0 auto; display: block; }
+
+        /* ========== EXAM TIPS ========== */
+        .exam-section { margin-bottom: 52px; }
+        .exam-box {
+            background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+            border: 2px solid #93C5FD;
+            border-radius: 16px; padding: 32px;
+        }
+        .exam-box h3 {
+            font-size: 1.05em; font-weight: 800; color: #1E40AF;
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .exam-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .exam-card {
+            background: #FFF; border-radius: 12px; padding: 18px;
+            border: 1px solid #BFDBFE;
+        }
+        .exam-card .ex-q {
+            font-size: 0.82em; font-weight: 700; color: #1E40AF;
+            margin-bottom: 8px;
+        }
+        .exam-card .ex-wrong {
+            font-size: 0.78em; color: #991B1B; margin-bottom: 4px;
+            display: flex; align-items: flex-start; gap: 6px;
+        }
+        .exam-card .ex-right {
+            font-size: 0.78em; color: #166534;
+            display: flex; align-items: flex-start; gap: 6px;
+        }
+
+        /* ========== FAQ ========== */
+        .faq-section { margin-bottom: 36px; }
+        .faq-item {
+            background: #FFF; border: 1px solid #E5E7EB;
+            border-radius: 12px; margin-bottom: 10px; overflow: hidden;
+        }
+        .faq-q {
+            padding: 16px 22px;
+            font-weight: 600; font-size: 0.9em; color: #232F3E;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+            transition: background 0.2s;
+        }
+        .faq-q:hover { background: #F9FAFB; }
+        .faq-q .qi { color: #FF9900; font-weight: 800; flex-shrink: 0; }
+        .faq-q .tog { margin-left: auto; color: #9CA3AF; font-size: 1.1em; transition: transform 0.3s; }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+        .faq-a-inner {
+            padding: 0 22px 16px 44px;
+            font-size: 0.85em; color: #475569; line-height: 1.8;
+        }
+        .faq-item.open .faq-a { max-height: 400px; }
+        .faq-item.open .tog { transform: rotate(180deg); }
+
+        /* ========== FOOTER ========== */
+        .footer {
+            background: #F9FAFB; border-top: 1px solid #E5E7EB;
+            padding: 22px 48px; text-align: center;
+            font-size: 0.78em; color: #9CA3AF;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            body { padding: 10px;
+            padding-top: 70px;}
+            .content { padding: 24px; }
+            .header { padding: 32px 24px; }
+            .header h1 { font-size: 1.5em; }
+            .conclusion-flow { flex-direction: column; gap: 12px; align-items: center; }
+            .conclusion-flow::before { display: none; }
+            .analogy-illustration { grid-template-columns: 1fr; }
+            .analogy-middle { min-width: auto; }
+            .ba-grid { grid-template-columns: 1fr; }
+            .enc-grid { grid-template-columns: 1fr; }
+            .prereq-grid { grid-template-columns: 1fr; }
+            .pitfall-grid { grid-template-columns: 1fr; }
+            .exam-grid { grid-template-columns: 1fr; }
+            .handshake-flow { flex-direction: column; gap: 16px; align-items: center; }
+            .handshake-flow::before { display: none; }
+            .step-timeline { padding-left: 20px; }
+            .step-card::before { left: -18px; width: 10px; height: 10px; }
+            .sv-grid-2 { grid-template-columns: 1fr; }
+        }</style>
+<!-- ========== HEADER ========== -->
+    <div class="header">
+        <div class="header-badge">🔐 AWS Direct Connect × MACsec × LAG</div>
+        <h1>既存LAG環境での<span>MACsec</span>実装<br>正しい手順の組み合わせ</h1>
+        <p>レイヤー2暗号化を既存のDirect Connect LAGに導入するための実装フローを、たとえ話と図解で完全解説</p>
+    </div>
+
+    <div class="content">
+
+        <!-- ========== CONCLUSION FIRST ========== -->
+        <div class="conclusion-box">
+            <h2 id="⚡-結論ファースト-─-実装に必要な4つのステップ">⚡ 結論ファースト ─ 実装に必要な4つのステップ</h2>
+            <p>既存のDirect Connect LAG環境にMACsecを導入するには、以下の4ステップを<strong>順番に</strong>実行します。<br>MACsecの設定は<strong>LAGレベル</strong>で行い、個々の接続レベルでは行いません。</p>
+            <div class="conclusion-flow">
+                <div class="cf-step">
+                    <div class="cf-num">1</div>
+                    <div class="cf-icon">🔑</div>
+                    <div class="cf-label">CKN/CAK<br>キーペアを生成</div>
+                    <div class="cf-sub">OpenSSL等で作成</div>
+                </div>
+                <div class="cf-step">
+                    <div class="cf-num">2</div>
+                    <div class="cf-icon">🔗</div>
+                    <div class="cf-label">CKN/CAKを<br>LAGに関連付け</div>
+                    <div class="cf-sub">AssociateMacSecKey API</div>
+                </div>
+                <div class="cf-step">
+                    <div class="cf-num">3</div>
+                    <div class="cf-icon">⚙️</div>
+                    <div class="cf-label">LAGの暗号化<br>モードを設定</div>
+                    <div class="cf-sub">UpdateLag API</div>
+                </div>
+                <div class="cf-step">
+                    <div class="cf-num">4</div>
+                    <div class="cf-icon">🏢</div>
+                    <div class="cf-label">オンプレミス<br>ルーターを設定</div>
+                    <div class="cf-sub">同一CKN/CAKを投入</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== ANALOGY ========== -->
+        <div class="analogy-section">
+            <div class="analogy-header">
+                <div class="emoji">🚛</div>
+                <h3 id="たとえ話で理解-─-現金輸送の護送隊にセキュリティ装甲を追加する">たとえ話で理解 ─ <span>「現金輸送の護送隊」にセキュリティ装甲を追加する</span></h3>
+            </div>
+
+            <!-- Visual illustration -->
+            <div class="analogy-illustration">
+                <div class="analogy-side">
+                    <div class="a-big-icon">🏦</div>
+                    <div class="a-label">銀行（本店）</div>
+                    <div class="a-sub">＝ オンプレミス</div>
+                </div>
+                <div class="analogy-middle">
+                    <!-- Truck 1: encrypted -->
+                    <div class="convoy-track">
+                        <div class="shield-overlay"></div>
+                        <span class="truck">🚛</span>
+                    </div>
+                    <div class="convoy-track">
+                        <div class="shield-overlay"></div>
+                        <span class="truck">🚛</span>
+                    </div>
+                    <div class="convoy-track">
+                        <div class="shield-overlay"></div>
+                        <span class="truck">🚛</span>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:4px;">
+                        <span class="convoy-label encrypted">🛡️ 防弾装甲＝MACsec暗号化</span>
+                        <span class="convoy-label plain">📦 護送隊＝LAG</span>
+                    </div>
+                </div>
+                <div class="analogy-side">
+                    <div class="a-big-icon">🏛️</div>
+                    <div class="a-label">金庫（支店）</div>
+                    <div class="a-sub">＝ AWS リージョン</div>
+                </div>
+            </div>
+
+            <!-- Mapping table -->
+            <table class="mapping-table">
+                <thead>
+                    <tr>
+                        <th>🚛 たとえ話</th>
+                        <th>☁️ AWSの実際</th>
+                        <th>📝 補足</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="map-emoji">🏦</span>銀行（出発地）</td>
+                        <td>オンプレミスデータセンター</td>
+                        <td>MACsec対応ルーターが必要</td>
+                    </tr>
+                    <tr>
+                        <td><span class="map-emoji">🚛</span>護送隊（まとめて管理）</td>
+                        <td>LAG（リンク集約グループ）</td>
+                        <td>複数の回線を1つの論理接続として管理</td>
+                    </tr>
+                    <tr>
+                        <td><span class="map-emoji">🛡️</span>防弾装甲（通信の暗号化）</td>
+                        <td>MACsec（IEEE 802.1AE）</td>
+                        <td>L2のポイントツーポイント暗号化</td>
+                    </tr>
+                    <tr>
+                        <td><span class="map-emoji">🗝️</span>装甲の合鍵</td>
+                        <td>CKN/CAK キーペア</td>
+                        <td>両端（銀行と金庫）で同じ鍵が必要</td>
+                    </tr>
+                    <tr>
+                        <td><span class="map-emoji">📋</span>セキュリティポリシー</td>
+                        <td>暗号化モード（should / must）</td>
+                        <td>装甲なしの車を走行禁止にするかどうか</td>
+                    </tr>
+                    <tr>
+                        <td><span class="map-emoji">🛤️</span>専用道路（高速道路ではない）</td>
+                        <td>Direct Connect 専用回線</td>
+                        <td>物理的に隔離された接続。暗号化は別途必要</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== BEFORE / AFTER ========== -->
+        <div class="before-after-section">
+            <div class="section-title">
+                <span class="icon">🔄</span>
+                <h2 id="Before-After-─-MACsec導入前後の変化">Before / After ─ <span>MACsec導入前後の変化</span></h2>
+            </div>
+            <div class="ba-grid">
+                <!-- BEFORE -->
+                <div class="ba-card before">
+                    <div class="ba-badge">BEFORE ─ MACsec未導入</div>
+                    <h3 id="専用道路だが中身は丸見え">🔓 専用道路だが中身は丸見え</h3>
+                    <div class="ba-diagram">
+                        <div class="ba-node onprem">🏢<br>オンプレ</div>
+                        <div class="ba-link">
+                            <div class="ba-link-bar plain"></div>
+                            <span class="ba-link-label open">⚠️ 暗号化なし</span>
+                        </div>
+                        <div class="ba-node dxloc">🏬<br>DX拠点</div>
+                        <div class="ba-link">
+                            <div class="ba-link-bar plain"></div>
+                            <span class="ba-link-label internal">AWS内部</span>
+                        </div>
+                        <div class="ba-node aws">☁️<br>AWS</div>
+                    </div>
+                    <div class="ba-features">
+                        <div class="ba-feat"><span class="check">✓</span> 専用回線で物理的に隔離</div>
+                        <div class="ba-feat"><span class="check">✓</span> LAGで帯域集約・冗長化</div>
+                        <div class="ba-feat"><span class="cross">✗</span> イーサネットフレームは平文</div>
+                        <div class="ba-feat"><span class="cross">✗</span> 中間者攻撃の可能性が残る</div>
+                    </div>
+                </div>
+                <!-- AFTER -->
+                <div class="ba-card after">
+                    <div class="ba-badge">AFTER ─ MACsec導入後</div>
+                    <h4>🔐 専用道路 + 装甲で二重防御</h4>
+                    <div class="ba-diagram">
+                        <div class="ba-node onprem">🏢<br>オンプレ</div>
+                        <div class="ba-link">
+                            <div class="ba-link-bar enc"></div>
+                            <span class="ba-link-label locked">🔐 MACsec暗号化</span>
+                        </div>
+                        <div class="ba-node dxloc">🏬<br>DX拠点</div>
+                        <div class="ba-link">
+                            <div class="ba-link-bar plain"></div>
+                            <span class="ba-link-label internal">AWS物理層暗号化</span>
+                        </div>
+                        <div class="ba-node aws">☁️<br>AWS</div>
+                    </div>
+                    <div class="ba-features">
+                        <div class="ba-feat"><span class="check">✓</span> 専用回線で物理的に隔離</div>
+                        <div class="ba-feat"><span class="check">✓</span> LAGで帯域集約・冗長化</div>
+                        <div class="ba-feat"><span class="check">✓</span> L2暗号化でデータ機密性を確保</div>
+                        <div class="ba-feat"><span class="check">✓</span> データ整合性・改ざん防止・リプレイ防御</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== NETWORK DIAGRAM (SVG) ========== -->
+        <div class="diagram-section">
+            <div class="section-title">
+                <span class="icon">📡</span>
+                <h2 id="MACsecの暗号化範囲とレイヤー構造">MACsecの<span>暗号化範囲</span>とレイヤー構造</h2>
+            </div>
+            <div class="diagram-box">
+                <svg role="img" class="svg-diagram" viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Background layers -->
+                    <rect x="20" y="180" width="860" height="120" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+                    <text x="35" y="205" font-size="11" fill="#94A3B8" font-weight="600">レイヤー構造</text>
+
+                    <!-- Layer labels -->
+                    <rect x="35" y="215" width="120" height="28" rx="6" fill="#DBEAFE" stroke="#93C5FD"/>
+                    <text x="95" y="234" font-size="10" fill="#1E40AF" text-anchor="middle" font-weight="600">L3: IP/BGP</text>
+                    <rect x="35" y="250" width="120" height="28" rx="6" fill="#FEF3C7" stroke="#FDE68A"/>
+                    <text x="95" y="269" font-size="10" fill="#92400E" text-anchor="middle" font-weight="700">L2: MACsec 🔐</text>
+                    <rect x="35" y="285" width="120" height="10" rx="4" fill="#E5E7EB"/>
+                    <text x="95" y="293" font-size="8" fill="#6B7280" text-anchor="middle">L1: Physical</text>
+
+                    <!-- On-premises -->
+                    <rect x="30" y="20" width="180" height="130" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="2"/>
+                    <text x="120" y="50" font-size="28" text-anchor="middle">🏢</text>
+                    <text x="120" y="75" font-size="13" fill="#1E40AF" text-anchor="middle" font-weight="700">オンプレミス</text>
+                    <text x="120" y="92" font-size="10" fill="#64748B" text-anchor="middle">MACsec対応ルーター</text>
+                    <rect x="55" y="102" width="130" height="22" rx="6" fill="#FEF3C7" stroke="#FDE68A"/>
+                    <text x="120" y="117" font-size="9" fill="#92400E" text-anchor="middle" font-weight="600">🔑 CKN/CAK 設定済み</text>
+                    <text x="120" y="140" font-size="9" fill="#64748B" text-anchor="middle">SCI = ON</text>
+
+                    <!-- MACsec encrypted link -->
+                    <defs>
+                        <linearGradient id="encGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#F59E0B"/>
+                            <stop offset="50%" style="stop-color:#EF4444"/>
+                            <stop offset="100%" style="stop-color:#F59E0B"/>
+                        </linearGradient>
+                    </defs>
+                    <line x1="210" y1="85" x2="350" y2="85" stroke="url(#encGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 0">
+                        <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.5s" repeatCount="indefinite"/>
+                    </line>
+                    <rect x="230" y="55" width="100" height="22" rx="6" fill="#FEF3C7" stroke="#FDE68A"/>
+                    <text x="280" y="70" font-size="9" fill="#92400E" text-anchor="middle" font-weight="700">🔐 MACsec暗号化</text>
+
+                    <!-- DX Location -->
+                    <rect x="350" y="20" width="200" height="130" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="450" y="50" font-size="28" text-anchor="middle">🏬</text>
+                    <text x="450" y="75" font-size="13" fill="#9A3412" text-anchor="middle" font-weight="700">DX ロケーション</text>
+                    <text x="450" y="92" font-size="10" fill="#64748B" text-anchor="middle">AWS Direct Connect</text>
+                    <text x="450" y="107" font-size="10" fill="#64748B" text-anchor="middle">エンドポイント</text>
+                    <rect x="375" y="115" width="150" height="22" rx="6" fill="#FFEDD5" stroke="#FDBA74"/>
+                    <text x="450" y="130" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">🔑 同一CKN/CAK</text>
+
+                    <!-- AWS internal link -->
+                    <line x1="550" y1="85" x2="680" y2="85" stroke="#D1D5DB" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 4"/>
+                    <rect x="580" y="55" width="100" height="22" rx="6" fill="#F1F5F9" stroke="#CBD5E1"/>
+                    <text x="630" y="70" font-size="9" fill="#64748B" text-anchor="middle" font-weight="600">AWS内部暗号化</text>
+
+                    <!-- AWS Region -->
+                    <rect x="680" y="20" width="190" height="130" rx="14" fill="#F0FDF4" stroke="#86EFAC" stroke-width="2"/>
+                    <text x="775" y="50" font-size="28" text-anchor="middle">☁️</text>
+                    <text x="775" y="75" font-size="13" fill="#166534" text-anchor="middle" font-weight="700">AWS リージョン</text>
+                    <text x="775" y="92" font-size="10" fill="#64748B" text-anchor="middle">VPC / サービス</text>
+                    <rect x="710" y="105" width="130" height="22" rx="6" fill="#DCFCE7" stroke="#86EFAC"/>
+                    <text x="775" y="120" font-size="9" fill="#166534" text-anchor="middle" font-weight="600">TLS/IPsec（追加暗号化）</text>
+
+                    <!-- Scope arrows -->
+                    <line x1="120" y1="160" x2="120" y2="250" stroke="#93C5FD" stroke-width="1" stroke-dasharray="3 3"/>
+                    <line x1="450" y1="160" x2="450" y2="250" stroke="#FDBA74" stroke-width="1" stroke-dasharray="3 3"/>
+
+                    <!-- Layer indicators -->
+                    <text x="285" y="240" font-size="9" fill="#1E40AF" text-anchor="middle">BGP ルーティング</text>
+                    <rect x="200" y="250" width="170" height="28" rx="6" fill="#FEF3C7" stroke="#FDE68A" stroke-width="2"/>
+                    <text x="285" y="269" font-size="10" fill="#92400E" text-anchor="middle" font-weight="800">🔐 MACsec (L2暗号化)</text>
+                    <text x="285" y="293" font-size="8" fill="#6B7280" text-anchor="middle">クロスコネクト（物理回線）</text>
+
+                    <text x="630" y="240" font-size="9" fill="#64748B" text-anchor="middle">AWS内部ルーティング</text>
+                    <rect x="555" y="250" width="150" height="28" rx="6" fill="#F1F5F9" stroke="#CBD5E1"/>
+                    <text x="630" y="269" font-size="10" fill="#64748B" text-anchor="middle" font-weight="600">AWS物理層暗号化</text>
+                    <text x="630" y="293" font-size="8" fill="#6B7280" text-anchor="middle">DX → リージョン間</text>
+                </svg>
+                <div class="diagram-caption">
+                    🔐 MACsecはポイントツーポイントのL2暗号化 ─ オンプレミスルーターとDXエンドポイント間のみ暗号化。AWSはDX拠点〜リージョン間も物理層で暗号化（多層防御）
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== LAG STRUCTURE (SVG) ========== -->
+        <div class="lag-section">
+            <div class="section-title">
+                <span class="icon">📦</span>
+                <h2 id="LAG内部でのMACsec構成"><span>LAG</span>内部でのMACsec構成</h2>
+            </div>
+            <div class="lag-box">
+                <svg role="img" class="lag-svg" viewBox="0 0 860 280" xmlns="http://www.w3.org/2000/svg">
+                    <!-- On-prem device -->
+                    <rect x="20" y="60" width="140" height="160" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="2"/>
+                    <text x="90" y="100" font-size="28" text-anchor="middle">🏢</text>
+                    <text x="90" y="125" font-size="11" fill="#1E40AF" text-anchor="middle" font-weight="700">オンプレミス</text>
+                    <text x="90" y="142" font-size="9" fill="#64748B" text-anchor="middle">MACsec対応</text>
+                    <text x="90" y="156" font-size="9" fill="#64748B" text-anchor="middle">エッジデバイス</text>
+                    <rect x="35" y="170" width="110" height="20" rx="5" fill="#FEF3C7" stroke="#FDE68A"/>
+                    <text x="90" y="184" font-size="8" fill="#92400E" text-anchor="middle" font-weight="600">🔑 CKN/CAK</text>
+                    <text x="90" y="208" font-size="8" fill="#64748B" text-anchor="middle">SCI = ON</text>
+
+                    <!-- LAG bracket -->
+                    <rect x="200" y="30" width="460" height="240" rx="16" fill="none" stroke="#FF9900" stroke-width="2" stroke-dasharray="8 4"/>
+                    <rect x="330" y="12" width="200" height="28" rx="8" fill="#FFF" stroke="#FF9900" stroke-width="2"/>
+                    <text x="430" y="31" font-size="11" fill="#FF9900" text-anchor="middle" font-weight="800">📦 LAG（リンク集約グループ）</text>
+
+                    <!-- Connection lines with encryption -->
+                    <line x1="160" y1="90" x2="660" y2="90" stroke="url(#encGrad)" stroke-width="4" stroke-linecap="round">
+                        <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite"/>
+                    </line>
+                    <text x="410" y="84" font-size="8" fill="#92400E" text-anchor="middle" font-weight="600">🔐 10Gbps ─ MACsec暗号化</text>
+
+                    <line x1="160" y1="130" x2="660" y2="130" stroke="url(#encGrad)" stroke-width="4" stroke-linecap="round">
+                        <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" begin="0.3s" repeatCount="indefinite"/>
+                    </line>
+                    <text x="410" y="124" font-size="8" fill="#92400E" text-anchor="middle" font-weight="600">🔐 10Gbps ─ MACsec暗号化</text>
+
+                    <line x1="160" y1="170" x2="660" y2="170" stroke="url(#encGrad)" stroke-width="4" stroke-linecap="round">
+                        <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" begin="0.6s" repeatCount="indefinite"/>
+                    </line>
+                    <text x="410" y="164" font-size="8" fill="#92400E" text-anchor="middle" font-weight="600">🔐 10Gbps ─ MACsec暗号化</text>
+
+                    <line x1="160" y1="210" x2="660" y2="210" stroke="url(#encGrad)" stroke-width="4" stroke-linecap="round">
+                        <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" begin="0.9s" repeatCount="indefinite"/>
+                    </line>
+                    <text x="410" y="204" font-size="8" fill="#92400E" text-anchor="middle" font-weight="600">🔐 10Gbps ─ MACsec暗号化</text>
+
+                    <!-- Key note -->
+                    <rect x="260" y="235" width="340" height="24" rx="6" fill="#FFF" stroke="#FDE68A"/>
+                    <text x="430" y="251" font-size="9" fill="#92400E" text-anchor="middle" font-weight="600">全メンバー接続が同一のCKN/CAKを使用（LAGレベルで設定）</text>
+
+                    <!-- AWS device -->
+                    <rect x="700" y="60" width="140" height="160" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="770" y="100" font-size="28" text-anchor="middle">🏬</text>
+                    <text x="770" y="125" font-size="11" fill="#9A3412" text-anchor="middle" font-weight="700">AWS Direct</text>
+                    <text x="770" y="142" font-size="11" fill="#9A3412" text-anchor="middle" font-weight="700">Connect デバイス</text>
+                    <rect x="715" y="158" width="110" height="20" rx="5" fill="#FFEDD5" stroke="#FDBA74"/>
+                    <text x="770" y="172" font-size="8" fill="#9A3412" text-anchor="middle" font-weight="600">🔑 同一CKN/CAK</text>
+                    <text x="770" y="200" font-size="8" fill="#64748B" text-anchor="middle">Key Server</text>
+                </svg>
+                <div class="lag-note">
+                    ⚠️ <strong>重要：</strong>MACsec設定はLAGレベルで行う ─ 個々の接続レベルでは設定しない。LAGに接続を追加すると、既存の接続のMACsecキーはdisassociateされLAGのキーが適用される
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== KEY HANDSHAKE ========== -->
+        <div class="handshake-section">
+            <div class="section-title">
+                <span class="icon">🤝</span>
+                <h2 id="鍵のハンドシェイクプロセス">鍵の<span>ハンドシェイク</span>プロセス</h2>
+            </div>
+            <div class="handshake-flow">
+                <div class="hs-step">
+                    <div class="hs-circle c1">🔧</div>
+                    <div class="hs-title">CKN/CAK生成</div>
+                    <div class="hs-desc">OpenSSL等で<br>64桁hex × 2</div>
+                </div>
+                <div class="hs-step">
+                    <div class="hs-circle c2">🗄️</div>
+                    <div class="hs-title">Secrets Manager<br>保管</div>
+                    <div class="hs-desc">AWSが自動で<br>シークレット作成</div>
+                </div>
+                <div class="hs-step">
+                    <div class="hs-circle c3">📡</div>
+                    <div class="hs-title">MKA<br>ネゴシエーション</div>
+                    <div class="hs-desc">両端のCKN/CAKで<br>相互認証を実行</div>
+                </div>
+                <div class="hs-step">
+                    <div class="hs-circle c4">🔑</div>
+                    <div class="hs-title">SAK<br>自動導出</div>
+                    <div class="hs-desc">セッション鍵を<br>暗号的に生成</div>
+                </div>
+                <div class="hs-step">
+                    <div class="hs-circle c5">🔐</div>
+                    <div class="hs-title">暗号化<br>通信開始</div>
+                    <div class="hs-desc">Encryption Up<br>ステータスに遷移</div>
+                </div>
+            </div>
+            <div class="alert-info" style="margin-top:16px;">
+                <span class="a-icon">ℹ️</span>
+                <div>SAK（Secure Association Key）はCKN/CAKペアから暗号的に<strong>自動導出</strong>されます。管理者が直接SAKを設定する必要はありません。CKN/CAKさえ両端で一致していれば、MKAプロトコルがSAKの生成・交換を自動的に行います。</div>
+            </div>
+        </div>
+
+        <!-- ========== IMPLEMENTATION STEPS (TIMELINE) ========== -->
+        <div class="steps-section">
+            <div class="section-title">
+                <span class="icon">🛠️</span>
+                <h2 id="実装ステップ-─-詳細手順">実装ステップ <span>─ 詳細手順</span></h2>
+            </div>
+
+            <div class="step-timeline">
+                <!-- STEP 1 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num-badge">1</div>
+                        <h3 id="CKN-CAKキーペアを生成する-─-️-合鍵を作る">CKN/CAKキーペアを生成する <span class="sub">─ 🗝️ 合鍵を作る</span></h3>
+                    </div>
+                    <div class="step-body">
+                        MACsec暗号化に使用する事前共有鍵（CKN/CAK）を生成します。たとえ話では「護送隊の装甲を解除するための合鍵」です。両端で同じ鍵を持っていないと暗号化通信は成立しません。
+                    </div>
+                    <div class="step-visual-box">
+                        <div class="sv-label">🔑 CKN/CAKの役割</div>
+                        <div class="sv-grid-2">
+                            <div class="sv-item">
+                                <h4>CKN（Connectivity Association Key Name）</h4>
+                                <p>MACsec接続を「識別」するための名前。合鍵にラベルを貼るようなもの。64桁の16進数（32オクテット）。</p>
+                            </div>
+                            <div class="sv-item">
+                                <h5 class="orange">CAK（Connectivity Association Key）</h5>
+                                <p>実際の暗号化に使う「秘密鍵」本体。ここからセッション鍵（SAK）が自動導出される。64桁の16進数。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="code-block">
+<span class="cmt"># OpenSSLを使ったCKN/CAK生成例</span>
+<span class="cmd">openssl</span> rand <span class="prm">-hex</span> <span class="val">32</span>   <span class="cmt"># → CKN（64桁の16進数文字列）</span>
+<span class="cmd">openssl</span> rand <span class="prm">-hex</span> <span class="val">32</span>   <span class="cmt"># → CAK（64桁の16進数文字列）</span>
+
+<span class="cmt"># 出力例：</span>
+<span class="cmt"># CKN: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6</span>
+<span class="cmt"># CAK: f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1</span>
+                    </div>
+                    <div class="alert-info">
+                        <span class="a-icon">ℹ️</span>
+                        <div>AWSは<strong>静的CAKモード</strong>のみサポート（動的CAKモード非対応）。256ビット鍵のみ使用可能です。</div>
+                    </div>
+                </div>
+
+                <!-- STEP 2 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num-badge">2</div>
+                        <h3 id="CKN-CAKをLAGに関連付ける-─-合鍵をセットする">CKN/CAKをLAGに関連付ける <span class="sub">─ 🔗 合鍵をセットする</span></h3>
+                    </div>
+                    <div class="step-body">
+                        生成したCKN/CAKペアをLAGに関連付けます。LAGレベルで設定すると、全メンバー接続に同じ鍵が自動適用されます。たとえ話では「護送隊のすべての車に同じ装甲と合鍵をセットする」ステップです。
+                    </div>
+                    <div class="code-block">
+<span class="cmt"># 方法1：CKN/CAKを直接指定</span>
+<span class="cmd">aws directconnect</span> associate-mac-sec-key \\
+    <span class="prm">--connection-id</span> <span class="val">dxlag-abcd1234</span> \\
+    <span class="prm">--ckn</span> <span class="val">a1b2c3d4...（64桁）</span> \\
+    <span class="prm">--cak</span> <span class="val">f6e5d4c3...（64桁）</span>
+
+<span class="cmt"># 方法2：Secrets Managerに保存済みのARNを参照</span>
+<span class="cmd">aws directconnect</span> associate-mac-sec-key \\
+    <span class="prm">--connection-id</span> <span class="val">dxlag-abcd1234</span> \\
+    <span class="prm">--secret-arn</span> <span class="val">arn:aws:secretsmanager:ap-northeast-1:...</span>
+                    </div>
+                    <div class="alert-info">
+                        <span class="a-icon">ℹ️</span>
+                        <div>CKN/CAKを直接指定した場合、AWSが自動的にSecrets Managerにシークレットを作成して保管します。</div>
+                    </div>
+                    <div class="alert-warn">
+                        <span class="a-icon">⚠️</span>
+                        <div>関連付け後のMACsecキーは<strong>変更不可</strong>です。変更するには、一度disassociateしてから新しい鍵をassociateし直す必要があります。</div>
+                    </div>
+                </div>
+
+                <!-- STEP 3 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num-badge">3</div>
+                        <h3 id="LAGの暗号化モードを設定する-─-⚙️-セキュリティルールを決める">LAGの暗号化モードを設定する <span class="sub">─ ⚙️ セキュリティルールを決める</span></h3>
+                    </div>
+                    <div class="step-body">
+                        LAGの暗号化モードを要件に応じて変更します。たとえ話では「装甲なしの車は走行禁止にするかどうかのルール」を決めるステップです。
+                    </div>
+                    <div class="code-block">
+<span class="cmt"># LAGの暗号化モードを更新</span>
+<span class="cmd">aws directconnect</span> update-lag \\
+    <span class="prm">--lag-id</span> <span class="val">dxlag-abcd1234</span> \\
+    <span class="prm">--encryption-mode</span> <span class="val">should_encrypt</span>
+
+<span class="cmt"># 動作確認後、厳格モードに変更</span>
+<span class="cmd">aws directconnect</span> update-lag \\
+    <span class="prm">--lag-id</span> <span class="val">dxlag-abcd1234</span> \\
+    <span class="prm">--encryption-mode</span> <span class="val">must_encrypt</span>
+                    </div>
+                    <div class="alert-warn">
+                        <span class="a-icon">🚨</span>
+                        <div><strong>must_encrypt</strong> を設定すると、暗号化が確立できない場合に接続がダウンします。必ず先に <strong>should_encrypt</strong> で動作確認してから切り替えてください。</div>
+                    </div>
+                </div>
+
+                <!-- STEP 4 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num-badge">4</div>
+                        <h3 id="オンプレミスルーターを設定する-─-自社側にも合鍵を配備">オンプレミスルーターを設定する <span class="sub">─ 🏢 自社側にも合鍵を配備</span></h3>
+                    </div>
+                    <div class="step-body">
+                        オンプレミス側のルーターにAWSと同一のCKN/CAKおよびMACsec設定を投入します。両端の設定が一致して初めてMKAセッションが確立されます。
+                    </div>
+                    <div class="step-visual-box">
+                        <div class="sv-label">⚙️ オンプレミス側で必要な設定項目</div>
+                        <div class="sv-grid-2">
+                            <div class="sv-item">
+                                <h4>CKN/CAK</h4>
+                                <p>AWS側と完全に一致させる（1文字でも違うとNG）</p>
+                            </div>
+                            <div class="sv-item">
+                                <h5>SCI（Secure Channel Identifier）</h5>
+                                <p>必ずONにする（AWS必須要件）</p>
+                            </div>
+                            <div class="sv-item">
+                                <h5 class="orange">暗号スイート</h5>
+                                <p>10G: GCM-AES-256 / XPN-256<br>100G/400G: GCM-AES-XPN-256のみ</p>
+                            </div>
+                            <div class="sv-item">
+                                <h5 class="orange">Key-Server Priority</h5>
+                                <p>0以外に設定（AWS側がキーサーバー）</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert-tip">
+                        <span class="a-icon">💡</span>
+                        <div>Cisco Catalyst（IOS XE 17.x.x）の場合は <strong>ssci-based-on-sci</strong> オプションを有効化。設定完了後はインターフェースのshutdown → no shutdownでバウンスが必要です。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== ENCRYPTION MODES + DECISION ========== -->
+        <div class="enc-section">
+            <div class="section-title">
+                <span class="icon">⚙️</span>
+                <h2 id="3つの暗号化モードと選択フロー">3つの<span>暗号化モード</span>と選択フロー</h2>
+            </div>
+            <div class="enc-grid">
+                <div class="enc-card no">
+                    <div class="e-icon">🔓</div>
+                    <h3 id="暗号化なし">暗号化なし</h3>
+                    <div class="e-code">no_encrypt</div>
+                    <p>MACsec暗号化を行わない。通常のDirect Connect接続と同じ動作</p>
+                    <div class="e-tag">初期設定</div>
+                </div>
+                <div class="enc-card should">
+                    <div class="e-icon">🔒</div>
+                    <h4>可能なら暗号化</h4>
+                    <div class="e-code">should_encrypt</div>
+                    <p>MACsecが確立できれば暗号化。確立できなくても接続はダウンしない</p>
+                    <div class="e-tag">推奨（初期導入時）</div>
+                </div>
+                <div class="enc-card must">
+                    <div class="e-icon">🛡️</div>
+                    <h4>暗号化必須</h4>
+                    <div class="e-code">must_encrypt</div>
+                    <p>暗号化が必須。確立できない場合、接続がダウンする</p>
+                    <div class="e-tag">厳格セキュリティ要件向け</div>
+                </div>
+            </div>
+
+            <!-- Decision flowchart (SVG) -->
+            <div class="decision-flow">
+                <h4>🧭 暗号化モードの選択フローチャート</h4>
+                <svg role="img" class="df-svg" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Start -->
+                    <rect x="250" y="10" width="200" height="36" rx="18" fill="#232F3E"/>
+                    <text x="350" y="33" font-size="12" fill="#FF9900" text-anchor="middle" font-weight="700">MACsec導入を検討</text>
+
+                    <line x1="350" y1="46" x2="350" y2="70" stroke="#9CA3AF" stroke-width="2"/>
+
+                    <!-- Decision 1 -->
+                    <polygon points="350,70 470,110 350,150 230,110" fill="#FFFBEB" stroke="#FDE68A" stroke-width="2"/>
+                    <text x="350" y="107" font-size="10" fill="#92400E" text-anchor="middle" font-weight="600">コンプライアンスで</text>
+                    <text x="350" y="120" font-size="10" fill="#92400E" text-anchor="middle" font-weight="600">暗号化が必須？</text>
+
+                    <!-- YES path -->
+                    <line x1="470" y1="110" x2="560" y2="110" stroke="#EF4444" stroke-width="2"/>
+                    <text x="510" y="103" font-size="9" fill="#EF4444" font-weight="700">YES</text>
+                    <rect x="560" y="90" width="130" height="40" rx="10" fill="#FFF1F2" stroke="#FECACA" stroke-width="2"/>
+                    <text x="625" y="107" font-size="10" fill="#991B1B" text-anchor="middle" font-weight="700">must_encrypt</text>
+                    <text x="625" y="121" font-size="8" fill="#991B1B" text-anchor="middle">暗号化ダウン＝接続ダウン</text>
+
+                    <!-- NO path -->
+                    <line x1="350" y1="150" x2="350" y2="175" stroke="#9CA3AF" stroke-width="2"/>
+                    <text x="363" y="165" font-size="9" fill="#6B7280" font-weight="700">NO</text>
+
+                    <!-- Decision 2 -->
+                    <polygon points="350,175 460,210 350,245 240,210" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="2"/>
+                    <text x="350" y="207" font-size="10" fill="#166534" text-anchor="middle" font-weight="600">初期導入 or</text>
+                    <text x="350" y="220" font-size="10" fill="#166534" text-anchor="middle" font-weight="600">動作検証中？</text>
+
+                    <!-- YES -->
+                    <line x1="460" y1="210" x2="560" y2="210" stroke="#F59E0B" stroke-width="2"/>
+                    <text x="510" y="203" font-size="9" fill="#F59E0B" font-weight="700">YES</text>
+                    <rect x="560" y="190" width="130" height="40" rx="10" fill="#FFFBEB" stroke="#FDE68A" stroke-width="2"/>
+                    <text x="625" y="207" font-size="10" fill="#92400E" text-anchor="middle" font-weight="700">should_encrypt</text>
+                    <text x="625" y="221" font-size="8" fill="#92400E" text-anchor="middle">安全に段階的導入</text>
+
+                    <!-- NO -->
+                    <line x1="240" y1="210" x2="130" y2="210" stroke="#9CA3AF" stroke-width="2"/>
+                    <text x="190" y="203" font-size="9" fill="#6B7280" font-weight="700">NO（暗号化不要）</text>
+                    <rect x="10" y="190" width="120" height="40" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="2"/>
+                    <text x="70" y="207" font-size="10" fill="#6B7280" text-anchor="middle" font-weight="700">no_encrypt</text>
+                    <text x="70" y="221" font-size="8" fill="#6B7280" text-anchor="middle">変更なし</text>
+
+                    <!-- Upgrade arrow -->
+                    <line x1="625" y1="230" x2="625" y2="260" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="4 3"/>
+                    <text x="625" y="275" font-size="8" fill="#991B1B" text-anchor="middle">検証完了後 → must_encrypt へ昇格</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- ========== PREREQUISITES ========== -->
+        <div class="prereq-section">
+            <div class="section-title">
+                <span class="icon">✅</span>
+                <h2 id="前提条件チェックリスト"><span>前提条件</span>チェックリスト</h2>
+            </div>
+            <div class="prereq-grid">
+                <div class="prereq-card">
+                    <div class="prereq-icon">⚠️</div>
+                    <div>
+                        <h3 id="専用接続Dedicatedであること">専用接続（Dedicated）であること</h3>
+                        <p>MACsecは10G / 100G / 400Gbps専用接続のみ対応。ホスト接続や1Gbpsでは使用不可</p>
+                    </div>
+                </div>
+                <div class="prereq-card">
+                    <div class="prereq-icon">⚠️</div>
+                    <div>
+                        <h4>LAGの全接続がMACsec対応</h4>
+                        <p>LAG内のすべてのメンバー接続がMACsecをサポートし、同一帯域幅であること</p>
+                    </div>
+                </div>
+                <div class="prereq-card">
+                    <div class="prereq-icon">⚠️</div>
+                    <div>
+                        <h4>オンプレミス機器がMACsec対応</h4>
+                        <p>自社側のルーター/スイッチがMACsec対応で、SCI有効化が可能であること</p>
+                    </div>
+                </div>
+                <div class="prereq-card">
+                    <div class="prereq-icon">⚠️</div>
+                    <div>
+                        <h4>256ビットキーのみ</h4>
+                        <p>CKN: 64桁hex（32オクテット）、CAK: 64桁hex（32オクテット）</p>
+                    </div>
+                </div>
+                <div class="prereq-card">
+                    <div class="prereq-icon">⚠️</div>
+                    <div>
+                        <h4>対応PoPロケーション</h4>
+                        <p>MACsecは選択されたDXポイント・オブ・プレゼンスでのみ利用可能。事前確認が必要</p>
+                    </div>
+                </div>
+                <div class="prereq-card">
+                    <div class="prereq-icon">⚠️</div>
+                    <div>
+                        <h4>L2透過性の確保</h4>
+                        <p>ラストマイル回線がL2トラフィックに対して透過的であること。プロバイダに確認</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== COMPARISON TABLE ========== -->
+        <div class="comparison-section">
+            <div class="section-title">
+                <span class="icon">⚖️</span>
+                <h2 id="MACsec-vs-IPsec-比較表">MACsec vs IPsec <span>比較表</span></h2>
+            </div>
+            <table class="comp-table">
+                <thead>
+                    <tr>
+                        <th style="width:170px;">比較項目</th>
+                        <th>🔐 MACsec</th>
+                        <th>🔒 IPsec VPN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="lbl">レイヤー</td>
+                        <td><span class="badge badge-o">レイヤー2</span> データリンク層</td>
+                        <td><span class="badge badge-b">レイヤー3</span> ネットワーク層</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">暗号化範囲</td>
+                        <td>ポイントツーポイント（ホップ単位）</td>
+                        <td>エンドツーエンド</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">パフォーマンス</td>
+                        <td><span class="badge badge-g">ほぼ回線速度</span> ハードウェア処理（ASIC/PHY）</td>
+                        <td>オーバーヘッドあり（暗号エンジン依存）</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">対応帯域幅</td>
+                        <td>10Gbps / 100Gbps / 400Gbps</td>
+                        <td>通常 1〜数Gbps程度</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">必要な接続タイプ</td>
+                        <td><span class="badge badge-r">専用接続のみ</span></td>
+                        <td>専用 / ホスト接続どちらもOK</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">セットアップ</td>
+                        <td>比較的シンプル（CKN/CAKの交換のみ）</td>
+                        <td>トンネル設定、IKE等の設定が必要</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">追加コスト</td>
+                        <td><span class="badge badge-g">なし</span></td>
+                        <td>VPNゲートウェイ料金等</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">上位プロトコル影響</td>
+                        <td>なし（L2で透過的に動作）</td>
+                        <td>ルーティング/アプリ設定への影響あり</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== PITFALLS ========== -->
+        <div class="pitfalls-section">
+            <div class="section-title">
+                <span class="icon">💣</span>
+                <h2 id="よくある落とし穴">よくある<span>落とし穴</span></h2>
+            </div>
+            <div class="pitfall-grid">
+                <div class="pitfall-card danger">
+                    <h3 id="個々の接続にMACsecを設定する">🚫 個々の接続にMACsecを設定する</h3>
+                    <p>LAG環境ではMACsec設定はLAGレベルで行う。接続レベルで設定するとLAG追加時にdisassociateされる。</p>
+                </div>
+                <div class="pitfall-card danger">
+                    <h4>🚫 いきなりmust_encryptにする</h4>
+                    <p>MKAセッション確立前にmust_encryptにすると、接続が即座にダウンし通信断が発生する。</p>
+                </div>
+                <div class="pitfall-card caution">
+                    <h4>⚠️ CKN/CAKの不一致</h4>
+                    <p>AWS側とオンプレミス側でCKN/CAKが1文字でも違うとMKAセッション確立不可。</p>
+                </div>
+                <div class="pitfall-card caution">
+                    <h4>⚠️ SCIをOFFのまま放置</h4>
+                    <p>AWSはSCIの有効化を必須要件としている。オンプレミス側で有効化忘れはネゴシエーション失敗の原因。</p>
+                </div>
+                <div class="pitfall-card caution">
+                    <h4>⚠️ Key-Server Priorityを0に設定</h4>
+                    <p>AWS側がキーサーバーとなるため、オンプレミス側のpriority値は0以外に設定する必要がある。</p>
+                </div>
+                <div class="pitfall-card caution">
+                    <h4>⚠️ 100GbpsでXPN非対応スイートを使用</h4>
+                    <p>100G/400G接続はGCM-AES-XPN-256のみ対応。XPN非対応だとネゴシエーション失敗。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TROUBLESHOOTING FLOW ========== -->
+        <div class="troubleshoot-section">
+            <div class="section-title">
+                <span class="icon">🔍</span>
+                <h2 id="トラブルシューティングフロー">トラブルシューティング<span>フロー</span></h2>
+            </div>
+            <div class="ts-flow">
+                <svg role="img" class="ts-svg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Start -->
+                    <rect x="280" y="5" width="240" height="36" rx="18" fill="#FEE2E2" stroke="#FCA5A5" stroke-width="2"/>
+                    <text x="400" y="28" font-size="11" fill="#991B1B" text-anchor="middle" font-weight="700">❌ MACsec Encryption Down</text>
+
+                    <line x1="400" y1="41" x2="400" y2="60" stroke="#9CA3AF" stroke-width="1.5"/>
+
+                    <!-- Check 1 -->
+                    <polygon points="400,60 520,95 400,130 280,95" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                    <text x="400" y="92" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">CKN/CAKが</text>
+                    <text x="400" y="104" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">両端で一致？</text>
+
+                    <line x1="280" y1="95" x2="120" y2="95" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="200" y="88" font-size="8" fill="#EF4444" font-weight="600">NO</text>
+                    <rect x="15" y="75" width="110" height="40" rx="8" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1.5"/>
+                    <text x="70" y="92" font-size="8" fill="#166534" text-anchor="middle" font-weight="600">CKN/CAKを再確認</text>
+                    <text x="70" y="104" font-size="8" fill="#166534" text-anchor="middle" font-weight="600">正しいペアを再設定</text>
+
+                    <line x1="400" y1="130" x2="400" y2="155" stroke="#9CA3AF" stroke-width="1.5"/>
+                    <text x="413" y="145" font-size="8" fill="#10B981" font-weight="600">YES</text>
+
+                    <!-- Check 2 -->
+                    <polygon points="400,155 520,190 400,225 280,190" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                    <text x="400" y="187" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">SCI が</text>
+                    <text x="400" y="199" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">ONになっている？</text>
+
+                    <line x1="280" y1="190" x2="120" y2="190" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="200" y="183" font-size="8" fill="#EF4444" font-weight="600">NO</text>
+                    <rect x="15" y="170" width="110" height="40" rx="8" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1.5"/>
+                    <text x="70" y="187" font-size="8" fill="#166534" text-anchor="middle" font-weight="600">SCIをONに設定</text>
+                    <text x="70" y="199" font-size="8" fill="#166534" text-anchor="middle" font-weight="600">I/Fバウンス実行</text>
+
+                    <line x1="400" y1="225" x2="400" y2="250" stroke="#9CA3AF" stroke-width="1.5"/>
+                    <text x="413" y="240" font-size="8" fill="#10B981" font-weight="600">YES</text>
+
+                    <!-- Check 3 -->
+                    <polygon points="400,250 530,285 400,320 270,285" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                    <text x="400" y="280" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">暗号スイート/暗号化モード</text>
+                    <text x="400" y="293" font-size="9" fill="#9A3412" text-anchor="middle" font-weight="600">が両端で一致？</text>
+
+                    <line x1="270" y1="285" x2="120" y2="285" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="195" y="278" font-size="8" fill="#EF4444" font-weight="600">NO</text>
+                    <rect x="15" y="265" width="110" height="40" rx="8" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1.5"/>
+                    <text x="70" y="282" font-size="8" fill="#166534" text-anchor="middle" font-weight="600">暗号スイート/モード</text>
+                    <text x="70" y="294" font-size="8" fill="#166534" text-anchor="middle" font-weight="600">を合わせて再設定</text>
+
+                    <line x1="400" y1="320" x2="400" y2="345" stroke="#9CA3AF" stroke-width="1.5"/>
+                    <text x="413" y="335" font-size="8" fill="#10B981" font-weight="600">YES</text>
+
+                    <!-- Final -->
+                    <rect x="295" y="350" width="210" height="40" rx="10" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1.5"/>
+                    <text x="400" y="367" font-size="9" fill="#1E40AF" text-anchor="middle" font-weight="600">describe-connections で</text>
+                    <text x="400" y="380" font-size="9" fill="#1E40AF" text-anchor="middle" font-weight="600">portEncryptionStatus を確認</text>
+
+                    <!-- Right side final -->
+                    <line x1="530" y1="285" x2="650" y2="285" stroke="#10B981" stroke-width="1.5"/>
+                    <text x="585" y="278" font-size="8" fill="#10B981" font-weight="600">全てYES</text>
+                    <rect x="645" y="265" width="140" height="40" rx="8" fill="#DCFCE7" stroke="#86EFAC" stroke-width="2"/>
+                    <text x="715" y="282" font-size="9" fill="#166534" text-anchor="middle" font-weight="700">✅ Encryption Up</text>
+                    <text x="715" y="294" font-size="8" fill="#166534" text-anchor="middle">MACsec正常稼働</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- ========== EXAM TIPS ========== -->
+        <div class="exam-section">
+            <div class="section-title">
+                <span class="icon">📝</span>
+                <h2 id="試験で狙われるポイント">試験で<span>狙われるポイント</span></h2>
+            </div>
+            <div class="exam-box">
+                <h3 id="SAP-Advanced-Networking-出題パターン">🎯 SAP / Advanced Networking 出題パターン</h3>
+                <div class="exam-grid">
+                    <div class="exam-card">
+                        <div class="ex-q">❓ LAGでのMACsec設定レベル</div>
+                        <div class="ex-wrong">✗ 誤：個々の接続にCKN/CAKを設定する</div>
+                        <div class="ex-right">✓ 正：LAGレベルでCKN/CAKを関連付ける</div>
+                    </div>
+                    <div class="exam-card">
+                        <div class="ex-q">❓ 暗号化モードの初期値</div>
+                        <div class="ex-wrong">✗ 誤：should_encrypt がデフォルト</div>
+                        <div class="ex-right">✓ 正：no_encrypt がデフォルト（明示的な変更が必要）</div>
+                    </div>
+                    <div class="exam-card">
+                        <div class="ex-q">❓ MACsec対応の接続タイプ</div>
+                        <div class="ex-wrong">✗ 誤：ホスト接続でもMACsecが使える</div>
+                        <div class="ex-right">✓ 正：専用接続（10G/100G/400G）のみ対応</div>
+                    </div>
+                    <div class="exam-card">
+                        <div class="ex-q">❓ MACsecの暗号化範囲</div>
+                        <div class="ex-wrong">✗ 誤：MACsecでエンドツーエンド暗号化される</div>
+                        <div class="ex-right">✓ 正：ポイントツーポイント（オンプレ〜DXロケーション間のみ）</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== FAQ ========== -->
+        <div class="faq-section">
+            <div class="section-title">
+                <span class="icon">❓</span>
+                <h2 id="よくある質問">よくある<span>質問</span></h2>
+            </div>
+
+            <div class="faq-item open">
+                <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="qi">Q</span>
+                    既存のLAGをMACsec対応に変更できますか？
+                    <span class="tog">▼</span>
+                </div>
+                <div class="faq-a"><div class="faq-a-inner">
+                    既存LAG内のすべての接続がMACsec対応（10G/100G/400Gbps専用接続で、MACsec対応PoP）であれば可能です。ただし、接続がMACsec非対応の場合は、MACsec対応の新しい接続を作成し、VIFの移行が必要になります。
+                </div></div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="qi">Q</span>
+                    MACsecの追加料金はかかりますか？
+                    <span class="tog">▼</span>
+                </div>
+                <div class="faq-a"><div class="faq-a-inner">
+                    MACsec自体に追加料金はかかりません。ただし、専用接続のポート料金とデータ転送料金は通常通り発生します。
+                </div></div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="qi">Q</span>
+                    鍵のローテーションはどのように行いますか？
+                    <span class="tog">▼</span>
+                </div>
+                <div class="faq-a"><div class="faq-a-inner">
+                    新しいCKN/CAKペアをLAGに関連付け → オンプレミス側にも新鍵を設定 → MKAセッション確立を確認 → 古い鍵をdisassociate。LAGでは同時に1つのアクティブキーのみ利用され、複数キー対応は鍵ローテーション専用です。
+                </div></div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="qi">Q</span>
+                    100Gbps接続で使える暗号スイートは？
+                    <span class="tog">▼</span>
+                </div>
+                <div class="faq-a"><div class="faq-a-inner">
+                    100G/400Gbps接続では GCM-AES-XPN-256 のみサポート。XPN（Extended Packet Numbering）は64ビットのパケット番号空間を使用し、高速接続での頻繁な鍵ローテーションを不要にします。10Gbps接続では GCM-AES-256 と GCM-AES-XPN-256 の両方が利用可能です。
+                </div></div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="qi">Q</span>
+                    MACsecだけで十分なセキュリティですか？
+                    <span class="tog">▼</span>
+                </div>
+                <div class="faq-a"><div class="faq-a-inner">
+                    MACsecはL2のポイントツーポイント暗号化であり、特定の暗号化技術を置き換えるものではありません。AWSは多層防御（Defense in Depth）の考え方で、MACsecに加えてTLS/IPsec等の既存暗号化も併用し続けることを推奨しています。
+                </div></div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="qi">Q</span>
+                    Secrets Managerのシークレットを削除するとどうなりますか？
+                    <span class="tog">▼</span>
+                </div>
+                <div class="faq-a"><div class="faq-a-inner">
+                    Secrets Managerでシークレットの削除をスケジュール（7〜30日）すると、CKNが読み取り不能になりネットワーク接続に影響する可能性があります。接続がavailable状態の場合、AWSが所有者にメールで通知し、30日以内に対応がなければCKNがdisassociateされます。最後のCKNがdisassociateされると、must_encryptモードは自動的にshould_encryptに変更され、突然のパケットロスを防止します。
+                </div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        📚 Direct Connect LAG + MACsec 実装ガイド ｜ AWS SAP 学習リソース ｜ 最終更新: 2025年
+    </div>
+
+
+</div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

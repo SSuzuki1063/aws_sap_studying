@@ -1,0 +1,1070 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Transit Gateway Deep Dive',
+  pageTitle: 'AWS Transit Gateway Deep Dive 完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Transit Gateway & ゲートウェイ',
+  slug: 'transit-gateway-deep-dive',
+  pageCss: '/aws_sap_studying/css/pages/transit-gateway-deep-dive.css',
+  tocItems: [
+    { level: 'h2', id: '結論ファースト-Transit-Gateway-とは', text: '💡 結論ファースト：Transit Gateway とは' },
+    { level: 'h3', id: '一言で言うと', text: '🎯 一言で言うと' },
+    { level: 'h2', id: '4つのコアコンセプトを図解で理解', text: '📚 4つのコアコンセプトを図解で理解' },
+    { level: 'h3', id: '4つの概念はこう繋がっている', text: '🔗 4つの概念はこう繋がっている' },
+    { level: 'h3', id: 'パケットの旅-各概念が機能するタイミング', text: '📦 パケットの旅：各概念が機能するタイミング' },
+    { level: 'h3', id: '⚖️-最重要-Association-と-Propagation-の違い', text: '⚖️ 最重要：Association と Propagation の違い' },
+    { level: 'h3', id: 'Association', text: 'Association' },
+    { level: 'h3', id: 'Propagation', text: 'Propagation' },
+    { level: 'h3', id: 'Attachmentアタッチメント', text: 'Attachment（アタッチメント）' },
+    { level: 'h3', id: 'Route-Tableルートテーブル', text: 'Route Table（ルートテーブル）' },
+    { level: 'h3', id: 'Associationアソシエーション', text: 'Association（アソシエーション）' },
+    { level: 'h3', id: 'Propagationプロパゲーション', text: 'Propagation（プロパゲーション）' },
+    { level: 'h2', id: 'アタッチメント種類の選び方', text: '🔌 アタッチメント種類の選び方' },
+    { level: 'h3', id: 'どのアタッチメントを使うべき？判断フロー', text: '🤔 どのアタッチメントを使うべき？判断フロー' },
+    { level: 'h3', id: 'アタッチメント比較表', text: '📊 アタッチメント比較表' },
+    { level: 'h3', id: '️-各アタッチメントの接続構成', text: '🏗️ 各アタッチメントの接続構成' },
+    { level: 'h2', id: 'Connect-Attachment-Deep-Dive', text: '🔀 Connect Attachment Deep Dive' },
+    { level: 'h3', id: 'たとえ話-ホテルの専用シャトルバス契約', text: '🏨 たとえ話：ホテルの「専用シャトルバス契約」' },
+    { level: 'h3', id: '⚖️-VPN-Attachment-vs-Connect-Attachment', text: '⚖️ VPN Attachment vs Connect Attachment' },
+    { level: 'h2', id: '主要なクォータ制限', text: '📏 主要なクォータ（制限）' },
+    { level: 'h2', id: '✅-ベストプラクティス', text: '✅ ベストプラクティス' },
+    { level: 'h3', id: '✅-推奨事項Do', text: '✅ 推奨事項（Do）' },
+    { level: 'h2', id: '❓-よくある質問FAQ', text: '❓ よくある質問（FAQ）' },
+    { level: 'h3', id: 'Q-VPC-PeeringとTransit-Gatewayの違いは？', text: 'Q: VPC PeeringとTransit Gatewayの違いは？' }
+  ],
+  prevPage: '../organizational-complexity/aws-ram-tgw-sharing.html',
+  nextPage: 'transit-gateway-peering-guide.html',
+  pageNum: 24,
+  pageTotal: 26,
+};
+
+const rawContent = `<!-- Header -->
+        <header class="header">
+            <h1>🔀 AWS Transit Gateway Deep Dive</h1>
+            <p class="subtitle">VPCネットワークの中央集約ハブを完全理解</p>
+            <span class="badge">📘 図解強化エディション</span>
+        </header>
+
+        <div class="content">
+            <!-- Conclusion First -->
+            <section id="結論ファースト" class="conclusion-first">
+                <h2 id="結論ファースト-Transit-Gateway-とは">💡 結論ファースト：Transit Gateway とは</h2>
+                <div class="key-points">
+                    <div class="key-point">
+                        <h3 id="一言で言うと">🎯 一言で言うと</h3>
+                        <p>複数のVPCとオンプレミスを<strong>一箇所で集中管理</strong>する「ネットワークのハブ空港」。VPC Peeringの複雑な接続管理から解放されます。</p>
+                    </div>
+                    <div class="key-point">
+                        <h4>🔢 導入タイミング</h4>
+                        <p>VPCが<strong>3つ以上</strong>あり増加見込み、Direct Connect接続VPCが<strong>20超</strong>、通信監査・ガバナンスが必要な場合</p>
+                    </div>
+                    <div class="key-point">
+                        <h4>⚡ 主要機能</h4>
+                        <p>VPC/VPN/Direct Connect接続、複数ルートテーブル、リージョン間ピアリング、マルチキャスト対応</p>
+                    </div>
+                    <div class="key-point">
+                        <h4>📊 帯域幅</h4>
+                        <p>VPCアタッチメント: <strong>最大100Gbps/AZ</strong>、MTU: <strong>8500バイト</strong> のジャンボフレーム対応</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Core Concepts Section -->
+            <section id="4つのコアコンセプト" class="concepts-section">
+                <h2 id="4つのコアコンセプトを図解で理解" class="section-title">📚 4つのコアコンセプトを図解で理解</h2>
+                <p class="section-subtitle">Transit Gatewayの心臓部となる4つの概念と、その関係性を視覚的に解説</p>
+
+                <!-- 4概念の関係図 -->
+                <div id="4概念の関係図" class="concepts-relationship">
+                    <h3 id="4つの概念はこう繋がっている" class="relationship-title">🔗 4つの概念はこう繋がっている</h3>
+                    <div class="relationship-diagram">
+                        <div class="concept-node attachment">
+                            <div class="node-icon">🔗</div>
+                            <h4>Attachment</h4>
+                            <div class="node-role">接続の入口</div>
+                        </div>
+
+                        <div class="relationship-arrow">
+                            <span class="arrow">→</span>
+                            <span class="label">接続する</span>
+                        </div>
+
+                        <div class="tgw-center">
+                            <div class="node-icon">🔀</div>
+                            <h4>TGW</h4>
+                        </div>
+
+                        <div class="relationship-arrow">
+                            <span class="arrow">→</span>
+                            <span class="label">参照する</span>
+                        </div>
+
+                        <div class="concept-node route-table">
+                            <div class="node-icon">🗺️</div>
+                            <h4>Route Table</h4>
+                            <div class="node-role">経路情報</div>
+                        </div>
+                    </div>
+
+                    <div class="concepts-bottom-row">
+                        <div class="concepts-bottom-item">
+                            <div class="concept-node association">
+                                <div class="node-icon">🎫</div>
+                                <h4>Association</h4>
+                                <div class="node-role">入口の紐付け</div>
+                            </div>
+                            <div class="concepts-bottom-note">AttachmentとRoute Tableを<br>1対1で紐付け</div>
+                        </div>
+
+                        <div class="concepts-bottom-item">
+                            <div class="concept-node propagation">
+                                <div class="node-icon">📢</div>
+                                <h4>Propagation</h4>
+                                <div class="node-role">経路の伝播</div>
+                            </div>
+                            <div class="concepts-bottom-note">AttachmentのCIDRを<br>Route Tableに自動登録</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- データフロー図 -->
+                <div id="パケットの旅" class="dataflow-section">
+                    <h3 id="パケットの旅-各概念が機能するタイミング" class="dataflow-title">📦 パケットの旅：各概念が機能するタイミング</h3>
+                    <div class="dataflow-diagram">
+                        <div class="flow-box">
+                            <span class="step-badge">1</span>
+                            <div class="flow-icon">🏢</div>
+                            <h4>VPCから送信</h4>
+                            <p>VPCのルートテーブルで宛先をTGWに向ける</p>
+                        </div>
+
+                        <span class="flow-arrow">→</span>
+
+                        <div class="flow-box">
+                            <span class="step-badge">2</span>
+                            <div class="flow-icon">🔗</div>
+                            <h5>Attachmentで受信</h5>
+                            <p>パケットがTGWのアタッチメント経由で到達</p>
+                            <span class="concept-tag attachment">Attachment</span>
+                        </div>
+
+                        <span class="flow-arrow">→</span>
+
+                        <div class="flow-box">
+                            <span class="step-badge">3</span>
+                            <div class="flow-icon">🎫</div>
+                            <h5>どのテーブルを見る？</h5>
+                            <p>Associationで紐付けられたRoute Tableを特定</p>
+                            <span class="concept-tag association">Association</span>
+                        </div>
+
+                        <span class="flow-arrow">→</span>
+
+                        <div class="flow-box">
+                            <span class="step-badge">4</span>
+                            <div class="flow-icon">🗺️</div>
+                            <h5>経路検索</h5>
+                            <p>Route Tableで宛先CIDRにマッチするルートを検索</p>
+                            <span class="concept-tag route-table">Route Table</span>
+                        </div>
+
+                        <span class="flow-arrow">→</span>
+
+                        <div class="flow-box">
+                            <span class="step-badge">5</span>
+                            <div class="flow-icon">🚀</div>
+                            <h5>転送実行</h5>
+                            <p>マッチしたルートのAttachmentへパケット転送</p>
+                        </div>
+                    </div>
+
+                    <div class="propagation-note">
+                        <p>
+                            <strong>💡 Propagationの役割：</strong>
+                            ステップ4で検索されるルートを<strong>自動登録</strong>する仕組み。VPCをアタッチすると、そのCIDRが自動的にRoute Tableに追加される。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Association vs Propagation 比較 -->
+                <div id="association-vs-propagation" class="comparison-section">
+                    <h3 id="⚖️-最重要-Association-と-Propagation-の違い" class="comparison-title">⚖️ 最重要：Association と Propagation の違い</h3>
+                    <div class="comparison-grid">
+                        <div class="comparison-card association-card">
+                            <div class="comparison-header">
+                                <div class="header-icon">🎫</div>
+                                <h3 id="Association">Association</h3>
+                                <div class="analogy">✈️ 搭乗券とゲートの紐付け</div>
+                            </div>
+                            <div class="comparison-body">
+                                <div class="comparison-visual">
+                                    <div class="visual-diagram">
+                                        <div class="visual-box vpc">VPC-A<br>Attachment</div>
+                                        <span class="visual-arrow association">━━▶</span>
+                                        <div class="visual-box rtb">Route Table A</div>
+                                    </div>
+                                    <div class="visual-note">1つのAttachmentは1つのRoute Tableにのみ紐付け可能</div>
+                                </div>
+
+                                <ul class="comparison-features">
+                                    <li>
+                                        <span class="feature-icon">📍</span>
+                                        <span><strong>役割：</strong>「このAttachmentから来たパケットはどのRoute Tableを見るか」を決定</span>
+                                    </li>
+                                    <li>
+                                        <span class="feature-icon">1️⃣</span>
+                                        <span><strong>関係：</strong>Attachment : Route Table = <strong>1 : 1</strong>（必ず1つだけ）</span>
+                                    </li>
+                                    <li>
+                                        <span class="feature-icon">🚪</span>
+                                        <span><strong>方向：</strong><strong>入口側</strong>の設定（パケットがTGWに入ってきた時）</span>
+                                    </li>
+                                    <li>
+                                        <span class="feature-icon">🎯</span>
+                                        <span><strong>用途：</strong>環境分離（本番用/開発用Route Tableを分ける）</span>
+                                    </li>
+                                </ul>
+
+                                <div class="comparison-key-point">
+                                    <strong>💡 覚え方：</strong>「この飛行機（Attachment）の乗客は、どの案内板（Route Table）を見て移動するか」
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="comparison-card propagation-card">
+                            <div class="comparison-header">
+                                <div class="header-icon">📢</div>
+                                <h3 id="Propagation">Propagation</h3>
+                                <div class="analogy">✈️ 新規就航便の案内板への自動登録</div>
+                            </div>
+                            <div class="comparison-body">
+                                <div class="comparison-visual">
+                                    <div class="visual-diagram">
+                                        <div class="visual-box vpc">VPC-A<br>10.1.0.0/16</div>
+                                        <span class="visual-arrow propagation">━━▶</span>
+                                        <div class="visual-box rtb">Route Table A</div>
+                                    </div>
+                                    <div class="visual-diagram">
+                                        <div class="visual-box vpc">VPC-A<br>10.1.0.0/16</div>
+                                        <span class="visual-arrow propagation">━━▶</span>
+                                        <div class="visual-box rtb">Route Table B</div>
+                                    </div>
+                                    <div class="visual-note">同じCIDRを複数のRoute Tableに伝播可能</div>
+                                </div>
+
+                                <ul class="comparison-features">
+                                    <li>
+                                        <span class="feature-icon">📍</span>
+                                        <span><strong>役割：</strong>AttachmentのCIDR情報をRoute Tableに<strong>自動登録</strong></span>
+                                    </li>
+                                    <li>
+                                        <span class="feature-icon">🔢</span>
+                                        <span><strong>関係：</strong>Attachment : Route Table = <strong>1 : N</strong>（複数可能）</span>
+                                    </li>
+                                    <li>
+                                        <span class="feature-icon">🚪</span>
+                                        <span><strong>方向：</strong><strong>出口側</strong>の設定（他からこのVPCに到達するためのルート）</span>
+                                    </li>
+                                    <li>
+                                        <span class="feature-icon">🎯</span>
+                                        <span><strong>用途：</strong>動的ルート管理、スタティックルート設定の省力化</span>
+                                    </li>
+                                </ul>
+
+                                <div class="comparison-key-point">
+                                    <strong>💡 覚え方：</strong>「新しい就航先（VPC）ができたら、案内板（Route Table）に自動で行き先を追加」
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4概念の詳細カード -->
+                <div class="concepts-detail-grid">
+                    <div class="concept-detail-card attachment">
+                        <div class="concept-detail-header">
+                            <span class="detail-icon">🔗</span>
+                            <div class="header-text">
+                                <h3 id="Attachmentアタッチメント">Attachment（アタッチメント）</h3>
+                                <span class="analogy-label">✈️ 空港の搭乗ゲート</span>
+                            </div>
+                        </div>
+                        <div class="concept-detail-body">
+                            <p class="detail-description">
+                                VPC、VPN、Direct Connect、他のTGWなどをTransit Gatewayに接続するための「入口」です。
+                                各接続先ごとに1つのAttachmentを作成します。
+                            </p>
+
+                            <div class="detail-visual">
+                                <div class="detail-visual-diagram">
+                                    <div class="mini-box vpc">VPC</div>
+                                    <span class="mini-arrow">→</span>
+                                    <div class="mini-box vpc">Attachment</div>
+                                    <span class="mini-arrow">→</span>
+                                    <div class="mini-box tgw">TGW</div>
+                                </div>
+                            </div>
+
+                            <div class="detail-key-points">
+                                <h4>⚠️ 重要ポイント</h4>
+                                <ul>
+                                    <li>✅ VPCアタッチメントは各AZにサブネット（/28以上）が必要</li>
+                                    <li>✅ サブネット内にENI（Elastic Network Interface）が作成される</li>
+                                    <li>✅ TGWあたり最大5,000アタッチメント（ハードリミット）</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="concept-detail-card route-table">
+                        <div class="concept-detail-header">
+                            <span class="detail-icon">🗺️</span>
+                            <div class="header-text">
+                                <h3 id="Route-Tableルートテーブル">Route Table（ルートテーブル）</h3>
+                                <span class="analogy-label">✈️ フライト案内板</span>
+                            </div>
+                        </div>
+                        <div class="concept-detail-body">
+                            <p class="detail-description">
+                                パケットをどのAttachmentに転送するか決める経路情報です。
+                                Transit Gatewayは複数のRoute Tableを持てるため、環境分離が可能です。
+                            </p>
+
+                            <div class="detail-visual">
+                                <div class="route-table-visual">
+                                    <div class="route-table-header">
+                                        <span><strong>宛先CIDR</strong></span>
+                                        <span><strong>転送先</strong></span>
+                                    </div>
+                                    <div class="route-table-row">
+                                        <span>10.1.0.0/16</span>
+                                        <span>→ VPC-A Attachment</span>
+                                    </div>
+                                    <div class="route-table-row">
+                                        <span>10.2.0.0/16</span>
+                                        <span>→ VPC-B Attachment</span>
+                                    </div>
+                                    <div class="route-table-row">
+                                        <span>192.168.0.0/16</span>
+                                        <span>→ VPN Attachment</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="detail-key-points">
+                                <h4>⚠️ 重要ポイント</h4>
+                                <ul>
+                                    <li>✅ TGWには最低1つのRoute Tableが必要</li>
+                                    <li>✅ デフォルトで最大20個（上限緩和可能）</li>
+                                    <li>✅ 経路は最大10,000件（全テーブル合計）</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="concept-detail-card association">
+                        <div class="concept-detail-header">
+                            <span class="detail-icon">🎫</span>
+                            <div class="header-text">
+                                <h3 id="Associationアソシエーション">Association（アソシエーション）</h3>
+                                <span class="analogy-label">✈️ 搭乗券とゲートの紐付け</span>
+                            </div>
+                        </div>
+                        <div class="concept-detail-body">
+                            <p class="detail-description">
+                                AttachmentとRoute Tableを紐付けます。VPCからTGWに入ったパケットは、
+                                Associateされたルートテーブルを参照して転送先を決定します。
+                            </p>
+
+                            <div class="detail-visual">
+                                <div class="detail-visual-diagram">
+                                    <div class="mini-box vpc">VPC-A</div>
+                                    <span class="visual-arrow association">━━🎫━━▶</span>
+                                    <div class="mini-box rtb">Route Table A</div>
+                                </div>
+                                <div class="association-warning">
+                                    ❌ 1つのAttachmentを複数のRoute Tableにはアソシエートできない
+                                </div>
+                            </div>
+
+                            <div class="detail-key-points">
+                                <h4>⚠️ 重要ポイント</h4>
+                                <ul>
+                                    <li>✅ <strong>1対1の関係</strong>：Attachmentは1つのRoute Tableのみ</li>
+                                    <li>✅ VPC内にTGWのルートは伝播されない→VPC側にスタティックルートが必要</li>
+                                    <li>✅ 「どのテーブルを見るか」を決める入口側の設定</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="concept-detail-card propagation">
+                        <div class="concept-detail-header">
+                            <span class="detail-icon">📢</span>
+                            <div class="header-text">
+                                <h3 id="Propagationプロパゲーション">Propagation（プロパゲーション）</h3>
+                                <span class="analogy-label">✈️ 新規就航便の案内板への自動登録</span>
+                            </div>
+                        </div>
+                        <div class="concept-detail-body">
+                            <p class="detail-description">
+                                AttachmentのCIDR情報をRoute Tableに自動伝播します。
+                                手動でスタティックルートを書く代わりに、動的に経路を登録できます。
+                            </p>
+
+                            <div class="detail-visual">
+                                <div class="flex-column gap-sm">
+                                    <div class="detail-visual-diagram">
+                                        <div class="mini-box vpc">VPC-A<br><small>10.1.0.0/16</small></div>
+                                        <span class="visual-arrow propagation">━📢━▶</span>
+                                        <div class="mini-box rtb">Route Table A</div>
+                                    </div>
+                                    <div class="detail-visual-diagram">
+                                        <div class="mini-box vpc">VPC-A<br><small>10.1.0.0/16</small></div>
+                                        <span class="visual-arrow propagation">━📢━▶</span>
+                                        <div class="mini-box rtb">Route Table B</div>
+                                    </div>
+                                </div>
+                                <div class="propagation-multi-note">
+                                    ✅ 同じCIDRを複数のRoute Tableに伝播可能（1対多）
+                                </div>
+                            </div>
+
+                            <div class="detail-key-points">
+                                <h4>⚠️ 重要ポイント</h4>
+                                <ul>
+                                    <li>✅ <strong>1対多の関係</strong>：複数のRoute Tableに伝播可能</li>
+                                    <li>✅ Associationとは独立した設定</li>
+                                    <li>✅ 「他からこのVPCへ到達するルート」を自動登録</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Attachments Section -->
+            <section id="アタッチメント種類" class="attachments-section">
+                <h2 id="アタッチメント種類の選び方" class="section-title">🔌 アタッチメント種類の選び方</h2>
+                <p class="section-subtitle">5種類のアタッチメントから最適なものを選ぶための判断基準と比較</p>
+
+                <!-- 選択フローチャート -->
+                <div id="選択フロー" class="selection-flowchart">
+                    <h3 id="どのアタッチメントを使うべき？判断フロー" class="flowchart-title">🤔 どのアタッチメントを使うべき？判断フロー</h3>
+                    <div class="flowchart-diagram">
+                        <div class="decision-node">
+                            <div class="question">接続先はどこ？</div>
+                        </div>
+
+                        <div class="decision-branches">
+                            <div class="branch">
+                                <span class="branch-label">AWS内のVPC</span>
+                                <span class="branch-arrow">↓</span>
+                                <div class="decision-node">
+                                    <div class="question">同じリージョン？</div>
+                                </div>
+                                <div class="decision-branches">
+                                    <div class="branch">
+                                        <span class="branch-label">Yes</span>
+                                        <span class="branch-arrow">↓</span>
+                                        <div class="result-node vpc">
+                                            <div class="result-icon">🏢</div>
+                                            VPC Attachment
+                                        </div>
+                                    </div>
+                                    <div class="branch">
+                                        <span class="branch-label">No</span>
+                                        <span class="branch-arrow">↓</span>
+                                        <div class="result-node peering">
+                                            <div class="result-icon">🌍</div>
+                                            Peering Attachment
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="branch">
+                                <span class="branch-label">オンプレミス</span>
+                                <span class="branch-arrow">↓</span>
+                                <div class="decision-node">
+                                    <div class="question">接続方法は？</div>
+                                </div>
+                                <div class="decision-branches">
+                                    <div class="branch">
+                                        <span class="branch-label">インターネット経由</span>
+                                        <span class="branch-arrow">↓</span>
+                                        <div class="result-node vpn">
+                                            <div class="result-icon">🔒</div>
+                                            VPN Attachment
+                                        </div>
+                                    </div>
+                                    <div class="branch">
+                                        <span class="branch-label">専用線</span>
+                                        <span class="branch-arrow">↓</span>
+                                        <div class="result-node dx">
+                                            <div class="result-icon">📡</div>
+                                            Direct Connect
+                                        </div>
+                                    </div>
+                                    <div class="branch">
+                                        <span class="branch-label">SD-WAN</span>
+                                        <span class="branch-arrow">↓</span>
+                                        <div class="result-node connect">
+                                            <div class="result-icon">🔀</div>
+                                            Connect
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 比較表 -->
+                <div id="比較表">
+                    <h3 id="アタッチメント比較表" class="comparison-table-heading">📊 アタッチメント比較表</h3>
+                    <div class="attachment-comparison-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>タイプ</th>
+                                    <th>最大帯域幅</th>
+                                    <th>ルーティング</th>
+                                    <th>暗号化</th>
+                                    <th>主なユースケース</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="type-badge vpc">🏢 VPC</span></td>
+                                    <td><span class="bandwidth-value">100 Gbps/AZ</span></td>
+                                    <td>スタティック</td>
+                                    <td><span class="cross-icon">✗</span> なし</td>
+                                    <td>同一リージョン内VPC接続</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="type-badge vpn">🔒 VPN</span></td>
+                                    <td><span class="bandwidth-value">1.25 Gbps/トンネル</span></td>
+                                    <td>BGP / スタティック</td>
+                                    <td><span class="check-icon">✓</span> IPsec</td>
+                                    <td>オンプレミスとの暗号化接続</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="type-badge dx">📡 Direct Connect</span></td>
+                                    <td><span class="bandwidth-value">100 Gbps（DX次第）</span></td>
+                                    <td>BGP</td>
+                                    <td><span class="warning-icon">△</span> MACsec対応</td>
+                                    <td>専用線による安定・大容量接続</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="type-badge peering">🌍 Peering</span></td>
+                                    <td><span class="bandwidth-value">制限なし</span></td>
+                                    <td>スタティックのみ</td>
+                                    <td><span class="check-icon">✓</span> AWSバックボーン</td>
+                                    <td>リージョン間/TGW間接続</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="type-badge connect">🔀 Connect</span></td>
+                                    <td><span class="bandwidth-value">5 Gbps/GREトンネル</span></td>
+                                    <td>BGP over GRE</td>
+                                    <td><span class="cross-icon">✗</span> なし</td>
+                                    <td>SD-WANアプライアンス接続</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- アタッチメント構成図 -->
+                <h3 id="️-各アタッチメントの接続構成" class="attachment-config-heading">🏗️ 各アタッチメントの接続構成</h3>
+                <div class="attachment-diagrams">
+                    <div class="attachment-diagram-card vpc">
+                        <div class="diagram-card-header">
+                            <span class="header-icon">🏢</span>
+                            <h4>VPC Attachment</h4>
+                        </div>
+                        <div class="diagram-card-body">
+                            <div class="architecture-mini-diagram">
+                                <div class="mini-architecture">
+                                    <div class="arch-element source">
+                                        VPC<br>
+                                        <small>10.1.0.0/16</small>
+                                    </div>
+                                    <span class="arch-arrow">━━▶</span>
+                                    <div class="arch-element tgw">
+                                        🔀<br>TGW
+                                    </div>
+                                    <span class="arch-arrow">━━▶</span>
+                                    <div class="arch-element destination">
+                                        他のVPC
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="diagram-features">
+                                <li>✅ 各AZにサブネット（/28以上）が必要</li>
+                                <li>✅ ENIが自動作成される</li>
+                                <li>✅ MTU 8500バイト対応</li>
+                                <li>⚠️ VPCルートテーブルに手動でTGW向けルート追加必要</li>
+                            </ul>
+
+                            <div class="diagram-usecase">
+                                <h5>💼 ユースケース例</h5>
+                                <p>マイクロサービス間通信、共有サービスVPCへのアクセス</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="attachment-diagram-card vpn">
+                        <div class="diagram-card-header">
+                            <span class="header-icon">🔒</span>
+                            <h4>VPN Attachment</h4>
+                        </div>
+                        <div class="diagram-card-body">
+                            <div class="architecture-mini-diagram">
+                                <div class="mini-architecture">
+                                    <div class="arch-element source">
+                                        🏭 オンプレ<br>
+                                        <small>Customer GW</small>
+                                    </div>
+                                    <span class="arch-arrow">🔐━▶</span>
+                                    <div class="arch-element tgw">
+                                        🔀<br>TGW
+                                    </div>
+                                    <span class="arch-arrow">━━▶</span>
+                                    <div class="arch-element destination">
+                                        VPC群
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="diagram-features">
+                                <li>✅ IPsec暗号化でセキュア</li>
+                                <li>✅ BGPまたはスタティックルート</li>
+                                <li>✅ ECMPで複数VPN束ねて帯域UP</li>
+                                <li>⚠️ 1トンネル最大1.25Gbps</li>
+                            </ul>
+
+                            <div class="diagram-usecase">
+                                <h5>💼 ユースケース例</h5>
+                                <p>オンプレDCとの接続、バックアップ経路、小規模拠点接続</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="attachment-diagram-card dx">
+                        <div class="diagram-card-header">
+                            <span class="header-icon">📡</span>
+                            <h4>Direct Connect Gateway</h4>
+                        </div>
+                        <div class="diagram-card-body">
+                            <div class="architecture-mini-diagram">
+                                <div class="mini-architecture">
+                                    <div class="arch-element source">
+                                        🏭 オンプレ<br>
+                                        <small>専用線</small>
+                                    </div>
+                                    <span class="arch-arrow">━━▶</span>
+                                    <div class="dxgw-element">
+                                        DXGW
+                                    </div>
+                                    <span class="arch-arrow">━━▶</span>
+                                    <div class="arch-element tgw">
+                                        🔀<br>TGW
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="diagram-features">
+                                <li>✅ Transit VIF経由で接続</li>
+                                <li>✅ 安定した大容量通信</li>
+                                <li>✅ 複数VPCを1本のDXで接続</li>
+                                <li>❌ Private VIFとの併用不可</li>
+                            </ul>
+
+                            <div class="diagram-usecase">
+                                <h5>💼 ユースケース例</h5>
+                                <p>大容量データ転送、低レイテンシ要件、基幹システム接続</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="attachment-diagram-card peering">
+                        <div class="diagram-card-header">
+                            <span class="header-icon">🌍</span>
+                            <h4>Peering Attachment</h4>
+                        </div>
+                        <div class="diagram-card-body">
+                            <div class="architecture-mini-diagram">
+                                <div class="mini-architecture">
+                                    <div class="arch-element tgw">
+                                        🔀<br><small>東京</small>
+                                    </div>
+                                    <span class="arch-arrow">⟺</span>
+                                    <div class="arch-element tgw">
+                                        🔀<br><small>大阪</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="diagram-features">
+                                <li>✅ リージョン間接続対応</li>
+                                <li>✅ 同一リージョン内も可能</li>
+                                <li>⚠️ スタティックルートのみ（BGP伝播なし）</li>
+                                <li>⚠️ 双方でアクセプトが必要</li>
+                            </ul>
+
+                            <div class="diagram-usecase">
+                                <h5>💼 ユースケース例</h5>
+                                <p>DR構成、グローバルサービス展開、マルチリージョン冗長化</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="attachment-diagram-card connect">
+                        <div class="diagram-card-header">
+                            <span class="header-icon">🔀</span>
+                            <h4>Connect Attachment</h4>
+                        </div>
+                        <div class="diagram-card-body">
+                            <div class="architecture-mini-diagram">
+                                <div class="mini-architecture">
+                                    <div class="arch-element source">
+                                        🔀 SD-WAN<br>
+                                        <small>アプライアンス</small>
+                                    </div>
+                                    <span class="arch-arrow">GRE▶</span>
+                                    <div class="arch-element tgw">
+                                        🔀<br>TGW
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="diagram-features">
+                                <li>✅ BGP over GREで接続</li>
+                                <li>✅ 最大5Gbps/GREトンネル</li>
+                                <li>✅ ECMPサポート</li>
+                                <li>⚠️ VPCまたはDXGWがトランスポート</li>
+                            </ul>
+
+                            <div class="diagram-usecase">
+                                <h5>💼 ユースケース例</h5>
+                                <p>SD-WAN統合、サードパーティNVA接続、ブランチオフィス統合</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Connect Attachment Deep Dive -->
+            <section id="connect-attachment" class="connect-deep-dive">
+                <h2 id="Connect-Attachment-Deep-Dive" class="section-title">🔀 Connect Attachment Deep Dive</h2>
+                <p class="section-subtitle">SD-WANや仮想アプライアンスとの高帯域接続を実現する特殊なアタッチメント</p>
+
+                <!-- たとえ話 -->
+                <div class="connect-analogy">
+                    <h3 id="たとえ話-ホテルの専用シャトルバス契約" class="connect-analogy-title">
+                        🏨 たとえ話：ホテルの「専用シャトルバス契約」
+                    </h3>
+                    <div class="analogy-grid">
+                        <div class="analogy-card">
+                            <h4>
+                                🏨 ホテルのたとえ
+                            </h4>
+                            <div class="analogy-items">
+                                <div class="analogy-item">
+                                    <span class="analogy-item-icon">🏨</span>
+                                    <div>
+                                        <strong class="analogy-item-label">ホテル本館</strong>
+                                        <p class="analogy-item-desc">中央のネットワークハブ</p>
+                                    </div>
+                                </div>
+                                <div class="analogy-item">
+                                    <span class="analogy-item-icon">🚌</span>
+                                    <div>
+                                        <strong class="analogy-item-label">専用シャトルバス会社</strong>
+                                        <p class="analogy-item-desc">SD-WANベンダー</p>
+                                    </div>
+                                </div>
+                                <div class="analogy-item">
+                                    <span class="analogy-item-icon">📋</span>
+                                    <div>
+                                        <strong class="analogy-item-label">バス会社との専用契約</strong>
+                                        <p class="analogy-item-desc">Connect Attachment</p>
+                                    </div>
+                                </div>
+                                <div class="analogy-item">
+                                    <span class="analogy-item-icon">🛣️</span>
+                                    <div>
+                                        <strong class="analogy-item-label">専用レーン</strong>
+                                        <p class="analogy-item-desc">GREトンネル</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="analogy-card">
+                            <h4>💡 ポイント</h4>
+                            <p class="analogy-point-text">
+                                通常のVPN Attachmentは「一般タクシー」のようなもの。<br>
+                                Connect Attachmentは「専用シャトルバス」で、SD-WAN事業者と直接契約して<strong>高速・柔軟な接続</strong>を実現します。
+                            </p>
+                            <div class="analogy-summary">
+                                <p>
+                                    <strong>🎯 一言で言うと：</strong><br>
+                                    SD-WANなどの仮想ネットワークアプライアンスとTransit Gatewayを<strong>GREトンネル + BGP</strong>で接続するための仕組み
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VPN vs Connect 比較 -->
+                <div class="vpn-connect-comparison">
+                    <h3 id="⚖️-VPN-Attachment-vs-Connect-Attachment" class="vpn-connect-title">
+                        ⚖️ VPN Attachment vs Connect Attachment
+                    </h3>
+                    <div class="vpn-connect-table-wrapper">
+                        <table class="vpn-connect-table">
+                            <thead>
+                                <tr>
+                                    <th>比較項目</th>
+                                    <th>🔒 VPN Attachment</th>
+                                    <th>🔀 Connect Attachment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>プロトコル</td>
+                                    <td>IPsec</td>
+                                    <td class="connect-highlight">GRE + BGP</td>
+                                </tr>
+                                <tr>
+                                    <td>帯域幅</td>
+                                    <td>1.25 Gbps/トンネル</td>
+                                    <td class="connect-highlight">5 Gbps/トンネル ⚡</td>
+                                </tr>
+                                <tr>
+                                    <td>暗号化</td>
+                                    <td class="vpn-positive">✓ あり（IPsec）</td>
+                                    <td class="connect-negative">✗ なし（別途実装要）</td>
+                                </tr>
+                                <tr>
+                                    <td>ルーティング</td>
+                                    <td>BGP or スタティック</td>
+                                    <td>BGP のみ</td>
+                                </tr>
+                                <tr>
+                                    <td>主なユースケース</td>
+                                    <td>オンプレ直接接続</td>
+                                    <td>SD-WAN / NVA経由接続</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="selection-guide">
+                        <div class="selection-guide-card vpn-guide">
+                            <h4>🔒 VPNを選ぶ場面</h4>
+                            <p>オンプレミスと直接接続し、<strong>暗号化が必須</strong>の場合。小〜中規模の接続に最適。</p>
+                        </div>
+                        <div class="selection-guide-card connect-guide">
+                            <h5>🔀 Connectを選ぶ場面</h5>
+                            <p>SD-WANソリューションとの統合で、<strong>高帯域が必要</strong>な場合。大規模ブランチ接続に最適。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quota Section -->
+            <section id="クォータ" class="quota-section">
+                <h2 id="主要なクォータ制限" class="section-title">📏 主要なクォータ（制限）</h2>
+                <div class="quota-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>項目</th>
+                                <th>デフォルト値</th>
+                                <th>上限緩和</th>
+                                <th>備考</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>アカウントあたりのTGW数</td>
+                                <td><strong>5</strong></td>
+                                <td><span class="quota-badge adjustable">可能</span></td>
+                                <td>リージョンごと</td>
+                            </tr>
+                            <tr>
+                                <td>TGWあたりのルートテーブル数</td>
+                                <td><strong>20</strong></td>
+                                <td><span class="quota-badge adjustable">可能</span></td>
+                                <td>環境分離に影響</td>
+                            </tr>
+                            <tr>
+                                <td>TGWあたりの経路数</td>
+                                <td><strong>10,000</strong></td>
+                                <td><span class="quota-badge adjustable">可能</span></td>
+                                <td>全ルートテーブル合計</td>
+                            </tr>
+                            <tr>
+                                <td>TGWあたりのアタッチメント数</td>
+                                <td><strong>5,000</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ハードリミット</td>
+                            </tr>
+                            <tr>
+                                <td>VPCあたりのTGW接続数</td>
+                                <td><strong>5</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ハードリミット</td>
+                            </tr>
+                            <tr>
+                                <td>VPCアタッチメント帯域幅</td>
+                                <td><strong>100 Gbps/AZ</strong></td>
+                                <td><span class="quota-badge adjustable">要相談</span></td>
+                                <td>バースト上限</td>
+                            </tr>
+                            <tr>
+                                <td>VPNトンネル帯域幅</td>
+                                <td><strong>1.25 Gbps</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ECMPで集約可能</td>
+                            </tr>
+                            <tr>
+                                <td>MTU</td>
+                                <td><strong>8,500 bytes</strong></td>
+                                <td><span class="quota-badge fixed">不可</span></td>
+                                <td>ジャンボフレーム対応</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Best Practices -->
+            <section id="ベストプラクティス" class="best-practices-section">
+                <h2 id="✅-ベストプラクティス" class="section-title">✅ ベストプラクティス</h2>
+                <div class="practices-grid">
+                    <div class="practice-card do">
+                        <h3 id="✅-推奨事項Do">✅ 推奨事項（Do）</h3>
+                        <ul>
+                            <li>✓ 各AZにアタッチメント用サブネットを配置し、可用性を確保する</li>
+                            <li>✓ ルートテーブルを用途・環境ごとに分割し、セキュリティ境界を明確にする</li>
+                            <li>✓ Propagationを活用して動的にルートを管理し、運用負荷を軽減する</li>
+                            <li>✓ VPC Flow Logsと合わせてトラフィックを可視化・監査する</li>
+                            <li>✓ TGWのAZごとの帯域上限を考慮した設計をする</li>
+                            <li>✓ ECMP対応環境ではVPN接続を複数束ねて帯域を確保する</li>
+                        </ul>
+                    </div>
+
+                    <div class="practice-card dont">
+                        <h4>❌ アンチパターン（Don't）</h4>
+                        <ul>
+                            <li>✗ VPC数が少ない（2つ以下）のにTGWを使用する → VPC Peeringで十分</li>
+                            <li>✗ 単一AZにのみアタッチメントを作成する → 可用性リスク</li>
+                            <li>✗ Transit VIFとPrivate VIFを同じDXGWで併用しようとする → 不可</li>
+                            <li>✗ ピアリング接続でBGPによる動的ルーティングを期待する → スタティックのみ</li>
+                            <li>✗ VPCサブネットのルートテーブルでTGW向けのルートを設定し忘れる</li>
+                            <li>✗ マルチキャストを後から有効化しようとする → TGW作成時のみ</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section id="FAQ" class="faq-section">
+                <h2 id="❓-よくある質問FAQ">❓ よくある質問（FAQ）</h2>
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <h3 id="Q-VPC-PeeringとTransit-Gatewayの違いは？">Q: VPC PeeringとTransit Gatewayの違いは？</h3>
+                        <p>VPC Peeringは2つのVPC間の1対1接続で、接続数が増えるとフルメッシュ構成が必要になり管理が複雑化します。Transit Gatewayはハブ＆スポーク型で、VPCが増えても管理がシンプルです。VPCが3つ以上ならTGWを検討しましょう。</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h4>Q: TGWの料金体系は？</h4>
+                        <p>アタッチメント時間（$/hour）とデータ処理量（$/GB）の2軸で課金されます。VPC Peeringより割高ですが、管理コストの削減や機能面でのメリットとのトレードオフを検討しましょう。</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h4>Q: 別アカウントのVPCも接続できる？</h4>
+                        <p>はい。Resource Access Manager（RAM）を使ってTGWを他のAWSアカウントと共有できます。AWS Organizationsと連携すれば、組織内でのマルチアカウント構成が容易になります。</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h4>Q: セキュリティグループは適用される？</h4>
+                        <p>TGW自体にセキュリティグループは適用できません。TGW通過後の通信制御は、各VPC内のセキュリティグループやNACL、またはNetwork Firewallで行います。</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h4>Q: Cloud WANとの違いは？</h4>
+                        <p>Transit Gatewayはリージョン単位で管理（Customer Managed）、Cloud WANはグローバルレベルで一元管理（AWS Managed）です。Cloud WANはBGPベースのリージョン間接続、Intent-basedポリシーなど高度な機能がありますが、TGWは柔軟なDIY設計が可能です。</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h4>Q: マルチキャストはどう使う？</h4>
+                        <p>TGW作成時にマルチキャストを有効化すると、TGWがマルチキャストルーターとして動作します。IGMPv2をサポートし、VPCアタッチメントのみで利用可能です。後から有効化はできないので注意。</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>📘 AWS Transit Gateway Deep Dive Complete Guide</p>
+            <p class="text-small">AWS Black Belt Online Seminar 2025年1月版を参考に作成</p>
+            <div class="resources">
+                <a href="https://docs.aws.amazon.com/vpc/latest/tgw/" target="_blank">📖 公式ドキュメント</a>
+                <a href="https://aws.amazon.com/transit-gateway/pricing/" target="_blank">💰 料金ページ</a>
+                <a href="https://docs.aws.amazon.com/vpc/latest/tgw/transit-gateway-quotas.html" target="_blank">📏 クォータ一覧</a>
+            </div>
+        </footer>
+
+    
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

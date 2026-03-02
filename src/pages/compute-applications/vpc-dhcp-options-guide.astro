@@ -1,0 +1,1122 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'VPC DHCP オプションとカスタム DNS 完全ガイド',
+  category: 'compute-applications',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: '',
+  slug: 'vpc-dhcp-options-guide',
+  pageCss: '/aws_sap_studying/css/pages/vpc-dhcp-options-guide.css',
+  tocItems: [
+    { level: 'h2', id: 'まずはイメージをつかもう', text: '💡 まずはイメージをつかもう' },
+    { level: 'h3', id: 'ホテルのチェックインサービス', text: '🏨 ホテルのチェックインサービス' },
+    { level: 'h2', id: 'DHCP-の基礎知識', text: '📚 DHCP の基礎知識' },
+    { level: 'h3', id: 'DHCPDynamic-Host-Configuration-Protocolとは？', text: '🔍 DHCP（Dynamic Host Configuration Protocol）とは？' },
+    { level: 'h2', id: '⚙️-DHCP-オプションの種類', text: '⚙️ DHCP オプションの種類' },
+    { level: 'h2', id: 'デフォルト-DNS-vs-カスタム-DNS', text: '🔄 デフォルト DNS vs カスタム DNS' },
+    { level: 'h3', id: 'オフィスビルのたとえ', text: '🏢 オフィスビルのたとえ' },
+    { level: 'h2', id: '️-DNS解決の仕組み', text: '🏗️ DNS解決の仕組み' },
+    { level: 'h2', id: '️-カスタム-DHCP-オプションの作成', text: '🛠️ カスタム DHCP オプションの作成' },
+    { level: 'h3', id: 'AWS-CLI-でのDHCPオプションセット作成', text: 'AWS CLI でのDHCPオプションセット作成' },
+    { level: 'h3', id: 'CloudFormation-テンプレート', text: 'CloudFormation テンプレート' },
+    { level: 'h3', id: 'AmazonProvidedDNS-との併用', text: 'AmazonProvidedDNS との併用' },
+    { level: 'h2', id: 'ユースケース', text: '📋 ユースケース' },
+    { level: 'h3', id: 'ハイブリッドクラウド環境', text: 'ハイブリッドクラウド環境' },
+    { level: 'h3', id: 'セキュリティ要件対応', text: 'セキュリティ要件対応' },
+    { level: 'h3', id: 'マルチリージョン構成', text: 'マルチリージョン構成' },
+    { level: 'h3', id: '厳密な時刻同期', text: '厳密な時刻同期' },
+    { level: 'h2', id: '✅-ベストプラクティス', text: '✅ ベストプラクティス' },
+    { level: 'h2', id: 'トラブルシューティング', text: '🔧 トラブルシューティング' },
+    { level: 'h3', id: 'よくある問題と解決策', text: 'よくある問題と解決策' },
+    { level: 'h2', id: '❓-よくある質問FAQ', text: '❓ よくある質問（FAQ）' },
+    { level: 'h2', id: 'まとめ-DHCP-オプションの活用ポイント', text: '📌 まとめ：DHCP オプションの活用ポイント' }
+  ],
+  prevPage: 'ecs-fargate-rolling-deploy-complete-guide.html',
+  nextPage: 'autoscaling-instance-refresh-guide.html',
+  pageNum: 24,
+  pageTotal: 41,
+};
+
+const rawContent = `<!-- ヘッダー -->
+<header class="header">
+<span class="header-icon">
+     🌐
+    </span>
+<h1>
+     VPC DHCP オプションと
+     <br/>
+     カスタム DNS 完全ガイド
+    </h1>
+
+<p>
+     EC2インスタンスに「ネットワーク設定」を自動配布する仕組みを理解しよう
+    </p>
+</header>
+<!-- たとえ話：全体像 -->
+<section class="section">
+<h2 class="section-title" id="まずはイメージをつかもう">
+     💡 まずはイメージをつかもう
+    </h2>
+<div class="analogy-box">
+<h3 class="analogy-title" id="ホテルのチェックインサービス">
+      🏨 ホテルのチェックインサービス
+     </h3>
+<div class="analogy-content">
+<p>
+<strong>
+        VPC の DHCP オプション
+       </strong>
+       は、
+       <strong>
+        ホテルのチェックイン時に渡される案内情報
+       </strong>
+       のようなものです。
+      </p>
+<br/>
+<p>
+       🏨 ホテルにチェックインすると、フロントから以下の情報をもらいますよね：
+      </p>
+<ul style="margin: 15px 0 15px 30px;">
+<li>
+        📶
+        <strong>
+         WiFiパスワード
+        </strong>
+        → DNS サーバーのアドレス
+       </li>
+<li>
+        🍳
+        <strong>
+         朝食会場の場所
+        </strong>
+        → ドメイン名
+       </li>
+<li>
+        ⏰
+        <strong>
+         チェックアウト時間
+        </strong>
+        → NTPサーバー（時刻同期）
+       </li>
+</ul>
+<p>
+       EC2インスタンスも起動時に、DHCPオプションから「どのDNSを使うか」「どのドメインに属するか」などの情報を自動的に受け取ります。
+      </p>
+</div>
+</div>
+<div class="comparison-container">
+<div class="comparison-item">
+<div class="comparison-icon">
+       🏨
+      </div>
+<h4>
+       ホテルのチェックイン
+      </h4>
+<p>
+       案内情報を受け取る
+      </p>
+</div>
+<div class="comparison-arrow">
+      ⟷
+     </div>
+<div class="comparison-item">
+<div class="comparison-icon">
+       💻
+      </div>
+<h4>
+       EC2 の起動
+      </h4>
+<p>
+       DHCP で設定を受け取る
+      </p>
+</div>
+</div>
+</section>
+<!-- DHCP とは -->
+<section class="section">
+<h2 class="section-title" id="DHCP-の基礎知識">
+     📚 DHCP の基礎知識
+    </h2>
+<div class="card">
+<h3 id="DHCPDynamic-Host-Configuration-Protocolとは？" style="margin-bottom: 20px; color: #a8d8ff;">
+      🔍 DHCP（Dynamic Host Configuration Protocol）とは？
+     </h3>
+<p>
+      コンピューターがネットワークに参加する際に、IPアドレスやDNSサーバーなどの設定を
+      <strong>
+       自動的に配布
+      </strong>
+      するプロトコルです。
+     </p>
+<div class="alert alert-info" style="margin-top: 20px;">
+<span class="alert-icon">
+       💡
+      </span>
+<div>
+<strong>
+        AWSでのDHCP：
+       </strong>
+       VPC内のEC2インスタンスは、起動時にDHCPサーバーから自動的にIPアドレスや各種設定を取得します。この「配布する設定内容」を定義するのが
+       <strong>
+        DHCPオプションセット
+       </strong>
+       です。
+      </div>
+</div>
+<div class="flow-container" style="margin-top: 30px;">
+<div class="flow-step">
+<div class="flow-number">
+        1
+       </div>
+<div class="flow-content">
+<strong>
+         EC2 インスタンス起動
+        </strong>
+<p>
+         インスタンスがVPC内で起動を開始
+        </p>
+</div>
+</div>
+<div class="flow-connector">
+</div>
+<div class="flow-step">
+<div class="flow-number">
+        2
+       </div>
+<div class="flow-content">
+<strong>
+         DHCP リクエスト送信
+        </strong>
+<p>
+         「設定情報をください」とDHCPサーバーに要求
+        </p>
+</div>
+</div>
+<div class="flow-connector">
+</div>
+<div class="flow-step">
+<div class="flow-number">
+        3
+       </div>
+<div class="flow-content">
+<strong>
+         DHCP オプション適用
+        </strong>
+<p>
+         DHCPオプションセットの内容がインスタンスに配布される
+        </p>
+</div>
+</div>
+<div class="flow-connector">
+</div>
+<div class="flow-step">
+<div class="flow-number">
+        4
+       </div>
+<div class="flow-content">
+<strong>
+         ネットワーク設定完了
+        </strong>
+<p>
+         DNS、ドメイン名、NTPなどが自動設定される
+        </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- DHCPオプションの種類 -->
+<section class="section">
+<h2 class="section-title" id="⚙️-DHCP-オプションの種類">
+     ⚙️ DHCP オプションの種類
+    </h2>
+<div class="card">
+<p>
+      VPCのDHCPオプションセットで設定できる5つのパラメータを見ていきましょう。
+     </p>
+<div class="options-grid">
+<div class="option-card">
+<div class="option-name">
+        domain-name
+       </div>
+<div style="font-size: 2rem; margin: 10px 0;">
+        📛
+       </div>
+<div class="option-desc">
+        インスタンスに設定するドメイン名。ホスト名の完全修飾に使用されます。
+       </div>
+<div class="option-analogy">
+        🏨 「このホテルは○○リゾートグループです」という所属情報
+       </div>
+</div>
+<div class="option-card">
+<div class="option-name">
+        domain-name-servers
+       </div>
+<div style="font-size: 2rem; margin: 10px 0;">
+        🔍
+       </div>
+<div class="option-desc">
+        名前解決に使用するDNSサーバーのIPアドレス（最大4つ）。
+       </div>
+<div class="option-analogy">
+        🏨 「施設の場所を聞くときは、このコンシェルジュに聞いてね」
+       </div>
+</div>
+<div class="option-card">
+<div class="option-name">
+        ntp-servers
+       </div>
+<div style="font-size: 2rem; margin: 10px 0;">
+        ⏰
+       </div>
+<div class="option-desc">
+        時刻同期に使用するNTPサーバーのIPアドレス（最大4つ）。
+       </div>
+<div class="option-analogy">
+        🏨 「正確な時刻はこの時計を見てね」という基準時計
+       </div>
+</div>
+<div class="option-card">
+<div class="option-name">
+        netbios-name-servers
+       </div>
+<div style="font-size: 2rem; margin: 10px 0;">
+        🖥️
+       </div>
+<div class="option-desc">
+        NetBIOS名前解決用のWINSサーバー（Windows環境向け）。
+       </div>
+<div class="option-analogy">
+        🏨 Windows専用の「別館案内係」
+       </div>
+</div>
+<div class="option-card">
+<div class="option-name">
+        netbios-node-type
+       </div>
+<div style="font-size: 2rem; margin: 10px 0;">
+        🔢
+       </div>
+<div class="option-desc">
+        NetBIOS名前解決の方式を指定（1, 2, 4, 8）。通常は2を推奨。
+       </div>
+<div class="option-analogy">
+        🏨 「案内係への問い合わせ方式」の指定
+       </div>
+</div>
+</div>
+</div>
+</section>
+<!-- デフォルト vs カスタム -->
+<section class="section">
+<h2 class="section-title" id="デフォルト-DNS-vs-カスタム-DNS">
+     🔄 デフォルト DNS vs カスタム DNS
+    </h2>
+<div class="card">
+<div class="analogy-box" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);">
+<h3 class="analogy-title" id="オフィスビルのたとえ">
+       🏢 オフィスビルのたとえ
+      </h3>
+<div class="analogy-content">
+<p>
+<strong>
+         デフォルトDNS（AmazonProvidedDNS）
+        </strong>
+        = ビル備え付けの案内板
+        <br/>
+        → 基本的な場所は分かるが、会社独自の部署名は載っていない
+       </p>
+<br/>
+<p>
+<strong>
+         カスタムDNS
+        </strong>
+        = 自社専用の受付係を配置
+        <br/>
+        → 社内の独自ルールや非公開サーバーの場所も案内できる
+       </p>
+</div>
+</div>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+         項目
+        </th>
+<th>
+         🏢 デフォルト DNS
+        </th>
+<th>
+         🎯 カスタム DNS
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+          提供元
+         </strong>
+</td>
+<td>
+         AWS（AmazonProvidedDNS）
+        </td>
+<td>
+         自前のDNSサーバー
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          IPアドレス
+         </strong>
+</td>
+<td>
+         VPC CIDR + 2
+         <br/>
+         (例: 10.0.0.2)
+        </td>
+<td>
+         任意のIPアドレス
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          Route 53連携
+         </strong>
+</td>
+<td>
+         ✅ 自動連携
+        </td>
+<td>
+         ⚠️ 設定が必要
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          社内DNS連携
+         </strong>
+</td>
+<td>
+         ❌ 不可
+        </td>
+<td>
+         ✅ 可能
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          ユースケース
+         </strong>
+</td>
+<td>
+         シンプルな構成
+        </td>
+<td>
+         ハイブリッド環境、エンタープライズ
+        </td>
+</tr>
+</tbody>
+</table>
+<div class="alert alert-warning">
+<span class="alert-icon">
+       ⚠️
+      </span>
+<div>
+<strong>
+        注意：
+       </strong>
+       カスタムDNSを使う場合、Route 53 プライベートホストゾーンの名前解決には追加設定（Route 53 Resolver）が必要になります。
+      </div>
+</div>
+</div>
+</section>
+<!-- アーキテクチャ図 -->
+<section class="section">
+<h2 class="section-title" id="️-DNS解決の仕組み">
+     🏗️ DNS解決の仕組み
+    </h2>
+<div class="architecture">
+<div class="arch-title">
+      📊 デフォルト DNS の動き
+     </div>
+<div class="arch-diagram">
+<div class="arch-box">
+<div class="arch-box-icon">
+        💻
+       </div>
+<div>
+        EC2 インスタンス
+       </div>
+<div style="font-size: 0.9rem; opacity: 0.8;">
+        app.internal を解決したい
+       </div>
+</div>
+<div class="arch-arrow">
+       →
+      </div>
+<div class="arch-box">
+<div class="arch-box-icon">
+        🔍
+       </div>
+<div>
+        AmazonProvidedDNS
+       </div>
+<div style="font-size: 0.9rem; opacity: 0.8;">
+        VPC CIDR + 2
+       </div>
+</div>
+<div class="arch-arrow">
+       →
+      </div>
+<div class="arch-box">
+<div class="arch-box-icon">
+        🗺️
+       </div>
+<div>
+        Route 53
+       </div>
+<div style="font-size: 0.9rem; opacity: 0.8;">
+        Private Hosted Zone
+       </div>
+</div>
+</div>
+</div>
+<div class="architecture" style="background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);">
+<div class="arch-title">
+      📊 カスタム DNS + Route 53 Resolver の動き
+     </div>
+<div class="arch-diagram">
+<div class="arch-box">
+<div class="arch-box-icon">
+        💻
+       </div>
+<div>
+        EC2 インスタンス
+       </div>
+</div>
+<div class="arch-arrow">
+       →
+      </div>
+<div class="arch-box" style="border-color: #fdcb6e;">
+<div class="arch-box-icon">
+        🏢
+       </div>
+<div>
+        カスタムDNS
+       </div>
+<div style="font-size: 0.9rem; color: #fdcb6e;">
+        社内サーバー
+       </div>
+</div>
+<div class="arch-arrow">
+       →
+      </div>
+<div class="arch-box" style="border-color: #74b9ff;">
+<div class="arch-box-icon">
+        🔀
+       </div>
+<div>
+        Route 53 Resolver
+       </div>
+<div style="font-size: 0.9rem; color: #74b9ff;">
+        Inbound Endpoint
+       </div>
+</div>
+<div class="arch-arrow">
+       →
+      </div>
+<div class="arch-box">
+<div class="arch-box-icon">
+        🗺️
+       </div>
+<div>
+        Route 53
+       </div>
+</div>
+</div>
+</div>
+</section>
+<!-- カスタムDHCPオプションの作成 -->
+<section class="section">
+<h2 class="section-title" id="️-カスタム-DHCP-オプションの作成">
+     🛠️ カスタム DHCP オプションの作成
+    </h2>
+<div class="card">
+<h3 id="AWS-CLI-でのDHCPオプションセット作成" style="margin-bottom: 20px; color: #a8d8ff;">
+      AWS CLI でのDHCPオプションセット作成
+     </h3>
+<div class="code-block">
+<div class="code-header">
+<span class="code-lang">
+        AWS CLI
+       </span>
+</div>
+<pre><span class="code-comment"># カスタムDHCPオプションセットを作成</span>
+aws ec2 create-dhcp-options \\
+    --dhcp-configurations \\
+        <span class="code-string">"Key=domain-name,Values=mycompany.internal"</span> \\
+        <span class="code-string">"Key=domain-name-servers,Values=10.0.1.100,10.0.2.100"</span> \\
+        <span class="code-string">"Key=ntp-servers,Values=169.254.169.123"</span>
+
+<span class="code-comment"># VPCにDHCPオプションセットを関連付け</span>
+aws ec2 associate-dhcp-options \\
+    --dhcp-options-id <span class="code-value">dopt-1234567890abcdef0</span> \\
+    --vpc-id <span class="code-value">vpc-0987654321fedcba0</span></pre>
+</div>
+<div class="alert alert-info">
+<span class="alert-icon">
+       💡
+      </span>
+<div>
+<strong>
+        Amazon Time Sync Service：
+       </strong>
+       NTPサーバーには
+       <code>
+        169.254.169.123
+       </code>
+       を指定すると、AWSのTime Sync Serviceを使用できます。うるう秒にも対応した高精度な時刻同期が可能です。
+      </div>
+</div>
+</div>
+<div class="card">
+<h3 id="CloudFormation-テンプレート" style="margin-bottom: 20px; color: #a8d8ff;">
+      CloudFormation テンプレート
+     </h3>
+<div class="code-block">
+<div class="code-header">
+<span class="code-lang">
+        YAML
+       </span>
+</div>
+<pre><span class="code-key">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-key">Description:</span> <span class="code-string">'Custom DHCP Options Set'</span>
+
+<span class="code-key">Resources:</span>
+  <span class="code-key">CustomDHCPOptions:</span>
+    <span class="code-key">Type:</span> <span class="code-value">AWS::EC2::DHCPOptions</span>
+    <span class="code-key">Properties:</span>
+      <span class="code-key">DomainName:</span> <span class="code-string">'mycompany.internal'</span>
+      <span class="code-key">DomainNameServers:</span>
+        - <span class="code-string">'10.0.1.100'</span>
+        - <span class="code-string">'10.0.2.100'</span>
+      <span class="code-key">NtpServers:</span>
+        - <span class="code-string">'169.254.169.123'</span>
+      <span class="code-key">Tags:</span>
+        - <span class="code-key">Key:</span> <span class="code-string">Name</span>
+          <span class="code-key">Value:</span> <span class="code-string">'Custom-DHCP-Options'</span>
+
+  <span class="code-key">DHCPOptionsAssociation:</span>
+    <span class="code-key">Type:</span> <span class="code-value">AWS::EC2::VPCDHCPOptionsAssociation</span>
+    <span class="code-key">Properties:</span>
+      <span class="code-key">DhcpOptionsId:</span> <span class="code-value">!Ref CustomDHCPOptions</span>
+      <span class="code-key">VpcId:</span> <span class="code-value">!Ref MyVPC</span></pre>
+</div>
+</div>
+<div class="card">
+<h3 id="AmazonProvidedDNS-との併用" style="margin-bottom: 20px; color: #a8d8ff;">
+      AmazonProvidedDNS との併用
+     </h3>
+<p>
+      カスタムDNSを使いながらRoute 53も使いたい場合は、DNSサーバーの一つに
+      <code>
+       AmazonProvidedDNS
+      </code>
+      を含めることができます。
+     </p>
+<div class="code-block">
+<div class="code-header">
+<span class="code-lang">
+        AWS CLI
+       </span>
+</div>
+<pre><span class="code-comment"># AmazonProvidedDNS とカスタムDNSの併用</span>
+aws ec2 create-dhcp-options \\
+    --dhcp-configurations \\
+        <span class="code-string">"Key=domain-name-servers,Values=AmazonProvidedDNS,10.0.1.100"</span></pre>
+</div>
+<div class="alert alert-warning">
+<span class="alert-icon">
+       ⚠️
+      </span>
+<div>
+<strong>
+        注意：
+       </strong>
+       この設定ではDNSクエリが両方のサーバーに分散されます。一貫した名前解決が必要な場合は、Route 53 Resolver を使用してください。
+      </div>
+</div>
+</div>
+</section>
+<!-- ユースケース -->
+<section class="section">
+<h2 class="section-title" id="ユースケース">
+     📋 ユースケース
+    </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<div class="usecase-icon">
+       🏢
+      </div>
+<h3 class="usecase-title" id="ハイブリッドクラウド環境">
+       ハイブリッドクラウド環境
+      </h3>
+<p>
+       オンプレミスのActive DirectoryやDNSサーバーと連携。社内ドメインの名前解決をAWSからも可能に。
+      </p>
+<div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+<strong>
+        設定例：
+       </strong>
+<br/>
+       DNS: オンプレミスDNS (192.168.1.10)
+       <br/>
+       Domain: corp.mycompany.com
+      </div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+       🔒
+      </div>
+<h3 class="usecase-title" id="セキュリティ要件対応">
+       セキュリティ要件対応
+      </h3>
+<p>
+       DNSクエリを監査可能な自前のDNSサーバー経由に統一。DNSログの一元管理を実現。
+      </p>
+<div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+<strong>
+        メリット：
+       </strong>
+<br/>
+       ・全DNSクエリの監査
+       <br/>
+       ・悪意あるドメインのブロック
+      </div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+       🌐
+      </div>
+<h3 class="usecase-title" id="マルチリージョン構成">
+       マルチリージョン構成
+      </h3>
+<p>
+       各リージョンで異なるDNS設定を適用。グローバル展開時の地域固有の名前解決に対応。
+      </p>
+<div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+<strong>
+        活用例：
+       </strong>
+<br/>
+       東京: jp.internal
+       <br/>
+       US: us.internal
+      </div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+       ⏱️
+      </div>
+<h3 class="usecase-title" id="厳密な時刻同期">
+       厳密な時刻同期
+      </h3>
+<p>
+       金融システムなど、ミリ秒単位の時刻精度が求められる環境でカスタムNTPを指定。
+      </p>
+<div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+<strong>
+        推奨設定：
+       </strong>
+<br/>
+       NTP: 169.254.169.123
+       <br/>
+       (Amazon Time Sync Service)
+      </div>
+</div>
+</div>
+</section>
+<!-- ベストプラクティス -->
+<section class="section">
+<h2 class="section-title" id="✅-ベストプラクティス">
+     ✅ ベストプラクティス
+    </h2>
+<div class="card">
+<div class="best-practice-list">
+<div class="best-practice-item">
+<div class="bp-icon">
+        🔄
+       </div>
+<div>
+<strong>
+         冗長化を確保する
+        </strong>
+<p>
+         DNSサーバーは必ず2台以上指定。異なるAZに配置してSPOFを防止しましょう。
+        </p>
+</div>
+</div>
+<div class="best-practice-item">
+<div class="bp-icon">
+        📝
+       </div>
+<div>
+<strong>
+         変更は計画的に
+        </strong>
+<p>
+         DHCPオプションの変更は、既存インスタンスには即座に反映されません。DHCPリース更新または再起動が必要です。
+        </p>
+</div>
+</div>
+<div class="best-practice-item">
+<div class="bp-icon">
+        🏷️
+       </div>
+<div>
+<strong>
+         命名規則を統一
+        </strong>
+<p>
+         ドメイン名は組織全体で一貫した命名規則を使用。例: env.region.company.internal
+        </p>
+</div>
+</div>
+<div class="best-practice-item">
+<div class="bp-icon">
+        📊
+       </div>
+<div>
+<strong>
+         DNSサーバーの監視
+        </strong>
+<p>
+         カスタムDNSサーバーの可用性とレスポンスタイムを監視。障害時の影響は甚大です。
+        </p>
+</div>
+</div>
+<div class="best-practice-item">
+<div class="bp-icon">
+        🔙
+       </div>
+<div>
+<strong>
+         ロールバック計画
+        </strong>
+<p>
+         変更前の設定を記録し、問題発生時はデフォルトDHCPオプションに戻せるようにしておきましょう。
+        </p>
+</div>
+</div>
+<div class="best-practice-item">
+<div class="bp-icon">
+        🧪
+       </div>
+<div>
+<strong>
+         テスト環境で検証
+        </strong>
+<p>
+         本番適用前に開発/テスト環境でDNS解決が正常に動作することを確認しましょう。
+        </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- トラブルシューティング -->
+<section class="section">
+<h2 class="section-title" id="トラブルシューティング">
+     🔧 トラブルシューティング
+    </h2>
+<div class="card">
+<h3 id="よくある問題と解決策" style="margin-bottom: 20px; color: #f093fb;">
+      よくある問題と解決策
+     </h3>
+<div class="alert alert-warning" style="margin-bottom: 20px;">
+<span class="alert-icon">
+       ❓
+      </span>
+<div>
+<strong>
+        問題: DHCPオプション変更が反映されない
+       </strong>
+<p style="margin-top: 10px;">
+<strong>
+         原因：
+        </strong>
+        既存インスタンスはDHCPリース期間中は古い設定を保持
+        <br/>
+<strong>
+         解決策：
+        </strong>
+        インスタンスを再起動するか、OS上で
+        <code>
+         sudo dhclient -r &amp;&amp; sudo dhclient
+        </code>
+        を実行
+       </p>
+</div>
+</div>
+<div class="alert alert-warning" style="margin-bottom: 20px;">
+<span class="alert-icon">
+       ❓
+      </span>
+<div>
+<strong>
+        問題: カスタムDNSでRoute 53 Private Hosted Zoneが解決できない
+       </strong>
+<p style="margin-top: 10px;">
+<strong>
+         原因：
+        </strong>
+        カスタムDNSはRoute 53に直接アクセスできない
+        <br/>
+<strong>
+         解決策：
+        </strong>
+        Route 53 Resolver Inbound Endpointを作成し、カスタムDNSからフォワード設定
+       </p>
+</div>
+</div>
+<div class="alert alert-warning">
+<span class="alert-icon">
+       ❓
+      </span>
+<div>
+<strong>
+        問題: 名前解決が遅い・タイムアウトする
+       </strong>
+<p style="margin-top: 10px;">
+<strong>
+         確認ポイント：
+        </strong>
+<br/>
+        ・DNSサーバーのセキュリティグループでポート53（UDP/TCP）が許可されているか
+        <br/>
+        ・DNSサーバーが正常に稼働しているか
+        <br/>
+        ・ネットワークACLでDNSトラフィックがブロックされていないか
+       </p>
+</div>
+</div>
+<div class="code-block" style="margin-top: 25px;">
+<div class="code-header">
+<span class="code-lang">
+        診断コマンド
+       </span>
+</div>
+<pre><span class="code-comment"># 現在のDNS設定を確認</span>
+cat /etc/resolv.conf
+
+<span class="code-comment"># DNS解決テスト</span>
+nslookup myserver.mycompany.internal
+
+<span class="code-comment"># 特定のDNSサーバーを指定してテスト</span>
+dig @10.0.1.100 myserver.mycompany.internal
+
+<span class="code-comment"># DHCPリースの更新</span>
+sudo dhclient -r &amp;&amp; sudo dhclient</pre>
+</div>
+</div>
+</section>
+<!-- FAQ -->
+<section class="section">
+<h2 class="section-title" id="❓-よくある質問FAQ">
+     ❓ よくある質問（FAQ）
+    </h2>
+<div class="card">
+<div class="faq-item">
+<div class="faq-question">
+<span>
+<span class="faq-icon">
+         Q.
+        </span>
+        DHCPオプションセットは後から変更できますか？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        A.
+       </strong>
+       既存のDHCPオプションセット自体は変更できません。新しいDHCPオプションセットを作成し、VPCに関連付けを変更する必要があります。ただし、既存インスタンスへの反映にはDHCPリース更新または再起動が必要です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+<span class="faq-icon">
+         Q.
+        </span>
+        AmazonProvidedDNS のIPアドレスは何ですか？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        A.
+       </strong>
+       VPCのCIDRブロックの「+2」のアドレスです。例えば、VPCが10.0.0.0/16の場合、DNSサーバーは10.0.0.2になります。また、169.254.169.253 でも常にアクセス可能です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+<span class="faq-icon">
+         Q.
+        </span>
+        1つのVPCに複数のDHCPオプションセットを関連付けできますか？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        A.
+       </strong>
+       いいえ、1つのVPCには1つのDHCPオプションセットのみ関連付け可能です。サブネットごとに異なるDNS設定が必要な場合は、インスタンスのOS上で個別に設定するか、異なるVPCを使用してください。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+<span class="faq-icon">
+         Q.
+        </span>
+        DHCPオプションを「なし」にするとどうなりますか？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        A.
+       </strong>
+       VPCのDHCP関連付けを「なし」にすると、インスタンスはDNSサーバーやドメイン名の情報を受け取れなくなります。この状態では名前解決ができないため、通常は推奨されません。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+<span class="faq-icon">
+         Q.
+        </span>
+        WindowsインスタンスでNetBIOS設定が必要ですか？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        A.
+       </strong>
+       最新のWindows環境では通常不要です。Active Directory環境でレガシーアプリケーションがNetBIOSに依存している場合のみ設定を検討してください。設定する場合は netbios-node-type を 2（P-node）にすることを推奨します。
+      </div>
+</div>
+</div>
+</section>
+<!-- まとめ -->
+<div class="summary-card">
+<h2 class="summary-title" id="まとめ-DHCP-オプションの活用ポイント">
+     📌 まとめ：DHCP オプションの活用ポイント
+    </h2>
+<div class="summary-points">
+<div class="summary-point">
+<div class="summary-point-icon">
+       🏨
+      </div>
+<div>
+<strong>
+        自動配布
+       </strong>
+</div>
+<div style="font-size: 0.9rem; opacity: 0.9;">
+       EC2起動時に設定を自動適用
+      </div>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">
+       🔍
+      </div>
+<div>
+<strong>
+        DNS制御
+       </strong>
+</div>
+<div style="font-size: 0.9rem; opacity: 0.9;">
+       カスタムDNSで社内連携
+      </div>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">
+       ⏰
+      </div>
+<div>
+<strong>
+        時刻同期
+       </strong>
+</div>
+<div style="font-size: 0.9rem; opacity: 0.9;">
+       NTPで正確な時刻を維持
+      </div>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">
+       🔄
+      </div>
+<div>
+<strong>
+        冗長化
+       </strong>
+</div>
+<div style="font-size: 0.9rem; opacity: 0.9;">
+       複数サーバーで可用性確保
+      </div>
+</div>
+</div>
+</div>
+
+
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

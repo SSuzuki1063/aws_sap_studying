@@ -1,0 +1,1614 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'Gateway Load Balancer (GWLB) 完全ガイド',
+  category: 'compute-applications',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: '',
+  slug: 'gwlb-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: 'Gateway-Load-BalancerGWLBを一言でいうと？', text: 'Gateway Load Balancer（GWLB）を一言でいうと？' },
+    { level: 'h2', id: 'GWLBとは？-──-全体像', text: 'GWLBとは？ ── 全体像' },
+    { level: 'h3', id: '空港のセキュリティゲートに例えると…', text: '🏢 「空港のセキュリティゲート」に例えると…' },
+    { level: 'h2', id: 'GWLBの4大特徴', text: 'GWLBの4大特徴' },
+    { level: 'h3', id: '①-透過的な検査', text: '① 透過的な検査' },
+    { level: 'h2', id: 'Geneveプロトコル-──-パケットの封筒詰め', text: 'Geneveプロトコル ── パケットの「封筒詰め」' },
+    { level: 'h3', id: '✉️-封筒の中に封筒を入れる仕組み', text: '✉️ 「封筒の中に封筒」を入れる仕組み' },
+    { level: 'h2', id: 'トラフィックフロー-──-データの旅路', text: 'トラフィックフロー ── データの旅路' },
+    { level: 'h3', id: '高速道路の料金所検査で考える', text: '🚗 「高速道路の料金所検査」で考える' },
+    { level: 'h2', id: 'VPCアーキテクチャ-──-2つのVPCの関係', text: 'VPCアーキテクチャ ── 2つのVPCの関係' },
+    { level: 'h3', id: '️-なぜVPCを分けるのか？', text: '🏗️ なぜVPCを分けるのか？' },
+    { level: 'h2', id: 'GWLBあり-vs-なし-──-何が変わる？', text: 'GWLBあり vs なし ── 何が変わる？' },
+    { level: 'h3', id: '❌-GWLBなしの場合', text: '❌ GWLBなしの場合' },
+    { level: 'h2', id: '3種類のロードバランサー比較', text: '3種類のロードバランサー比較' },
+    { level: 'h3', id: 'ホテルのスタッフに例えると…', text: '🏨 「ホテルのスタッフ」に例えると…' },
+    { level: 'h2', id: 'ユースケース-──-どんな時に使う？', text: 'ユースケース ── どんな時に使う？' },
+    { level: 'h3', id: '次世代ファイアウォール', text: '次世代ファイアウォール' },
+    { level: 'h2', id: 'ルートテーブル設定-──-経路制御の鍵', text: 'ルートテーブル設定 ── 経路制御の鍵' },
+    { level: 'h3', id: '️-道路標識で例えると…', text: '🗺️ 「道路標識」で例えると…' },
+    { level: 'h2', id: '高可用性とスケーリング', text: '高可用性とスケーリング' },
+    { level: 'h3', id: 'ヘルスチェック', text: 'ヘルスチェック' },
+    { level: 'h2', id: 'FAQ-──-よくある質問', text: 'FAQ ── よくある質問' },
+    { level: 'h3', id: 'AWS認定試験で押さえるべきGWLBのポイント', text: 'AWS認定試験で押さえるべきGWLBのポイント' }
+  ],
+  prevPage: 'eventbridge-event-patterns-guide.html',
+  nextPage: 'aws-lambda-metrics-perfect.html',
+  pageNum: 27,
+  pageTotal: 43,
+};
+
+const rawContent = `<style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: #f0f4f8;
+            color: #374151;
+            line-height: 1.8;
+            padding: 20px;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 40%, #4facfe 100%);
+            color: white;
+            padding: 60px 50px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '🛡️';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.07;
+            top: -40px;
+            right: -30px;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #ff9900, #ffcc80, #ff9900);
+        }
+
+        .header-badge {
+            display: inline-block;
+            background: rgba(255, 153, 0, 0.25);
+            border: 1px solid rgba(255, 153, 0, 0.5);
+            padding: 6px 20px;
+            border-radius: 30px;
+            font-size: 0.85em;
+            font-weight: 500;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            font-weight: 800;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+            line-height: 1.3;
+        }
+
+        .header p {
+            font-size: 1.15em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+            max-width: 750px;
+            margin: 0 auto;
+        }
+
+        /* ========== CONTENT ========== */
+        .content {
+            padding: 50px;
+        }
+
+        /* ========== CONCLUSION FIRST ========== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .conclusion-first::before {
+            content: '⚡ まず結論';
+            position: absolute;
+            top: -16px;
+            left: 30px;
+            background: #f59e0b;
+            color: white;
+            padding: 4px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9em;
+        }
+
+        .conclusion-first h2 {
+            color: #92400e;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        .conclusion-points {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .conclusion-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 16px;
+            border-radius: 12px;
+        }
+
+        .conclusion-point .icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .conclusion-point .text {
+            font-size: 0.95em;
+            color: #78350f;
+            line-height: 1.6;
+        }
+
+        .conclusion-point .text strong {
+            color: #92400e;
+        }
+
+        /* ========== SECTION TITLES ========== */
+        .section {
+            margin-bottom: 55px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 30px;
+            padding-bottom: 16px;
+            border-bottom: 3px solid #e5e7eb;
+        }
+
+        .section-number {
+            background: linear-gradient(135deg, #1e3a5f, #4facfe);
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .section-header h2 {
+            font-size: 1.8em;
+            color: #1e3a5f;
+            font-weight: 700;
+        }
+
+        /* ========== ANALOGY BOX ========== */
+        .analogy-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 30px;
+            border-left: 6px solid #3b82f6;
+            position: relative;
+        }
+
+        .analogy-box::before {
+            content: '💡 たとえ話で理解';
+            position: absolute;
+            top: -14px;
+            left: 24px;
+            background: #3b82f6;
+            color: white;
+            padding: 4px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .analogy-box h3 {
+            color: #1e40af;
+            font-size: 1.3em;
+            margin-bottom: 16px;
+            margin-top: 8px;
+        }
+
+        .analogy-box p {
+            color: #1e3a8a;
+            font-size: 0.95em;
+            line-height: 1.8;
+        }
+
+        /* ========== COMPARISON TABLE ========== */
+        .comparison-container {
+            overflow-x: auto;
+            margin: 25px 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #1e3a5f, #2d6a9f);
+            color: white;
+            padding: 16px 20px;
+            font-weight: 600;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .comparison-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.9em;
+        }
+
+        .comparison-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .comparison-table tr:hover td {
+            background: #eff6ff;
+            transition: background 0.2s;
+        }
+
+        /* ========== DIAGRAM STYLES ========== */
+        .diagram-container {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 35px;
+            margin: 25px 0;
+        }
+
+        .diagram-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #1e3a5f;
+            margin-bottom: 25px;
+        }
+
+        /* ===== Flow Diagram (GWLB Traffic) ===== */
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .flow-box {
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-align: center;
+            min-width: 160px;
+            position: relative;
+        }
+
+        .flow-box.user {
+            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+            border: 2px solid #0ea5e9;
+            color: #0c4a6e;
+        }
+
+        .flow-box.gwlbe {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            color: #78350f;
+        }
+
+        .flow-box.gwlb {
+            background: linear-gradient(135deg, #dbeafe, #93c5fd);
+            border: 2px solid #3b82f6;
+            color: #1e3a8a;
+        }
+
+        .flow-box.appliance {
+            background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+            border: 2px solid #ec4899;
+            color: #831843;
+        }
+
+        .flow-box.app {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            border: 2px solid #10b981;
+            color: #064e3b;
+        }
+
+        .flow-box.internet {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            border: 2px solid #94a3b8;
+            color: #334155;
+        }
+
+        .flow-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 0;
+            color: #64748b;
+            font-size: 0.78em;
+            font-weight: 500;
+        }
+
+        .flow-arrow .arrow-icon {
+            font-size: 1.5em;
+            line-height: 1;
+        }
+
+        .flow-arrow .arrow-label {
+            font-size: 0.85em;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+
+        .flow-arrow-horizontal {
+            display: flex;
+            align-items: center;
+            color: #64748b;
+            font-size: 0.8em;
+            gap: 4px;
+        }
+
+        .flow-arrow-horizontal .arrow-icon {
+            font-size: 1.5em;
+        }
+
+        /* ===== VPC Layout Diagram ===== */
+        .vpc-diagram {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .vpc-box {
+            border: 3px dashed #94a3b8;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+        }
+
+        .vpc-box.consumer {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        .vpc-box.security {
+            border-color: #ec4899;
+            background: rgba(236, 72, 153, 0.03);
+        }
+
+        .vpc-label {
+            position: absolute;
+            top: -14px;
+            left: 20px;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8em;
+            letter-spacing: 0.5px;
+        }
+
+        .vpc-label.consumer {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .vpc-label.security {
+            background: #ec4899;
+            color: white;
+        }
+
+        .vpc-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .vpc-component {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .vpc-connection {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 0.75em;
+            color: #64748b;
+            padding: 8px 0;
+        }
+
+        /* ========== FOUR FEATURE CARDS ========== */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .feature-card {
+            background: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 28px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .feature-card:nth-child(1)::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .feature-card:nth-child(2)::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+        .feature-card:nth-child(3)::before { background: linear-gradient(90deg, #10b981, #34d399); }
+        .feature-card:nth-child(4)::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+        .feature-card .feature-icon {
+            font-size: 2em;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3, .feature-card h4 {
+            font-size: 1.1em;
+            color: #1e3a5f;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            font-size: 0.88em;
+            color: #6b7280;
+            line-height: 1.7;
+        }
+
+        /* ========== GENEVE PROTOCOL DIAGRAM ========== */
+        .geneve-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .packet-layer {
+            display: flex;
+            align-items: stretch;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .packet-label {
+            padding: 14px 18px;
+            font-weight: 700;
+            font-size: 0.78em;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .packet-fields {
+            display: flex;
+            flex: 1;
+        }
+
+        .packet-field {
+            flex: 1;
+            padding: 14px 12px;
+            text-align: center;
+            font-size: 0.78em;
+            font-weight: 500;
+            border-left: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .packet-layer.outer .packet-label {
+            background: #1e40af;
+            color: white;
+        }
+        .packet-layer.outer .packet-field {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left-color: #93c5fd;
+        }
+
+        .packet-layer.geneve .packet-label {
+            background: #7c3aed;
+            color: white;
+        }
+        .packet-layer.geneve .packet-field {
+            background: #ede9fe;
+            color: #5b21b6;
+            border-left-color: #c4b5fd;
+        }
+
+        .packet-layer.original .packet-label {
+            background: #059669;
+            color: white;
+        }
+        .packet-layer.original .packet-field {
+            background: #d1fae5;
+            color: #065f46;
+            border-left-color: #6ee7b7;
+        }
+
+        /* ========== STEP-BY-STEP FLOW ========== */
+        .step-flow {
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .step-flow::before {
+            content: '';
+            position: absolute;
+            left: 23px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, #3b82f6, #8b5cf6, #ec4899, #10b981);
+            border-radius: 3px;
+        }
+
+        .step-item {
+            position: relative;
+            margin-bottom: 24px;
+            padding: 20px 24px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            transform: translateX(4px);
+        }
+
+        .step-item::before {
+            content: attr(data-step);
+            position: absolute;
+            left: -50px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85em;
+            color: white;
+            z-index: 1;
+        }
+
+        .step-item:nth-child(1)::before { background: #3b82f6; }
+        .step-item:nth-child(2)::before { background: #6366f1; }
+        .step-item:nth-child(3)::before { background: #8b5cf6; }
+        .step-item:nth-child(4)::before { background: #a855f7; }
+        .step-item:nth-child(5)::before { background: #d946ef; }
+        .step-item:nth-child(6)::before { background: #ec4899; }
+        .step-item:nth-child(7)::before { background: #10b981; }
+
+        .step-item h4 {
+            color: #1e3a5f;
+            font-size: 1em;
+            margin-bottom: 6px;
+        }
+
+        .step-item p {
+            color: #6b7280;
+            font-size: 0.88em;
+        }
+
+        /* ========== COMPARISON CARDS ========== */
+        .compare-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .compare-card {
+            border-radius: 14px;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .compare-card.without {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 2px solid #fca5a5;
+        }
+
+        .compare-card.with {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 2px solid #86efac;
+        }
+
+        .compare-card h3, .compare-card h4 {
+            font-size: 1.1em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .compare-card.without h3, .compare-card.without h4 { color: #991b1b; }
+        .compare-card.with h3, .compare-card.with h4 { color: #166534; }
+
+        .compare-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .compare-list li {
+            padding: 8px 0;
+            font-size: 0.9em;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .compare-card.without .compare-list li { color: #7f1d1d; }
+        .compare-card.with .compare-list li { color: #14532d; }
+
+        /* ========== USE CASE CARDS ========== */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .usecase-card {
+            background: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .usecase-card:hover {
+            border-color: #4facfe;
+            box-shadow: 0 8px 24px rgba(79, 172, 254, 0.15);
+            transform: translateY(-3px);
+        }
+
+        .usecase-card .usecase-icon {
+            font-size: 2.5em;
+            margin-bottom: 14px;
+        }
+
+        .usecase-card h3, .usecase-card h4 {
+            color: #1e3a5f;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .usecase-card p {
+            color: #6b7280;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+
+        /* ========== FAQ SECTION ========== */
+        .faq-item {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .faq-q {
+            font-weight: 700;
+            color: #1e3a5f;
+            font-size: 1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .faq-q::before {
+            content: 'Q';
+            background: #3b82f6;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            flex-shrink: 0;
+        }
+
+        .faq-a {
+            font-size: 0.9em;
+            color: #6b7280;
+            line-height: 1.8;
+            padding-left: 38px;
+        }
+
+        /* ========== HIGHLIGHT BOX ========== */
+        .highlight-box {
+            background: linear-gradient(135deg, #fdf4ff, #fae8ff);
+            border: 2px solid #d946ef;
+            border-radius: 14px;
+            padding: 24px;
+            margin: 25px 0;
+        }
+
+        .highlight-box h3, .highlight-box h4 {
+            color: #86198f;
+            font-size: 1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .highlight-box p {
+            color: #701a75;
+            font-size: 0.9em;
+            line-height: 1.7;
+        }
+
+        /* ========== ANALOGY DIAGRAM ========== */
+        .analogy-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            margin: 24px 0;
+        }
+
+        .analogy-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .analogy-item {
+            padding: 14px 22px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.88em;
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .analogy-item.real {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            color: #78350f;
+        }
+
+        .analogy-item.aws {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .analogy-arrow {
+            font-size: 1.3em;
+            color: #94a3b8;
+        }
+
+        .analogy-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .analogy-divider::before,
+        .analogy-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #d1d5db;
+        }
+
+        .analogy-divider span {
+            font-size: 0.75em;
+            color: #9ca3af;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* ========== EXAM TIPS ========== */
+        .exam-tips {
+            background: linear-gradient(135deg, #fff7ed, #ffedd5);
+            border: 2px solid #f97316;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .exam-tips::before {
+            content: '📝 試験対策ポイント';
+            position: absolute;
+            top: -14px;
+            left: 24px;
+            background: #f97316;
+            color: white;
+            padding: 4px 18px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85em;
+        }
+
+        .exam-tips h3 {
+            color: #9a3412;
+            margin-bottom: 16px;
+            margin-top: 8px;
+        }
+
+        .exam-tip-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            font-size: 0.9em;
+            color: #7c2d12;
+            border-bottom: 1px solid rgba(249, 115, 22, 0.15);
+        }
+
+        .exam-tip-item:last-child {
+            border-bottom: none;
+        }
+
+        /* ========== FOOTER ========== */
+        .footer {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+            color: white;
+            padding: 30px 50px;
+            text-align: center;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        /* ========== MAPPING TABLE ========== */
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 8px 16px;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .mapping-item {
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 0.88em;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .mapping-real {
+            background: #fef3c7;
+            border: 1.5px solid #f59e0b;
+            color: #78350f;
+        }
+
+        .mapping-arrow {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.2em;
+        }
+
+        .mapping-aws {
+            background: #dbeafe;
+            border: 1.5px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .mapping-header {
+            font-weight: 700;
+            font-size: 0.8em;
+            text-align: center;
+            padding: 10px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 900px) {
+            .content { padding: 30px 20px; }
+            .header { padding: 40px 20px; }
+            .header h1 { font-size: 2em; }
+            .conclusion-points { grid-template-columns: 1fr; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .vpc-diagram { grid-template-columns: 1fr; }
+            .compare-cards { grid-template-columns: 1fr; }
+            .usecase-grid { grid-template-columns: 1fr; }
+            .flow-row { flex-direction: column; gap: 0; }
+            .mapping-grid { grid-template-columns: 1fr; gap: 4px; }
+            .mapping-arrow { transform: rotate(90deg); }
+        }</style>
+<!-- ==================== HEADER ==================== -->
+    <div class="header">
+        <div class="header-badge">AWS NETWORKING · 初心者向けガイド</div>
+        <h1>🛡️ Gateway Load Balancer<br>完全ガイド</h1>
+        <p>ネットワークセキュリティの「見えない検問所」—— すべてのトラフィックを透過的に検査するGWLBの仕組みをたとえ話で徹底解説</p>
+    </div>
+
+    <div class="content">
+        <!-- ==================== CONCLUSION FIRST ==================== -->
+        <div class="conclusion-first">
+            <h2 id="Gateway-Load-BalancerGWLBを一言でいうと？">Gateway Load Balancer（GWLB）を一言でいうと？</h2>
+            <div class="conclusion-points">
+                <div class="conclusion-point">
+                    <span class="icon">🔍</span>
+                    <div class="text"><strong>透過的なセキュリティ検査</strong>：アプリケーションに手を加えず、すべてのトラフィックをファイアウォールやIDS/IPSに通せる「見えない検問所」</div>
+                </div>
+                <div class="conclusion-point">
+                    <span class="icon">📦</span>
+                    <div class="text"><strong>Geneveプロトコルで原本保持</strong>：元のパケット情報を丸ごとカプセル化して転送するため、送信元IPなどの情報が失われない</div>
+                </div>
+                <div class="conclusion-point">
+                    <span class="icon">🏗️</span>
+                    <div class="text"><strong>高可用性と自動スケーリング</strong>：複数AZに分散配置し、アプライアンスの障害時には自動フェイルオーバーする</div>
+                </div>
+                <div class="conclusion-point">
+                    <span class="icon">🔗</span>
+                    <div class="text"><strong>GWLBエンドポイント（GWLBe）</strong>：VPC間のトラフィックをつなぐ入口/出口として機能し、ルートテーブルで経路制御する</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 1: OVERVIEW ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h2 id="GWLBとは？-──-全体像">GWLBとは？ ── 全体像</h2>
+            </div>
+
+            <div class="analogy-box">
+                <h3 id="空港のセキュリティゲートに例えると…">🏢 「空港のセキュリティゲート」に例えると…</h3>
+                <p>
+                    空港に入るすべての旅客は、必ずセキュリティゲートを通過します。ゲートでは荷物の X線検査やボディチェックを受けますが、<strong>旅客のパスポート情報（送信元IP）は変わりません</strong>。検査が終われば、旅客はそのまま搭乗ゲートへ向かいます。この「全員が必ず通る、でも元の情報はそのまま」という仕組みが、GWLBの「透過的検査」そのものです。
+                </p>
+                <p style="margin-top: 12px;">
+                    さらに、空港には<strong>複数のセキュリティレーン</strong>があり、混雑したらレーンを増やし（スケーリング）、1つのレーンが故障しても他のレーンでカバーします（高可用性）。GWLBも同様に、検査装置（アプライアンス）を複数配置して負荷を分散します。
+                </p>
+            </div>
+
+            <!-- Mapping Table: Analogy → AWS -->
+            <div class="diagram-container">
+                <div class="diagram-title">🔗 たとえ話とAWSの対応関係</div>
+                <div class="mapping-grid">
+                    <div class="mapping-header">🏢 空港のたとえ</div>
+                    <div class="mapping-header"></div>
+                    <div class="mapping-header">☁️ AWSの実体</div>
+
+                    <div class="mapping-item mapping-real">✈️ 空港全体</div>
+                    <div class="mapping-arrow">→</div>
+                    <div class="mapping-item mapping-aws">VPC（ネットワーク全体）</div>
+
+                    <div class="mapping-item mapping-real">🚪 セキュリティゲート入口</div>
+                    <div class="mapping-arrow">→</div>
+                    <div class="mapping-item mapping-aws">GWLBエンドポイント（GWLBe）</div>
+
+                    <div class="mapping-item mapping-real">🔍 X線検査・ボディチェック</div>
+                    <div class="mapping-arrow">→</div>
+                    <div class="mapping-item mapping-aws">セキュリティアプライアンス</div>
+
+                    <div class="mapping-item mapping-real">👮 検査員の配置・管理</div>
+                    <div class="mapping-arrow">→</div>
+                    <div class="mapping-item mapping-aws">Gateway Load Balancer</div>
+
+                    <div class="mapping-item mapping-real">🎫 パスポート（変わらない）</div>
+                    <div class="mapping-arrow">→</div>
+                    <div class="mapping-item mapping-aws">元のIPアドレス情報</div>
+
+                    <div class="mapping-item mapping-real">🧳 荷物の封筒詰め</div>
+                    <div class="mapping-arrow">→</div>
+                    <div class="mapping-item mapping-aws">Geneveカプセル化</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 2: 4 FEATURES ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h2 id="GWLBの4大特徴">GWLBの4大特徴</h2>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3 id="①-透過的な検査">① 透過的な検査</h3>
+                    <p>アプリケーション側は検査の存在を意識しません。ルートテーブルの設定だけでトラフィックを検査経路に誘導でき、元のIP情報（送信元・宛先）はそのまま保持されます。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h4>② Geneveプロトコル</h4>
+                    <p>レイヤー3で動作し、元のパケットを丸ごとGeneve形式でカプセル化してアプライアンスに転送します。UDPポート6081を使用し、フロー情報（5タプル/3タプル/2タプル）で分散可能です。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏗️</div>
+                    <h4>③ 高可用性</h4>
+                    <p>複数のAZにまたがってアプライアンスを配置し、ヘルスチェックで障害を検知すると自動フェイルオーバー。クロスゾーン負荷分散にも対応しています。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h4>④ GWLBエンドポイント</h4>
+                    <p>VPCエンドポイント技術（PrivateLink）をベースに、VPC間のトラフィック入口・出口として機能します。ルートテーブルでGWLBeを指定して経路を制御します。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 3: GENEVE PROTOCOL ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h2 id="Geneveプロトコル-──-パケットの封筒詰め">Geneveプロトコル ── パケットの「封筒詰め」</h2>
+            </div>
+
+            <div class="analogy-box">
+                <h3 id="✉️-封筒の中に封筒を入れる仕組み">✉️ 「封筒の中に封筒」を入れる仕組み</h3>
+                <p>
+                    あなたが友人に手紙を送るとします。普通はそのまま封筒に入れて郵便局に出しますよね。ところが、セキュリティ会社が中身を検査する必要がある場合、<strong>元の封筒ごと大きな封筒に入れて</strong>セキュリティ会社に送ります。セキュリティ会社は大きな封筒を開け、中の元の封筒を検査し、問題なければ元の封筒をそのまま宛先に転送します。これがGeneveカプセル化の考え方です。
+                </p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-title">📦 Geneveカプセル化のパケット構造</div>
+                <div class="geneve-diagram">
+                    <div class="packet-layer outer">
+                        <div class="packet-label">外側ヘッダー<br>（大きな封筒）</div>
+                        <div class="packet-fields">
+                            <div class="packet-field">外側 IP ヘッダー<br><small>GWLB ↔ アプライアンス</small></div>
+                            <div class="packet-field">外側 UDP ヘッダー<br><small>ポート 6081</small></div>
+                        </div>
+                    </div>
+                    <div class="packet-layer geneve">
+                        <div class="packet-label">Geneve<br>ヘッダー</div>
+                        <div class="packet-fields">
+                            <div class="packet-field">VNI<br><small>仮想ネットワーク識別子</small></div>
+                            <div class="packet-field">フローCookie<br><small>フロー追跡用</small></div>
+                            <div class="packet-field">TLVオプション<br><small>拡張メタデータ</small></div>
+                        </div>
+                    </div>
+                    <div class="packet-layer original">
+                        <div class="packet-label">元のパケット<br>（中の封筒）</div>
+                        <div class="packet-fields">
+                            <div class="packet-field">元の IP ヘッダー<br><small>送信元・宛先 IP</small></div>
+                            <div class="packet-field">元の TCP/UDP<br><small>ポート情報</small></div>
+                            <div class="packet-field">ペイロード<br><small>実際のデータ</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h4>💡 なぜGeneveが重要？</h4>
+                <p>
+                    VXLANやNVGREなどの類似プロトコルと異なり、Geneveは<strong>TLVオプション</strong>で任意のメタデータを柔軟に追加できます。AWSはこれを活用してフローCookieやAZ情報をアプライアンスに伝達し、ステートフルな検査を実現しています。また、元のパケットを完全に保持するため、アプライアンスは送信元IPを正確に識別でき、セキュリティ分析の精度が向上します。
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 4: TRAFFIC FLOW ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h2 id="トラフィックフロー-──-データの旅路">トラフィックフロー ── データの旅路</h2>
+            </div>
+
+            <div class="analogy-box">
+                <h3 id="高速道路の料金所検査で考える">🚗 「高速道路の料金所検査」で考える</h3>
+                <p>
+                    高速道路の入口から入った車（パケット）が目的地に行く途中、必ず料金所兼検問所（GWLBe → GWLB → アプライアンス）を通過します。検問所では車のナンバープレート（送信元IP）を記録し、荷物（パケット内容）を検査します。問題なければそのまま通過させ、車は目的地へ向かいます。帰りも同じ検問所を通ります。
+                </p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-title">🔄 インバウンドトラフィックの流れ（7ステップ）</div>
+                <div class="step-flow">
+                    <div class="step-item" data-step="1">
+                        <h4>🌐 インターネットからトラフィック到着</h4>
+                        <p>外部ユーザーがWebアプリにアクセス。トラフィックがInternet Gatewayを経由してVPCに入る。</p>
+                    </div>
+                    <div class="step-item" data-step="2">
+                        <h4>🔗 IGWルートテーブルがGWLBeへ転送</h4>
+                        <p>Internet Gatewayのルートテーブルにて、アプリサブネット宛のトラフィックをGWLBエンドポイントに向ける。</p>
+                    </div>
+                    <div class="step-item" data-step="3">
+                        <h4>📤 GWLBeがセキュリティVPCへ転送</h4>
+                        <p>GWLBエンドポイントがPrivateLinkを通じて、セキュリティVPC内のGWLBにトラフィックを送る。</p>
+                    </div>
+                    <div class="step-item" data-step="4">
+                        <h4>📦 GWLBがGeneveでカプセル化・分散</h4>
+                        <p>GWLBが元のパケットをGeneveプロトコルでカプセル化し、ターゲットグループ内のアプライアンスに負荷分散。</p>
+                    </div>
+                    <div class="step-item" data-step="5">
+                        <h4>🔍 アプライアンスが検査</h4>
+                        <p>ファイアウォール/IDS/IPSが元のパケットを検査。問題なければGWLBに返送、問題ありなら遮断。</p>
+                    </div>
+                    <div class="step-item" data-step="6">
+                        <h4>📥 GWLBがGWLBeに返送</h4>
+                        <p>検査済みパケットをデカプセル化し、GWLBエンドポイント経由でコンシューマーVPCに戻す。</p>
+                    </div>
+                    <div class="step-item" data-step="7">
+                        <h4>🖥️ アプリケーションに到着</h4>
+                        <p>検査済みの安全なトラフィックがアプリケーション（EC2やALB）に到達。元のIPアドレス情報はそのまま。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 5: VPC ARCHITECTURE ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h2 id="VPCアーキテクチャ-──-2つのVPCの関係">VPCアーキテクチャ ── 2つのVPCの関係</h2>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-title">🏛️ コンシューマーVPC × セキュリティVPC 構成</div>
+                <div class="vpc-diagram">
+                    <div class="vpc-box consumer">
+                        <div class="vpc-label consumer">コンシューマーVPC</div>
+                        <div class="vpc-inner">
+                            <div class="vpc-component" style="background: #f1f5f9; border: 1.5px solid #94a3b8; color: #334155;">🌐 Internet Gateway</div>
+                            <div class="vpc-connection">↕ ルートテーブルで誘導</div>
+                            <div class="vpc-component" style="background: #fef3c7; border: 1.5px solid #f59e0b; color: #78350f;">🔗 GWLBエンドポイント（GWLBe）</div>
+                            <div class="vpc-connection">↕ 検査済みトラフィック</div>
+                            <div class="vpc-component" style="background: #d1fae5; border: 1.5px solid #10b981; color: #064e3b;">🖥️ アプリケーション (EC2 / ALB)</div>
+                        </div>
+                    </div>
+                    <div class="vpc-box security">
+                        <div class="vpc-label security">セキュリティVPC</div>
+                        <div class="vpc-inner">
+                            <div class="vpc-component" style="background: #dbeafe; border: 1.5px solid #3b82f6; color: #1e40af;">⚖️ Gateway Load Balancer</div>
+                            <div class="vpc-connection">↕ Geneve (UDP 6081)</div>
+                            <div class="vpc-component" style="background: #fce7f3; border: 1.5px solid #ec4899; color: #831843;">🔥 ファイアウォール</div>
+                            <div class="vpc-component" style="background: #fce7f3; border: 1.5px solid #ec4899; color: #831843;">🔍 IDS/IPS</div>
+                            <div class="vpc-component" style="background: #fce7f3; border: 1.5px solid #ec4899; color: #831843;">📡 パケットインスペクション</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 16px; font-size: 0.85em; color: #6b7280;">
+                    <strong>PrivateLink</strong> でVPC間を接続 ── GWLBe（コンシューマー側）と GWLB（セキュリティ側）がペアで動作
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h3 id="️-なぜVPCを分けるのか？">🏗️ なぜVPCを分けるのか？</h3>
+                <p>
+                    セキュリティアプライアンスを<strong>専用VPC</strong>に集約することで、複数のアプリケーションVPCのトラフィックを一元的に検査できます。これは「マンションの全室を1つの警備室で監視する」のと同じ考え方で、セキュリティポリシーの統一管理、アプライアンスの共有によるコスト削減、アプリケーションチームとセキュリティチームの責任分離を実現します。
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 6: WITH / WITHOUT ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <h2 id="GWLBあり-vs-なし-──-何が変わる？">GWLBあり vs なし ── 何が変わる？</h2>
+            </div>
+
+            <div class="compare-cards">
+                <div class="compare-card without">
+                    <h3 id="❌-GWLBなしの場合">❌ GWLBなしの場合</h3>
+                    <ul class="compare-list">
+                        <li>⚠️ 各VPCにアプライアンスを個別配置 → コスト増</li>
+                        <li>⚠️ NATやプロキシで中継 → 元のIPアドレスが失われる</li>
+                        <li>⚠️ アプライアンス障害時の切替が手動 → ダウンタイム</li>
+                        <li>⚠️ トラフィック増加時の手動スケーリング</li>
+                        <li>⚠️ ルーティングが複雑になり管理負荷が増大</li>
+                    </ul>
+                </div>
+                <div class="compare-card with">
+                    <h4>✅ GWLBありの場合</h4>
+                    <ul class="compare-list">
+                        <li>✨ アプライアンスを集約VPCで共有 → コスト最適化</li>
+                        <li>✨ Geneveカプセル化で元のIP情報を完全保持</li>
+                        <li>✨ ヘルスチェック+自動フェイルオーバー → 高可用性</li>
+                        <li>✨ ターゲットグループで自動スケーリング</li>
+                        <li>✨ ルートテーブル＋GWLBeのシンプルな経路制御</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 7: ELB COMPARISON ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">7</div>
+                <h2 id="3種類のロードバランサー比較">3種類のロードバランサー比較</h2>
+            </div>
+
+            <div class="analogy-box">
+                <h3 id="ホテルのスタッフに例えると…">🏨 「ホテルのスタッフ」に例えると…</h3>
+                <p>
+                    <strong>ALB</strong>は「コンシェルジュ」── お客の要望（URLパス、ホスト名）に応じて最適な部門に案内します。<strong>NLB</strong>は「玄関の回転ドア」── 誰でも超高速で通しますが、中身は見ません。<strong>GWLB</strong>は「セキュリティスタッフ」── 全員の荷物を検査しますが、お客の身元（IP）は変えません。
+                </p>
+            </div>
+
+            <div class="comparison-container">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 18%;">項目</th>
+                            <th style="width: 27%;">ALB</th>
+                            <th style="width: 27%;">NLB</th>
+                            <th style="width: 28%;">GWLB</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>動作レイヤー</strong></td>
+                            <td>L7（HTTP/HTTPS）</td>
+                            <td>L4（TCP/UDP/TLS）</td>
+                            <td>L3（IP）+ Geneve</td>
+                        </tr>
+                        <tr>
+                            <td><strong>主な用途</strong></td>
+                            <td>Webアプリの振り分け</td>
+                            <td>高速TCP/UDP転送</td>
+                            <td>セキュリティアプライアンス検査</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ターゲット</strong></td>
+                            <td>EC2, Lambda, IP</td>
+                            <td>EC2, IP, ALB</td>
+                            <td>EC2, IP（アプライアンス）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>送信元IP保持</strong></td>
+                            <td>X-Forwarded-For</td>
+                            <td>保持 or Proxy Protocol</td>
+                            <td>Geneveで完全保持 ✅</td>
+                        </tr>
+                        <tr>
+                            <td><strong>VPC間連携</strong></td>
+                            <td>なし</td>
+                            <td>PrivateLink可</td>
+                            <td>GWLBeで専用設計 ✅</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ポート</strong></td>
+                            <td>80, 443 など</td>
+                            <td>任意のTCP/UDPポート</td>
+                            <td>UDP 6081（Geneve）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ホテルの例え</strong></td>
+                            <td>🧑‍💼 コンシェルジュ</td>
+                            <td>🚪 回転ドア</td>
+                            <td>🛡️ セキュリティスタッフ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 8: USE CASES ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">8</div>
+                <h2 id="ユースケース-──-どんな時に使う？">ユースケース ── どんな時に使う？</h2>
+            </div>
+
+            <div class="usecase-grid">
+                <div class="usecase-card">
+                    <div class="usecase-icon">🔥</div>
+                    <h3 id="次世代ファイアウォール">次世代ファイアウォール</h3>
+                    <p>Palo Alto、Fortinet、Check Pointなどのサードパーティ製ファイアウォールで、すべての通信をインライン検査</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">🕵️</div>
+                    <h4>IDS/IPS（侵入検知/防御）</h4>
+                    <p>不正なアクセスパターンをリアルタイム検知し、攻撃トラフィックを自動ブロック</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">📡</div>
+                    <h4>ディープパケットインスペクション</h4>
+                    <p>パケットの中身を詳細に分析し、マルウェアやデータ漏洩を検出</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">📋</div>
+                    <h4>コンプライアンス監査</h4>
+                    <p>規制要件に基づくすべてのトラフィックの記録・検査を一元的に実施</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">🌐</div>
+                    <h4>マルチVPCセキュリティ</h4>
+                    <p>Transit Gatewayと組み合わせ、数十〜数百のVPCのトラフィックを集約検査</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">🔐</div>
+                    <h4>ゼロトラストネットワーク</h4>
+                    <p>East-West（VPC内）トラフィックも含め、すべての通信を「信頼しない」前提で検査</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 9: ROUTE TABLE ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">9</div>
+                <h2 id="ルートテーブル設定-──-経路制御の鍵">ルートテーブル設定 ── 経路制御の鍵</h2>
+            </div>
+
+            <div class="analogy-box">
+                <h3 id="️-道路標識で例えると…">🗺️ 「道路標識」で例えると…</h3>
+                <p>
+                    ルートテーブルは「道路標識」です。「○○方面はこちら」と書いてあるように、トラフィックの行き先を指示します。GWLBの場合、IGWのルートテーブルに「アプリサブネット行きはGWLBeを経由せよ」と記載することで、すべてのトラフィックをセキュリティ検査に誘導します。
+                </p>
+            </div>
+
+            <div class="comparison-container">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>ルートテーブル</th>
+                            <th>宛先（Destination）</th>
+                            <th>ターゲット（Target）</th>
+                            <th>説明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>IGWルートテーブル</strong></td>
+                            <td>10.0.1.0/24（アプリサブネット）</td>
+                            <td>GWLBe</td>
+                            <td>インバウンドをGWLBeに誘導</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GWLBeサブネットRT</strong></td>
+                            <td>0.0.0.0/0</td>
+                            <td>IGW</td>
+                            <td>検査済みを外部へ返送</td>
+                        </tr>
+                        <tr>
+                            <td><strong>アプリサブネットRT</strong></td>
+                            <td>0.0.0.0/0</td>
+                            <td>GWLBe</td>
+                            <td>アウトバウンドもGWLBeに誘導</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="highlight-box">
+                <h4>⚠️ 設定の注意点</h4>
+                <p>
+                    GWLBeは<strong>アプリケーションサブネットとは別のサブネット</strong>に配置する必要があります。同じサブネットに置くとルーティングループが発生します。また、IGWの「Edge Association」ルートテーブルを使って、インバウンドトラフィックをGWLBeに向けることが重要です。
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 10: HA & SCALING ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <h2 id="高可用性とスケーリング">高可用性とスケーリング</h2>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🏥</div>
+                    <h3 id="ヘルスチェック">ヘルスチェック</h3>
+                    <p>TCP/HTTP/HTTPSでアプライアンスの状態を定期的に確認。異常検知時は自動的にトラフィックを正常なアプライアンスに切替えます。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h4>クロスゾーン負荷分散</h4>
+                    <p>複数AZのアプライアンスに均等にトラフィックを分散。片方のAZに障害があっても、もう片方で処理を継続できます。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h4>ターゲットグループ</h4>
+                    <p>Auto Scalingグループと連携し、トラフィック増加時にアプライアンスインスタンスを自動追加。縮小も自動です。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔀</div>
+                    <h4>フロースティッキネス</h4>
+                    <p>5タプル/3タプルハッシュにより、同じフローのパケットを同じアプライアンスに送り続け、ステートフル検査を維持します。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 11: EXAM TIPS ==================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">11</div>
+                <h2 id="FAQ-──-よくある質問">FAQ ── よくある質問</h2>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">GWLBとNLBの違いは何ですか？</div>
+                <div class="faq-a">NLBはアプリケーションへのトラフィック分散が目的で、L4で動作します。GWLBはセキュリティアプライアンスへの透過的なトラフィック転送が目的で、L3＋Geneveで動作します。最大の違いは、GWLBは元のパケット情報を完全に保持できる点です。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">GWLBは既存のVPCに後から追加できますか？</div>
+                <div class="faq-a">はい。ルートテーブルの変更とGWLBeの作成で、既存のVPCに後からGWLBを組み込めます。アプリケーション側の変更は不要です。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">GWLBはどのサードパーティ製品と連携できますか？</div>
+                <div class="faq-a">AWS Marketplaceで提供されているPalo Alto Networks、Fortinet FortiGate、Check Point CloudGuard、Cisco Firepower、Trend Micro Cloud Oneなど、Geneve対応の主要セキュリティベンダー製品と連携可能です。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">GWLBの料金体系は？</div>
+                <div class="faq-a">GWLBの時間料金（1時間あたり）＋処理データ量（LCU: Load Balancer Capacity Unit）に基づく従量課金です。GWLBe（エンドポイント）にも別途、時間料金とデータ処理料金がかかります。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">Transit Gatewayとの組み合わせは？</div>
+                <div class="faq-a">Transit Gatewayの「アプライアンスモード」を有効にし、セキュリティVPCをハブとして使用します。各スポークVPCからのトラフィックをTGW経由でセキュリティVPCに送り、GWLBで検査する構成が一般的です。</div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 12: EXAM TIPS ==================== -->
+        <div class="exam-tips">
+            <h3 id="AWS認定試験で押さえるべきGWLBのポイント">AWS認定試験で押さえるべきGWLBのポイント</h3>
+            <div class="exam-tip-item">
+                <span>🎯</span>
+                <span>「サードパーティのファイアウォール/IDS/IPSをインラインで透過的に使いたい」→ <strong>GWLB</strong>を選択</span>
+            </div>
+            <div class="exam-tip-item">
+                <span>🎯</span>
+                <span>「元のIPアドレスをアプライアンスで確認したい」→ GWLBの<strong>Geneveカプセル化</strong>がキーワード</span>
+            </div>
+            <div class="exam-tip-item">
+                <span>🎯</span>
+                <span>「複数VPCのトラフィックを集約してセキュリティ検査」→ <strong>GWLBe + セキュリティVPC</strong>の構成</span>
+            </div>
+            <div class="exam-tip-item">
+                <span>🎯</span>
+                <span>「アプリケーションを変更せずにセキュリティ検査を挿入」→ <strong>ルートテーブル + GWLBe</strong>による透過的挿入</span>
+            </div>
+            <div class="exam-tip-item">
+                <span>🎯</span>
+                <span>GWLBは<strong>L3（ネットワーク層）</strong>で動作、ALB（L7）やNLB（L4）との違いを明確に区別</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== FOOTER ==================== -->
+    <div class="footer">
+        Gateway Load Balancer 完全ガイド ── AWS初心者のためのインフォグラフィック学習資料
+    </div>
+
+
+</div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

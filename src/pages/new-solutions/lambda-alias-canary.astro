@@ -1,0 +1,610 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Lambda Alias Canary',
+  pageTitle: 'Lambda関数のエイリアス＆カナリアリリース解説',
+  category: 'new-solutions',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: 'Lambda & サーバーレス',
+  slug: 'lambda-alias-canary',
+  pageCss: '/aws_sap_studying/css/pages/lambda-alias-canary.css',
+  tocItems: [
+    { level: 'h2', id: '基本概念-Lambda関数とは？', text: '📘 基本概念: Lambda関数とは？' },
+    { level: 'h2', id: 'Lambda関数バージョン', text: '🔢 Lambda関数バージョン' },
+    { level: 'h2', id: '️-Lambda関数エイリアス', text: '🏷️ Lambda関数エイリアス' },
+    { level: 'h3', id: 'エイリアスの利点', text: 'エイリアスの利点' },
+    { level: 'h2', id: 'カナリアリリースとは？', text: '🐤 カナリアリリースとは？' },
+    { level: 'h3', id: 'Lambdaでのカナリアリリース実装方法', text: 'Lambdaでのカナリアリリース実装方法' },
+    { level: 'h2', id: 'カナリアデプロイメントのステップバイステップ', text: '🚀 カナリアデプロイメントのステップバイステップ' },
+    { level: 'h2', id: '具体的な実装例', text: '💻 具体的な実装例' },
+    { level: 'h2', id: 'まとめ', text: '📝 まとめ' },
+    { level: 'h3', id: 'Lambda関数のエイリアス', text: 'Lambda関数のエイリアス' },
+    { level: 'h3', id: 'カナリアリリース', text: 'カナリアリリース' }
+  ],
+  prevPage: '../compute-applications/aws-lambda-metrics.html',
+  nextPage: '../compute-applications/aws_ecs_infographic.html',
+  pageNum: 29,
+  pageTotal: 41,
+};
+
+const rawContent = `<!-- 基本概念のセクション -->
+<div class="section">
+<h2 id="基本概念-Lambda関数とは？">
+     📘 基本概念: Lambda関数とは？
+    </h2>
+<p>
+     AWS Lambdaは、サーバーを管理することなくコードを実行できるサービスです。イベント発生時に自動的に実行される関数を作成できます。
+    </p>
+<div class="diagram">
+<svg aria-labelledby="svg-title-1 svg-desc-1" height="200" role="img" width="600" xmlns="http://www.w3.org/2000/svg">
+<title id="svg-title-1">
+       基本概念 Lambda関数とはの図
+      </title>
+<desc id="svg-desc-1">
+       AWS Lambdaは、サーバーを管理することなくコードを実行できるサービスです。3個のコンポーネント（矩形）、矢印や接続線で構成された図。ラベル: イベントソース、Lambda関数、(コード実行)、結果
+      </desc>
+<!-- イベントソース -->
+<rect fill="#ffccbc" height="60" rx="10" stroke="#ff5722" stroke-width="2" width="120" x="50" y="70">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="110" y="105">
+       イベントソース
+      </text>
+<!-- 矢印 -->
+<line stroke="#666" stroke-width="2" x1="170" x2="270" y1="100" y2="100">
+</line>
+<polygon fill="#666" points="270,100 260,95 260,105">
+</polygon>
+<!-- Lambda関数 -->
+<rect fill="#bbdefb" height="100" rx="10" stroke="#1976d2" stroke-width="2" width="150" x="270" y="50">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="345" y="105">
+       Lambda関数
+      </text>
+<text fill="#333" font-size="12" text-anchor="middle" x="345" y="125">
+       (コード実行)
+      </text>
+<!-- 矢印 -->
+<line stroke="#666" stroke-width="2" x1="420" x2="520" y1="100" y2="100">
+</line>
+<polygon fill="#666" points="520,100 510,95 510,105">
+</polygon>
+<!-- 結果 -->
+<rect fill="#c8e6c9" height="60" rx="10" stroke="#2E7D32" stroke-width="2" width="80" x="520" y="70">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="560" y="105">
+       結果
+      </text>
+</svg>
+</div>
+</div>
+<!-- Lambda関数バージョンのセクション -->
+<div class="section">
+<h2 id="Lambda関数バージョン">
+     🔢 Lambda関数バージョン
+    </h2>
+<p>
+     Lambdaでは、コードの各デプロイが
+     <span class="highlight">
+      バージョン
+     </span>
+     として保存されます。一度公開されたバージョンは変更できません。
+    </p>
+<div class="diagram">
+<svg aria-labelledby="svg-title-2 svg-desc-2" height="300" role="img" width="600" xmlns="http://www.w3.org/2000/svg">
+<title id="svg-title-2">
+       Lambda関数バージョンの図
+      </title>
+<desc id="svg-desc-2">
+       Lambdaでは、コードの各デプロイがバージョンとして保存されます。5個のコンポーネント（矩形）、矢印や接続線で構成された図。7個のラベル付き要素を含む。
+      </desc>
+<!-- Lambda関数の基本コンテナ -->
+<rect fill="#f5f5f5" height="220" rx="10" stroke="#cccccc" stroke-width="2" width="400" x="100" y="50">
+</rect>
+<text fill="#333" font-size="16" font-weight="bold" text-anchor="middle" x="300" y="80">
+       Lambda関数: hello-world
+      </text>
+<!-- $LATEST -->
+<rect fill="#e1f5fe" height="40" rx="5" stroke="#0369A1" stroke-width="2" width="340" x="130" y="100">
+</rect>
+<text fill="#333" font-weight="bold" x="170" y="125">
+       $LATEST
+      </text>
+<text fill="#333" font-size="14" x="350" y="125">
+       （常に最新のコード）
+      </text>
+<!-- バージョン1 -->
+<rect fill="#e1f5fe" height="40" rx="5" stroke="#0369A1" stroke-width="2" width="100" x="130" y="150">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="180" y="175">
+       バージョン 1
+      </text>
+<!-- バージョン2 -->
+<rect fill="#e1f5fe" height="40" rx="5" stroke="#0369A1" stroke-width="2" width="100" x="250" y="150">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="300" y="175">
+       バージョン 2
+      </text>
+<!-- バージョン3 -->
+<rect fill="#e1f5fe" height="40" rx="5" stroke="#0369A1" stroke-width="2" width="100" x="370" y="150">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="420" y="175">
+       バージョン 3
+      </text>
+<!-- 時間の流れ -->
+<line stroke="#666" stroke-width="2" x1="130" x2="470" y1="210" y2="210">
+</line>
+<polygon fill="#666" points="470,210 460,205 460,215">
+</polygon>
+<text fill="#666" text-anchor="middle" x="300" y="230">
+       時間の流れ
+      </text>
+</svg>
+</div>
+<div class="card">
+<p>
+<strong>
+       バージョン番号の特徴:
+      </strong>
+</p>
+<ul>
+<li>
+       整数の連番（1, 2, 3...）
+      </li>
+<li>
+       公開後は不変（変更不可）
+      </li>
+<li>
+       URNは特定のバージョンを指定:
+       <code>
+        arn:aws:lambda:region:account-id:function:function-name:version
+       </code>
+</li>
+<li>
+<code>
+        $LATEST
+       </code>
+       は常に最新バージョンを示す特殊な識別子
+      </li>
+</ul>
+</div>
+</div>
+<!-- エイリアスのセクション -->
+<div class="section">
+<h2 id="️-Lambda関数エイリアス">
+     🏷️ Lambda関数エイリアス
+    </h2>
+<p>
+<span class="highlight">
+      エイリアス
+     </span>
+     は特定のLambda関数バージョンを指す「ポインタ」のようなものです。エイリアスは変更可能なため、関数のバージョンを切り替えるときに便利です。
+    </p>
+<div class="diagram">
+<svg aria-labelledby="svg-title-3 svg-desc-3" height="300" role="img" width="600" xmlns="http://www.w3.org/2000/svg">
+<title id="svg-title-3">
+       Lambda関数エイリアスの図
+      </title>
+<desc id="svg-desc-3">
+       エイリアスは特定のLambda関数バージョンを指す「ポインタ」のようなものです。5個のコンポーネント（矩形）、矢印や接続線で構成された図。ラベル: バージョン 1、バージョン 2、バージョン 3、PROD エイリアス、DEV エイリアス
+      </desc>
+<!-- バージョン -->
+<rect fill="#e1f5fe" height="60" rx="5" stroke="#0369A1" stroke-width="2" width="120" x="100" y="50">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="160" y="85">
+       バージョン 1
+      </text>
+<rect fill="#e1f5fe" height="60" rx="5" stroke="#0369A1" stroke-width="2" width="120" x="100" y="120">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="160" y="155">
+       バージョン 2
+      </text>
+<rect fill="#e1f5fe" height="60" rx="5" stroke="#0369A1" stroke-width="2" width="120" x="100" y="190">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="160" y="225">
+       バージョン 3
+      </text>
+<!-- エイリアス -->
+<rect fill="#fff9c4" height="50" rx="5" stroke="#fbc02d" stroke-width="2" width="150" x="350" y="80">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="425" y="110">
+       PROD エイリアス
+      </text>
+<rect fill="#fff9c4" height="50" rx="5" stroke="#fbc02d" stroke-width="2" width="150" x="350" y="170">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="425" y="200">
+       DEV エイリアス
+      </text>
+<!-- 矢印 -->
+<line stroke="#666" stroke-width="2" x1="220" x2="350" y1="80" y2="105">
+</line>
+<polygon fill="#666" points="350,105 340,100 340,110">
+</polygon>
+<line stroke="#666" stroke-width="2" x1="220" x2="350" y1="150" y2="195">
+</line>
+<polygon fill="#666" points="350,195 340,190 340,200">
+</polygon>
+</svg>
+</div>
+<div class="card">
+<p>
+<strong>
+       エイリアスの特徴:
+      </strong>
+</p>
+<ul>
+<li>
+       名前付きのポインタ（例: PROD, DEV, STAGING）
+      </li>
+<li>
+       いつでも別のバージョンを指すように変更可能
+      </li>
+<li>
+       クライアントは常に同じエイリアスを呼び出せば良い
+      </li>
+<li>
+       URNにエイリアス名を指定:
+       <code>
+        arn:aws:lambda:region:account-id:function:function-name:alias-name
+       </code>
+</li>
+</ul>
+</div>
+<div class="subsection">
+<h3 id="エイリアスの利点">
+      エイリアスの利点
+     </h3>
+<div class="benefit">
+      簡単なロールバック: バージョンに問題があれば、エイリアスを以前のバージョンに戻すだけ
+     </div>
+<div class="benefit">
+      環境分離: PROD、DEV、STAGINGなど環境別に異なるバージョンを使用可能
+     </div>
+<div class="benefit">
+      クライアント側の変更不要: クライアントはエイリアスを参照するため、バージョン変更の影響を受けない
+     </div>
+</div>
+<div class="code-block">
+     # AWSコンソールでエイリアスを作成する代わりに、AWS CLIを使用する例：
+                aws lambda create-alias \\
+                  --function-name hello-world \\
+                  --name PROD \\
+                  --function-version 2 \\
+                  --description "本番環境用エイリアス"
+    </div>
+</div>
+<!-- カナリアリリースのセクション -->
+<div class="section">
+<h2 id="カナリアリリースとは？">
+     🐤 カナリアリリースとは？
+    </h2>
+<p>
+     カナリアリリースとは、新バージョンを全ユーザーに一度に提供するのではなく、
+     <span class="highlight">
+      一部のトラフィックだけ
+     </span>
+     を新バージョンに流す手法です。問題があれば影響を最小限に抑えられます。
+    </p>
+<div class="card">
+<p>
+      💡
+      <strong>
+       なぜ「カナリア」というのか？
+      </strong>
+</p>
+<p>
+      昔、炭鉱では有毒ガスを検知するために「カナリア」という鳥を持ち込んでいました。カナリアが異常を示せば、人間は避難できました。同様に、小さな割合のユーザーで新機能をテストし、問題があれば全体へのリリースを止められます。
+     </p>
+</div>
+<div class="traffic-split">
+<div class="traffic-block" style="width: 80%; background-color: #1976d2;">
+      80% バージョン2（安定版）
+     </div>
+<div class="traffic-block" style="width: 20%; background-color: #f44336;">
+      20% バージョン3（新版）
+     </div>
+</div>
+<div class="subsection">
+<h3 id="Lambdaでのカナリアリリース実装方法">
+      Lambdaでのカナリアリリース実装方法
+     </h3>
+<p>
+      Lambda関数のエイリアスを使って、トラフィックを2つのバージョンに分割できます：
+     </p>
+<div class="diagram">
+<svg aria-labelledby="svg-title-4 svg-desc-4" height="350" role="img" width="600" xmlns="http://www.w3.org/2000/svg">
+<title id="svg-title-4">
+        Lambdaでのカナリアリリース実装方法の図
+       </title>
+<desc id="svg-desc-4">
+        Lambda関数のエイリアスを使って、トラフィックを2つのバージョンに分割できます：。6個のコンポーネント（矩形）、矢印や接続線で構成された図。11個のラベル付き要素を含む。
+       </desc>
+<!-- ユーザーリクエスト -->
+<rect fill="#ffccbc" height="60" rx="10" stroke="#ff5722" stroke-width="2" width="150" x="50" y="50">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="125" y="85">
+        ユーザーリクエスト
+       </text>
+<!-- 矢印 -->
+<line stroke="#666" stroke-width="2" x1="200" x2="270" y1="80" y2="80">
+</line>
+<polygon fill="#666" points="270,80 260,75 260,85">
+</polygon>
+<!-- PRODエイリアス -->
+<rect fill="#fff9c4" height="60" rx="10" stroke="#fbc02d" stroke-width="2" width="150" x="270" y="50">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="345" y="70">
+        PROD エイリアス
+       </text>
+<text fill="#333" font-size="12" text-anchor="middle" x="345" y="90">
+        トラフィック分割
+       </text>
+<!-- 分岐矢印 -->
+<line stroke="#666" stroke-width="2" x1="345" x2="345" y1="110" y2="140">
+</line>
+<line stroke="#666" stroke-width="2" x1="345" x2="250" y1="140" y2="170">
+</line>
+<line stroke="#666" stroke-width="2" x1="345" x2="440" y1="140" y2="170">
+</line>
+<polygon fill="#666" points="250,170 255,160 260,170">
+</polygon>
+<polygon fill="#666" points="440,170 430,160 435,170">
+</polygon>
+<!-- バージョン情報 -->
+<rect fill="#e1f5fe" height="80" rx="10" stroke="#0369A1" stroke-width="2" width="200" x="150" y="170">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="250" y="195">
+        バージョン 2
+       </text>
+<text fill="#333" font-size="12" text-anchor="middle" x="250" y="215">
+        (安定版)
+       </text>
+<text fill="#333" font-size="12" text-anchor="middle" x="250" y="235">
+        80%のトラフィック
+       </text>
+<rect fill="#e1f5fe" height="80" rx="10" stroke="#0369A1" stroke-width="2" width="200" x="390" y="170">
+</rect>
+<text fill="#333" font-weight="bold" text-anchor="middle" x="490" y="195">
+        バージョン 3
+       </text>
+<text fill="#333" font-size="12" text-anchor="middle" x="490" y="215">
+        (新バージョン)
+       </text>
+<text fill="#333" font-size="12" text-anchor="middle" x="490" y="235">
+        20%のトラフィック
+       </text>
+<!-- メトリクス -->
+<rect fill="#c8e6c9" height="50" rx="5" stroke="#2E7D32" stroke-width="2" width="200" x="150" y="280">
+</rect>
+<text fill="#333" font-size="14" text-anchor="middle" x="250" y="310">
+        メトリクス監視
+       </text>
+<rect fill="#c8e6c9" height="50" rx="5" stroke="#2E7D32" stroke-width="2" width="200" x="390" y="280">
+</rect>
+<text fill="#333" font-size="14" text-anchor="middle" x="490" y="310">
+        メトリクス監視
+       </text>
+<!-- 矢印 -->
+<line stroke="#666" stroke-width="2" x1="250" x2="250" y1="250" y2="280">
+</line>
+<polygon fill="#666" points="250,280 245,270 255,270">
+</polygon>
+<line stroke="#666" stroke-width="2" x1="490" x2="490" y1="250" y2="280">
+</line>
+<polygon fill="#666" points="490,280 485,270 495,270">
+</polygon>
+</svg>
+</div>
+<div class="code-block">
+      # AWS CLIでエイリアスにカナリアリリース設定を行う例：
+                    aws lambda update-alias \\
+                      --function-name hello-world \\
+                      --name PROD \\
+                      --function-version 2 \\
+                      --routing-config AdditionalVersionWeights={"3"=0.2}
+     </div>
+<p>
+      この設定では：
+     </p>
+<ul>
+<li>
+       80%のトラフィックはバージョン2に送られる
+      </li>
+<li>
+       20%のトラフィックはバージョン3に送られる
+      </li>
+<li>
+       クライアントからは単にPRODエイリアスを呼び出すだけで良い
+      </li>
+</ul>
+</div>
+</div>
+<!-- カナリアデプロイメントのステップバイステップ -->
+<div class="section">
+<h2 id="カナリアデプロイメントのステップバイステップ">
+     🚀 カナリアデプロイメントのステップバイステップ
+    </h2>
+<div class="step">
+<div class="step-number">
+      1
+     </div>
+<div>
+      現在の安定版（例：バージョン2）を本番環境（PROD）で使用中
+     </div>
+</div>
+<div class="step">
+<div class="step-number">
+      2
+     </div>
+<div>
+      新しいコードをデプロイし、新バージョン（バージョン3）を作成
+     </div>
+</div>
+<div class="step">
+<div class="step-number">
+      3
+     </div>
+<div>
+      PRODエイリアスの設定を変更し、トラフィックの一部（例：10%）を新バージョンに割り当て
+     </div>
+</div>
+<div class="step">
+<div class="step-number">
+      4
+     </div>
+<div>
+      新バージョンのパフォーマンスとエラー率を監視
+     </div>
+</div>
+<div class="step">
+<div class="step-number">
+      5
+     </div>
+<div>
+      問題がなければ、徐々に新バージョンへのトラフィック割合を増やす（30%→50%→100%）
+     </div>
+</div>
+<div class="step">
+<div class="step-number">
+      6
+     </div>
+<div>
+      問題が発生した場合、すぐに100%を安定版に戻す（ロールバック）
+     </div>
+</div>
+</div>
+<!-- 実践例のセクション -->
+<div class="section">
+<h2 id="具体的な実装例">
+     💻 具体的な実装例
+    </h2>
+<table>
+<tr>
+<th>
+       ステップ
+      </th>
+<th>
+       AWS CLIコマンド
+      </th>
+<th>
+       説明
+      </th>
+</tr>
+<tr>
+<td>
+       1. 新バージョンの発行
+      </td>
+<td>
+<code>
+        aws lambda publish-version --function-name hello-world
+       </code>
+</td>
+<td>
+       $LATESTから新しいバージョン（例：3）を作成
+      </td>
+</tr>
+<tr>
+<td>
+       2. カナリア設定の開始
+      </td>
+<td>
+<code>
+        aws lambda update-alias --function-name hello-world --name PROD --function-version 2 --routing-config AdditionalVersionWeights={"3"=0.1}
+       </code>
+</td>
+<td>
+       10%のトラフィックをバージョン3へ
+      </td>
+</tr>
+<tr>
+<td>
+       3. カナリア比率の増加
+      </td>
+<td>
+<code>
+        aws lambda update-alias --function-name hello-world --name PROD --function-version 2 --routing-config AdditionalVersionWeights={"3"=0.5}
+       </code>
+</td>
+<td>
+       50%のトラフィックをバージョン3へ
+      </td>
+</tr>
+<tr>
+<td>
+       4. 完全移行
+      </td>
+<td>
+<code>
+        aws lambda update-alias --function-name hello-world --name PROD --function-version 3
+       </code>
+</td>
+<td>
+       100%のトラフィックをバージョン3へ
+      </td>
+</tr>
+<tr>
+<td>
+       5. 問題時のロールバック
+      </td>
+<td>
+<code>
+        aws lambda update-alias --function-name hello-world --name PROD --function-version 2
+       </code>
+</td>
+<td>
+       問題発生時に100%のトラフィックをバージョン2へ戻す
+      </td>
+</tr>
+</table>
+</div>
+<!-- まとめのセクション -->
+<div class="section">
+<h2 id="まとめ">
+     📝 まとめ
+    </h2>
+<div class="card">
+<h3 id="Lambda関数のエイリアス">
+      Lambda関数のエイリアス
+     </h3>
+<p>
+      ✅ 特定のバージョンを指す名前付きポインタ
+     </p>
+<p>
+      ✅ 環境別（PROD/DEV/TEST）に異なるバージョンを使用可能
+     </p>
+<p>
+      ✅ クライアント側の変更なしにバージョン切り替えが可能
+     </p>
+</div>
+<div class="card">
+<h3 id="カナリアリリース">
+      カナリアリリース
+     </h3>
+<p>
+      ✅ トラフィックの一部だけを新バージョンに流す手法
+     </p>
+<p>
+      ✅ リスクを最小限に抑えながら段階的にリリース
+     </p>
+<p>
+      ✅ エイリアスのルーティング設定で簡単に実装可能
+     </p>
+<p>
+      ✅ 問題発生時に素早くロールバック可能
+     </p>
+</div>
+<div class="benefit">
+<strong>
+      初心者向けアドバイス：
+     </strong>
+     まずはテスト環境で少量のトラフィック（例：5%）から始め、新バージョンの動作を確認してから徐々に増やしていくことをおすすめします。
+    </div>
+</div>
+
+
+</div>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

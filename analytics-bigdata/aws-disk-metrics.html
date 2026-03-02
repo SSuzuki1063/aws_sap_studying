@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   AWS EC2ディスクメトリクスの違い
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+  <!-- ページ固有CSSファイル -->
+  <link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/aws-disk-metrics.css" rel="stylesheet"/>
+  
+  
+
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#概要">概要</a></li>
+            <li class="toc-h3"><a href="#インスタンスレベルのメトリクス">インスタンスレベルのメトリクス</a></li>
+            <li class="toc-h3"><a href="#ボリュームレベルのメトリクス">ボリュームレベルのメトリクス</a></li>
+            <li class="toc-h2"><a href="#メトリクスの詳細">メトリクスの詳細</a></li>
+            <li class="toc-h3"><a href="#DiskReadBytes-DiskWriteBytes">DiskReadBytes / DiskWriteBytes</a></li>
+            <li class="toc-h3"><a href="#VolumeReadBytes-VolumeWriteBytes">VolumeReadBytes / VolumeWriteBytes</a></li>
+            <li class="toc-h2"><a href="#主な違い">主な違い</a></li>
+            <li class="toc-h3"><a href="#値の差が生じる理由">値の差が生じる理由</a></li>
+            <li class="toc-h2"><a href="#データの流れ">データの流れ</a></li>
+            <li class="toc-h2"><a href="#使い分け方">使い分け方</a></li>
+            <li class="toc-h3"><a href="#DiskReadBytes-DiskWriteBytes-を使う場合">DiskReadBytes / DiskWriteBytes を使う場合</a></li>
+            <li class="toc-h3"><a href="#VolumeReadBytes-VolumeWriteBytes-を使う場合">VolumeReadBytes / VolumeWriteBytes を使う場合</a></li>
+            <li class="toc-h2"><a href="#監視のベストプラクティス">監視のベストプラクティス</a></li>
+            <li class="toc-h3"><a href="#効果的な監視のためのヒント">効果的な監視のためのヒント</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<header>
+<h1>
+    AWS EC2 ディスクメトリクスの違い
+   </h1>
+
+<div class="subtitle">
+    DiskReadBytes・DiskWriteBytes vs VolumeReadBytes・VolumeWriteBytes
+   </div>
+</header>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     分析・運用・クイズ
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     分析・運用
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Aws Disk Metrics
+    </span>
+</nav>
+<div class="section">
+<h2 id="概要">
+     概要
+    </h2>
+<p>
+     AWS EC2インスタンスのディスクパフォーマンスを監視する際、似たような名前の2種類のメトリクスがあります：
+    </p>
+<div class="metrics-diagram">
+<div class="metric-box instance-metrics">
+<div class="metric-header">
+<div class="metric-icon instance-icon">
+        EC2
+       </div>
+<h3 class="metric-title" id="インスタンスレベルのメトリクス">
+        インスタンスレベルのメトリクス
+       </h3>
+</div>
+<div class="metric-detail">
+<p>
+<span class="highlight">
+         DiskReadBytes
+        </span>
+        と
+        <span class="highlight">
+         DiskWriteBytes
+        </span>
+</p>
+<p>
+        EC2インスタンスのOSが認識するディスク操作を測定します。
+       </p>
+</div>
+</div>
+<div class="metric-box volume-metrics">
+<div class="metric-header">
+<div class="metric-icon volume-icon">
+        EBS
+       </div>
+<h3 class="metric-title" id="ボリュームレベルのメトリクス">
+        ボリュームレベルのメトリクス
+       </h3>
+</div>
+<div class="metric-detail">
+<p>
+<span class="highlight-blue">
+         VolumeReadBytes
+        </span>
+        と
+        <span class="highlight-blue">
+         VolumeWriteBytes
+        </span>
+</p>
+<p>
+        EBSボリュームの実際の物理的なI/O操作を測定します。
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="メトリクスの詳細">
+     メトリクスの詳細
+    </h2>
+<div class="metric-box instance-metrics">
+<div class="metric-header">
+<div class="metric-icon instance-icon">
+       EC2
+      </div>
+<h3 class="metric-title" id="DiskReadBytes-DiskWriteBytes">
+       DiskReadBytes / DiskWriteBytes
+      </h3>
+</div>
+<div class="metric-detail">
+<p>
+       これらはEC2インスタンスの
+       <strong>
+        論理的なI/O操作
+       </strong>
+       を測定するメトリクスです。
+      </p>
+<ul class="metric-list">
+<li>
+<strong>
+         測定場所：
+        </strong>
+        インスタンスのOSレベル（ハイパーバイザーから見たI/O）
+       </li>
+<li>
+<strong>
+         キャッシュの影響：
+        </strong>
+        OSのキャッシュやバッファリングの影響を受けます
+       </li>
+<li>
+<strong>
+         計測単位：
+        </strong>
+        バイト数
+       </li>
+<li>
+<strong>
+         取得方法：
+        </strong>
+        CloudWatchメトリクスの「EC2」名前空間から
+       </li>
+</ul>
+</div>
+</div>
+<div class="metric-box volume-metrics">
+<div class="metric-header">
+<div class="metric-icon volume-icon">
+       EBS
+      </div>
+<h3 class="metric-title" id="VolumeReadBytes-VolumeWriteBytes">
+       VolumeReadBytes / VolumeWriteBytes
+      </h3>
+</div>
+<div class="metric-detail">
+<p>
+       これらはEBSボリュームの
+       <strong>
+        物理的なI/O操作
+       </strong>
+       を測定するメトリクスです。
+      </p>
+<ul class="metric-list">
+<li>
+<strong>
+         測定場所：
+        </strong>
+        EBSボリュームレベル（実際のストレージデバイス）
+       </li>
+<li>
+<strong>
+         キャッシュの影響：
+        </strong>
+        OSのキャッシュやバッファリングの影響を受けません
+       </li>
+<li>
+<strong>
+         計測単位：
+        </strong>
+        バイト数
+       </li>
+<li>
+<strong>
+         取得方法：
+        </strong>
+        CloudWatchメトリクスの「EBS」名前空間から
+       </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="主な違い">
+     主な違い
+    </h2>
+<table class="comparison-table">
+<tr>
+<th>
+       比較項目
+      </th>
+<th>
+       DiskReadBytes / DiskWriteBytes
+      </th>
+<th>
+       VolumeReadBytes / VolumeWriteBytes
+      </th>
+</tr>
+<tr class="instance-row">
+<td>
+       測定レベル
+      </td>
+<td>
+       インスタンス（OS）レベル
+      </td>
+<td>
+       ボリューム（物理ストレージ）レベル
+      </td>
+</tr>
+<tr class="volume-row">
+<td>
+       データの正確性
+      </td>
+<td>
+       OSのキャッシュにより値が少なく見える場合がある
+      </td>
+<td>
+       実際にディスクに書き込まれた正確なバイト数
+      </td>
+</tr>
+<tr class="instance-row">
+<td>
+       ユースケース
+      </td>
+<td>
+       アプリケーションの論理的I/O性能の把握
+      </td>
+<td>
+       実際のEBSボリュームのパフォーマンス把握
+      </td>
+</tr>
+<tr class="volume-row">
+<td>
+       複数ボリューム
+      </td>
+<td>
+       インスタンスにアタッチされた全ボリュームの合計
+      </td>
+<td>
+       個別のボリュームごとに測定可能
+      </td>
+</tr>
+<tr class="instance-row">
+<td>
+       監視の目的
+      </td>
+<td>
+       アプリケーションがどれだけのI/Oを要求しているか
+      </td>
+<td>
+       物理的なディスクの使用状況と性能
+      </td>
+</tr>
+</table>
+<div class="comparison">
+<h3 id="値の差が生じる理由">
+      値の差が生じる理由
+     </h3>
+<p>
+      同じインスタンスで測定した場合でも、これらのメトリクスの値が異なることがあります。主な理由は：
+     </p>
+<ul>
+<li>
+<strong>
+        OSのキャッシュ：
+       </strong>
+       OSはディスク操作を最適化するためにメモリ上にキャッシュを持ちます。読み取りがキャッシュから行われた場合、DiskReadBytesには含まれませんが、最初にデータを読み取る際にはVolumeReadBytesに記録されます。
+      </li>
+<li>
+<strong>
+        バッファリング：
+       </strong>
+       書き込みはOSによってバッファリングされ、一定のタイミングでまとめて物理ディスクに書き込まれます。そのため、DiskWriteBytesとVolumeWriteBytesの間で時間差が生じることがあります。
+      </li>
+<li>
+<strong>
+        ファイルシステムのオーバーヘッド：
+       </strong>
+       ファイルシステムが内部で行う操作（メタデータの更新など）により、アプリケーションが要求した以上のディスクI/Oが発生することがあります。
+      </li>
+</ul>
+</div>
+</div>
+<div class="section">
+<h2 id="データの流れ">
+     データの流れ
+    </h2>
+<div class="flowchart">
+<div class="flow-box" style="border-color: #dc7600;">
+<strong>
+       アプリケーション
+      </strong>
+<br/>
+      データの読み書きを要求
+     </div>
+<div class="flow-arrow">
+      ↓
+     </div>
+<div class="flow-box" style="border-color: #dc7600;">
+<strong>
+       OSのキャッシュ・バッファ
+      </strong>
+<br/>
+<span class="highlight">
+       DiskReadBytes / DiskWriteBytes
+      </span>
+      はここで測定
+     </div>
+<div class="flow-arrow">
+      ↓
+     </div>
+<div class="flow-box" style="border-color: #527FFF;">
+<strong>
+       EBSボリューム（物理ストレージ）
+      </strong>
+<br/>
+<span class="highlight-blue">
+       VolumeReadBytes / VolumeWriteBytes
+      </span>
+      はここで測定
+     </div>
+</div>
+<div class="example">
+<div class="example-title">
+      例：ファイル読み取りの場合
+     </div>
+<p>
+      1. アプリケーションが10MBのファイルを読み取り要求
+     </p>
+<p>
+      2. 初回アクセス時：OSはEBSから10MB読み取り →
+      <span class="highlight-blue">
+       VolumeReadBytes = 10MB
+      </span>
+      ,
+      <span class="highlight">
+       DiskReadBytes = 10MB
+      </span>
+</p>
+<p>
+      3. 2回目のアクセス時：OSがキャッシュから読み取り →
+      <span class="highlight-blue">
+       VolumeReadBytes = 0MB
+      </span>
+      (追加読み取りなし),
+      <span class="highlight">
+       DiskReadBytes = 10MB
+      </span>
+</p>
+</div>
+</div>
+<div class="section">
+<h2 id="使い分け方">
+     使い分け方
+    </h2>
+<div class="metric-box instance-metrics">
+<div class="metric-header">
+<div class="metric-icon instance-icon">
+       EC2
+      </div>
+<h3 class="metric-title" id="DiskReadBytes-DiskWriteBytes-を使う場合">
+       DiskReadBytes / DiskWriteBytes を使う場合
+      </h3>
+</div>
+<div class="metric-detail">
+<ul class="metric-list">
+<li>
+<strong>
+         アプリケーションの要求するI/O量
+        </strong>
+        を把握したい場合
+       </li>
+<li>
+        アプリケーションレベルの
+        <strong>
+         パフォーマンスチューニング
+        </strong>
+        をする場合
+       </li>
+<li>
+        複数のEBSボリュームを使用しており、
+        <strong>
+         インスタンス全体の論理的なI/O
+        </strong>
+        を監視したい場合
+       </li>
+</ul>
+</div>
+</div>
+<div class="metric-box volume-metrics">
+<div class="metric-header">
+<div class="metric-icon volume-icon">
+       EBS
+      </div>
+<h3 class="metric-title" id="VolumeReadBytes-VolumeWriteBytes-を使う場合">
+       VolumeReadBytes / VolumeWriteBytes を使う場合
+      </h3>
+</div>
+<div class="metric-detail">
+<ul class="metric-list">
+<li>
+<strong>
+         実際のディスク使用量
+        </strong>
+        を正確に把握したい場合
+       </li>
+<li>
+        EBSボリュームの
+        <strong>
+         パフォーマンス制限
+        </strong>
+        に近づいているかを確認したい場合
+       </li>
+<li>
+        複数のEBSボリュームがある場合に
+        <strong>
+         個別のボリュームパフォーマンス
+        </strong>
+        を監視したい場合
+       </li>
+<li>
+        ストレージコストの
+        <strong>
+         最適化
+        </strong>
+        を行いたい場合
+       </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="監視のベストプラクティス">
+     監視のベストプラクティス
+    </h2>
+<div class="tips">
+<h3 id="効果的な監視のためのヒント">
+      効果的な監視のためのヒント
+     </h3>
+<ul class="tips-list">
+<li>
+<strong>
+        両方のメトリクスを監視する：
+       </strong>
+       完全な状況を把握するためには、両方のメトリクスを監視することをお勧めします。
+      </li>
+<li>
+<strong>
+        差異に注目する：
+       </strong>
+       二つのメトリクス間に大きな差がある場合、それはOSのキャッシュが効いている、またはI/Oの問題がある可能性があります。
+      </li>
+<li>
+<strong>
+        アラートの設定：
+       </strong>
+       VolumeReadBytes/VolumeWriteBytesがボリュームの制限に近づいた場合にアラートを設定すると、パフォーマンスの問題を事前に検知できます。
+      </li>
+<li>
+<strong>
+        トレンドの分析：
+       </strong>
+       単発の値よりも時間経過による傾向を分析することで、システムの健全性をより良く理解できます。
+      </li>
+</ul>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="aws-cost-tools.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">2</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">15</span>
+    </div>
+    <a href="aws-errors-infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+    Created by
+    <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+     SSuzuki1063
+    </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+    AWS SAP Learning Resources
+   </p>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

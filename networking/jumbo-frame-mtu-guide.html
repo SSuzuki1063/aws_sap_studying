@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ジャンボフレーム＆MTU問題 完全図解ガイド</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #e94560 75%, #ff6b6b 100%);
+            padding: 20px;
+            line-height: 1.6;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🚛';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファースト */
+        .conclusion-first {
+            background: linear-gradient(135deg, #232f3e 0%, #0f3460 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+        }
+        
+        .conclusion-first h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #ff9900;
+            text-align: center;
+        }
+        
+        .answer-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .answer-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #ef4444;
+            backdrop-filter: blur(10px);
+        }
+        
+        .answer-card.correct {
+            border-color: #ef4444;
+        }
+        
+        .answer-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .answer-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fbbf24;
+        }
+        
+        .answer-desc {
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+        
+        .both-correct {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 30px;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #0284c7;
+        }
+        
+        .analogy-title {
+            color: #0c4a6e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        /* トラックとトンネルの図解 */
+        .truck-diagram {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .truck-scenario {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            padding: 30px;
+            background: #f8fafc;
+            border-radius: 15px;
+        }
+        
+        .truck-box {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .truck-icon {
+            font-size: 5em;
+            margin-bottom: 10px;
+        }
+        
+        .truck-label {
+            font-weight: bold;
+            color: #1e293b;
+            font-size: 1.1em;
+        }
+        
+        .truck-size {
+            color: #64748b;
+            font-size: 0.95em;
+            margin-top: 5px;
+        }
+        
+        .tunnel-box {
+            text-align: center;
+            padding: 30px 40px;
+            background: linear-gradient(to bottom, #64748b 0%, #475569 100%);
+            border-radius: 50px 50px 0 0;
+            position: relative;
+        }
+        
+        .tunnel-icon {
+            font-size: 4em;
+            color: white;
+        }
+        
+        .tunnel-label {
+            color: white;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .tunnel-size {
+            color: #cbd5e1;
+            font-size: 0.9em;
+        }
+        
+        .arrow-section {
+            font-size: 3em;
+            color: #64748b;
+        }
+        
+        .result-badge {
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .result-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            border: 3px solid #10b981;
+        }
+        
+        .result-fail {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+            border: 3px solid #ef4444;
+        }
+        
+        /* MTU比較図 */
+        .mtu-comparison {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #f59e0b;
+        }
+        
+        .mtu-title {
+            color: #92400e;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .mtu-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .mtu-bar-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .mtu-bar-label {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .mtu-bar-icon {
+            font-size: 2em;
+        }
+        
+        .mtu-bar-name {
+            font-weight: bold;
+            color: #1e293b;
+            font-size: 1.2em;
+        }
+        
+        .mtu-bar {
+            height: 50px;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .mtu-bar.jumbo {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            width: 100%;
+        }
+        
+        .mtu-bar.standard {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+            width: 16.6%; /* 1500/9001 ≈ 16.6% */
+        }
+        
+        .mtu-bar.vpn {
+            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+            width: 14%; /* 1300/9001 ≈ 14% */
+        }
+        
+        .mtu-value {
+            position: absolute;
+            right: 20px;
+            background: rgba(255,255,255,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        
+        /* Don't Fragmentフラグ説明 */
+        .df-flag-section {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #ef4444;
+        }
+        
+        .df-title {
+            color: #991b1b;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .df-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .df-step {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .df-step-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .df-step-label {
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .df-arrow {
+            font-size: 2em;
+            color: #ef4444;
+        }
+        
+        .df-result {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 180px;
+        }
+        
+        /* 経路別問題図解 */
+        .route-problems {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .route-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .route-diagram {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .ec2-center {
+            background: linear-gradient(135deg, #ff9900 0%, #ec7211 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 200px;
+            margin: 0 auto 40px;
+            box-shadow: 0 10px 30px rgba(255, 153, 0, 0.3);
+        }
+        
+        .ec2-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .ec2-label {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .ec2-mtu {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .routes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .route-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-top: 5px solid;
+            text-align: center;
+        }
+        
+        .route-card.success {
+            border-color: #10b981;
+        }
+        
+        .route-card.fail {
+            border-color: #ef4444;
+        }
+        
+        .route-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .route-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .route-mtu {
+            background: #f1f5f9;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        
+        .route-card.success .route-mtu {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .route-card.fail .route-mtu {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .route-status {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .status-ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-ng {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* 問題発生メカニズム */
+        .mechanism-section {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #7c3aed;
+        }
+        
+        .mechanism-title {
+            color: #5b21b6;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .mechanism-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .mech-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: white;
+            padding: 20px 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .mech-number {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .mech-content {
+            flex: 1;
+        }
+        
+        .mech-title {
+            font-weight: bold;
+            color: #5b21b6;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .mech-desc {
+            color: #64748b;
+        }
+        
+        .mech-arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #7c3aed;
+        }
+        
+        /* 解決策 */
+        .solution-section {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border-left: 8px solid #10b981;
+        }
+        
+        .solution-title {
+            color: #065f46;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .solution-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .solution-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .solution-card h3, .solution-card h4 {
+            color: #065f46;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .solution-card p {
+            color: #475569;
+            line-height: 1.7;
+        }
+        
+        .code-box {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+        
+        /* 比較表 */
+        .comparison-table {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .table-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #232f3e 0%, #0f3460 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        th:first-child {
+            border-radius: 10px 0 0 0;
+            text-align: left;
+        }
+        
+        th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 2px solid #f1f5f9;
+            text-align: center;
+        }
+        
+        td:first-child {
+            text-align: left;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .check-mark {
+            color: #10b981;
+            font-size: 1.5em;
+        }
+        
+        .cross-mark {
+            color: #ef4444;
+            font-size: 1.5em;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .faq-title {
+            text-align: center;
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #0c4a6e;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            padding: 25px;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        /* まとめ */
+        .summary {
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fbbf24;
+            margin-bottom: 10px;
+        }
+        
+        .summary-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        
+        .final-message {
+            background: rgba(255,255,255,0.2);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+        
+        @media (max-width: 1024px) {
+            .answer-cards,
+            .routes-grid,
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .truck-scenario {
+                flex-direction: column;
+            }
+            
+            .df-flow {
+                flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+            }
+        }
+    </style>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論-両方とも根本原因になりうる！">📌 結論：両方とも根本原因になりうる！</a></li>
+            <li class="toc-h2"><a href="#トラックとトンネルで理解するMTU問題">🚛 トラックとトンネルで理解するMTU問題</a></li>
+            <li class="toc-h3"><a href="#MTU-=-トラックの最大積載サイズ">📦 MTU = トラックの最大積載サイズ</a></li>
+            <li class="toc-h2"><a href="#各経路のMTUサイズ比較">📏 各経路のMTUサイズ比較</a></li>
+            <li class="toc-h2"><a href="#Don">🚫 Don't Fragment（DF）フラグとは？</a></li>
+            <li class="toc-h3"><a href="#たとえ話でいうと...">🏠 たとえ話でいうと...</a></li>
+            <li class="toc-h2"><a href="#️-経路別-転送成功-失敗マップ">🗺️ 経路別：転送成功・失敗マップ</a></li>
+            <li class="toc-h2"><a href="#⚙️-問題発生のメカニズム">⚙️ 問題発生のメカニズム</a></li>
+            <li class="toc-h2"><a href="#解決策">💡 解決策</a></li>
+            <li class="toc-h3"><a href="#MTUを調整する">MTUを調整する</a></li>
+            <li class="toc-h2"><a href="#AWS-Direct-Connect-のジャンボフレーム詳細">🔌 AWS Direct Connect のジャンボフレーム詳細</a></li>
+            <li class="toc-h3"><a href="#プライベート仮想インターフェイス">プライベート仮想インターフェイス</a></li>
+            <li class="toc-h2"><a href="#経路別MTU比較表詳細版">📊 経路別MTU比較表（詳細版）</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#AWS公式ドキュメント">📚 AWS公式ドキュメント</a></li>
+            <li class="toc-h3"><a href="#Direct-Connect---ジャンボフレームの設定">Direct Connect - ジャンボフレームの設定</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 ジャンボフレーム＆MTU問題</h1>
+            <p>大きなトラックが狭いトンネルを通れない問題を完全図解！</p>
+        </div>
+        
+        <div class="content">
+            <!-- 結論ファースト -->
+            <div class="conclusion-first">
+                <h2 id="結論-両方とも根本原因になりうる！">📌 結論：両方とも根本原因になりうる！</h2>
+                
+                <p style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
+                    ジャンボフレーム（MTU 9001）で「Don't Fragment」フラグが設定されている場合、<br>
+                    <strong>インターネット経由</strong>と<strong>VPN経由</strong>の両方で転送失敗が発生します
+                </p>
+                
+                <div class="answer-cards">
+                    <div class="answer-card correct">
+                        <div class="answer-icon">🌐</div>
+                        <div class="answer-title">A1. パブリックインターネット経由</div>
+                        <div class="answer-desc">
+                            インターネットの標準MTUは<strong>1500バイト</strong><br>
+                            9001バイトのパケットは通過できず、<br>
+                            Don't Fragmentフラグにより分割もできない<br>
+                            → <strong>パケットドロップ！</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="answer-card correct">
+                        <div class="answer-icon">🔒</div>
+                        <div class="answer-title">A2. Site-to-Site VPN経由</div>
+                        <div class="answer-desc">
+                            VPNはオーバーヘッドがあるため<br>
+                            実効MTUは約<strong>1300～1400バイト</strong><br>
+                            9001バイトのパケットは通過できず、<br>
+                            → <strong>パケットドロップ！</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="both-correct">
+                    ⚠️ A1もA2も両方とも正解（根本原因）です！
+                </div>
+            </div>
+            
+            <!-- たとえ話 -->
+            <div class="analogy-section">
+                <h2 id="トラックとトンネルで理解するMTU問題" class="analogy-title">🚛 トラックとトンネルで理解するMTU問題</h2>
+                
+                <div class="truck-diagram">
+                    <h3 id="MTU-=-トラックの最大積載サイズ" style="text-align: center; color: #0c4a6e; margin-bottom: 30px; font-size: 1.5em;">
+                        📦 MTU = トラックの最大積載サイズ
+                    </h3>
+                    
+                    <p style="text-align: center; color: #475569; margin-bottom: 30px;">
+                        <strong>MTU（Maximum Transmission Unit）</strong>とは、1回で送れるデータの最大サイズです。<br>
+                        これを「トラックに積める荷物の最大サイズ」に例えましょう！
+                    </p>
+                    
+                    <!-- VPC内（成功例） -->
+                    <h4 style="color: #10b981; margin: 30px 0 15px; text-align: center;">✅ VPC内の通信（成功）</h4>
+                    <div class="truck-scenario">
+                        <div class="truck-box">
+                            <div class="truck-icon">🚛</div>
+                            <div class="truck-label">大型トラック</div>
+                            <div class="truck-size">荷物サイズ: 9001</div>
+                        </div>
+                        
+                        <div class="arrow-section">➡️</div>
+                        
+                        <div class="tunnel-box" style="background: linear-gradient(to bottom, #10b981 0%, #059669 100%);">
+                            <div class="tunnel-icon">🏗️</div>
+                            <div class="tunnel-label">VPCトンネル</div>
+                            <div class="tunnel-size">高さ制限: 9001</div>
+                        </div>
+                        
+                        <div class="arrow-section">➡️</div>
+                        
+                        <div class="result-badge result-success">✅ 通過OK！</div>
+                    </div>
+                    
+                    <!-- インターネット経由（失敗例） -->
+                    <h4 style="color: #ef4444; margin: 30px 0 15px; text-align: center;">❌ インターネット経由（失敗）</h4>
+                    <div class="truck-scenario">
+                        <div class="truck-box">
+                            <div class="truck-icon">🚛</div>
+                            <div class="truck-label">大型トラック</div>
+                            <div class="truck-size">荷物サイズ: 9001</div>
+                        </div>
+                        
+                        <div class="arrow-section">➡️</div>
+                        
+                        <div class="tunnel-box">
+                            <div class="tunnel-icon">🚇</div>
+                            <div class="tunnel-label">インターネットトンネル</div>
+                            <div class="tunnel-size">高さ制限: 1500 😱</div>
+                        </div>
+                        
+                        <div class="arrow-section">➡️</div>
+                        
+                        <div class="result-badge result-fail">❌ 通過NG！</div>
+                    </div>
+                    
+                    <div style="background: #fef3c7; padding: 20px; border-radius: 15px; margin-top: 30px; text-align: center;">
+                        <strong style="color: #92400e;">🚫 Don't Fragmentフラグ = 「荷物を分割するな！」という指示</strong><br>
+                        <span style="color: #78350f;">このフラグがあると、トラックを小さく分けることができず、立ち往生してしまいます</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MTU比較 -->
+            <div class="mtu-comparison">
+                <h2 id="各経路のMTUサイズ比較" class="mtu-title">📏 各経路のMTUサイズ比較</h2>
+                
+                <div class="mtu-visual">
+                    <div class="mtu-bar-container">
+                        <div class="mtu-bar-label">
+                            <div class="mtu-bar-icon">☁️</div>
+                            <div class="mtu-bar-name">VPC内（ジャンボフレーム）</div>
+                        </div>
+                        <div class="mtu-bar jumbo">
+                            最大 9001 バイト
+                            <span class="mtu-value">✅ 大きなデータOK</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mtu-bar-container">
+                        <div class="mtu-bar-label">
+                            <div class="mtu-bar-icon">🌐</div>
+                            <div class="mtu-bar-name">インターネット（標準）</div>
+                        </div>
+                        <div class="mtu-bar standard">
+                            1500
+                        </div>
+                        <p style="color: #92400e; margin-top: 10px; font-size: 0.9em;">
+                            ⚠️ ジャンボフレームの約17%のサイズしか通らない！
+                        </p>
+                    </div>
+                    
+                    <div class="mtu-bar-container">
+                        <div class="mtu-bar-label">
+                            <div class="mtu-bar-icon">🔒</div>
+                            <div class="mtu-bar-name">Site-to-Site VPN</div>
+                        </div>
+                        <div class="mtu-bar vpn">
+                            ~1300
+                        </div>
+                        <p style="color: #991b1b; margin-top: 10px; font-size: 0.9em;">
+                            ⚠️ VPNオーバーヘッドがあるため、さらに小さい！
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Don't Fragmentフラグ説明 -->
+            <div class="df-flag-section">
+                <h2 id="Don't-FragmentDFフラグとは？" class="df-title">🚫 Don't Fragment（DF）フラグとは？</h2>
+                
+                <p style="text-align: center; color: #991b1b; margin-bottom: 30px; font-size: 1.1em;">
+                    「このパケットは分割しないでください」という指示をIPヘッダーに設定するフラグです
+                </p>
+                
+                <div class="df-flow">
+                    <div class="df-step">
+                        <div class="df-step-icon">📦</div>
+                        <div class="df-step-label">9001バイトのパケット<br>（DFフラグ付き）</div>
+                    </div>
+                    
+                    <div class="df-arrow">➡️</div>
+                    
+                    <div class="df-step">
+                        <div class="df-step-icon">🚧</div>
+                        <div class="df-step-label">MTU 1500の経路<br>（インターネット）</div>
+                    </div>
+                    
+                    <div class="df-arrow">➡️</div>
+                    
+                    <div class="df-step">
+                        <div class="df-step-icon">🤔</div>
+                        <div class="df-step-label">分割したいけど<br>DFフラグがある...</div>
+                    </div>
+                    
+                    <div class="df-arrow">➡️</div>
+                    
+                    <div class="df-result">
+                        <div class="df-step-icon">💥</div>
+                        <div class="df-step-label">パケット破棄！<br>ICMP「Fragmentation Needed」送信</div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+                    <h3 id="たとえ話でいうと..." style="color: #991b1b; margin-bottom: 15px;">🏠 たとえ話でいうと...</h3>
+                    <p style="color: #475569;">
+                        <strong>「この大きな荷物は絶対に分けないで配送してください！」</strong>という指示がついた荷物を、<br>
+                        小さなトンネルしかない道で運ぼうとしている状態です。<br><br>
+                        分割が禁止されているため、配送員は<strong>「配達不能」として返送</strong>するしかありません。
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 経路別問題図解 -->
+            <div class="route-problems">
+                <h2 id="️-経路別-転送成功-失敗マップ" class="route-title">🗺️ 経路別：転送成功・失敗マップ</h2>
+                
+                <div class="route-diagram">
+                    <div class="ec2-center">
+                        <div class="ec2-icon">🖥️</div>
+                        <div class="ec2-label">EC2インスタンス</div>
+                        <div class="ec2-mtu">MTU: 9001（ジャンボフレーム）</div>
+                    </div>
+                    
+                    <div class="routes-grid">
+                        <div class="route-card success">
+                            <div class="route-icon">☁️</div>
+                            <div class="route-name">VPC内の通信</div>
+                            <div class="route-mtu">MTU: 9001 バイト</div>
+                            <p style="color: #475569; margin-bottom: 15px;">
+                                同じVPC内のEC2間では<br>ジャンボフレームがサポート
+                            </p>
+                            <div class="route-status status-ok">✅ 転送成功</div>
+                        </div>
+                        
+                        <div class="route-card fail">
+                            <div class="route-icon">🌐</div>
+                            <div class="route-name">インターネット経由</div>
+                            <div class="route-mtu">MTU: 1500 バイト</div>
+                            <p style="color: #475569; margin-bottom: 15px;">
+                                パブリックインターネットは<br>標準MTUのみサポート
+                            </p>
+                            <div class="route-status status-ng">❌ 転送失敗</div>
+                        </div>
+                        
+                        <div class="route-card fail">
+                            <div class="route-icon">🔒</div>
+                            <div class="route-name">Site-to-Site VPN</div>
+                            <div class="route-mtu">MTU: ~1300 バイト</div>
+                            <p style="color: #475569; margin-bottom: 15px;">
+                                VPNオーバーヘッドにより<br>さらにMTUが小さくなる
+                            </p>
+                            <div class="route-status status-ng">❌ 転送失敗</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 問題発生メカニズム -->
+            <div class="mechanism-section">
+                <h2 id="⚙️-問題発生のメカニズム" class="mechanism-title">⚙️ 問題発生のメカニズム</h2>
+                
+                <div class="mechanism-flow">
+                    <div class="mech-step">
+                        <div class="mech-number">1</div>
+                        <div class="mech-content">
+                            <div class="mech-title">EC2がジャンボフレームでパケット送信</div>
+                            <div class="mech-desc">1,024MB以上のファイルを9001バイト単位で分割して送信開始</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mech-arrow">⬇️</div>
+                    
+                    <div class="mech-step">
+                        <div class="mech-number">2</div>
+                        <div class="mech-content">
+                            <div class="mech-title">パケットがMTU境界に到達</div>
+                            <div class="mech-desc">インターネットやVPNゲートウェイなど、MTUが小さい経路に到達</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mech-arrow">⬇️</div>
+                    
+                    <div class="mech-step">
+                        <div class="mech-number">3</div>
+                        <div class="mech-content">
+                            <div class="mech-title">フラグメンテーションを試みる</div>
+                            <div class="mech-desc">ルーターがパケットを小さく分割しようとするが...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mech-arrow">⬇️</div>
+                    
+                    <div class="mech-step">
+                        <div class="mech-number">4</div>
+                        <div class="mech-content">
+                            <div class="mech-title">DFフラグにより分割不可</div>
+                            <div class="mech-desc">「Don't Fragment」フラグが設定されているため、分割できない</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mech-arrow">⬇️</div>
+                    
+                    <div class="mech-step" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);">
+                        <div class="mech-number" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">💥</div>
+                        <div class="mech-content">
+                            <div class="mech-title" style="color: #991b1b;">パケットがドロップ！</div>
+                            <div class="mech-desc" style="color: #991b1b;">ファイル転送が失敗し、クライアントに届かない</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 解決策 -->
+            <div class="solution-section">
+                <h2 id="解決策" class="solution-title">💡 解決策</h2>
+                
+                <div class="solution-grid">
+                    <div class="solution-card">
+                        <div class="solution-icon">📏</div>
+                        <h3 id="MTUを調整する">MTUを調整する</h3>
+                        <p>
+                            外部と通信する場合は、MTUを標準の<strong>1500バイト</strong>に設定します。
+                        </p>
+                        <div class="code-box">
+                            # Linux でMTUを変更<br>
+                            sudo ip link set dev eth0 mtu 1500
+                        </div>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <div class="solution-icon">✂️</div>
+                        <h4>DFフラグを無効化</h4>
+                        <p>
+                            Don't Fragmentフラグを外して、パケットの分割を許可します。
+                        </p>
+                        <div class="code-box">
+                            # アプリケーション側で<br>
+                            # ソケットオプションを変更
+                        </div>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <div class="solution-icon">🔍</div>
+                        <h4>Path MTU Discoveryを活用</h4>
+                        <p>
+                            経路上の最小MTUを自動検出し、適切なサイズでパケットを送信します。
+                        </p>
+                        <div class="code-box">
+                            # ICMPがブロックされていないか確認<br>
+                            # セキュリティグループを確認
+                        </div>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <div class="solution-icon">🔌</div>
+                        <h4>Direct Connectを使用</h4>
+                        <p>
+                            プライベートVIFでMTU 9001、トランジットVIFでMTU 8500のジャンボフレームをサポート。<strong>ただしVPNと同じルートを共有しないこと！</strong>
+                        </p>
+                        <div class="code-box">
+                            # 注意: VPNと同じルートを<br>
+                            # アドバタイズすると1500に制限
+                        </div>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <div class="solution-icon">🚇</div>
+                        <h4>Transit Gateway使用時の注意</h4>
+                        <p>
+                            Transit GatewayはMTU <strong>8500</strong>が上限です。9001ではありません。
+                        </p>
+                        <div class="code-box">
+                            # TGW経由の場合<br>
+                            sudo ip link set dev eth0 mtu 8500
+                        </div>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <div class="solution-icon">📋</div>
+                        <h4>EC2インスタンスタイプ確認</h4>
+                        <p>
+                            C1、CC1、T1、M1はジャンボフレーム非対応。現行世代のインスタンスを使用してください。
+                        </p>
+                        <div class="code-box">
+                            # 対応確認<br>
+                            aws ec2 describe-instance-types \<br>
+                            --query "InstanceTypes[*].NetworkInfo"
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Direct Connect詳細セクション -->
+            <div class="direct-connect-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 50px; border-radius: 20px; margin: 50px 0; border-left: 8px solid #22c55e;">
+                <h2 id="AWS-Direct-Connect-のジャンボフレーム詳細" style="color: #166534; font-size: 2em; margin-bottom: 30px; text-align: center; font-weight: bold;">
+                    🔌 AWS Direct Connect のジャンボフレーム詳細
+                </h2>
+                <p style="text-align: center; color: #166534; margin-bottom: 30px; font-size: 1.1em;">
+                    <strong>AWS公式ドキュメントより</strong>：Direct Connectの仮想インターフェイス別MTU制限
+                </p>
+                
+                <!-- VIF別MTU -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin: 30px 0;">
+                    <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-top: 5px solid #22c55e;">
+                        <div style="font-size: 2.5em; text-align: center; margin-bottom: 15px;">🏠</div>
+                        <h3 id="プライベート仮想インターフェイス" style="color: #166534; text-align: center; margin-bottom: 15px; font-size: 1.3em;">プライベート仮想インターフェイス</h3>
+                        <div style="background: #d1fae5; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 2em; font-weight: bold; color: #166534;">MTU: 9001</span>
+                            <span style="display: block; color: #166534; font-size: 0.9em;">（ジャンボフレーム）</span>
+                        </div>
+                        <p style="color: #475569; font-size: 0.95em;">
+                            VPCへの接続用。仮想プライベートゲートウェイまたはDirect Connectゲートウェイにアタッチ可能。
+                        </p>
+                    </div>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-top: 5px solid #3b82f6;">
+                        <div style="font-size: 2.5em; text-align: center; margin-bottom: 15px;">🚇</div>
+                        <h4 style="color: #1e40af; text-align: center; margin-bottom: 15px; font-size: 1.3em;">トランジット仮想インターフェイス</h4>
+                        <div style="background: #dbeafe; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 2em; font-weight: bold; color: #1e40af;">MTU: 8500</span>
+                            <span style="display: block; color: #1e40af; font-size: 0.9em;">（ジャンボフレーム）</span>
+                        </div>
+                        <p style="color: #475569; font-size: 0.95em;">
+                            Transit Gateway経由での接続用。<strong>9001ではなく8500が上限</strong>なので注意！
+                        </p>
+                    </div>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-top: 5px solid #f59e0b;">
+                        <div style="font-size: 2.5em; text-align: center; margin-bottom: 15px;">🌐</div>
+                        <h4 style="color: #92400e; text-align: center; margin-bottom: 15px; font-size: 1.3em;">パブリック仮想インターフェイス</h4>
+                        <div style="background: #fef3c7; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 2em; font-weight: bold; color: #92400e;">MTU: 1500</span>
+                            <span style="display: block; color: #92400e; font-size: 0.9em;">（標準のみ）</span>
+                        </div>
+                        <p style="color: #475569; font-size: 0.95em;">
+                            AWSパブリックサービスへの接続用。ジャンボフレームは<strong>サポートされません</strong>。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- 重要な注意事項 -->
+                <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); padding: 30px; border-radius: 15px; border: 3px solid #ef4444; margin-top: 30px;">
+                    <h4 style="color: #991b1b; margin-bottom: 20px; font-size: 1.3em; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5em;">⚠️</span>
+                        <span>重要：VPNと共存時のMTU制限</span>
+                    </h4>
+                    <p style="color: #991b1b; line-height: 1.8; font-size: 1.05em;">
+                        <strong>同じルートをアドバタイズする</strong>が<strong>異なるMTU値を使用する</strong>2つのプライベート仮想インターフェイスがある場合、<br>
+                        または<strong>同じルートをアドバタイズするSite-to-Site VPNがある場合</strong>には、<br><br>
+                        <span style="background: #991b1b; color: white; padding: 5px 15px; border-radius: 20px; font-size: 1.1em;">
+                            🚫 自動的に 1500 MTU が使用されます！
+                        </span>
+                    </p>
+                    <p style="color: #7f1d1d; margin-top: 15px; font-size: 0.95em;">
+                        → これが今回の問題の重要なポイント！Direct Connectがあっても、VPNが同じルートを持つと1500に制限される可能性があります。
+                    </p>
+                </div>
+                
+                <!-- EC2インスタンスタイプの制限 -->
+                <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-top: 30px;">
+                    <h4 style="color: #166534; margin-bottom: 20px; font-size: 1.2em;">📋 EC2インスタンスタイプ別ジャンボフレーム対応</h4>
+                    <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <div style="background: #d1fae5; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                                <strong style="color: #166534;">✅ 対応するインスタンス</strong>
+                            </div>
+                            <p style="color: #475569;">
+                                C1、CC1、T1、M1<strong>以外</strong>のすべてのEC2インスタンスタイプ<br>
+                                （現行世代のほとんどのインスタンス）
+                            </p>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <div style="background: #fee2e2; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                                <strong style="color: #991b1b;">❌ 非対応のインスタンス</strong>
+                            </div>
+                            <p style="color: #475569;">
+                                <strong>C1、CC1、T1、M1</strong><br>
+                                これらの古いインスタンスタイプではジャンボフレームがドロップされます
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- イーサネットフレームサイズ -->
+                <div style="background: #f8fafc; padding: 25px; border-radius: 15px; margin-top: 30px; border: 2px dashed #94a3b8;">
+                    <h4 style="color: #475569; margin-bottom: 15px;">🔧 技術詳細：イーサネットフレームサイズ</h4>
+                    <p style="color: #64748b; font-family: 'Courier New', monospace; font-size: 0.95em;">
+                        Direct Connectがリンクレイヤーでサポートするフレームサイズ：<br><br>
+                        <strong>標準:</strong> 1522バイト = 14(イーサネットヘッダー) + 4(VLANタグ) + 1500(IPデータグラム) + 4(FCS)<br>
+                        <strong>ジャンボ:</strong> 9023バイト = 14(イーサネットヘッダー) + 4(VLANタグ) + 9001(IPデータグラム) + 4(FCS)
+                    </p>
+                </div>
+            </div>
+
+            <!-- 比較表 -->
+            <div class="comparison-table">
+                <h2 id="経路別MTU比較表詳細版" class="table-title">📊 経路別MTU比較表（詳細版）</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>経路</th>
+                            <th>MTUサイズ</th>
+                            <th>ジャンボフレーム対応</th>
+                            <th>9001バイトパケット</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🏠 VPC内（同一リージョン）</td>
+                            <td>9001 バイト</td>
+                            <td><span class="check-mark">✅</span></td>
+                            <td><span class="check-mark">✅ 通過</span></td>
+                        </tr>
+                        <tr>
+                            <td>🔗 VPCピアリング（同一リージョン）</td>
+                            <td>9001 バイト</td>
+                            <td><span class="check-mark">✅</span></td>
+                            <td><span class="check-mark">✅ 通過</span></td>
+                        </tr>
+                        <tr>
+                            <td>🌉 Transit Gateway</td>
+                            <td><strong>8500 バイト</strong></td>
+                            <td><span class="check-mark">✅</span></td>
+                            <td><span class="cross-mark">❌ 要調整（8500以下に）</span></td>
+                        </tr>
+                        <tr>
+                            <td>🌐 インターネットゲートウェイ</td>
+                            <td>1500 バイト</td>
+                            <td><span class="cross-mark">❌</span></td>
+                            <td><span class="cross-mark">❌ ドロップ</span></td>
+                        </tr>
+                        <tr>
+                            <td>🔒 Site-to-Site VPN</td>
+                            <td>~1300-1400 バイト</td>
+                            <td><span class="cross-mark">❌</span></td>
+                            <td><span class="cross-mark">❌ ドロップ</span></td>
+                        </tr>
+                        <tr style="background: #f0fdf4;">
+                            <td>🔌 Direct Connect（プライベートVIF）</td>
+                            <td><strong>9001 バイト</strong></td>
+                            <td><span class="check-mark">✅</span></td>
+                            <td><span class="check-mark">✅ 通過</span></td>
+                        </tr>
+                        <tr style="background: #eff6ff;">
+                            <td>🔌 Direct Connect（トランジットVIF）</td>
+                            <td><strong>8500 バイト</strong></td>
+                            <td><span class="check-mark">✅</span></td>
+                            <td><span class="cross-mark">❌ 要調整（8500以下に）</span></td>
+                        </tr>
+                        <tr style="background: #fef3c7;">
+                            <td>🔌 Direct Connect（パブリックVIF）</td>
+                            <td>1500 バイト</td>
+                            <td><span class="cross-mark">❌</span></td>
+                            <td><span class="cross-mark">❌ ドロップ</span></td>
+                        </tr>
+                        <tr style="background: #fee2e2;">
+                            <td>⚠️ DX + VPN共存（同一ルート）</td>
+                            <td><strong>1500 バイト</strong></td>
+                            <td><span class="cross-mark">❌ 強制制限</span></td>
+                            <td><span class="cross-mark">❌ ドロップ</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="color: #64748b; font-size: 0.9em; margin-top: 15px;">
+                    ※ Direct Connectでジャンボフレームを使用するには、オンプレミス側のルーター設定も必要です<br>
+                    ※ 同じルートにVPNがある場合は自動的に1500 MTUに制限されます（AWS公式ドキュメントより）
+                </p>
+            </div>
+            
+            <!-- FAQ -->
+            <div class="faq-section">
+                <h2 id="❓-よくある質問" class="faq-title">❓ よくある質問</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>なぜUIは正常に表示されるのにファイル転送だけ失敗するの？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>HTMLファイル（1,024バイト）は小さいため、1パケットで送信できます。</strong><br>
+                        1,024バイトはMTU 1500バイト以下なので、どの経路でも問題なく転送できます。<br>
+                        一方、1,024MB以上のファイルは多数のパケットに分割され、そのうち9001バイトのパケットがMTU境界で問題を起こします。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>クラスタープレイスメントグループとは何ですか？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>同じラック内にEC2インスタンスを配置して、低レイテンシ・高スループットを実現する機能です。</strong><br>
+                        HPC（高性能コンピューティング）やビッグデータ処理など、インスタンス間通信が多いワークロードに最適です。<br>
+                        同一AZ内に配置されるため、ジャンボフレーム（MTU 9001）が完全にサポートされます。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>VPNのMTUがインターネットより小さいのはなぜ？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>VPNにはカプセル化のオーバーヘッドがあるためです。</strong><br>
+                        IPsec VPNでは、元のパケットにVPNヘッダー（約100～200バイト）が追加されます。<br>
+                        そのため、実際に送れるデータ部分のMTUは1300～1400バイト程度に制限されます。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>Direct Connectでもジャンボフレームが使えないケースは？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>AWS公式ドキュメントによると、以下のケースでは1500 MTUに制限されます：</strong><br><br>
+                        1. <strong>パブリック仮想インターフェイス</strong>を使用する場合（ジャンボフレーム非対応）<br>
+                        2. <strong>同じルートをアドバタイズするSite-to-Site VPN</strong>がある場合（自動的に1500に制限）<br>
+                        3. <strong>異なるMTU値を使用する2つのプライベートVIF</strong>が同じルートを持つ場合<br>
+                        4. <strong>オンプレミス側のルーター</strong>がジャンボフレームに対応していない場合<br>
+                        5. <strong>C1、CC1、T1、M1インスタンス</strong>との通信（これらはジャンボフレーム非対応）
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>Transit GatewayとDirect Connectゲートウェイの違いは？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>MTUサイズが異なります！</strong><br><br>
+                        ・<strong>プライベートVIF（Direct Connectゲートウェイ経由）</strong>：MTU 9001まで対応<br>
+                        ・<strong>トランジットVIF（Transit Gateway経由）</strong>：MTU 8500まで対応<br><br>
+                        Transit Gatewayは複数VPCのハブとして便利ですが、ジャンボフレームのサイズが8500バイトに制限される点に注意してください。<br>
+                        9001バイトのパケットはTransit Gateway経由では通過できません。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>🤔</span>
+                        <span>SiteLinkとは何ですか？</span>
+                    </div>
+                    <div class="faq-answer">
+                        <strong>Direct Connect POPs間を直接接続するオプション機能です。</strong><br><br>
+                        AWSグローバルネットワークを使って、リージョンを経由せずにオンプレミス拠点間を接続できます。<br>
+                        SiteLinkは仮想インターフェイスの種類に応じて、最大8500または9001のジャンボフレームMTUサイズをサポートします。<br>
+                        ※AWS GovCloud (US)および中国リージョンでは使用できません。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 参考リンク -->
+            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 40px; border-radius: 20px; margin: 50px 0; border-left: 8px solid #0284c7;">
+                <h2 id="AWS公式ドキュメント" style="color: #0c4a6e; font-size: 2em; margin-bottom: 25px; text-align: center;">📚 AWS公式ドキュメント</h2>
+                
+                <div style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: flex-start; gap: 20px;">
+                        <div style="font-size: 3em;">📖</div>
+                        <div style="flex: 1;">
+                            <h3 id="Direct-Connect---ジャンボフレームの設定" style="color: #0c4a6e; font-size: 1.3em; margin-bottom: 10px;">
+                                Direct Connect - ジャンボフレームの設定
+                            </h3>
+                            <p style="color: #475569; line-height: 1.7; margin-bottom: 15px;">
+                                AWS Direct Connectでジャンボフレームを使用する際の設定方法、MTUサイズの考慮事項、
+                                仮想インターフェイスでのMTU設定について詳しく解説されています。
+                            </p>
+                            <a href="https://docs.aws.amazon.com/ja_jp/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces.html#set-jumbo-frames-vif" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               style="display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #ff9900 0%, #ec7211 100%); color: white; padding: 12px 25px; border-radius: 10px; text-decoration: none; font-weight: bold; transition: all 0.3s ease;">
+                                <span>🔗</span>
+                                <span>AWS公式ドキュメントを見る</span>
+                                <span>→</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #fef3c7; padding: 20px; border-radius: 15px; margin-top: 25px; display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 2em;">💡</span>
+                    <div>
+                        <strong style="color: #92400e;">学習のヒント：</strong>
+                        <span style="color: #78350f;">
+                            Direct Connectはジャンボフレーム（MTU 9001）をサポートしていますが、
+                            オンプレミス側のネットワーク機器も同様に設定する必要があります。
+                            エンドツーエンドでMTUが一致していることが重要です。
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- まとめ -->
+            <div class="summary">
+                <h2 id="まとめ">🎓 まとめ</h2>
+                
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-icon">🚛</div>
+                        <div class="summary-title">ジャンボフレーム</div>
+                        <div class="summary-desc">
+                            MTU 9001バイトの大きなパケット<br>
+                            VPC内では高速通信が可能<br>
+                            外部通信では問題発生の可能性
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">🚫</div>
+                        <div class="summary-title">Don't Fragmentフラグ</div>
+                        <div class="summary-desc">
+                            パケット分割を禁止するフラグ<br>
+                            MTUが小さい経路では<br>
+                            パケットがドロップされる
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">🛣️</div>
+                        <div class="summary-title">経路によるMTU差</div>
+                        <div class="summary-desc">
+                            VPC内: 9001バイト ✅<br>
+                            インターネット: 1500バイト ⚠️<br>
+                            VPN: ~1300バイト ⚠️
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="final-message">
+                    <strong>🎯 試験のポイント：</strong><br><br>
+                    ジャンボフレーム + Don't Fragmentフラグ + 外部通信 = 転送失敗<br><br>
+                    <span style="font-size: 1.1em;">
+                        ✅ A1（インターネット経由）も A2（VPN経由）も<br>
+                        <strong>両方とも根本原因になりうる正解です！</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+    <!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="vpc-network-access-analyzer-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">19</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">26</span>
+    </div>
+    <a href="ec2-mtu-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

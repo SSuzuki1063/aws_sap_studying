@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   AWS Fault Injection Simulator 完全ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/aws_fis_infographic.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#FISって何？">🤔 FISって何？</a></li>
+            <li class="toc-h3"><a href="#病院の避難訓練のようなもの">🏥
+      
+      病院の避難訓練のようなもの</a></li>
+            <li class="toc-h2"><a href="#なぜ必要なの？">🎯 なぜ必要なの？</a></li>
+            <li class="toc-h3"><a href="#建物の耐震テスト">建物の耐震テスト</a></li>
+            <li class="toc-h2"><a href="#⚙️-どう動くの？">⚙️ どう動くの？</a></li>
+            <li class="toc-h3"><a href="#演劇のリハーサルみたい！">🎭
+      
+      演劇のリハーサルみたい！</a></li>
+            <li class="toc-h2"><a href="#できること">🎪 できること</a></li>
+            <li class="toc-h3"><a href="#EC2インスタンス停止">EC2インスタンス停止</a></li>
+            <li class="toc-h2"><a href="#対応AWSサービス">🔗 対応AWSサービス</a></li>
+            <li class="toc-h3"><a href="#いろんなお店での防犯訓練">🏪
+      
+      いろんなお店での防犯訓練</a></li>
+            <li class="toc-h2"><a href="#従来の方法との違い">📊 従来の方法との違い</a></li>
+            <li class="toc-h2"><a href="#✨-使うメリット">✨ 使うメリット</a></li>
+            <li class="toc-h3"><a href="#システムが強くなる">システムが強くなる</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎯 まとめ</a></li>
+            <li class="toc-h3"><a href="#最後に...">🌟
+      
+      最後に...</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<!-- ブレッドクラムナビゲーション -->
+<nav class="breadcrumb-nav">
+<a class="breadcrumb-home" href="../index.html">
+     🏠 ホーム
+    </a>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     セキュリティ・ガバナンス
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-item">
+     その他
+    </span>
+<span class="breadcrumb-separator">
+     ›
+    </span>
+<span class="breadcrumb-current">
+     Aws Fis Infographic
+    </span>
+</nav>
+<!-- ヘッダー -->
+<div class="header">
+<h1>
+     🔧 AWS Fault Injection Simulator
+    </h1>
+<p>
+     システムの「健康診断」を行う魔法のツール
+    </p>
+</div>
+<!-- FISとは何か -->
+<div class="section">
+<h2 class="section-title" id="FISって何？">
+     🤔 FISって何？
+    </h2>
+<div class="analogy-box">
+<h3 id="病院の避難訓練のようなもの">
+<span class="icon">
+       🏥
+      </span>
+      病院の避難訓練のようなもの
+     </h3>
+<p>
+      実際の火災が起きる前に、避難訓練を行って「もしもの時」に備えますよね？AWS FISも同じように、システムに意図的に「問題」を起こして、システムが正しく対応できるかをテストするサービスです。
+     </p>
+</div>
+<div class="highlight">
+     AWSのシステムを「わざと壊して」強くするツール！
+    </div>
+</div>
+<!-- なぜ必要なのか -->
+<div class="section">
+<h2 class="section-title" id="なぜ必要なの？">
+     🎯 なぜ必要なの？
+    </h2>
+<div class="feature-grid">
+<div class="feature-card">
+<span class="icon">
+       🏗️
+      </span>
+<h3 id="建物の耐震テスト">
+       建物の耐震テスト
+      </h3>
+<p>
+       地震が来る前に建物の強度をテストするように、システムの弱点を事前に見つけることができます
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       🚗
+      </span>
+<h4>
+       自動車の衝突テスト
+      </h4>
+<p>
+       実際の事故が起きる前に安全性をテストするように、システムの安全性を確認できます
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       💡
+      </span>
+<h4>
+       停電への備え
+      </h4>
+<p>
+       計画停電でシステムが正常に動くかテストして、実際の停電時に備えることができます
+      </p>
+</div>
+</div>
+</div>
+<!-- どのように動作するか -->
+<div class="section">
+<h2 class="section-title" id="⚙️-どう動くの？">
+     ⚙️ どう動くの？
+    </h2>
+<div class="workflow">
+<div class="workflow-step pulse">
+<div class="step-number">
+       1
+      </div>
+<div class="step-text">
+       実験計画
+       <br/>
+       作成
+      </div>
+</div>
+<div class="workflow-arrow">
+      →
+     </div>
+<div class="workflow-step">
+<div class="step-number">
+       2
+      </div>
+<div class="step-text">
+       対象選択
+       <br/>
+       (EC2など)
+      </div>
+</div>
+<div class="workflow-arrow">
+      →
+     </div>
+<div class="workflow-step">
+<div class="step-number">
+       3
+      </div>
+<div class="step-text">
+       障害注入
+       <br/>
+       実行
+      </div>
+</div>
+<div class="workflow-arrow">
+      →
+     </div>
+<div class="workflow-step">
+<div class="step-number">
+       4
+      </div>
+<div class="step-text">
+       結果分析
+       <br/>
+       改善
+      </div>
+</div>
+</div>
+<div class="analogy-box">
+<h3 id="演劇のリハーサルみたい！">
+<span class="icon">
+       🎭
+      </span>
+      演劇のリハーサルみたい！
+     </h3>
+<p>
+      本番の舞台（本番環境）で失敗しないように、リハーサル（テスト）を何度も行って完璧な公演を目指すのと同じです。FISでは「もしサーバーが止まったら？」「もしネットワークが遅くなったら？」という状況を作り出してテストします。
+     </p>
+</div>
+</div>
+<!-- 主な機能 -->
+<div class="section">
+<h2 class="section-title" id="できること">
+     🎪 できること
+    </h2>
+<div class="feature-grid">
+<div class="feature-card">
+<span class="icon">
+       💻
+      </span>
+<h3 id="EC2インスタンス停止">
+       EC2インスタンス停止
+      </h3>
+<p>
+       サーバーを一時的に止めて、システムが自動復旧するかテスト
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       🌐
+      </span>
+<h4>
+       ネットワーク遅延
+      </h4>
+<p>
+       通信を意図的に遅くして、タイムアウト処理が正しく動くかチェック
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       💾
+      </span>
+<h4>
+       ディスク障害
+      </h4>
+<p>
+       ストレージにアクセスできない状況を作り、データベースの耐障害性をテスト
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       🔋
+      </span>
+<h4>
+       CPU負荷増加
+      </h4>
+<p>
+       プロセッサーに高負荷をかけて、システムの処理能力限界をチェック
+      </p>
+</div>
+</div>
+</div>
+<!-- 対応AWSサービス -->
+<div class="section">
+<h2 class="section-title" id="対応AWSサービス">
+     🔗 対応AWSサービス
+    </h2>
+<div class="aws-services">
+<div class="aws-service">
+      EC2
+     </div>
+<div class="aws-service">
+      RDS
+     </div>
+<div class="aws-service">
+      EKS
+     </div>
+<div class="aws-service">
+      ECS
+     </div>
+<div class="aws-service">
+      Lambda
+     </div>
+<div class="aws-service">
+      S3
+     </div>
+</div>
+<div class="analogy-box">
+<h3 id="いろんなお店での防犯訓練">
+<span class="icon">
+       🏪
+      </span>
+      いろんなお店での防犯訓練
+     </h3>
+<p>
+      コンビニ、レストラン、銀行など、それぞれ違う種類のお店で防犯訓練を行うように、FISも様々なAWSサービスで障害テストができます。
+     </p>
+</div>
+</div>
+<!-- 従来の方法との比較 -->
+<div class="section">
+<h2 class="section-title" id="従来の方法との違い">
+     📊 従来の方法との違い
+    </h2>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>
+        項目
+       </th>
+<th>
+        従来の方法
+       </th>
+<th>
+        AWS FIS
+       </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+         テストの簡単さ
+        </strong>
+</td>
+<td>
+        複雑なスクリプト作成が必要
+       </td>
+<td>
+        GUIでクリックするだけ
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         安全性
+        </strong>
+</td>
+<td>
+        予期しない影響のリスク
+       </td>
+<td>
+        安全ガードが組み込み済み
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         対象範囲
+        </strong>
+</td>
+<td>
+        限定的
+       </td>
+<td>
+        多くのAWSサービスに対応
+       </td>
+</tr>
+<tr>
+<td>
+<strong>
+         結果の分析
+        </strong>
+</td>
+<td>
+        手動で収集・分析
+       </td>
+<td>
+        自動でログ収集・可視化
+       </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- メリット -->
+<div class="section">
+<h2 class="section-title" id="✨-使うメリット">
+     ✨ 使うメリット
+    </h2>
+<div class="feature-grid">
+<div class="feature-card">
+<span class="icon">
+       💪
+      </span>
+<h3 id="システムが強くなる">
+       システムが強くなる
+      </h3>
+<p>
+       弱点を見つけて改善することで、障害に強いシステムが作れます
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       😴
+      </span>
+<h4>
+       安心して眠れる
+      </h4>
+<p>
+       夜中にシステムトラブルで起こされる心配が減ります
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       💰
+      </span>
+<h4>
+       コストダウン
+      </h4>
+<p>
+       大きな障害が起きる前に対策できるので、損失を防げます
+      </p>
+</div>
+<div class="feature-card">
+<span class="icon">
+       🎓
+      </span>
+<h4>
+       チームが成長
+      </h4>
+<p>
+       障害対応の経験を積むことで、チーム全体のスキルが向上します
+      </p>
+</div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="section">
+<h2 class="section-title" id="まとめ">
+     🎯 まとめ
+    </h2>
+<div class="highlight">
+     AWS FISは「転ばぬ先の杖」
+     <br/>
+     システムを強くして、みんなが安心できるサービスを作ろう！
+    </div>
+<div class="analogy-box">
+<h3 id="最後に...">
+<span class="icon">
+       🌟
+      </span>
+      最後に...
+     </h3>
+<p>
+      スポーツ選手が日々トレーニングして強くなるように、システムも定期的に「トレーニング」（障害テスト）することで、どんな問題にも負けない強いシステムを作ることができます。AWS FISは、そのためのベストパートナーです！
+     </p>
+</div>
+</div>
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+   🏠 リソース集に戻る
+  </button>
+<div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;">
+<p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+    Created by
+    <a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+     SSuzuki1063
+    </a>
+</p>
+<p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+    AWS SAP Learning Resources
+   </p>
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

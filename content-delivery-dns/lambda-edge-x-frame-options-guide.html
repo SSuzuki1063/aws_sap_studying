@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lambda@Edge Origin Response X-Frame-Options完全ガイド</title>
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/lambda-edge-x-frame-options-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論-3ステップでクリックジャッキング対策完了！">📌 結論：3ステップでクリックジャッキング対策完了！</a></li>
+            <li class="toc-h2"><a href="#✈️-空港の税関検査で理解しよう！">✈️ 空港の税関検査で理解しよう！</a></li>
+            <li class="toc-h3"><a href="#Lambda@Edge-=-空港の税関検査官">🛃 Lambda@Edge = 空港の税関検査官</a></li>
+            <li class="toc-h2"><a href="#⚡-Lambda@Edgeの4つのトリガーポイント">⚡ Lambda@Edgeの4つのトリガーポイント</a></li>
+            <li class="toc-h3"><a href="#✅-Origin-Response-を選ぶ理由">✅ Origin Response を選ぶ理由</a></li>
+            <li class="toc-h2"><a href="#ヘッダー追加の仕組み">🔧 ヘッダー追加の仕組み</a></li>
+            <li class="toc-h2"><a href="#X-Frame-Options-の3つのオプション">🎯 X-Frame-Options の3つのオプション</a></li>
+            <li class="toc-h2"><a href="#クリックジャッキング攻撃とは？">😈 クリックジャッキング攻撃とは？</a></li>
+            <li class="toc-h3"><a href="#透明なiframeで騙す攻撃手法">🎭 透明なiframeで騙す攻撃手法</a></li>
+            <li class="toc-h2"><a href="#Lambda関数コード例">💻 Lambda関数コード例</a></li>
+            <li class="toc-h3"><a href="#コードのポイント">📋 コードのポイント</a></li>
+            <li class="toc-h2"><a href="#設定手順フローチャート">📝 設定手順フローチャート</a></li>
+            <li class="toc-h3"><a href="#5ステップで完了！">🚀 5ステップで完了！</a></li>
+            <li class="toc-h2"><a href="#トリガーポイント比較表">📊 トリガーポイント比較表</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<div class="header">
+<h1>🛡️ Lambda@Edge Origin Response<br/>X-Frame-Options 完全ガイド</h1>
+<p>空港の税関検査で理解する！クリックジャッキング攻撃からWebサイトを守る方法</p>
+</div>
+<div class="content">
+<!-- 結論ファースト -->
+<div class="conclusion-first">
+<h2 id="結論-3ステップでクリックジャッキング対策完了！">📌 結論：3ステップでクリックジャッキング対策完了！</h2>
+<div class="conclusion-summary">
+<div class="summary-card">
+<div class="summary-icon">📝</div>
+<div class="summary-title">STEP 1</div>
+<div class="summary-desc">
+                            Lambda関数を作成<br/>
+<strong>us-east-1</strong>リージョン必須<br/>
+                            ヘッダー追加コードを書く
+                        </div>
+</div>
+<div class="summary-card">
+<div class="summary-icon">🔗</div>
+<div class="summary-title">STEP 2</div>
+<div class="summary-desc">
+                            CloudFrontに紐付け<br/>
+<strong>Origin Response</strong>に設定<br/>
+                            バージョン発行して関連付け
+                        </div>
+</div>
+<div class="summary-card">
+<div class="summary-icon">✅</div>
+<div class="summary-title">STEP 3</div>
+<div class="summary-desc">
+                            動作確認<br/>
+                            レスポンスヘッダーを確認<br/>
+                            iframe埋め込みをテスト
+                        </div>
+</div>
+</div>
+</div>
+<!-- たとえ話 -->
+<h2 class="section-title" id="✈️-空港の税関検査で理解しよう！">✈️ 空港の税関検査で理解しよう！</h2>
+<div class="analogy-section">
+<h3 class="analogy-title" id="Lambda@Edge-=-空港の税関検査官">🛃 Lambda@Edge = 空港の税関検査官</h3>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 30px;">
+<p style="text-align: center; color: #78350f; font-size: 1.15em; line-height: 1.8;">
+<strong>あなたのWebサイトへのアクセス</strong>は、<strong>国際空港を通過する旅客</strong>のようなもの。<br/>
+                        Lambda@Edge（税関検査官）が<strong>Origin Response（入国審査後）</strong>のタイミングで<br/>
+<strong>X-Frame-Options（セキュリティスタンプ）</strong>を押してくれます！
+                    </p>
+</div>
+<div class="analogy-flow">
+<div class="analogy-box">
+<div class="analogy-box-icon">👤</div>
+<div class="analogy-box-label">ユーザー</div>
+<div class="analogy-box-desc">旅行者</div>
+</div>
+<div class="analogy-arrow">➡️</div>
+<div class="analogy-box">
+<div class="analogy-box-icon">🌐</div>
+<div class="analogy-box-label">CloudFront</div>
+<div class="analogy-box-desc">国際空港</div>
+</div>
+<div class="analogy-arrow">➡️</div>
+<div class="analogy-box">
+<div class="analogy-box-icon">🏢</div>
+<div class="analogy-box-label">オリジン（S3等）</div>
+<div class="analogy-box-desc">目的地の国</div>
+</div>
+<div class="analogy-arrow">➡️</div>
+<div class="analogy-box analogy-highlight">
+<div class="analogy-box-icon">🛃</div>
+<div class="analogy-box-label">Lambda@Edge</div>
+<div class="analogy-box-desc">税関検査官<br/>（ここでスタンプ！）</div>
+</div>
+<div class="analogy-arrow">➡️</div>
+<div class="analogy-box">
+<div class="analogy-box-icon">👤✅</div>
+<div class="analogy-box-label">安全なレスポンス</div>
+<div class="analogy-box-desc">スタンプ付きで帰国</div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+<p style="text-align: center; color: #78350f; font-size: 1.1em;">
+<strong>🔖 X-Frame-Optionsスタンプの意味：</strong><br/>
+                        「このWebページは<strong>他人の額縁（iframe）に入れられることを拒否します</strong>」<br/>
+                        悪意あるサイトがあなたのページを勝手に埋め込むのを防ぎます！
+                    </p>
+</div>
+</div>
+<!-- Lambda@Edgeの4つのトリガーポイント -->
+<h2 class="section-title" id="⚡-Lambda@Edgeの4つのトリガーポイント">⚡ Lambda@Edgeの4つのトリガーポイント</h2>
+<div class="trigger-diagram">
+<p style="text-align: center; color: #0c4a6e; font-size: 1.15em; margin-bottom: 30px;">
+<strong>Origin Response</strong>がX-Frame-Optionsを追加する<strong>ベストタイミング</strong>です！
+                </p>
+<div class="trigger-flow">
+<div class="trigger-node">
+<div class="trigger-icon">👤</div>
+<div class="trigger-label">ユーザー</div>
+</div>
+<div class="trigger-arrow">➡️</div>
+<div class="lambda-badge">
+<div class="lambda-icon">λ</div>
+<div class="lambda-label">① Viewer Request</div>
+</div>
+<div class="trigger-arrow">➡️</div>
+<div class="trigger-node active">
+<div class="trigger-icon">🌐</div>
+<div class="trigger-label">CloudFront</div>
+<div class="trigger-sublabel">キャッシュ確認</div>
+</div>
+<div class="trigger-arrow">➡️</div>
+<div class="lambda-badge">
+<div class="lambda-icon">λ</div>
+<div class="lambda-label">② Origin Request</div>
+</div>
+<div class="trigger-arrow">➡️</div>
+<div class="trigger-node">
+<div class="trigger-icon">🏢</div>
+<div class="trigger-label">オリジン</div>
+<div class="trigger-sublabel">S3 / ALB など</div>
+</div>
+</div>
+<div class="trigger-flow" style="margin-top: 20px;">
+<div class="trigger-node">
+<div class="trigger-icon">👤✅</div>
+<div class="trigger-label">ユーザー</div>
+</div>
+<div class="trigger-arrow">⬅️</div>
+<div class="lambda-badge">
+<div class="lambda-icon">λ</div>
+<div class="lambda-label">④ Viewer Response</div>
+</div>
+<div class="trigger-arrow">⬅️</div>
+<div class="trigger-node active">
+<div class="trigger-icon">🌐</div>
+<div class="trigger-label">CloudFront</div>
+<div class="trigger-sublabel">キャッシュ保存</div>
+</div>
+<div class="trigger-arrow">⬅️</div>
+<div class="lambda-badge" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 12px; border-radius: 12px;">
+<div class="lambda-icon" style="background: white; color: #059669;">λ</div>
+<div class="lambda-label" style="color: white;">③ Origin Response ⭐</div>
+</div>
+<div class="trigger-arrow">⬅️</div>
+<div class="trigger-node">
+<div class="trigger-icon">🏢</div>
+<div class="trigger-label">オリジン</div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 40px;">
+<div style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #10b981;">
+<h3 id="✅-Origin-Response-を選ぶ理由" style="color: #059669; margin-bottom: 10px;">✅ Origin Response を選ぶ理由</h3>
+<ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+<li>キャッシュに<strong>ヘッダー付きで保存</strong>される</li>
+<li>オリジンからの<strong>全レスポンスに適用</strong></li>
+<li>効率的（キャッシュヒット時も適用済み）</li>
+</ul>
+</div>
+<div style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #f59e0b;">
+<h4 style="color: #d97706; margin-bottom: 10px;">⚠️ Viewer Response との違い</h4>
+<ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+<li>Viewer Responseは<strong>毎リクエスト実行</strong></li>
+<li>コストが高くなる可能性</li>
+<li>キャッシュ済みでも毎回Lambda実行</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- ヘッダー追加の仕組み -->
+<h2 class="section-title" id="ヘッダー追加の仕組み">🔧 ヘッダー追加の仕組み</h2>
+<div class="header-flow">
+<p style="text-align: center; color: #065f46; font-size: 1.15em; margin-bottom: 30px;">
+                    オリジンからのレスポンスに<strong>X-Frame-Optionsヘッダーを追加</strong>してCloudFrontに返します
+                </p>
+<div class="response-transform">
+<div class="response-box response-before">
+<div class="response-title">
+<span>❌</span>
+<span>Before（オリジンからの返答）</span>
+</div>
+<div class="response-content">
+HTTP/1.1 200 OK<br/>
+Content-Type: text/html<br/>
+Content-Length: 1234<br/>
+Cache-Control: max-age=3600<br/>
+<br/>
+<span style="color: #94a3b8;">（セキュリティヘッダーなし...）</span>
+</div>
+</div>
+<div class="transform-arrow">➡️</div>
+<div class="response-box response-after">
+<div class="response-title">
+<span>✅</span>
+<span>After（Lambda@Edge処理後）</span>
+</div>
+<div class="response-content">
+HTTP/1.1 200 OK<br/>
+Content-Type: text/html<br/>
+Content-Length: 1234<br/>
+Cache-Control: max-age=3600<br/>
+<span class="header-new">X-Frame-Options: SAMEORIGIN</span><br/>
+<br/>
+<span style="color: #4ade80;">（セキュリティヘッダー追加！）</span>
+</div>
+</div>
+</div>
+</div>
+<!-- X-Frame-Optionsの3つのオプション -->
+<h2 class="section-title" id="X-Frame-Options-の3つのオプション">🎯 X-Frame-Options の3つのオプション</h2>
+<div class="options-section">
+<div class="options-grid">
+<div class="option-card option-deny">
+<div class="option-icon">🚫</div>
+<div class="option-name">DENY</div>
+<div class="option-desc">どのサイトからも<br/>iframeで埋め込み不可</div>
+<div class="option-example">
+<div class="option-example-title">設定値</div>
+<div class="option-example-value">X-Frame-Options: DENY</div>
+</div>
+<div style="background: #f8fafc; padding: 15px; border-radius: 10px; margin-top: 15px;">
+<p style="font-size: 0.9em; color: #475569;">
+<strong>🏠 たとえ：</strong><br/>
+                                「この家は誰の額縁にも飾られません！」<br/>
+                                自分のサイトからも埋め込み不可
+                            </p>
+</div>
+<div style="text-align: center;">
+<span class="option-badge badge-strict">🔒 最も厳格</span>
+</div>
+</div>
+<div class="option-card option-sameorigin">
+<div class="option-icon">🏠</div>
+<div class="option-name">SAMEORIGIN</div>
+<div class="option-desc">同じドメインからのみ<br/>iframeで埋め込み可能</div>
+<div class="option-example">
+<div class="option-example-title">設定値</div>
+<div class="option-example-value">X-Frame-Options: SAMEORIGIN</div>
+</div>
+<div style="background: #f8fafc; padding: 15px; border-radius: 10px; margin-top: 15px;">
+<p style="font-size: 0.9em; color: #475569;">
+<strong>🏠 たとえ：</strong><br/>
+                                「家族の額縁にだけ飾ってOK！」<br/>
+                                自分のサイト内では埋め込み可
+                            </p>
+</div>
+<div style="text-align: center;">
+<span class="option-badge badge-recommended">⭐ 推奨</span>
+</div>
+</div>
+<div class="option-card option-allowfrom">
+<div class="option-icon">📋</div>
+<div class="option-name">ALLOW-FROM</div>
+<div class="option-desc">指定したドメインからのみ<br/>iframeで埋め込み可能</div>
+<div class="option-example">
+<div class="option-example-title">設定値</div>
+<div class="option-example-value">X-Frame-Options: ALLOW-FROM https://example.com</div>
+</div>
+<div style="background: #f8fafc; padding: 15px; border-radius: 10px; margin-top: 15px;">
+<p style="font-size: 0.9em; color: #475569;">
+<strong>🏠 たとえ：</strong><br/>
+                                「特定の友人の額縁だけOK！」<br/>
+                                ただし非推奨（ブラウザ対応不完全）
+                            </p>
+</div>
+<div style="text-align: center;">
+<span class="option-badge badge-deprecated">⚠️ 非推奨</span>
+</div>
+</div>
+</div>
+<div class="tip-box" style="margin-top: 30px;">
+<div class="tip-title">
+<span>💡</span>
+<span>推奨設定</span>
+</div>
+<div class="tip-content">
+<strong>ほとんどのケースでは SAMEORIGIN を推奨します。</strong><br/><br/>
+                        理由：<br/>
+                        ・自分のサイト内でiframeを使う可能性がある<br/>
+                        ・外部サイトからの悪意ある埋め込みは防げる<br/>
+                        ・すべてのモダンブラウザでサポート<br/><br/>
+<strong>完全に埋め込みを禁止したい場合は DENY を使用してください。</strong>
+</div>
+</div>
+</div>
+<!-- クリックジャッキング攻撃の図解 -->
+<h2 class="section-title" id="クリックジャッキング攻撃とは？">😈 クリックジャッキング攻撃とは？</h2>
+<div class="attack-section">
+<h3 class="attack-title" id="透明なiframeで騙す攻撃手法">🎭 透明なiframeで騙す攻撃手法</h3>
+<div class="attack-diagram">
+<div class="attack-scenario scenario-bad">
+<div class="scenario-title">
+<span>❌</span>
+<span>X-Frame-Optionsなし</span>
+</div>
+<div class="browser-frame">
+<div class="browser-bar">
+<div class="browser-dot red"></div>
+<div class="browser-dot yellow"></div>
+<div class="browser-dot green"></div>
+<span style="color: white; margin-left: 10px; font-size: 0.85em;">evil-site.com</span>
+</div>
+<div class="browser-content">
+<div class="evil-site">
+<div class="evil-label">😈 悪意あるサイト</div>
+<p style="font-size: 0.9em;">🎁 無料プレゼント！<br/>ここをクリック！</p>
+</div>
+<div class="iframe-overlay">
+<div style="font-size: 0.8em; color: #dc2626;">
+                                        👻 透明なiframe<br/>
+                                        （あなたの銀行サイト）<br/>
+                                        [送金ボタン]
+                                    </div>
+</div>
+</div>
+</div>
+<div class="scenario-result result-danger">
+                            😱 クリックすると送金実行！
+                        </div>
+</div>
+<div class="attack-scenario scenario-good">
+<div class="scenario-title">
+<span>✅</span>
+<span>X-Frame-Optionsあり</span>
+</div>
+<div class="browser-frame">
+<div class="browser-bar">
+<div class="browser-dot red"></div>
+<div class="browser-dot yellow"></div>
+<div class="browser-dot green"></div>
+<span style="color: white; margin-left: 10px; font-size: 0.85em;">evil-site.com</span>
+</div>
+<div class="browser-content">
+<div class="evil-site">
+<div class="evil-label">😈 悪意あるサイト</div>
+<p style="font-size: 0.9em;">🎁 無料プレゼント！<br/>ここをクリック！</p>
+</div>
+<div class="iframe-overlay iframe-blocked">
+<div style="font-size: 0.9em;">
+                                        🛡️ ブロック！<br/>
+                                        iframe埋め込み拒否
+                                    </div>
+</div>
+</div>
+</div>
+<div class="scenario-result result-safe">
+                            🎉 銀行サイトは表示されない！
+                        </div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+<h4 style="color: #991b1b; margin-bottom: 15px; text-align: center;">📋 クリックジャッキングの手口</h4>
+<ol style="color: #475569; padding-left: 25px; line-height: 2;">
+<li>攻撃者が<strong>悪意あるWebページ</strong>を作成</li>
+<li>そこに<strong>透明なiframe</strong>であなたの銀行サイト等を埋め込む</li>
+<li>「プレゼント獲得！」などの<strong>偽のボタン</strong>を表示</li>
+<li>ユーザーがクリックすると、実際は<strong>銀行の送金ボタン</strong>をクリック</li>
+<li>ログイン済みなら<strong>そのまま送金が実行</strong>されてしまう！</li>
+</ol>
+</div>
+</div>
+<!-- Lambda関数コード例 -->
+<h2 class="section-title" id="Lambda関数コード例">💻 Lambda関数コード例</h2>
+<div class="code-section">
+<div class="code-title">
+<span>📝</span>
+<span>index.js（Node.js 18.x / 20.x）</span>
+</div>
+<div class="code-block">
+<span class="code-comment">'use strict';</span>
+<span class="code-comment">// Lambda@Edge Origin Response ハンドラー</span>
+<span class="code-keyword">exports</span>.<span class="code-property">handler</span> = <span class="code-keyword">async</span> (<span class="code-variable">event</span>) =&gt; {
+    <span class="code-comment">// CloudFrontからのレスポンスを取得</span>
+<span class="code-keyword">const</span> <span class="code-variable">response</span> = <span class="code-variable">event</span>.<span class="code-property">Records</span>[<span class="code-number">0</span>].<span class="code-property">cf</span>.<span class="code-property">response</span>;
+    <span class="code-keyword">const</span> <span class="code-variable">headers</span> = <span class="code-variable">response</span>.<span class="code-property">headers</span>;
+
+    <span class="code-comment">// X-Frame-Options ヘッダーを追加</span>
+<span class="code-comment">// DENY: 全てのiframe埋め込みを禁止</span>
+<span class="code-comment">// SAMEORIGIN: 同一オリジンからの埋め込みのみ許可（推奨）</span>
+<span class="code-variable">headers</span>[<span class="code-string">'x-frame-options'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'X-Frame-Options'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'SAMEORIGIN'</span>
+    }];
+
+    <span class="code-comment">// その他のセキュリティヘッダーも追加（推奨）</span>
+<span class="code-variable">headers</span>[<span class="code-string">'x-content-type-options'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'X-Content-Type-Options'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'nosniff'</span>
+    }];
+
+    <span class="code-variable">headers</span>[<span class="code-string">'x-xss-protection'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'X-XSS-Protection'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'1; mode=block'</span>
+    }];
+
+    <span class="code-variable">headers</span>[<span class="code-string">'referrer-policy'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'Referrer-Policy'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'strict-origin-when-cross-origin'</span>
+    }];
+
+    <span class="code-comment">// 修正したレスポンスを返す</span>
+<span class="code-keyword">return</span> <span class="code-variable">response</span>;
+};
+                </div>
+<div style="background: #0f172a; padding: 20px; border-radius: 10px; margin-top: 20px;">
+<h3 id="コードのポイント" style="color: #dc7600; margin-bottom: 15px;">📋 コードのポイント</h3>
+<ul style="color: #e2e8f0; padding-left: 20px; line-height: 2;">
+<li><code style="background: #1e293b; padding: 2px 8px; border-radius: 4px;">event.Records[0].cf.response</code> でレスポンスオブジェクトを取得</li>
+<li>ヘッダー名は<strong>小文字</strong>で指定（<code style="background: #1e293b; padding: 2px 8px; border-radius: 4px;">x-frame-options</code>）</li>
+<li><code style="background: #1e293b; padding: 2px 8px; border-radius: 4px;">key</code>プロパティは表示用の<strong>正式名</strong>（大文字小文字混在OK）</li>
+<li>必ず<strong>レスポンスオブジェクトを return</strong> する</li>
+</ul>
+</div>
+</div>
+<!-- 設定手順 -->
+<h2 class="section-title" id="設定手順フローチャート">📝 設定手順フローチャート</h2>
+<div class="setup-section">
+<h3 class="setup-title" id="5ステップで完了！">🚀 5ステップで完了！</h3>
+<div class="setup-steps">
+<div class="setup-step">
+<div class="step-number">1</div>
+<div class="step-content">
+<div class="step-title">🌎 us-east-1 リージョンでLambda関数を作成</div>
+<div class="step-desc">
+                                Lambda@Edgeは<strong>必ずus-east-1（バージニア北部）</strong>で作成する必要があります。<br/>
+                                ランタイム: Node.js 18.x または 20.x を選択
+                            </div>
+<div class="step-note">
+                                ⚠️ 他のリージョンで作成するとCloudFrontに関連付けできません！
+                            </div>
+</div>
+</div>
+<div class="setup-step">
+<div class="step-number">2</div>
+<div class="step-content">
+<div class="step-title">📝 上記のコードをデプロイ</div>
+<div class="step-desc">
+                                Lambda関数にコードを貼り付けて保存。<br/>
+                                X-Frame-Optionsの値を<code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">DENY</code>か<code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">SAMEORIGIN</code>に設定
+                            </div>
+</div>
+</div>
+<div class="setup-step">
+<div class="step-number">3</div>
+<div class="step-content">
+<div class="step-title">🔐 IAMロールにEdge権限を追加</div>
+<div class="step-desc">
+                                Lambda関数のIAMロールの「信頼関係」を編集し、<br/>
+<code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">edgelambda.amazonaws.com</code> を追加
+                            </div>
+<div class="step-note">
+                                信頼ポリシーの Service に "edgelambda.amazonaws.com" を追加
+                            </div>
+</div>
+</div>
+<div class="setup-step">
+<div class="step-number">4</div>
+<div class="step-content">
+<div class="step-title">📦 バージョンを発行</div>
+<div class="step-desc">
+                                Lambda関数の「アクション」→「新しいバージョンを発行」<br/>
+                                Lambda@Edgeは<strong>$LATESTではなく特定のバージョン</strong>を指定する必要があります
+                            </div>
+</div>
+</div>
+<div class="setup-step">
+<div class="step-number">5</div>
+<div class="step-content">
+<div class="step-title">🔗 CloudFrontに関連付け</div>
+<div class="step-desc">
+                                CloudFrontディストリビューション → ビヘイビア → 編集<br/>
+                                「関数の関連付け」で<strong>Origin Response</strong>にLambda関数ARN（バージョン付き）を設定
+                            </div>
+<div class="step-note">
+                                ARN例: arn:aws:lambda:us-east-1:123456789012:function:add-security-headers:1
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- トリガーポイント比較表 -->
+<h2 class="section-title" id="トリガーポイント比較表">📊 トリガーポイント比較表</h2>
+<div class="comparison-table">
+<table>
+<thead>
+<tr>
+<th>トリガー</th>
+<th>タイミング</th>
+<th>セキュリティヘッダー追加</th>
+<th>キャッシュ効率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① Viewer Request</td>
+<td>ユーザー → CloudFront</td>
+<td><span class="cell-icon">❌</span> 不可</td>
+<td>-</td>
+</tr>
+<tr>
+<td>② Origin Request</td>
+<td>CloudFront → オリジン</td>
+<td><span class="cell-icon">❌</span> 不可</td>
+<td>-</td>
+</tr>
+<tr style="background: #d1fae5;">
+<td><strong>③ Origin Response ⭐</strong></td>
+<td>オリジン → CloudFront</td>
+<td><span class="cell-icon">✅</span> <strong>最適！</strong></td>
+<td><span class="cell-icon">✅</span> 高効率</td>
+</tr>
+<tr>
+<td>④ Viewer Response</td>
+<td>CloudFront → ユーザー</td>
+<td><span class="cell-icon">⚠️</span> 可能だが非推奨</td>
+<td><span class="cell-icon">❌</span> 毎回実行</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- FAQ -->
+<h2 class="section-title" id="❓-よくある質問">❓ よくある質問</h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>なぜ us-east-1 リージョンでないとダメ？</span>
+</div>
+<div class="faq-answer">
+<strong>Lambda@EdgeはCloudFrontと密接に連携するため、us-east-1でのみ作成可能です。</strong><br/><br/>
+                        CloudFrontはグローバルサービスで、そのコントロールプレーンがus-east-1にあるためです。<br/>
+                        ただし、実行時はユーザーに近いエッジロケーションで実行されるため、<br/>
+                        レイテンシーの心配はありません。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>CloudFront Functions ではダメ？</span>
+</div>
+<div class="faq-answer">
+<strong>CloudFront FunctionsでもOrigin Responseで同じことが可能です！</strong><br/><br/>
+<strong>CloudFront Functions を選ぶケース：</strong><br/>
+                        ・シンプルなヘッダー追加のみ<br/>
+                        ・コストを最小限にしたい<br/>
+                        ・より高速な実行が必要<br/><br/>
+<strong>Lambda@Edge を選ぶケース：</strong><br/>
+                        ・複雑なロジックが必要<br/>
+                        ・外部APIへのアクセスが必要<br/>
+                        ・より多くのメモリ・実行時間が必要
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>Content-Security-Policy の frame-ancestors との違いは？</span>
+</div>
+<div class="faq-answer">
+<strong>CSPのframe-ancestorsはX-Frame-Optionsの後継で、より柔軟な設定が可能です。</strong><br/><br/>
+<strong>X-Frame-Options：</strong><br/>
+                        ・古いブラウザもサポート<br/>
+                        ・シンプルな設定（DENY/SAMEORIGIN）<br/><br/>
+<strong>CSP frame-ancestors：</strong><br/>
+                        ・複数のドメインを指定可能<br/>
+                        ・より細かい制御が可能<br/>
+                        ・モダンブラウザのみ対応<br/><br/>
+<strong>推奨：両方を設定して互換性を確保</strong>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>既にオリジンでX-Frame-Optionsを設定している場合は？</span>
+</div>
+<div class="faq-answer">
+<strong>Lambda@Edgeで上書きされます。</strong><br/><br/>
+                        オリジンのレスポンスにすでにX-Frame-Optionsヘッダーがある場合、<br/>
+                        Lambda@Edgeのコードで同じヘッダーを設定すると上書きされます。<br/><br/>
+                        既存のヘッダーを保持したい場合は、コード内で存在チェックを追加してください：<br/>
+<code style="background: #f1f5f9; padding: 5px 10px; border-radius: 4px; display: block; margin-top: 10px;">
+                        if (!headers['x-frame-options']) {<br/>
+                          headers['x-frame-options'] = [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }];<br/>
+                        }
+                        </code>
+</div>
+</div>
+</div>
+<!-- Tip Box -->
+<div class="tip-box">
+<div class="tip-title">
+<span>💡</span>
+<span>ベストプラクティス</span>
+</div>
+<div class="tip-content">
+<strong>1. 複数のセキュリティヘッダーをまとめて追加：</strong><br/>
+                    X-Frame-Options だけでなく、X-Content-Type-Options、X-XSS-Protection、<br/>
+                    Referrer-Policy、Content-Security-Policy もまとめて設定しましょう。<br/><br/>
+<strong>2. テスト環境で十分に検証：</strong><br/>
+                    本番環境に適用する前に、ステージング環境でiframe埋め込みの動作を確認。<br/>
+                    自サイト内でiframeを使っている場合はSAMEORIGINを選択。<br/><br/>
+<strong>3. CloudWatch Logsでモニタリング：</strong><br/>
+                    Lambda@Edgeのログはエッジロケーションごとにリージョンに出力されます。<br/>
+                    エラーが発生していないか定期的に確認しましょう。
+                </div>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ">🎓 まとめ</h2>
+<div class="summary-points">
+<div class="summary-point">
+<div class="summary-point-icon">🛃</div>
+<div class="summary-point-title">Lambda@Edge</div>
+<div class="summary-point-desc">
+                            空港の税関検査官<br/>
+                            レスポンスにスタンプを押す
+                        </div>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">📍</div>
+<div class="summary-point-title">Origin Response</div>
+<div class="summary-point-desc">
+                            ヘッダー追加の<br/>
+                            ベストタイミング
+                        </div>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">🛡️</div>
+<div class="summary-point-title">X-Frame-Options</div>
+<div class="summary-point-desc">
+                            クリックジャッキング<br/>
+                            攻撃を防止
+                        </div>
+</div>
+<div class="summary-point">
+<div class="summary-point-icon">⭐</div>
+<div class="summary-point-title">SAMEORIGIN推奨</div>
+<div class="summary-point-desc">
+                            同一ドメインからは<br/>
+                            埋め込みを許可
+                        </div>
+</div>
+</div>
+<div class="final-message">
+<strong>🔐 クリックジャッキング対策の完成！</strong><br/><br/>
+                    ① <strong>us-east-1</strong>でLambda関数を作成<br/>
+                    ② <strong>Origin Response</strong>トリガーに設定<br/>
+                    ③ <strong>X-Frame-Options: SAMEORIGIN</strong>ヘッダーを追加<br/><br/>
+                    これであなたのWebサイトは悪意あるiframe埋め込みから守られます！🎉
+                </div>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="acm-alb-ec2-tls-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">11</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">15</span>
+    </div>
+    <a href="aws-dns-infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

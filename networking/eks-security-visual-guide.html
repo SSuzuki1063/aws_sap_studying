@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   Amazon EKS セキュリティ完全図解ガイド
+  </title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<!-- ページ固有CSSファイル -->
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/><link href="/aws_sap_studying/css/pages/eks-security-visual-guide.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論-EKSを守る3つのセキュリティ機能">📌 結論：EKSを守る3つのセキュリティ機能</a></li>
+            <li class="toc-h2"><a href="#EKSクラスター-=-高級タワーマンション">🏢 EKSクラスター = 高級タワーマンション</a></li>
+            <li class="toc-h2"><a href="#ノード間暗号化の仕組み">🔒 ノード間暗号化の仕組み</a></li>
+            <li class="toc-h2"><a href="#ポッドセキュリティの仕組み">📋 ポッドセキュリティの仕組み</a></li>
+            <li class="toc-h3"><a href="#Pod-Security-StandardsPSSの3レベル">📊 Pod Security Standards（PSS）の3レベル</a></li>
+            <li class="toc-h2"><a href="#ネットワークポリシーの仕組み">🚪 ネットワークポリシーの仕組み</a></li>
+            <li class="toc-h2"><a href="#⚔️-攻撃シナリオと3層防御">⚔️ 攻撃シナリオと3層防御</a></li>
+            <li class="toc-h3"><a href="#ノード間暗号化">ノード間暗号化</a></li>
+            <li class="toc-h2"><a href="#3層防御の全体像">🎯 3層防御の全体像</a></li>
+            <li class="toc-h2"><a href="#3つのセキュリティ機能-比較表">📊 3つのセキュリティ機能 比較表</a></li>
+            <li class="toc-h2"><a href="#導入の流れ">📝 導入の流れ</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問">❓ よくある質問</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+<div class="container">
+<div class="header">
+<h1>
+     🔐 Amazon EKS セキュリティ完全図解
+    </h1>
+<p>
+     高級マンションで理解する！3層防御の仕組みを徹底ビジュアル化
+    </p>
+</div>
+<div class="content">
+<!-- 結論ファースト：3本柱 -->
+<div class="conclusion-first">
+<h2 id="結論-EKSを守る3つのセキュリティ機能">
+      📌 結論：EKSを守る3つのセキュリティ機能
+     </h2>
+<div class="three-pillars">
+<div class="pillar">
+<div class="pillar-layer">
+        第1層
+       </div>
+<div class="pillar-icon">
+        🔒
+       </div>
+<div class="pillar-title">
+        ノード間暗号化
+       </div>
+<div class="pillar-desc">
+        通信データを暗号化
+        <br/>
+<strong>
+         「盗聴」を防止
+        </strong>
+<br/>
+<br/>
+        🏠 住人の電話を暗号化
+        <br/>
+        盗み聞きされても安心
+       </div>
+</div>
+<div class="pillar">
+<div class="pillar-layer">
+        第2層
+       </div>
+<div class="pillar-icon">
+        📋
+       </div>
+<div class="pillar-title">
+        ポッドセキュリティ
+       </div>
+<div class="pillar-desc">
+        Podの権限を制御
+        <br/>
+<strong>
+         「危険な入居者」を阻止
+        </strong>
+<br/>
+<br/>
+        🏠 厳格な入居審査
+        <br/>
+        怪しい人は入居拒否
+       </div>
+</div>
+<div class="pillar">
+<div class="pillar-layer">
+        第3層
+       </div>
+<div class="pillar-icon">
+        🚪
+       </div>
+<div class="pillar-title">
+        ネットワークポリシー
+       </div>
+<div class="pillar-desc">
+        Pod間の通信を制御
+        <br/>
+<strong>
+         「不正移動」を防止
+        </strong>
+<br/>
+<br/>
+        🏠 部屋間の通行ルール
+        <br/>
+        許可なく他の部屋へ行けない
+       </div>
+</div>
+</div>
+</div>
+<!-- マンション全体図 -->
+<h2 class="section-title" id="EKSクラスター-=-高級タワーマンション">
+     🏢 EKSクラスター = 高級タワーマンション
+    </h2>
+<div class="building-diagram">
+<div class="building-container">
+<div class="building">
+<div class="building-roof">
+        🏢 EKSクラスター（タワーマンション）
+       </div>
+<div class="floor">
+<div class="floor-label">
+         🖥️ ノードA
+         <br/>
+         （5階）
+        </div>
+<div class="rooms">
+<div class="room">
+<div class="security-badge">
+           🔒
+          </div>
+<div class="room-icon">
+           📦
+          </div>
+<div class="room-label">
+           Pod 1
+           <br/>
+           frontend
+          </div>
+</div>
+<div class="room">
+<div class="security-badge">
+           🔒
+          </div>
+<div class="room-icon">
+           📦
+          </div>
+<div class="room-label">
+           Pod 2
+           <br/>
+           api
+          </div>
+</div>
+</div>
+</div>
+<div class="floor">
+<div class="floor-label">
+         🖥️ ノードB
+         <br/>
+         （3階）
+        </div>
+<div class="rooms">
+<div class="room">
+<div class="security-badge">
+           🔒
+          </div>
+<div class="room-icon">
+           📦
+          </div>
+<div class="room-label">
+           Pod 3
+           <br/>
+           backend
+          </div>
+</div>
+<div class="room">
+<div class="security-badge">
+           🔒
+          </div>
+<div class="room-icon">
+           🗄️
+          </div>
+<div class="room-label">
+           Pod 4
+           <br/>
+           database
+          </div>
+</div>
+</div>
+</div>
+</div>
+<div class="building-legend">
+<div class="legend-item">
+<div class="legend-icon">
+         🖥️
+        </div>
+<span>
+<strong>
+          ノード
+         </strong>
+         = 各フロア
+        </span>
+</div>
+<div class="legend-item">
+<div class="legend-icon">
+         📦
+        </div>
+<span>
+<strong>
+          Pod
+         </strong>
+         = 各部屋
+        </span>
+</div>
+<div class="legend-item">
+<div class="legend-icon">
+         🔒
+        </div>
+<span>
+<strong>
+          暗号化
+         </strong>
+         = 盗聴防止
+        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- ノード間暗号化の図解 -->
+<h2 class="section-title" id="ノード間暗号化の仕組み">
+     🔒 ノード間暗号化の仕組み
+    </h2>
+<div class="flow-diagram">
+<p style="text-align: center; color: #065f46; font-size: 1.2em; margin-bottom: 30px;">
+<strong>
+       🎯 目的：
+      </strong>
+      ノード間の通信を暗号化して「盗聴」を防止
+     </p>
+<div class="encryption-flow">
+<div class="node-box">
+<div class="node-title">
+        🖥️ ノードA（5階）
+       </div>
+<div class="pod-container">
+<div class="mini-pod">
+         📦
+        </div>
+<div class="mini-pod">
+         📦
+        </div>
+</div>
+</div>
+<div class="encryption-pipe">
+<div class="pipe-label">
+        暗号化トンネル
+       </div>
+<div class="pipe-line">
+<span style="font-size: 1.5em;">
+         🔒
+        </span>
+<div class="pipe">
+</div>
+<span style="font-size: 1.5em;">
+         🔒
+        </span>
+</div>
+<div class="pipe-label">
+        TLS / Nitro暗号化
+       </div>
+</div>
+<div class="node-box">
+<div class="node-title">
+        🖥️ ノードB（3階）
+       </div>
+<div class="pod-container">
+<div class="mini-pod">
+         📦
+        </div>
+<div class="mini-pod">
+         🗄️
+        </div>
+</div>
+</div>
+</div>
+<div class="data-packet">
+<div class="packet packet-plain">
+<span>
+        📄
+       </span>
+<span>
+        平文データ
+        <br/>
+        "password123"
+       </span>
+</div>
+<div class="transform-arrow">
+       ➡️ 🔐 ➡️
+      </div>
+<div class="packet packet-encrypted">
+<span>
+        🔒
+       </span>
+<span>
+        暗号化データ
+        <br/>
+        "x8K#mP@..."
+       </span>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+<p style="text-align: center; color: #065f46; font-size: 1.1em;">
+<strong>
+        🏠 マンションのたとえ：
+       </strong>
+<br/>
+       3階と5階の住人が電話するとき、廊下で誰かが盗み聞きしても
+       <br/>
+<strong>
+        「@#$%^&amp;*...」
+       </strong>
+       ← 暗号化されているから内容がわからない！
+      </p>
+</div>
+</div>
+<!-- ポッドセキュリティの図解 -->
+<h2 class="section-title" id="ポッドセキュリティの仕組み">
+     📋 ポッドセキュリティの仕組み
+    </h2>
+<div class="pod-security-diagram">
+<p style="text-align: center; color: #1e40af; font-size: 1.2em; margin-bottom: 30px;">
+<strong>
+       🎯 目的：
+      </strong>
+      危険な権限を持つPodのデプロイを阻止
+     </p>
+<!-- 入居審査フロー -->
+<div class="admission-flow">
+<div class="admission-step">
+<div class="admission-box">
+<div class="admission-icon">
+         📦
+        </div>
+<div class="admission-label">
+         Pod作成リクエスト
+        </div>
+</div>
+<div class="admission-desc">
+        「入居希望者」
+       </div>
+</div>
+<div class="admission-arrow">
+       ➡️
+      </div>
+<div class="security-gate">
+<div class="gate-icon">
+        🛂
+       </div>
+<div class="gate-title">
+        Pod Security Admission
+       </div>
+<div class="gate-checks">
+        ✓ root権限チェック
+        <br/>
+        ✓ 特権モードチェック
+        <br/>
+        ✓ ホストネットワークチェック
+        <br/>
+        ✓ 危険なCapabilityチェック
+       </div>
+</div>
+<div class="admission-arrow">
+       ➡️
+      </div>
+<div class="admission-step">
+<div class="admission-box">
+<div class="admission-icon">
+         ⚖️
+        </div>
+<div class="admission-label">
+         審査結果
+        </div>
+</div>
+</div>
+</div>
+<div class="result-paths">
+<div class="result-path">
+<div class="result-arrow" style="color: #10b981;">
+        ⬇️ 合格
+       </div>
+<div class="result-box result-allow">
+        ✅ デプロイ許可
+        <br/>
+        「入居OK！」
+       </div>
+</div>
+<div class="result-path">
+<div class="result-arrow" style="color: #ef4444;">
+        ⬇️ 不合格
+       </div>
+<div class="result-box result-deny">
+        ❌ デプロイ拒否
+        <br/>
+        「入居NG！」
+       </div>
+</div>
+</div>
+<!-- PSS 3レベル -->
+<h3 id="Pod-Security-StandardsPSSの3レベル" style="text-align: center; margin: 50px 0 30px; color: #1e40af; font-size: 1.5em;">
+      📊 Pod Security Standards（PSS）の3レベル
+     </h3>
+<div class="pss-levels">
+<div class="pss-level privileged">
+<div class="pss-header">
+<div class="pss-icon">
+         🔓
+        </div>
+<div class="pss-name">
+         Privileged
+        </div>
+</div>
+<div class="pss-desc">
+        制限なし（非推奨）
+       </div>
+<div class="pss-rules">
+<ul style="list-style: none; padding: 0;">
+<li>
+          ❌ root実行 → 許可
+         </li>
+<li>
+          ❌ 特権モード → 許可
+         </li>
+<li>
+          ❌ ホストネットワーク → 許可
+         </li>
+</ul>
+</div>
+<div style="margin-top: 15px; text-align: center;">
+<span style="background: #fee2e2; color: #991b1b; padding: 5px 15px; border-radius: 10px; font-size: 0.85em;">
+         ⚠️ 使用非推奨
+        </span>
+</div>
+</div>
+<div class="pss-level baseline">
+<div class="pss-header">
+<div class="pss-icon">
+         🔐
+        </div>
+<div class="pss-name">
+         Baseline
+        </div>
+</div>
+<div class="pss-desc">
+        基本的な制限
+       </div>
+<div class="pss-rules">
+<ul style="list-style: none; padding: 0;">
+<li>
+          ⚠️ root実行 → 許可
+         </li>
+<li>
+          ✅ 特権モード → 禁止
+         </li>
+<li>
+          ✅ ホストネットワーク → 禁止
+         </li>
+</ul>
+</div>
+<div style="margin-top: 15px; text-align: center;">
+<span style="background: #fef3c7; color: #92400e; padding: 5px 15px; border-radius: 10px; font-size: 0.85em;">
+         📝 開発環境向け
+        </span>
+</div>
+</div>
+<div class="pss-level restricted">
+<div class="pss-header">
+<div class="pss-icon">
+         🔒
+        </div>
+<div class="pss-name">
+         Restricted
+        </div>
+</div>
+<div class="pss-desc">
+        最も厳格な制限
+       </div>
+<div class="pss-rules">
+<ul style="list-style: none; padding: 0;">
+<li>
+          ✅ root実行 → 禁止
+         </li>
+<li>
+          ✅ 特権モード → 禁止
+         </li>
+<li>
+          ✅ ホストネットワーク → 禁止
+         </li>
+</ul>
+</div>
+<div style="margin-top: 15px; text-align: center;">
+<span style="background: #d1fae5; color: #065f46; padding: 5px 15px; border-radius: 10px; font-size: 0.85em;">
+         🏆 本番環境推奨
+        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- ネットワークポリシーの図解 -->
+<h2 class="section-title" id="ネットワークポリシーの仕組み">
+     🚪 ネットワークポリシーの仕組み
+    </h2>
+<div class="network-policy-diagram">
+<p style="text-align: center; color: #92400e; font-size: 1.2em; margin-bottom: 30px;">
+<strong>
+       🎯 目的：
+      </strong>
+      Pod間の通信を制御して不正アクセスを防止
+     </p>
+<!-- 通信ルールの図解 -->
+<div class="traffic-rules">
+<div class="traffic-rule">
+<div class="traffic-from">
+<span>
+         📱
+        </span>
+<span>
+         frontend
+        </span>
+</div>
+<div class="traffic-arrow allowed">
+        ➡️
+        <span class="traffic-result allowed">
+         ✅ 許可
+        </span>
+        ➡️
+       </div>
+<div class="traffic-to">
+<span>
+         ⚙️
+        </span>
+<span>
+         backend
+        </span>
+</div>
+</div>
+<div class="traffic-rule">
+<div class="traffic-from">
+<span>
+         ⚙️
+        </span>
+<span>
+         backend
+        </span>
+</div>
+<div class="traffic-arrow allowed">
+        ➡️
+        <span class="traffic-result allowed">
+         ✅ 許可
+        </span>
+        ➡️
+       </div>
+<div class="traffic-to">
+<span>
+         🗄️
+        </span>
+<span>
+         database
+        </span>
+</div>
+</div>
+<div class="traffic-rule">
+<div class="traffic-from">
+<span>
+         📱
+        </span>
+<span>
+         frontend
+        </span>
+</div>
+<div class="traffic-arrow denied">
+        ➡️
+        <span class="traffic-result denied">
+         ❌ 拒否
+        </span>
+        ➡️
+       </div>
+<div class="traffic-to">
+<span>
+         🗄️
+        </span>
+<span>
+         database
+        </span>
+</div>
+</div>
+<div class="traffic-rule">
+<div class="traffic-from">
+<span>
+         😈
+        </span>
+<span>
+         攻撃者Pod
+        </span>
+</div>
+<div class="traffic-arrow denied">
+        ➡️
+        <span class="traffic-result denied">
+         ❌ 拒否
+        </span>
+        ➡️
+       </div>
+<div class="traffic-to">
+<span>
+         🗄️
+        </span>
+<span>
+         database
+        </span>
+</div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
+<p style="text-align: center; color: #92400e; font-size: 1.1em;">
+<strong>
+        🏠 マンションのたとえ：
+       </strong>
+<br/>
+       101号室（frontend）→ 102号室（backend）→ 管理人室（database）の順でしか行けない
+       <br/>
+       101号室から直接管理人室に行くことは
+       <strong>
+        禁止！
+       </strong>
+</p>
+</div>
+</div>
+<!-- 攻撃シナリオと防御 -->
+<h2 class="section-title" id="⚔️-攻撃シナリオと3層防御">
+     ⚔️ 攻撃シナリオと3層防御
+    </h2>
+<div class="attack-scenario">
+<p style="text-align: center; color: #991b1b; font-size: 1.2em; margin-bottom: 30px;">
+<strong>
+       😈 攻撃者がPodを侵害した場合、どう防ぐ？
+      </strong>
+</p>
+<div class="attack-flow">
+<div class="attack-step">
+<div class="attack-box">
+<div class="attack-icon">
+         😈
+        </div>
+<div class="attack-label">
+         攻撃者
+        </div>
+</div>
+<div class="attack-desc">
+        脆弱性を突いて侵入
+       </div>
+</div>
+<div class="attack-arrow">
+       ➡️
+      </div>
+<div class="attack-step">
+<div class="attack-box">
+<div class="attack-icon">
+         📦💀
+        </div>
+<div class="attack-label">
+         侵害されたPod
+        </div>
+</div>
+<div class="attack-desc">
+        frontendが乗っ取られた
+       </div>
+</div>
+<div class="attack-arrow">
+       ➡️
+      </div>
+<div class="defense-layer">
+<div class="defense-icon">
+        🛡️
+       </div>
+<div class="defense-title">
+        3層防御で阻止！
+       </div>
+</div>
+</div>
+<!-- 各層の防御効果 -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px;">
+<div style="background: white; padding: 25px; border-radius: 15px; border-top: 5px solid #10b981;">
+<div style="text-align: center; font-size: 2em; margin-bottom: 10px;">
+        🔒
+       </div>
+<h3 id="ノード間暗号化" style="color: #065f46; text-align: center; margin-bottom: 15px;">
+        ノード間暗号化
+       </h3>
+<p style="color: #475569; font-size: 0.95em;">
+<strong>
+         🛡️ 防御効果：
+        </strong>
+<br/>
+        通信を傍受しても
+        <br/>
+<strong>
+         暗号化されているため
+         <br/>
+         内容を読めない
+        </strong>
+</p>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; border-top: 5px solid #3b82f6;">
+<div style="text-align: center; font-size: 2em; margin-bottom: 10px;">
+        📋
+       </div>
+<h4 style="color: #1e40af; text-align: center; margin-bottom: 15px;">
+        ポッドセキュリティ
+       </h4>
+<p style="color: #475569; font-size: 0.95em;">
+<strong>
+         🛡️ 防御効果：
+        </strong>
+<br/>
+        特権エスカレーションを試みても
+        <br/>
+<strong>
+         制限されているため
+         <br/>
+         root権限を取得できない
+        </strong>
+</p>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; border-top: 5px solid #f59e0b;">
+<div style="text-align: center; font-size: 2em; margin-bottom: 10px;">
+        🚪
+       </div>
+<h4 style="color: #92400e; text-align: center; margin-bottom: 15px;">
+        ネットワークポリシー
+       </h4>
+<p style="color: #475569; font-size: 0.95em;">
+<strong>
+         🛡️ 防御効果：
+        </strong>
+<br/>
+        他のPodへ横移動しようとしても
+        <br/>
+<strong>
+         通信が許可されていないため
+         <br/>
+         アクセスできない
+        </strong>
+</p>
+</div>
+</div>
+</div>
+<!-- 3層防御の総合図 -->
+<h2 class="section-title" id="3層防御の全体像">
+     🎯 3層防御の全体像
+    </h2>
+<div class="defense-layers">
+<div class="layers-visual">
+<div class="defense-ring ring-outer">
+<div class="ring-label">
+        🔒 第1層：ノード間暗号化
+       </div>
+<div class="defense-ring ring-middle">
+<div class="ring-label">
+         📋 第2層：ポッドセキュリティ
+        </div>
+<div class="defense-ring ring-inner">
+<div class="ring-label">
+          🚪 第3層：ネットワークポリシー
+         </div>
+<div class="ring-center">
+<div class="center-icon">
+           📦
+          </div>
+<div class="center-label">
+           あなたのPod
+           <br/>
+           （守られている！）
+          </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div style="display: flex; justify-content: center; gap: 30px; margin-top: 40px; flex-wrap: wrap;">
+<div style="background: #d1fae5; padding: 15px 25px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+<span style="font-size: 1.5em;">
+        🔒
+       </span>
+<span style="color: #065f46; font-weight: bold;">
+        外側：通信の暗号化
+       </span>
+</div>
+<div style="background: #dbeafe; padding: 15px 25px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+<span style="font-size: 1.5em;">
+        📋
+       </span>
+<span style="color: #1e40af; font-weight: bold;">
+        中間：権限の制限
+       </span>
+</div>
+<div style="background: #fef3c7; padding: 15px 25px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+<span style="font-size: 1.5em;">
+        🚪
+       </span>
+<span style="color: #92400e; font-weight: bold;">
+        内側：通信の制御
+       </span>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<h2 class="section-title" id="3つのセキュリティ機能-比較表">
+     📊 3つのセキュリティ機能 比較表
+    </h2>
+<div class="comparison-table">
+<table>
+<thead>
+<tr>
+<th>
+         比較項目
+        </th>
+<th>
+         🔒 ノード間暗号化
+        </th>
+<th>
+         📋 ポッドセキュリティ
+        </th>
+<th>
+         🚪 ネットワークポリシー
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+         🎯 守るもの
+        </td>
+<td>
+<span class="cell-icon">
+          📡
+         </span>
+         通信データ
+        </td>
+<td>
+<span class="cell-icon">
+          ⚙️
+         </span>
+         Podの権限
+        </td>
+<td>
+<span class="cell-icon">
+          🛤️
+         </span>
+         通信経路
+        </td>
+</tr>
+<tr>
+<td>
+         😈 防ぐ脅威
+        </td>
+<td>
+         盗聴・傍受
+        </td>
+<td>
+         特権エスカレーション
+        </td>
+<td>
+         横移動・不正アクセス
+        </td>
+</tr>
+<tr>
+<td>
+         🏠 マンションのたとえ
+        </td>
+<td>
+         電話の暗号化
+        </td>
+<td>
+         入居審査
+        </td>
+<td>
+         通行ルール
+        </td>
+</tr>
+<tr>
+<td>
+         ⚙️ 設定レベル
+        </td>
+<td>
+         インフラ層
+        </td>
+<td>
+         Namespace/Pod層
+        </td>
+<td>
+         Pod/Label層
+        </td>
+</tr>
+<tr>
+<td>
+         📦 デフォルト
+        </td>
+<td>
+         Nitro: 有効 ✅
+        </td>
+<td>
+         無効（要設定）
+        </td>
+<td>
+         全許可（要設定）
+        </td>
+</tr>
+<tr>
+<td>
+         🔧 追加コンポーネント
+        </td>
+<td>
+         不要（Nitro）
+        </td>
+<td>
+         不要（K8s組み込み）
+        </td>
+<td>
+         CNI必要
+         <br/>
+         (Calico/Cilium)
+        </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- 設定フローチャート -->
+<h2 class="section-title" id="導入の流れ">
+     📝 導入の流れ
+    </h2>
+<div class="setup-flowchart">
+<div class="flowchart">
+<div class="flow-step-box">
+<div class="step-number">
+        1
+       </div>
+<div class="step-content">
+<div class="step-title">
+         🔒 ノード間暗号化を確認
+        </div>
+<div class="step-desc">
+         Nitroインスタンス（c5, m5, r5など）を使用 → 自動有効！
+        </div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-step-box">
+<div class="step-number">
+        2
+       </div>
+<div class="step-content">
+<div class="step-title">
+         📋 ポッドセキュリティを設定
+        </div>
+<div class="step-desc">
+         まず warn モードで影響確認 → 問題なければ enforce に変更
+        </div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-step-box">
+<div class="step-number">
+        3
+       </div>
+<div class="step-content">
+<div class="step-title">
+         🚪 ネットワークポリシーを設定
+        </div>
+<div class="step-desc">
+         CNI（Calico等）を導入 → 必要な通信のみ許可するポリシーを作成
+        </div>
+</div>
+</div>
+<div class="flow-arrow-down">
+       ⬇️
+      </div>
+<div class="flow-step-box" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #10b981;">
+<div class="step-number" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+        ✓
+       </div>
+<div class="step-content">
+<div class="step-title" style="color: #065f46;">
+         🛡️ 3層防御の完成！
+        </div>
+<div class="step-desc" style="color: #065f46;">
+         多層防御（Defense in Depth）でEKSクラスターを保護
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- FAQ -->
+<h2 class="section-title" id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        3つのうち1つだけ導入すればいい？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        いいえ！3つすべてを組み合わせましょう。
+       </strong>
+<br/>
+       各機能は「代替」ではなく「補完」関係です。1つが突破されても、他の層で攻撃を止められます。
+       <br/>
+       これが「多層防御（Defense in Depth）」の考え方です。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        PodSecurityPolicy（PSP）はもう使えない？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        はい、PSPはKubernetes 1.25で削除されました。
+       </strong>
+<br/>
+       現在はPod Security Standards（PSS）とPod Security Admission（PSA）を使用します。
+       <br/>
+       PSSは Privileged / Baseline / Restricted の3レベルでシンプルに管理できます。
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        🤔
+       </span>
+<span>
+        ネットワークポリシーはデフォルトで有効？
+       </span>
+</div>
+<div class="faq-answer">
+<strong>
+        いいえ、デフォルトは「すべて許可」です。
+       </strong>
+<br/>
+       明示的にNetworkPolicyを作成しないと、どのPodからでも他のPodにアクセス可能です。
+       <br/>
+       また、EKSデフォルトのVPC CNIはネットワークポリシー未対応なので、Calicoなどの導入が必要です。
+      </div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ">
+      🎓 まとめ
+     </h2>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">
+        🔒
+       </div>
+<div class="summary-title">
+        ノード間暗号化
+       </div>
+<div class="summary-desc">
+        通信を暗号化
+        <br/>
+        「盗聴」を防止
+        <br/>
+        Nitroで自動有効
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        📋
+       </div>
+<div class="summary-title">
+        ポッドセキュリティ
+       </div>
+<div class="summary-desc">
+        権限を制限
+        <br/>
+        「危険なPod」を阻止
+        <br/>
+        PSS/PSAで設定
+       </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">
+        🚪
+       </div>
+<div class="summary-title">
+        ネットワークポリシー
+       </div>
+<div class="summary-desc">
+        通信を制御
+        <br/>
+        「横移動」を防止
+        <br/>
+        CNIで実現
+       </div>
+</div>
+</div>
+<div class="final-message">
+<strong>
+       🏢 高級マンション（EKS）の完璧なセキュリティ：
+      </strong>
+<br/>
+<br/>
+      🔒 住人の電話は暗号化（ノード間暗号化）
+      <br/>
+      📋 怪しい人は入居拒否（ポッドセキュリティ）
+      <br/>
+      🚪 部屋間の移動はルールあり（ネットワークポリシー）
+      <br/>
+<br/>
+<span style="font-size: 1.3em;">
+       3層すべてを導入して、堅牢なEKS環境を構築しよう！🛡️
+      </span>
+</div>
+</div>
+</div>
+<!-- ページ下部ナビゲーション -->
+<nav class="page-bottom-nav" aria-label="前後ページナビゲーション">
+    <a href="nacl-sg-comparison-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ">
+        <span class="nav-arrow" aria-hidden="true">←</span>
+        <span class="nav-label">前のページ</span>
+    </a>
+    <div class="page-bottom-nav-counter" role="status">
+        <span class="visually-hidden">ページ </span>
+        <span class="current">13</span>
+        <span class="separator" aria-hidden="true">/</span>
+        <span class="total">19</span>
+    </div>
+    <a href="cloudfront-security-headers-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ">
+        <span class="nav-label">次のページ</span>
+        <span class="nav-arrow" aria-hidden="true">→</span>
+    </a>
+</nav>
+
+</div>
+<script>
+   // 読書進捗インジケーター
+    window.addEventListener('scroll', function() {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        const progressBar = document.getElementById('readingProgressBar');
+        const progressContainer = document.getElementById('readingProgress');
+        if (progressBar) {
+            progressBar.style.width = scrolled + '%';
+            progressContainer.setAttribute('aria-valuenow', Math.round(scrolled));
+        }
+        if (winScroll > 100) {
+            progressContainer.classList.add('show');
+        } else {
+            progressContainer.classList.remove('show');
+        }
+    });
+
+    // トップに戻るボタン
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    window.addEventListener('scroll', function() {
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+            scrollToTopBtn.classList.add('show');
+        } else {
+            scrollToTopBtn.classList.remove('show');
+        }
+    });
+    scrollToTopBtn.addEventListener('click', function() {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+  </script>
+<button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">🏠 リソース集に戻る</button>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,1910 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Transit Gateway Connect Guide',
+  pageTitle: 'Transit Gateway Connect 完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Transit Gateway & ゲートウェイ',
+  slug: 'transit-gateway-connect-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: 'まず結論-Transit-Gateway-Connect-とは？', text: '📌 まず結論：Transit Gateway Connect とは？' },
+    { level: 'h2', id: '️-たとえ話で理解する', text: '🏗️ たとえ話で理解する' },
+    { level: 'h2', id: '️-アーキテクチャ全体像', text: '🏛️ アーキテクチャ全体像' },
+    { level: 'h2', id: '⚖️-なぜ高速？-IPsec-VPN-vs-GRE-の違い', text: '⚖️ なぜ高速？ IPsec VPN vs GRE の違い' },
+    { level: 'h2', id: '構成要素を深掘り', text: '🧩 構成要素を深掘り' },
+    { level: 'h2', id: '️-実装ステップ', text: '🛠️ 実装ステップ' },
+    { level: 'h3', id: '基盤となるVPCアタッチメントを確認-作成', text: '基盤となるVPCアタッチメントを確認/作成' },
+    { level: 'h2', id: '⚠️-知っておくべき制限事項', text: '⚠️ 知っておくべき制限事項' },
+    { level: 'h2', id: 'ユースケース', text: '🎯 ユースケース' },
+    { level: 'h2', id: '❓-よくある質問', text: '❓ よくある質問' }
+  ],
+  prevPage: 'tgw-appliance-mode-guide.html',
+  nextPage: undefined,
+  pageNum: 44,
+  pageTotal: 44,
+};
+
+const rawContent = `<style>* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 25%, #e0f2fe 50%, #f0f9ff 75%, #f8fafc 100%);
+            padding: 20px;
+            line-height: 1.6;
+            color: #1e293b;
+            padding-top: 70px;}
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0ea5e9 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '🔗';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.08;
+            top: -40px;
+            right: -30px;
+        }
+
+        .header::after {
+            content: '🌐';
+            position: absolute;
+            font-size: 12em;
+            opacity: 0.06;
+            bottom: -30px;
+            left: -20px;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 30px;
+            padding: 6px 20px;
+            font-size: 0.85em;
+            margin-top: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== CONTENT ===== */
+        .content {
+            padding: 50px;
+        }
+
+        /* ===== 結論ファースト ===== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            border-left: 6px solid #2563eb;
+            position: relative;
+        }
+
+        .conclusion-first h2 {
+            color: #1e40af;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        .conclusion-points {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .conclusion-point {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .conclusion-point .point-icon {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .conclusion-point .point-title {
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 1.05em;
+        }
+
+        .conclusion-point .point-desc {
+            font-size: 0.9em;
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        /* ===== セクション共通 ===== */
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #1e293b;
+            margin-bottom: 10px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title .emoji {
+            font-size: 1.1em;
+        }
+
+        .section-lead {
+            font-size: 1.1em;
+            color: #475569;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        /* ===== たとえ話セクション ===== */
+        .analogy-container {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 40px;
+            border: 2px solid #fde047;
+            position: relative;
+        }
+
+        .analogy-container::before {
+            content: '💡';
+            position: absolute;
+            top: -18px;
+            left: 30px;
+            font-size: 2em;
+            background: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .analogy-title {
+            font-size: 1.4em;
+            color: #854d0e;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .analogy-text {
+            color: #713f12;
+            font-size: 1.05em;
+            line-height: 1.8;
+        }
+
+        .analogy-highlight {
+            background: rgba(255,255,255,0.7);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* ===== アナロジー図解 ===== */
+        .analogy-diagram {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .analogy-diagram-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+
+        /* 高速道路のたとえ図 */
+        .highway-analogy {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .highway-side {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+        }
+
+        .highway-side-icon {
+            font-size: 3em;
+            margin-bottom: 12px;
+        }
+
+        .highway-side-label {
+            font-weight: 700;
+            font-size: 1.15em;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .highway-side-desc {
+            font-size: 0.88em;
+            color: #64748b;
+        }
+
+        .highway-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 200px;
+        }
+
+        .highway-tunnel {
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: white;
+            padding: 18px 24px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95em;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+            width: 100%;
+        }
+
+        .highway-arrows {
+            font-size: 1.8em;
+            color: #2563eb;
+            letter-spacing: 4px;
+        }
+
+        .highway-protocol-tags {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .protocol-tag {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78em;
+            font-weight: 600;
+            border: 1px solid #bfdbfe;
+        }
+
+        /* ===== マッピング表 ===== */
+        .mapping-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 30px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .mapping-table th {
+            background: linear-gradient(135deg, #1e3a5f, #2563eb);
+            color: white;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .mapping-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.93em;
+        }
+
+        .mapping-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .mapping-table tr:hover td {
+            background: #eff6ff;
+        }
+
+        .mapping-table .mapping-emoji {
+            font-size: 1.3em;
+            margin-right: 6px;
+        }
+
+        /* ===== アーキテクチャ図 ===== */
+        .architecture-diagram {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 2px solid #e2e8f0;
+        }
+
+        .arch-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+
+        /* 3段構成のアーキテクチャ */
+        .arch-layers {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .arch-layer {
+            padding: 24px 30px;
+            border: 2px solid;
+            position: relative;
+        }
+
+        .arch-layer:first-child {
+            border-radius: 16px 16px 0 0;
+        }
+
+        .arch-layer:last-child {
+            border-radius: 0 0 16px 16px;
+        }
+
+        .arch-layer-label {
+            font-weight: 700;
+            font-size: 1em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .arch-layer-content {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .layer-onprem {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .layer-onprem .arch-layer-label {
+            color: #991b1b;
+        }
+
+        .layer-connect {
+            background: linear-gradient(90deg, #eff6ff, #e0f2fe);
+            border-color: #93c5fd;
+            border-width: 3px;
+        }
+
+        .layer-connect .arch-layer-label {
+            color: #1e40af;
+        }
+
+        .layer-aws {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .layer-aws .arch-layer-label {
+            color: #166534;
+        }
+
+        .arch-box {
+            background: white;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-size: 0.88em;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .arch-box-icon {
+            font-size: 1.6em;
+            margin-bottom: 4px;
+        }
+
+        .arch-arrow-down {
+            text-align: center;
+            font-size: 1.6em;
+            color: #2563eb;
+            margin: -2px 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ===== 特徴カード ===== */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .feature-card:hover {
+            border-color: #93c5fd;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.1);
+            transform: translateY(-2px);
+        }
+
+        .feature-card-icon {
+            font-size: 2.4em;
+            margin-bottom: 12px;
+        }
+
+        .feature-card-title {
+            font-weight: 700;
+            font-size: 1.15em;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .feature-card-desc {
+            color: #475569;
+            font-size: 0.93em;
+            line-height: 1.7;
+        }
+
+        .feature-card-highlight {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+
+        /* ===== 比較図 ===== */
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .comparison-card {
+            border-radius: 14px;
+            padding: 28px;
+            border: 2px solid;
+        }
+
+        .comparison-before {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .comparison-after {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .comparison-label {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.82em;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .comparison-before .comparison-label {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .comparison-after .comparison-label {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .comparison-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+
+        .comparison-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .comparison-list li {
+            padding: 8px 0;
+            font-size: 0.93em;
+            color: #475569;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.6;
+        }
+
+        .comparison-list .icon {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* ===== 実装ステップ ===== */
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 20px;
+            padding: 24px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .step:last-child {
+            border-bottom: none;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.4em;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+        }
+
+        .step-content h3, .step-content h4 {
+            font-size: 1.15em;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .step-content p {
+            color: #475569;
+            font-size: 0.93em;
+            line-height: 1.7;
+        }
+
+        .step-code {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.83em;
+            margin-top: 12px;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        .step-code .comment {
+            color: #64748b;
+        }
+
+        .step-code .keyword {
+            color: #7dd3fc;
+        }
+
+        .step-code .value {
+            color: #86efac;
+        }
+
+        /* ===== GRE vs IPsec 比較図 ===== */
+        .protocol-comparison {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .protocol-comparison-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+
+        .protocol-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .protocol-pipe {
+            text-align: center;
+            padding: 24px;
+            border-radius: 14px;
+            border: 2px solid;
+        }
+
+        .pipe-ipsec {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .pipe-gre {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .pipe-label {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+        }
+
+        .pipe-ipsec .pipe-label {
+            color: #991b1b;
+        }
+
+        .pipe-gre .pipe-label {
+            color: #166534;
+        }
+
+        .pipe-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin: 16px 0;
+            min-height: 60px;
+        }
+
+        .pipe-thin {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pipe-thin .pipe-bar {
+            width: 120px;
+            height: 18px;
+            border-radius: 9px;
+            background: linear-gradient(90deg, #f87171, #ef4444);
+        }
+
+        .pipe-wide .pipe-bar {
+            width: 120px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #34d399, #10b981);
+        }
+
+        .pipe-speed {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        .pipe-ipsec .pipe-speed {
+            color: #dc2626;
+        }
+
+        .pipe-gre .pipe-speed {
+            color: #059669;
+        }
+
+        .pipe-note {
+            font-size: 0.82em;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        /* ===== フロー図 ===== */
+        .flow-diagram {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 2px solid #e2e8f0;
+        }
+
+        .flow-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+
+        .flow-node {
+            padding: 14px 22px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .flow-node-sdwan {
+            background: #fef3c7;
+            border: 2px solid #fbbf24;
+            color: #92400e;
+        }
+
+        .flow-node-gre {
+            background: #dbeafe;
+            border: 2px solid #60a5fa;
+            color: #1e40af;
+        }
+
+        .flow-node-connect {
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+        }
+
+        .flow-node-vpc {
+            background: #dcfce7;
+            border: 2px solid #4ade80;
+            color: #166534;
+        }
+
+        .flow-node-tgw {
+            background: #e0e7ff;
+            border: 2px solid #818cf8;
+            color: #3730a3;
+        }
+
+        .flow-arrow {
+            font-size: 1.5em;
+            color: #94a3b8;
+        }
+
+        .flow-label {
+            text-align: center;
+            font-size: 0.82em;
+            color: #64748b;
+            margin: 4px 0 16px;
+        }
+
+        /* ===== 制限事項 ===== */
+        .limitations-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .limitation-card {
+            background: #fffbeb;
+            border: 2px solid #fde68a;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .limitation-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .limitation-title {
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .limitation-desc {
+            font-size: 0.85em;
+            color: #78350f;
+            line-height: 1.6;
+        }
+
+        /* ===== ユースケース ===== */
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .usecase-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .usecase-card:hover {
+            border-color: #93c5fd;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.1);
+        }
+
+        .usecase-icon {
+            font-size: 2.4em;
+            margin-bottom: 12px;
+        }
+
+        .usecase-title {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .usecase-desc {
+            color: #475569;
+            font-size: 0.9em;
+            line-height: 1.7;
+        }
+
+        /* ===== ベストプラクティス ===== */
+        .best-practices {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-radius: 16px;
+            padding: 36px;
+            margin: 30px 0;
+            border: 2px solid #bbf7d0;
+        }
+
+        .bp-title {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bp-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .bp-item {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        .bp-item-icon {
+            font-size: 1.4em;
+            flex-shrink: 0;
+        }
+
+        .bp-item-text {
+            font-size: 0.9em;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .bp-item-text strong {
+            color: #166534;
+        }
+
+        /* ===== FAQ ===== */
+        .faq-list {
+            margin: 30px 0;
+        }
+
+        .faq-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 20px 24px;
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        .faq-answer {
+            padding: 18px 24px;
+            font-size: 0.93em;
+            color: #475569;
+            line-height: 1.7;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        /* ===== データフロー比較 ===== */
+        .dataflow-comparison {
+            margin: 30px 0;
+        }
+
+        .dataflow-row {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .dataflow-label {
+            font-weight: 700;
+            font-size: 1em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dataflow-path {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .dataflow-node {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.82em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .dataflow-node-onprem {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+
+        .dataflow-node-tunnel {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #60a5fa;
+        }
+
+        .dataflow-node-aws {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #4ade80;
+        }
+
+        .dataflow-arrow {
+            color: #94a3b8;
+            font-size: 1.2em;
+        }
+
+        .dataflow-speed {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+
+        .speed-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .speed-slow {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .speed-fast {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* ===== まとめ ===== */
+        .summary-section {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0ea5e9 100%);
+            border-radius: 16px;
+            padding: 40px;
+            color: white;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .summary-title {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 22px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .summary-item-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .summary-item-text {
+            font-size: 0.93em;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        /* ===== CloudFormation例 ===== */
+        .cfn-block {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 30px;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+
+        .cfn-title {
+            color: #94a3b8;
+            font-size: 0.85em;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .cfn-code {
+            color: #e2e8f0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.82em;
+            line-height: 1.7;
+            white-space: pre;
+        }
+
+        .cfn-code .key {
+            color: #7dd3fc;
+        }
+
+        .cfn-code .val {
+            color: #86efac;
+        }
+
+        .cfn-code .cmt {
+            color: #64748b;
+        }
+
+        /* ===== レスポンシブ ===== */
+        @media (max-width: 768px) {
+            .content {
+                padding: 24px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .conclusion-points,
+            .feature-grid,
+            .comparison-container,
+            .protocol-visual,
+            .usecase-grid,
+            .bp-grid,
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .limitations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .highway-analogy {
+                grid-template-columns: 1fr;
+            }
+
+            .highway-connector {
+                min-width: auto;
+            }
+
+            .highway-arrows {
+                transform: rotate(90deg);
+            }
+
+            .flow-row {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+
+            .step {
+                grid-template-columns: 1fr;
+            }
+
+            .step-number {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2em;
+            }
+
+            .dataflow-path {
+                flex-direction: column;
+            }
+
+            .dataflow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    
+        /* ブレッドクラムナビゲーション */
+        .breadcrumb-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 0.95em;
+        }
+
+        .breadcrumb-home {
+            color: #FF9900;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .breadcrumb-home:hover {
+            opacity: 0.7;
+        }
+
+        .breadcrumb-separator {
+            color: #9CA3AF;
+            user-select: none;
+        }
+
+        .breadcrumb-item {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .breadcrumb-current {
+            color: #FF9900;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .breadcrumb-nav {
+                font-size: 0.85em;
+                padding: 12px 18px;
+            }
+        }</style>
+<!-- ===== HEADER ===== -->
+        <div class="header">
+            <h1>🔗 Transit Gateway Connect</h1>
+            <p class="header-subtitle">SD-WANとAWSをGREトンネルで高速接続する次世代アタッチメント</p>
+            <span class="header-badge">📅 2020年導入 ｜ Networking & Content Delivery</span>
+        </div>
+
+        <div class="content">
+            <!-- ===== 結論ファースト ===== -->
+            <div class="conclusion-first">
+                <h2 id="まず結論-Transit-Gateway-Connect-とは？">📌 まず結論：Transit Gateway Connect とは？</h2>
+                <p style="font-size: 1.1em; color: #1e40af; line-height: 1.8;">
+                    Transit Gateway Connectは、<strong>SD-WANデバイスとAWS Transit Gatewayを高スループットで統合</strong>するための専用アタッチメントです。従来のIPsec VPN（最大約1.25Gbps）の制限を超え、<strong>GREトンネル</strong>と<strong>BGP動的ルーティング</strong>を使って数十Gbpsの帯域を実現します。
+                </p>
+                <div class="conclusion-points">
+                    <div class="conclusion-point">
+                        <div class="point-icon">⚡</div>
+                        <div class="point-title">超高スループット</div>
+                        <div class="point-desc">IPsec VPNの約1.25Gbps制限を突破し、数十Gbpsの帯域を実現</div>
+                    </div>
+                    <div class="conclusion-point">
+                        <div class="point-icon">🚇</div>
+                        <div class="point-title">GREトンネリング</div>
+                        <div class="point-desc">暗号化オーバーヘッドが不要な軽量カプセル化で高速転送</div>
+                    </div>
+                    <div class="conclusion-point">
+                        <div class="point-icon">🔄</div>
+                        <div class="point-title">BGP動的ルーティング</div>
+                        <div class="point-desc">経路情報を自動交換し、スケーラブルなネットワーク運用を実現</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== たとえ話 ===== -->
+            <div class="section">
+                <h2 id="️-たとえ話で理解する" class="section-title"><span class="emoji">🏗️</span> たとえ話で理解する</h2>
+                <p class="section-lead">Transit Gateway Connectを「高速道路の専用コネクタ」に例えて理解しましょう。</p>
+
+                <div class="analogy-container">
+                    <div class="analogy-title">🛣️ 「高速道路のインターチェンジ」のたとえ</div>
+                    <div class="analogy-text">
+                        あなたの会社（<span class="analogy-highlight">オンプレミス</span>）とショッピングモール（<span class="analogy-highlight">AWS クラウド</span>）をつなぐ道路を想像してください。
+                        <br><br>
+                        従来の<strong>IPsec VPN</strong>は「<span class="analogy-highlight">検問付きの一般道</span>」です。すべての車（データ）を停めて身分証確認（暗号化・復号化）するため、通れる車の数に限界がありました（約1.25Gbps）。安全ですが、渋滞しがちです。
+                        <br><br>
+                        <strong>Transit Gateway Connect</strong>は「<span class="analogy-highlight">専用高速トンネル</span>」です。車を検問なしでコンテナ（GREカプセル化）に載せてまとめて運ぶので、一気に大量の車が通れます（数十Gbps）。さらに、交通整理員（BGP）がリアルタイムで最適な経路を案内してくれます。
+                        <br><br>
+                        ただし、この高速トンネルは<strong>既存のインターチェンジ（VPCアタッチメント）の上に建設</strong>する必要があります。つまり、まずインターチェンジがないと、トンネルは作れません。
+                    </div>
+                </div>
+
+                <!-- アナロジー図解 -->
+                <div class="analogy-diagram">
+                    <div class="analogy-diagram-title">🗺️ たとえ話の対応関係</div>
+                    <div class="highway-analogy">
+                        <div class="highway-side">
+                            <div class="highway-side-icon">🏢</div>
+                            <div class="highway-side-label">あなたの会社</div>
+                            <div class="highway-side-desc">オンプレミス環境<br>（SD-WANデバイス）</div>
+                        </div>
+                        <div class="highway-connector">
+                            <div class="highway-arrows">⟵ ⟶</div>
+                            <div class="highway-tunnel">🚇 専用高速トンネル<br>（TGW Connect）</div>
+                            <div class="highway-protocol-tags">
+                                <span class="protocol-tag">GRE カプセル化</span>
+                                <span class="protocol-tag">BGP 経路案内</span>
+                            </div>
+                            <div style="font-size: 0.78em; color: #64748b; margin-top: 6px;">VPCアタッチメント上に構築</div>
+                        </div>
+                        <div class="highway-side">
+                            <div class="highway-side-icon">🏬</div>
+                            <div class="highway-side-label">ショッピングモール</div>
+                            <div class="highway-side-desc">AWSクラウド<br>（Transit Gateway）</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- マッピング表 -->
+                <table class="mapping-table">
+                    <thead>
+                        <tr>
+                            <th>🛣️ たとえ話（高速道路）</th>
+                            <th>☁️ AWS の実際の概念</th>
+                            <th>💡 ポイント</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="mapping-emoji">🏢</span> あなたの会社</td>
+                            <td>オンプレミス環境 / SD-WANデバイス</td>
+                            <td>通信の発信元</td>
+                        </tr>
+                        <tr>
+                            <td><span class="mapping-emoji">🏬</span> ショッピングモール</td>
+                            <td>AWS Transit Gateway</td>
+                            <td>中央のルーティングハブ</td>
+                        </tr>
+                        <tr>
+                            <td><span class="mapping-emoji">🛤️</span> インターチェンジ</td>
+                            <td>VPC アタッチメント（基盤）</td>
+                            <td>Connectの前提条件</td>
+                        </tr>
+                        <tr>
+                            <td><span class="mapping-emoji">🚇</span> 専用高速トンネル</td>
+                            <td>Transit Gateway Connect アタッチメント</td>
+                            <td>GREベースの高速接続</td>
+                        </tr>
+                        <tr>
+                            <td><span class="mapping-emoji">📦</span> コンテナに車を載せる</td>
+                            <td>GRE カプセル化</td>
+                            <td>低オーバーヘッドで高速</td>
+                        </tr>
+                        <tr>
+                            <td><span class="mapping-emoji">🚦</span> 交通整理員</td>
+                            <td>BGP 動的ルーティング</td>
+                            <td>経路を自動最適化</td>
+                        </tr>
+                        <tr>
+                            <td><span class="mapping-emoji">🔍</span> 検問付き一般道</td>
+                            <td>IPsec VPN（従来方式）</td>
+                            <td>暗号化オーバーヘッドで低速</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ===== アーキテクチャ図 ===== -->
+            <div class="section">
+                <h2 id="️-アーキテクチャ全体像" class="section-title"><span class="emoji">🏛️</span> アーキテクチャ全体像</h2>
+                <p class="section-lead">Transit Gateway Connectは3つの層（オンプレミス・接続層・AWS）で構成されます。</p>
+
+                <div class="architecture-diagram">
+                    <div class="arch-title">📐 Transit Gateway Connect の3層アーキテクチャ</div>
+                    <div class="arch-layers">
+                        <!-- オンプレミス層 -->
+                        <div class="arch-layer layer-onprem">
+                            <div class="arch-layer-label">🏢 オンプレミス層（あなたの会社）</div>
+                            <div class="arch-layer-content">
+                                <div class="arch-box">
+                                    <div class="arch-box-icon">📡</div>
+                                    SD-WAN デバイス
+                                </div>
+                                <div class="arch-box">
+                                    <div class="arch-box-icon">🖥️</div>
+                                    社内ネットワーク
+                                </div>
+                                <div class="arch-box">
+                                    <div class="arch-box-icon">🔄</div>
+                                    BGP ルーター
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connect接続層 -->
+                        <div class="arch-layer layer-connect">
+                            <div class="arch-layer-label">🔗 Transit Gateway Connect 層（専用高速トンネル）</div>
+                            <div class="arch-layer-content">
+                                <div class="arch-box" style="border-color: #60a5fa;">
+                                    <div class="arch-box-icon">🚇</div>
+                                    GRE トンネル
+                                </div>
+                                <div class="arch-box" style="border-color: #60a5fa;">
+                                    <div class="arch-box-icon">🤝</div>
+                                    Connect Peer
+                                </div>
+                                <div class="arch-box" style="border-color: #60a5fa;">
+                                    <div class="arch-box-icon">🔄</div>
+                                    BGP セッション
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AWS層 -->
+                        <div class="arch-layer layer-aws">
+                            <div class="arch-layer-label">☁️ AWS 層（ショッピングモール）</div>
+                            <div class="arch-layer-content">
+                                <div class="arch-box" style="border-color: #4ade80;">
+                                    <div class="arch-box-icon">🌐</div>
+                                    Transit Gateway
+                                </div>
+                                <div class="arch-box" style="border-color: #4ade80;">
+                                    <div class="arch-box-icon">🏗️</div>
+                                    VPC アタッチメント（基盤）
+                                </div>
+                                <div class="arch-box" style="border-color: #4ade80;">
+                                    <div class="arch-box-icon">🌍</div>
+                                    各 VPC / 他のアタッチメント
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- データフロー -->
+                <div class="flow-diagram">
+                    <div class="flow-title">🔀 データの流れ（パケットの旅路）</div>
+                    <div class="flow-row">
+                        <div class="flow-node flow-node-sdwan">📡 SD-WAN<br>デバイス</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-node flow-node-gre">📦 GRE<br>カプセル化</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-node flow-node-connect">🔗 TGW Connect<br>Peer</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-node flow-node-tgw">🌐 Transit<br>Gateway</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-node flow-node-vpc">🏗️ 宛先<br>VPC</div>
+                    </div>
+                    <div class="flow-label">BGP で経路情報を動的に交換しながら、GRE でカプセル化されたパケットが高速に転送される</div>
+                </div>
+            </div>
+
+            <!-- ===== IPsec vs GRE 比較 ===== -->
+            <div class="section">
+                <h2 id="⚖️-なぜ高速？-IPsec-VPN-vs-GRE-の違い" class="section-title"><span class="emoji">⚖️</span> なぜ高速？ IPsec VPN vs GRE の違い</h2>
+                <p class="section-lead">Transit Gateway Connect が高スループットを実現できる理由をプロトコルレベルで比較します。</p>
+
+                <div class="protocol-comparison">
+                    <div class="protocol-comparison-title">🔬 パイプの太さで見るスループットの違い</div>
+                    <div class="protocol-visual">
+                        <div class="protocol-pipe pipe-ipsec">
+                            <div class="pipe-label">🔒 IPsec VPN（従来方式）</div>
+                            <div class="pipe-visual">
+                                <div class="pipe-thin">
+                                    <div class="pipe-bar"></div>
+                                </div>
+                            </div>
+                            <div class="pipe-speed">最大 ~1.25 Gbps</div>
+                            <div class="pipe-note">暗号化/復号化の処理がボトルネック</div>
+                        </div>
+                        <div class="protocol-pipe pipe-gre">
+                            <div class="pipe-label">📦 GRE（Transit Gateway Connect）</div>
+                            <div class="pipe-visual">
+                                <div class="pipe-wide">
+                                    <div class="pipe-bar"></div>
+                                </div>
+                            </div>
+                            <div class="pipe-speed">最大 数十 Gbps</div>
+                            <div class="pipe-note">カプセル化のみでオーバーヘッド最小</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-container">
+                    <div class="comparison-card comparison-before">
+                        <span class="comparison-label">従来方式</span>
+                        <div class="comparison-title">🔒 IPsec VPN 接続</div>
+                        <ul class="comparison-list">
+                            <li><span class="icon">❌</span> 暗号化/復号化のCPUオーバーヘッドが大きい</li>
+                            <li><span class="icon">❌</span> 1トンネルあたり最大約1.25Gbps</li>
+                            <li><span class="icon">❌</span> スケールアウトには複数トンネルが必要</li>
+                            <li><span class="icon">⚠️</span> 暗号化が必要な通信には適している</li>
+                            <li><span class="icon">✅</span> VPCアタッチメント不要で直接接続可能</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-card comparison-after">
+                        <span class="comparison-label">Transit Gateway Connect</span>
+                        <div class="comparison-title">📦 GRE + BGP 接続</div>
+                        <ul class="comparison-list">
+                            <li><span class="icon">✅</span> GREカプセル化のみで低オーバーヘッド</li>
+                            <li><span class="icon">✅</span> VPCアタッチメントの帯域をフル活用</li>
+                            <li><span class="icon">✅</span> BGPで経路を自動管理・最適化</li>
+                            <li><span class="icon">✅</span> SD-WANデバイスとネイティブ統合</li>
+                            <li><span class="icon">⚠️</span> 前提として VPC アタッチメントが必要</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- データフロー比較 -->
+                <div class="dataflow-comparison">
+                    <div class="dataflow-row">
+                        <div class="dataflow-label" style="color: #991b1b;">🔒 従来方式：IPsec VPN のデータ経路</div>
+                        <div class="dataflow-path">
+                            <span class="dataflow-node dataflow-node-onprem">📡 SD-WAN</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-tunnel" style="background: #fee2e2; color: #991b1b; border-color: #f87171;">🔐 IPsec暗号化</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-tunnel" style="background: #fee2e2; color: #991b1b; border-color: #f87171;">🔓 復号化</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-aws">🌐 TGW</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-aws">🏗️ VPC</span>
+                        </div>
+                        <div class="dataflow-speed">
+                            <span class="speed-badge speed-slow">⏱️ 最大 ~1.25 Gbps（暗号化処理がボトルネック）</span>
+                        </div>
+                    </div>
+                    <div class="dataflow-row">
+                        <div class="dataflow-label" style="color: #166534;">📦 新方式：Transit Gateway Connect のデータ経路</div>
+                        <div class="dataflow-path">
+                            <span class="dataflow-node dataflow-node-onprem">📡 SD-WAN</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-tunnel">📦 GREカプセル化</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node" style="background: #dbeafe; color: #1e40af; border: 1px solid #60a5fa;">🔗 Connect Peer</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-aws">🌐 TGW</span>
+                            <span class="dataflow-arrow">→</span>
+                            <span class="dataflow-node dataflow-node-aws">🏗️ VPC</span>
+                        </div>
+                        <div class="dataflow-speed">
+                            <span class="speed-badge speed-fast">🚀 最大 数十Gbps（VPCアタッチメントの帯域を活用）</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 3つの主要コンポーネント ===== -->
+            <div class="section">
+                <h2 id="構成要素を深掘り" class="section-title"><span class="emoji">🧩</span> 構成要素を深掘り</h2>
+                <p class="section-lead">Transit Gateway Connect を支える3つの技術要素を詳しく見ていきましょう。</p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-card-icon">📦</div>
+                        <div class="feature-card-title">GRE（Generic Routing Encapsulation）</div>
+                        <div class="feature-card-desc">
+                            パケットを別のパケットの中に「包む」カプセル化プロトコルです。IPsecのような暗号化処理を行わないため、CPUオーバーヘッドが極めて小さく、高スループットを実現します。ただし暗号化しないため、安全なネットワーク（Direct ConnectやVPC内）での利用が前提となります。
+                        </div>
+                        <span class="feature-card-highlight">低オーバーヘッド・高速転送</span>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-card-icon">🔄</div>
+                        <div class="feature-card-title">BGP（Border Gateway Protocol）</div>
+                        <div class="feature-card-desc">
+                            インターネットのバックボーンで使われる動的ルーティングプロトコルです。隣接するルーター同士が経路情報を自動的に交換し合い、ネットワーク変更に動的に対応します。手動でルートテーブルを更新する必要がなく、大規模ネットワークの運用を自動化できます。
+                        </div>
+                        <span class="feature-card-highlight">動的経路交換・自動化</span>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-card-icon">🤝</div>
+                        <div class="feature-card-title">Connect Peer</div>
+                        <div class="feature-card-desc">
+                            Transit Gateway ConnectアタッチメントとSD-WANデバイス間のGREトンネルとBGPセッションを確立するコンポーネントです。各Connect Peerには、GREのアウターIPアドレスとBGPのインナーIPアドレスを指定します。1つのConnectアタッチメントに複数のPeerを設定できます。
+                        </div>
+                        <span class="feature-card-highlight">GRE + BGP の接続点</span>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-card-icon">🏗️</div>
+                        <div class="feature-card-title">VPC アタッチメント（基盤トランスポート）</div>
+                        <div class="feature-card-desc">
+                            Transit Gateway Connectは独立した接続ではなく、既存のVPCアタッチメントを「土台」として使います。GREトンネルのトラフィックは、この基盤VPCアタッチメントの物理的なネットワーク帯域の上を流れます。そのため、Connect作成前にVPCアタッチメントが必須です。
+                        </div>
+                        <span class="feature-card-highlight">Connectの必須前提条件</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 実装ステップ ===== -->
+            <div class="section">
+                <h2 id="️-実装ステップ" class="section-title"><span class="emoji">🛠️</span> 実装ステップ</h2>
+                <p class="section-lead">Transit Gateway Connectをセットアップする3つのステップを、AWS CLIコマンド付きで解説します。</p>
+
+                <div class="steps-container">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3 id="基盤となるVPCアタッチメントを確認-作成">基盤となるVPCアタッチメントを確認/作成</h3>
+                            <p>Transit Gateway ConnectはVPCアタッチメントの上に構築されるため、まず基盤となるVPCアタッチメントが必要です。既にある場合はそのIDを確認します。</p>
+                            <div class="step-code">
+<span class="comment"># 既存のVPCアタッチメントを確認</span>
+aws ec2 describe-transit-gateway-attachments \\
+  --filters "Name=resource-type,Values=vpc" \\
+  --query "TransitGatewayAttachments[*].[TransitGatewayAttachmentId,State]"
+
+<span class="comment"># 新規作成する場合</span>
+aws ec2 create-transit-gateway-vpc-attachment \\
+  --transit-gateway-id <span class="value">tgw-0123456789abcdef0</span> \\
+  --vpc-id <span class="value">vpc-0123456789abcdef0</span> \\
+  --subnet-ids <span class="value">subnet-0123456789abcdef0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Transit Gateway Connect アタッチメントを作成</h4>
+                            <p>基盤VPCアタッチメントのIDを指定して、Connectアタッチメントを作成します。プロトコルは現在GREのみサポートされています。</p>
+                            <div class="step-code">
+<span class="comment"># Connect アタッチメント作成</span>
+aws ec2 create-transit-gateway-connect \\
+  --transport-transit-gateway-attachment-id <span class="value">tgw-attach-0123456789abcdef0</span> \\
+  --options "Protocol=gre"
+
+<span class="comment"># 作成確認</span>
+aws ec2 describe-transit-gateway-connects \\
+  --query "TransitGatewayConnects[*].[TransitGatewayAttachmentId,State]"
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Connect Peer を設定</h4>
+                            <p>GREトンネルとBGPセッションのパラメータを指定してConnect Peerを作成します。SD-WANデバイス側のIPアドレスとBGPのASNを設定します。</p>
+                            <div class="step-code">
+<span class="comment"># Connect Peer 作成</span>
+aws ec2 create-transit-gateway-connect-peer \\
+  --transit-gateway-attachment-id <span class="value">tgw-attach-connect-0123456789</span> \\
+  --peer-address <span class="value">10.0.0.1</span> \\
+  --transit-gateway-address <span class="value">10.0.0.2</span> \\
+  --bgp-options "PeerAsn=65000" \\
+  --inside-cidr-blocks <span class="value">"169.254.6.0/29"</span>
+
+<span class="comment"># Peer状態を確認</span>
+aws ec2 describe-transit-gateway-connect-peers \\
+  --query "TransitGatewayConnectPeers[*].[TransitGatewayAttachmentId,State]"
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CloudFormation テンプレート -->
+                <div class="cfn-block">
+                    <div class="cfn-title">📄 CloudFormation テンプレート例</div>
+                    <div class="cfn-code"><span class="key">AWSTemplateFormatVersion:</span> <span class="val">'2010-09-09'</span>
+<span class="key">Description:</span> <span class="val">'Transit Gateway Connect Setup'</span>
+
+<span class="key">Resources:</span>
+  <span class="cmt"># 1. 基盤となるVPCアタッチメント</span>
+  <span class="key">TransportAttachment:</span>
+    <span class="key">Type:</span> AWS::EC2::TransitGatewayVpcAttachment
+    <span class="key">Properties:</span>
+      <span class="key">TransitGatewayId:</span> <span class="val">!Ref TransitGateway</span>
+      <span class="key">VpcId:</span> <span class="val">!Ref TransportVPC</span>
+      <span class="key">SubnetIds:</span>
+        - <span class="val">!Ref TransportSubnet</span>
+
+  <span class="cmt"># 2. Connect アタッチメント</span>
+  <span class="key">TGWConnect:</span>
+    <span class="key">Type:</span> AWS::EC2::TransitGatewayConnect
+    <span class="key">Properties:</span>
+      <span class="key">TransportTransitGatewayAttachmentId:</span> <span class="val">!Ref TransportAttachment</span>
+      <span class="key">Options:</span>
+        <span class="key">Protocol:</span> <span class="val">gre</span>
+
+  <span class="cmt"># 3. Connect Peer</span>
+  <span class="key">TGWConnectPeer:</span>
+    <span class="key">Type:</span> AWS::EC2::TransitGatewayConnectPeer
+    <span class="key">Properties:</span>
+      <span class="key">TransitGatewayAttachmentId:</span> <span class="val">!Ref TGWConnect</span>
+      <span class="key">PeerAddress:</span> <span class="val">'10.0.0.1'</span>            <span class="cmt"># SD-WANデバイスのIP</span>
+      <span class="key">TransitGatewayAddress:</span> <span class="val">'10.0.0.2'</span>  <span class="cmt"># TGW側のIP</span>
+      <span class="key">BgpOptions:</span>
+        <span class="key">PeerAsn:</span> <span class="val">65000</span>
+      <span class="key">InsideCidrBlocks:</span>
+        - <span class="val">'169.254.6.0/29'</span>                   <span class="cmt"># BGPピアリング用CIDR</span></div>
+                </div>
+            </div>
+
+            <!-- ===== 制限事項 ===== -->
+            <div class="section">
+                <h2 id="⚠️-知っておくべき制限事項" class="section-title"><span class="emoji">⚠️</span> 知っておくべき制限事項</h2>
+                <p class="section-lead">Transit Gateway Connectを使う前に把握しておくべき重要な制限事項です。</p>
+
+                <div class="limitations-grid">
+                    <div class="limitation-card">
+                        <div class="limitation-icon">📦</div>
+                        <div class="limitation-title">GRE プロトコルのみ</div>
+                        <div class="limitation-desc">現在サポートされるカプセル化プロトコルはGREのみです。VXLANなど他のプロトコルは利用できません。</div>
+                    </div>
+                    <div class="limitation-card">
+                        <div class="limitation-icon">🔄</div>
+                        <div class="limitation-title">BGP ルーティングのみ</div>
+                        <div class="limitation-desc">ルーティングプロトコルはBGPのみ対応。スタティックルーティングやOSPFなどは使用できません。</div>
+                    </div>
+                    <div class="limitation-card">
+                        <div class="limitation-icon">🏗️</div>
+                        <div class="limitation-title">VPC アタッチメント必須</div>
+                        <div class="limitation-desc">Connect単独では使えず、基盤となるVPCアタッチメント（トランスポート）が必ず必要です。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ユースケース ===== -->
+            <div class="section">
+                <h2 id="ユースケース" class="section-title"><span class="emoji">🎯</span> ユースケース</h2>
+                <p class="section-lead">Transit Gateway Connectが真価を発揮する代表的なシナリオです。</p>
+
+                <div class="usecase-grid">
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🏭</div>
+                        <div class="usecase-title">SD-WAN とAWSの統合</div>
+                        <div class="usecase-desc">Cisco SD-WAN、VMware SD-WAN、Aruba SD-WANなどのSD-WANデバイスをAWSに統合。各拠点からAWSへの高速アクセスを一元管理できます。</div>
+                    </div>
+                    <div class="usecase-card">
+                        <div class="usecase-icon">📊</div>
+                        <div class="usecase-title">大容量データ転送</div>
+                        <div class="usecase-desc">IPsec VPNの1.25Gbps制限を超えるスループットが必要なワークロード。ビッグデータ分析やメディア配信基盤の構築に最適です。</div>
+                    </div>
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🌍</div>
+                        <div class="usecase-title">マルチリージョン・マルチ拠点接続</div>
+                        <div class="usecase-desc">グローバル企業が多数の拠点をAWSに接続する際、BGPの動的ルーティングにより経路管理を自動化。スケーラブルなハイブリッドネットワークを構築できます。</div>
+                    </div>
+                    <div class="usecase-card">
+                        <div class="usecase-icon">🔐</div>
+                        <div class="usecase-title">Direct Connect との組み合わせ</div>
+                        <div class="usecase-desc">AWS Direct Connectで専用線接続している環境に、Transit Gateway Connectを追加。すでに安全な専用線上でGREトンネルを構築するため、高速かつセキュアな接続を実現します。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ベストプラクティス ===== -->
+            <div class="section">
+                <div class="best-practices">
+                    <div class="bp-title">✅ ベストプラクティス</div>
+                    <div class="bp-grid">
+                        <div class="bp-item">
+                            <div class="bp-item-icon">🔒</div>
+                            <div class="bp-item-text"><strong>GREは暗号化しない点に注意：</strong>GREトンネルは暗号化を行わないため、Direct Connectなどの安全なトランスポート上で使用するか、アプリケーションレベルの暗号化を併用してください。</div>
+                        </div>
+                        <div class="bp-item">
+                            <div class="bp-item-icon">📐</div>
+                            <div class="bp-item-text"><strong>IPアドレス計画を事前に：</strong>Connect Peerの設定にはGREアウターIPとBGPインナーIPが必要です。アドレス空間の重複がないよう事前に計画しましょう。</div>
+                        </div>
+                        <div class="bp-item">
+                            <div class="bp-item-icon">🔄</div>
+                            <div class="bp-item-text"><strong>冗長化を考慮：</strong>複数のConnect Peerを異なるAZに配置し、BGPの冗長パスを確保することで、可用性を高められます。</div>
+                        </div>
+                        <div class="bp-item">
+                            <div class="bp-item-icon">📊</div>
+                            <div class="bp-item-text"><strong>CloudWatchで監視：</strong>Transit Gatewayのメトリクス（BytesIn/BytesOut、PacketDropCount）を監視し、帯域使用率やパケット損失を継続的にモニタリングしましょう。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== FAQ ===== -->
+            <div class="section">
+                <h2 id="❓-よくある質問" class="section-title"><span class="emoji">❓</span> よくある質問</h2>
+
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">💬 GREは暗号化しないのに安全なの？</div>
+                        <div class="faq-answer">GRE自体は暗号化しませんが、Transit Gateway Connectは通常、Direct ConnectやVPC内部のプライベートネットワーク上で使用します。これらは既に安全な閉域網なので、二重に暗号化する必要がないケースがほとんどです。インターネット経由の場合は、アプリケーションレベルの暗号化（TLS/SSL）との併用を検討してください。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">💬 既存のVPN接続と併用できる？</div>
+                        <div class="faq-answer">はい。Transit Gatewayには複数のアタッチメントタイプを同時に接続できます。IPsec VPN、Direct Connect、VPCアタッチメント、Connect アタッチメントを組み合わせ、用途に応じて使い分けることが可能です。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">💬 VXLANは使えないの？</div>
+                        <div class="faq-answer">現時点ではGREプロトコルのみがサポートされています。VXLANのサポートは発表されていませんが、AWSは継続的にサービスを拡張しているため、最新のドキュメントを確認することをお勧めします。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">💬 Connect Peerはいくつまで設定できる？</div>
+                        <div class="faq-answer">1つのTransit Gateway Connectアタッチメントあたり最大4つのConnect Peerを設定できます。各Peerが1つのGREトンネルとBGPセッションに対応し、冗長構成やトラフィック分散に活用できます。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">💬 Transit Gateway Connectの料金体系は？</div>
+                        <div class="faq-answer">Transit Gateway Connectのアタッチメント時間料金と、データ処理料金が発生します。加えて、基盤となるVPCアタッチメントの料金も別途発生する点に注意してください。最新の料金はAWS公式サイトで確認することをお勧めします。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== まとめ ===== -->
+            <div class="summary-section">
+                <div class="summary-title">📝 まとめ</div>
+                <p style="font-size: 1.1em; opacity: 0.95; margin-bottom: 20px;">
+                    Transit Gateway Connect = SD-WAN × GRE × BGP で実現する高速ハイブリッド接続
+                </p>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-item-icon">🎯</div>
+                        <div class="summary-item-text">SD-WANデバイスとAWSを<strong>ネイティブに統合</strong>するための専用アタッチメント</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-item-icon">⚡</div>
+                        <div class="summary-item-text">GREの<strong>低オーバーヘッド</strong>で、IPsec VPNを大幅に超えるスループットを実現</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-item-icon">🔄</div>
+                        <div class="summary-item-text">BGPによる<strong>動的ルーティング</strong>で、大規模ネットワークの運用を自動化</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+
+</div>
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>パケットの気持ちになって辿る Amazon VPC のルーティング | AWS学習リソース</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+  <meta name="description" content="Amazon VPCのルーティングをパケット（荷物）の視点で図解。ルートテーブル、サブネット、ゲートウェイの仕組みを配達ドライバーのたとえで初心者にもわかりやすく解説。">
+  <style>
+    /* ========================================
+       CSS変数定義（プロジェクト準拠）
+       ======================================== */
+    :root {
+      --color-aws-dark: #232F3E;
+      --color-aws-orange: #dc7600;
+      --color-aws-orange-original: #FF9900;
+      --color-aws-orange-hover: #EC7211;
+      --color-text-primary: #374151;
+      --color-text-secondary: #6B7280;
+      --color-text-white: #FFFFFF;
+      --color-bg-light: #F9FAFB;
+      --color-bg-white: #FFFFFF;
+      --color-border-light: #E5E7EB;
+      --color-success: #10B981;
+      --color-warning: #F59E0B;
+      --color-error: #EF4444;
+      --color-info: #3B82F6;
+      --color-category-networking: #3B82F6;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-base: 10px;
+      --radius-lg: 15px;
+      --radius-xl: 20px;
+      --transition-base: 0.3s ease;
+    }
+
+    /* ========================================
+       ベーススタイル
+       ======================================== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.75;
+      color: var(--color-text-primary);
+      margin: 0;
+      padding: 20px;
+      padding-top: 80px;
+      background-color: var(--color-bg-light);
+      font-size: 20px;
+    }
+
+    /* ========================================
+       固定ヘッダー
+       ======================================== */
+    .fixed-nav-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(135deg, var(--color-aws-dark) 0%, #374151 100%);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      z-index: 1002;
+      display: flex;
+      align-items: center;
+    }
+
+    .fixed-nav-container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .fixed-nav-logo {
+      font-size: 1.3em;
+      font-weight: 700;
+      color: var(--color-aws-orange-original);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fixed-nav-links {
+      display: flex;
+      gap: 25px;
+      align-items: center;
+    }
+
+    .fixed-nav-links a {
+      color: var(--color-text-white);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.85em;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-base);
+    }
+
+    .fixed-nav-links a:hover,
+    .fixed-nav-links a:focus {
+      background-color: rgba(255,153,0,0.2);
+      color: var(--color-aws-orange-original);
+    }
+
+    /* ========================================
+       メインコンテナ
+       ======================================== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px;
+      background-color: var(--color-bg-white);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ========================================
+       見出しスタイル
+       ======================================== */
+    h1 {
+      font-size: 2.2em;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 1.6em;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+      margin-top: 0;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--color-category-networking);
+    }
+
+    h3 {
+      font-size: 1.3em;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    h4 {
+      font-size: 1.1em;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+
+    /* ========================================
+       ヒーローセクション
+       ======================================== */
+    .hero-section {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563EB 60%, #3B82F6 100%);
+      color: var(--color-text-white);
+      padding: 50px 40px;
+      border-radius: var(--radius-xl);
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .hero-section h1 {
+      color: var(--color-text-white);
+    }
+
+    .hero-subtitle {
+      font-size: 1.15em;
+      opacity: 0.9;
+      max-width: 700px;
+      margin: 0 auto 30px;
+      line-height: 1.8;
+    }
+
+    .hero-analogy-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 12px 28px;
+      border-radius: 50px;
+      font-size: 1.1em;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+
+    /* ========================================
+       結論ファーストセクション
+       ======================================== */
+    .conclusion-first {
+      background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+      border: 2px solid #93C5FD;
+      border-radius: var(--radius-xl);
+      padding: 35px;
+      margin-bottom: 40px;
+    }
+
+    .conclusion-first h2 {
+      border-bottom-color: var(--color-category-networking);
+      color: #1E40AF;
+    }
+
+    .conclusion-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .conclusion-card {
+      background: var(--color-bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .conclusion-icon {
+      font-size: 1.8em;
+      flex-shrink: 0;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #EFF6FF;
+      border-radius: var(--radius-base);
+    }
+
+    .conclusion-text {
+      flex: 1;
+    }
+
+    .conclusion-text strong {
+      display: block;
+      font-size: 1.05em;
+      margin-bottom: 6px;
+      color: #1E40AF;
+    }
+
+    .conclusion-text p {
+      margin-bottom: 0;
+      color: var(--color-text-primary);
+    }
+
+    /* ========================================
+       たとえ話セクション
+       ======================================== */
+    .analogy-intro {
+      background: #FFFBEB;
+      border: 2px solid #FCD34D;
+      border-radius: var(--radius-xl);
+      padding: 35px;
+      margin-bottom: 40px;
+    }
+
+    .analogy-intro h2 {
+      border-bottom-color: #F59E0B;
+      color: #92400E;
+    }
+
+    .analogy-mapping {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .analogy-map-card {
+      background: var(--color-bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      border-left: 5px solid #F59E0B;
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+    }
+
+    .analogy-map-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .analogy-map-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .analogy-map-emoji {
+      font-size: 1.6em;
+    }
+
+    .analogy-map-labels {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .analogy-aws-label {
+      font-weight: 700;
+      color: #1E40AF;
+      font-size: 1.05em;
+    }
+
+    .analogy-real-label {
+      color: #92400E;
+      font-size: 0.9em;
+    }
+
+    .analogy-map-desc {
+      margin-bottom: 0;
+      color: var(--color-text-primary);
+    }
+
+    /* ========================================
+       SVGダイアグラム共通
+       ======================================== */
+    .diagram-container {
+      background: var(--color-bg-white);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-xl);
+      padding: 30px;
+      margin: 30px 0;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+    }
+
+    .diagram-container svg {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .diagram-caption {
+      text-align: center;
+      color: var(--color-text-secondary);
+      font-size: 0.9em;
+      margin-top: 16px;
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       セクション共通
+       ======================================== */
+    .content-section {
+      margin-bottom: 50px;
+    }
+
+    .section-box {
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
+      padding: 35px;
+      margin-bottom: 40px;
+    }
+
+    /* ========================================
+       ジャーニーステップ
+       ======================================== */
+    .journey-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .journey-step {
+      background: var(--color-bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+      position: relative;
+    }
+
+    .journey-step:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .journey-step-number {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      color: var(--color-text-white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1em;
+      margin: 0 auto 14px;
+    }
+
+    .journey-step h4 {
+      text-align: center;
+    }
+
+    .journey-step p {
+      margin-bottom: 0;
+      color: var(--color-text-primary);
+    }
+
+    .journey-step-emoji {
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+
+    /* ========================================
+       シナリオセクション
+       ======================================== */
+    .scenario-section {
+      background: var(--color-bg-white);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-xl);
+      padding: 35px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .scenario-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .scenario-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 0.85em;
+      font-weight: 600;
+      color: var(--color-text-white);
+    }
+
+    .scenario-badge-basic {
+      background: var(--color-success);
+    }
+
+    .scenario-badge-intermediate {
+      background: var(--color-info);
+    }
+
+    .scenario-badge-advanced {
+      background: #8B5CF6;
+    }
+
+    .packet-thought {
+      background: #F0FDF4;
+      border: 2px dashed #86EFAC;
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin: 20px 0;
+      position: relative;
+    }
+
+    .packet-thought::before {
+      content: '📦💭';
+      position: absolute;
+      top: -16px;
+      left: 20px;
+      font-size: 1.3em;
+      background: #F0FDF4;
+      padding: 0 8px;
+    }
+
+    .packet-thought p {
+      color: #166534;
+      font-style: italic;
+      margin-bottom: 0;
+      padding-top: 6px;
+    }
+
+    /* ========================================
+       ルートテーブル表示
+       ======================================== */
+    .route-table-display {
+      background: #1E293B;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+
+    .route-table-title {
+      color: #94A3B8;
+      font-size: 0.85em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+    }
+
+    .route-table-display table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95em;
+    }
+
+    .route-table-display th {
+      color: #94A3B8;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 16px;
+      border-bottom: 1px solid #334155;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .route-table-display td {
+      color: #E2E8F0;
+      padding: 10px 16px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .route-table-display tr:last-child td {
+      border-bottom: none;
+    }
+
+    .route-table-display .route-match {
+      background: rgba(16,185,129,0.15);
+    }
+
+    .route-table-display .route-match td {
+      color: #6EE7B7;
+      font-weight: 600;
+    }
+
+    .route-dest {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 600;
+    }
+
+    .route-target {
+      font-family: 'Courier New', Courier, monospace;
+      color: #93C5FD;
+    }
+
+    .route-match .route-target {
+      color: #6EE7B7;
+    }
+
+    /* ========================================
+       最長プレフィックスマッチ図解
+       ======================================== */
+    .prefix-match-visual {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .prefix-card {
+      background: var(--color-bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border: 2px solid var(--color-border-light);
+      transition: all var(--transition-base);
+    }
+
+    .prefix-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .prefix-card-winner {
+      border-color: var(--color-success);
+      background: #F0FDF4;
+    }
+
+    .prefix-card-loser {
+      opacity: 0.6;
+    }
+
+    .prefix-cidr {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.1em;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 8px;
+    }
+
+    .prefix-bits {
+      font-size: 0.9em;
+      color: var(--color-text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .prefix-result {
+      font-weight: 700;
+      font-size: 1.05em;
+    }
+
+    .prefix-result-win {
+      color: var(--color-success);
+    }
+
+    .prefix-result-lose {
+      color: var(--color-text-secondary);
+    }
+
+    /* ========================================
+       比較テーブル
+       ======================================== */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .comparison-card {
+      background: var(--color-bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      border-top: 4px solid var(--color-category-networking);
+    }
+
+    .comparison-card h3 {
+      color: #1E40AF;
+    }
+
+    /* ========================================
+       警告・Tips・情報ボックス
+       ======================================== */
+    .info-box {
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin: 24px 0;
+    }
+
+    .info-box-warning {
+      background: #FEF3C7;
+      border: 2px solid #FCD34D;
+    }
+
+    .info-box-tip {
+      background: #ECFDF5;
+      border: 2px solid #6EE7B7;
+    }
+
+    .info-box-info {
+      background: #EFF6FF;
+      border: 2px solid #93C5FD;
+    }
+
+    .info-box-title {
+      font-weight: 700;
+      font-size: 1.05em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-box-warning .info-box-title {
+      color: #92400E;
+    }
+
+    .info-box-tip .info-box-title {
+      color: #065F46;
+    }
+
+    .info-box-info .info-box-title {
+      color: #1E40AF;
+    }
+
+    .info-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       トラブルシューティング
+       ======================================== */
+    .troubleshoot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .troubleshoot-card {
+      background: var(--color-bg-white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      border-left: 5px solid var(--color-error);
+    }
+
+    .troubleshoot-symptom {
+      font-weight: 700;
+      color: var(--color-error);
+      margin-bottom: 8px;
+    }
+
+    .troubleshoot-cause {
+      color: var(--color-text-primary);
+      margin-bottom: 10px;
+    }
+
+    .troubleshoot-fix {
+      background: #F0FDF4;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      color: #166534;
+      font-weight: 500;
+    }
+
+    .troubleshoot-fix p {
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       FAQ
+       ======================================== */
+    .faq-section {
+      margin-top: 40px;
+    }
+
+    .faq-item {
+      background: var(--color-bg-white);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .faq-question {
+      font-weight: 700;
+      color: #1E40AF;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .faq-answer {
+      color: var(--color-text-primary);
+      padding-left: 36px;
+    }
+
+    .faq-answer p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       まとめセクション
+       ======================================== */
+    .summary-section {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563EB 60%, #3B82F6 100%);
+      color: var(--color-text-white);
+      padding: 50px 40px;
+      border-radius: var(--radius-xl);
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .summary-section h2 {
+      color: var(--color-text-white);
+      border-bottom: none;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .summary-card {
+      background: rgba(255,255,255,0.15);
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(10px);
+    }
+
+    .summary-card-emoji {
+      font-size: 2em;
+      margin-bottom: 12px;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 1.1em;
+      margin-bottom: 8px;
+    }
+
+    .summary-card p {
+      opacity: 0.9;
+      margin-bottom: 0;
+    }
+
+    .summary-message {
+      font-size: 1.15em;
+      max-width: 700px;
+      margin: 20px auto 0;
+      background: rgba(255,255,255,0.2);
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(10px);
+      line-height: 1.8;
+    }
+
+    /* ========================================
+       フッター
+       ======================================== */
+    .page-footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--color-text-secondary);
+      font-size: 0.85em;
+    }
+
+    /* ========================================
+       アクセシビリティ：フォーカスインジケーター
+       ======================================== */
+    a:focus,
+    button:focus {
+      outline: 3px solid var(--color-aws-orange-original);
+      outline-offset: 2px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ========================================
+       レスポンシブ対応
+       ======================================== */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+        padding-top: 70px;
+        font-size: 18px;
+      }
+
+      .container {
+        padding: 20px;
+      }
+
+      .hero-section {
+        padding: 30px 20px;
+      }
+
+      h1 {
+        font-size: 1.7em;
+      }
+
+      h2 {
+        font-size: 1.4em;
+      }
+
+      .conclusion-grid,
+      .analogy-mapping,
+      .comparison-grid,
+      .troubleshoot-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .journey-steps,
+      .prefix-match-visual,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .fixed-nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#conclusion-title">🎯 結論ファースト：3分で掴む VPC ルーティングの核心</a></li>
+            <li class="toc-h2"><a href="#analogy-title">🚚 たとえ話：VPCルーティング ＝ 配達ドライバーの道案内</a></li>
+            <li class="toc-h2"><a href="#structure-title">🗺️ パケットの旅：全体構造を図で見る</a></li>
+            <li class="toc-h3"><a href="#パケットが辿る-3つのステップ">📦 パケットが辿る 3つのステップ</a></li>
+            <li class="toc-h2"><a href="#scenarios-title">🛤️ シナリオ別：パケットの旅を追体験</a></li>
+            <li class="toc-h3"><a href="#scenario-1">シナリオ1：同じVPC内の通信（local ルート）</a></li>
+            <li class="toc-h3"><a href="#scenario-2">シナリオ2：パブリックサブネットからインターネットへ</a></li>
+            <li class="toc-h3"><a href="#scenario-3">シナリオ3：プライベートサブネットからインターネットへ（NAT Gateway）</a></li>
+            <li class="toc-h3"><a href="#scenario-4">シナリオ4：別のVPCへの通信（VPC Peering）</a></li>
+            <li class="toc-h2"><a href="#prefix-title">🔍 最長プレフィックスマッチ：なぜ「詳しい住所」が優先されるのか</a></li>
+            <li class="toc-h3"><a href="#例-宛先が-10.0.1.50-の場合">例：宛先が 10.0.1.50 の場合</a></li>
+            <li class="toc-h2"><a href="#table-types-title">📋 ルートテーブルの種類と使い分け</a></li>
+            <li class="toc-h2"><a href="#targets-title">🚪 ターゲット早見表：パケットの出口一覧</a></li>
+            <li class="toc-h2"><a href="#troubleshoot-title">🔧 トラブルシューティング：パケットが迷子になったら</a></li>
+            <li class="toc-h2"><a href="#faq-title">❓ よくある質問（FAQ）</a></li>
+            <li class="toc-h2"><a href="#summary-title">🎓 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+
+  <!-- 固定ヘッダー -->
+  <header class="fixed-nav-header">
+    <div class="fixed-nav-container">
+      <a href="#" class="fixed-nav-logo" aria-label="AWS SAP学習リソース トップへ">
+        📡 AWS ネットワーキング
+      </a>
+      <nav class="fixed-nav-links" aria-label="メインナビゲーション">
+        <a href="#conclusion">結論</a>
+        <a href="#analogy">たとえ話</a>
+        <a href="#journey">旅の全体像</a>
+        <a href="#scenarios">シナリオ別</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main>
+    <div class="container">
+
+      <!-- ヒーローセクション -->
+      <section class="hero-section" aria-labelledby="hero-title">
+        <h1 id="hero-title">📦 パケットの気持ちになって辿る<br>Amazon VPC のルーティング</h1>
+        <p class="hero-subtitle">
+          「僕はパケット。宛先に届くために、VPCの道案内（ルートテーブル）を頼りに旅をする。」<br>
+          パケットの視点で VPC ルーティングの仕組みを理解しよう！
+        </p>
+        <span class="hero-analogy-badge">🚚 たとえ話：配達ドライバーが道路標識を見て届ける物流</span>
+      </section>
+
+      <!-- 結論ファースト -->
+      <section class="conclusion-first" id="conclusion" aria-labelledby="conclusion-title">
+        <h2 id="conclusion-title">🎯 結論ファースト：3分で掴む VPC ルーティングの核心</h2>
+        <p>VPC ルーティングを理解するために、まずこの4つのポイントだけ押さえてください。</p>
+
+        <div class="conclusion-grid">
+          <div class="conclusion-card">
+            <div class="conclusion-icon" aria-hidden="true">📋</div>
+            <div class="conclusion-text">
+              <strong>ルートテーブル＝道路標識</strong>
+              <p>パケットは「宛先IPアドレス」を見て、ルートテーブル（道路標識）に従い、次にどこへ行くか決めます。</p>
+            </div>
+          </div>
+          <div class="conclusion-card">
+            <div class="conclusion-icon" aria-hidden="true">🔍</div>
+            <div class="conclusion-text">
+              <strong>最長プレフィックスマッチが鉄則</strong>
+              <p>ルートが複数マッチする場合、最も具体的な（CIDRが長い）ルートが優先されます。住所が詳しい標識ほど優先！</p>
+            </div>
+          </div>
+          <div class="conclusion-card">
+            <div class="conclusion-icon" aria-hidden="true">🏘️</div>
+            <div class="conclusion-text">
+              <strong>サブネットごとに1つのルートテーブル</strong>
+              <p>各サブネットには必ず1つのルートテーブルが紐づきます。明示的に設定しないとメインルートテーブルが使われます。</p>
+            </div>
+          </div>
+          <div class="conclusion-card">
+            <div class="conclusion-icon" aria-hidden="true">🚪</div>
+            <div class="conclusion-text">
+              <strong>ターゲット＝次の出口</strong>
+              <p>ルートの「ターゲット」は、パケットが次に通過するゲートウェイやENIです。目的地への「出口」のこと。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- たとえ話の対応表 -->
+      <section class="analogy-intro" id="analogy" aria-labelledby="analogy-title">
+        <h2 id="analogy-title">🚚 たとえ話：VPCルーティング ＝ 配達ドライバーの道案内</h2>
+        <p>
+          あなたは配達ドライバー（パケット）です。荷物（データ）を届けるために、
+          街（VPC）の中を道路標識（ルートテーブル）を見ながら走ります。
+          この対応表を覚えれば、VPCルーティングはもう怖くありません！
+        </p>
+
+        <div class="analogy-mapping">
+          <div class="analogy-map-card">
+            <div class="analogy-map-header">
+              <span class="analogy-map-emoji" aria-hidden="true">🏙️</span>
+              <div class="analogy-map-labels">
+                <span class="analogy-aws-label">VPC（Virtual Private Cloud）</span>
+                <span class="analogy-real-label">＝ あなたが走る「街」全体</span>
+              </div>
+            </div>
+            <p class="analogy-map-desc">自分だけの専用ネットワーク空間。街の境界線（CIDRブロック）で範囲が決まっています。</p>
+          </div>
+          <div class="analogy-map-card">
+            <div class="analogy-map-header">
+              <span class="analogy-map-emoji" aria-hidden="true">🏘️</span>
+              <div class="analogy-map-labels">
+                <span class="analogy-aws-label">サブネット</span>
+                <span class="analogy-real-label">＝ 街の中の「地区・町内」</span>
+              </div>
+            </div>
+            <p class="analogy-map-desc">VPCを区切った小さなネットワーク。各地区（サブネット）ごとに道路標識（ルートテーブル）が設置されています。</p>
+          </div>
+          <div class="analogy-map-card">
+            <div class="analogy-map-header">
+              <span class="analogy-map-emoji" aria-hidden="true">🪧</span>
+              <div class="analogy-map-labels">
+                <span class="analogy-aws-label">ルートテーブル</span>
+                <span class="analogy-real-label">＝ 交差点にある「道路標識」</span>
+              </div>
+            </div>
+            <p class="analogy-map-desc">「この宛先に行くなら、この道を通れ」という案内板。すべてのサブネットに必ず1つ設置されます。</p>
+          </div>
+          <div class="analogy-map-card">
+            <div class="analogy-map-header">
+              <span class="analogy-map-emoji" aria-hidden="true">🚪</span>
+              <div class="analogy-map-labels">
+                <span class="analogy-aws-label">ターゲット（IGW, NAT-GW等）</span>
+                <span class="analogy-real-label">＝ 「出口」や「中継所」</span>
+              </div>
+            </div>
+            <p class="analogy-map-desc">IGW（Internet Gateway）は「街の正面玄関」で、VPC自体にアタッチされます（サブネットの外）。NAT-GWは「パブリックサブネット内に配置された、代理で外出してくれる受付」です。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 全体構造の図解 -->
+      <section class="content-section" id="journey" aria-labelledby="structure-title">
+        <h2 id="structure-title">🗺️ パケットの旅：全体構造を図で見る</h2>
+        <p>
+          パケットがサブネットから出発するとき、まずルートテーブルを確認します。
+          下の図は VPC 内の基本的な構造と、パケットがどのようにルーティングされるかを示しています。
+        </p>
+
+        <div class="diagram-container">
+          <svg role="img" aria-label="VPC全体構造図：IGWはVPCの境界にアタッチ、NAT-GWはパブリックサブネット内に配置。パケットがルートテーブルを参照して各ターゲットへ向かう流れ" viewBox="0 0 1100 640" xmlns="http://www.w3.org/2000/svg" width="100%" height="auto">
+
+            <!-- 矢印マーカー定義 -->
+            <defs>
+              <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#F59E0B"/>
+              </marker>
+              <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981"/>
+              </marker>
+              <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6"/>
+              </marker>
+              <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#8B5CF6"/>
+              </marker>
+              <marker id="arrowDark" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
+              </marker>
+            </defs>
+
+            <!-- ==========================================
+                 レイヤー1: 背景（VPC・サブネット枠）
+                 ========================================== -->
+
+            <!-- VPC全体（左側に収める） -->
+            <rect x="30" y="30" width="620" height="580" rx="20" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2.5" stroke-dasharray="8,4"/>
+            <text x="55" y="62" font-size="17" font-weight="700" fill="#1E40AF">🏙️ VPC（10.0.0.0/16）＝ 街全体</text>
+
+            <!-- パブリックサブネット -->
+            <rect x="50" y="80" width="580" height="230" rx="14" fill="#FFFFFF" stroke="#10B981" stroke-width="2"/>
+            <text x="75" y="110" font-size="14" font-weight="700" fill="#065F46">🏘️ パブリックサブネット（10.0.1.0/24）</text>
+
+            <!-- プライベートサブネット -->
+            <rect x="50" y="330" width="580" height="195" rx="14" fill="#FFFFFF" stroke="#6366F1" stroke-width="2"/>
+            <text x="75" y="360" font-size="14" font-weight="700" fill="#3730A3">🏘️ プライベートサブネット（10.0.2.0/24）</text>
+
+            <!-- ==========================================
+                 レイヤー2: パブリックサブネット内の要素
+                 ========================================== -->
+
+            <!-- EC2パブリック -->
+            <rect x="75" y="130" width="120" height="65" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+            <text x="97" y="158" font-size="12" font-weight="600" fill="#1E40AF">🖥️ EC2</text>
+            <text x="91" y="178" font-size="10" fill="#374151">10.0.1.10</text>
+
+            <!-- パケット（パブリック） -->
+            <rect x="80" y="210" width="110" height="36" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+            <text x="96" y="233" font-size="11" font-weight="600" fill="#92400E">📦 パケット</text>
+
+            <!-- ルートテーブル（パブリック） -->
+            <rect x="230" y="130" width="150" height="105" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2"/>
+            <text x="252" y="155" font-size="11" font-weight="700" fill="#065F46">🪧 ルートテーブル</text>
+            <line x1="245" y1="162" x2="365" y2="162" stroke="#D1D5DB" stroke-width="1"/>
+            <text x="245" y="182" font-size="10" font-family="monospace" fill="#374151">10.0.0.0/16→local</text>
+            <text x="245" y="202" font-size="10" font-family="monospace" fill="#374151">0.0.0.0/0 →IGW</text>
+
+            <!-- パケット→RT矢印 -->
+            <line x1="190" y1="224" x2="225" y2="195" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowOrange)"/>
+            <text x="192" y="215" font-size="9" fill="#92400E" font-weight="600">参照</text>
+
+            <!-- NAT-GW（パブリックサブネット内に配置） -->
+            <rect x="430" y="130" width="175" height="100" rx="14" fill="#F59E0B" stroke="#92400E" stroke-width="2.5"/>
+            <text x="472" y="162" font-size="14" font-weight="700" fill="#FFFFFF">🔄 NAT-GW</text>
+            <text x="457" y="184" font-size="10" fill="#FEF3C7">NATゲートウェイ</text>
+            <!-- NAT-GWの配置ラベル -->
+            <rect x="450" y="199" width="138" height="22" rx="11" fill="#92400E"/>
+            <text x="457" y="214" font-size="9" font-weight="700" fill="#FFFFFF">📍 パブリックSN内に配置</text>
+
+            <!-- ==========================================
+                 レイヤー3: プライベートサブネット内の要素
+                 ========================================== -->
+
+            <!-- EC2プライベート -->
+            <rect x="75" y="380" width="120" height="65" rx="8" fill="#EDE9FE" stroke="#6366F1" stroke-width="1.5"/>
+            <text x="97" y="408" font-size="12" font-weight="600" fill="#3730A3">🖥️ EC2</text>
+            <text x="91" y="428" font-size="10" fill="#374151">10.0.2.20</text>
+
+            <!-- ルートテーブル（プライベート） -->
+            <rect x="230" y="375" width="155" height="110" rx="8" fill="#EDE9FE" stroke="#6366F1" stroke-width="2"/>
+            <text x="252" y="398" font-size="11" font-weight="700" fill="#3730A3">🪧 ルートテーブル</text>
+            <line x1="245" y1="405" x2="370" y2="405" stroke="#D1D5DB" stroke-width="1"/>
+            <text x="245" y="425" font-size="10" font-family="monospace" fill="#374151">10.0.0.0/16→local</text>
+            <text x="245" y="445" font-size="10" font-family="monospace" fill="#374151">0.0.0.0/0→NAT-GW</text>
+            <text x="245" y="465" font-size="8.5" fill="#6B7280">（↑パブリックSN内のNAT-GWへ）</text>
+
+            <!-- プライベートRT→NAT-GW矢印 -->
+            <line x1="385" y1="420" x2="465" y2="235" stroke="#6366F1" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+            <text x="405" y="330" font-size="9" fill="#3730A3" font-weight="600">NAT-GWへ</text>
+            <text x="402" y="345" font-size="9" fill="#3730A3">（パブリックSN内）</text>
+
+            <!-- VPC Peering -->
+            <rect x="430" y="378" width="175" height="80" rx="14" fill="#8B5CF6" stroke="#5B21B6" stroke-width="2"/>
+            <text x="455" y="413" font-size="13" font-weight="700" fill="#FFFFFF">🔗 VPC Peering</text>
+            <text x="475" y="435" font-size="10" fill="#EDE9FE">他のVPCへ</text>
+
+            <!-- ==========================================
+                 レイヤー4: VPC外の要素（十分な間隔を確保）
+                 ========================================== -->
+
+            <!-- IGW（VPC境界の右側、サブネットの外） -->
+            <rect x="720" y="100" width="160" height="120" rx="18" fill="#10B981" stroke="#065F46" stroke-width="2.5"/>
+            <text x="757" y="140" font-size="16" font-weight="700" fill="#FFFFFF">🚪 IGW</text>
+            <text x="740" y="164" font-size="11" fill="#D1FAE5">Internet Gateway</text>
+            <rect x="738" y="178" width="126" height="26" rx="13" fill="#065F46"/>
+            <text x="752" y="196" font-size="10" font-weight="700" fill="#FFFFFF">⚡ VPCにアタッチ</text>
+
+            <!-- インターネット -->
+            <rect x="950" y="75" width="130" height="140" rx="65" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+            <text x="990" y="135" font-size="20" font-weight="700" fill="#1E40AF">🌍</text>
+            <text x="968" y="168" font-size="13" font-weight="600" fill="#1E40AF">インターネット</text>
+            <text x="985" y="190" font-size="10" fill="#6B7280">（VPCの外）</text>
+
+            <!-- 別のVPC -->
+            <rect x="950" y="340" width="130" height="120" rx="14" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="2" stroke-dasharray="5,3"/>
+            <text x="990" y="395" font-size="16" font-weight="600" fill="#5B21B6">🏙️</text>
+            <text x="980" y="420" font-size="12" fill="#5B21B6">別のVPC</text>
+
+            <!-- ==========================================
+                 レイヤー5: 矢印（要素間の接続）
+                 ========================================== -->
+
+            <!-- パブリックRT → IGW（メインのルーティング経路）NAT-GWの上を迂回 -->
+            <path d="M 380 155 Q 545 75, 715 125" fill="none" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="510" y="88" font-size="9" fill="#065F46" font-weight="600">0.0.0.0/0 → IGW</text>
+
+            <!-- NAT-GW → IGW（NAT-GWの外出経路）下側を通る -->
+            <path d="M 605 200 Q 660 240, 720 200" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arrowDark)" stroke-dasharray="6,3"/>
+            <text x="625" y="252" font-size="9" fill="#374151" font-weight="600">IGW経由で外出 ↗</text>
+
+            <!-- IGW → Internet -->
+            <line x1="880" y1="155" x2="945" y2="150" stroke="#3B82F6" stroke-width="3" marker-end="url(#arrowBlue)"/>
+
+            <!-- Peering → 他VPC -->
+            <line x1="605" y1="418" x2="945" y2="400" stroke="#8B5CF6" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+
+            <!-- ==========================================
+                 レイヤー6: 配置ルール凡例
+                 ========================================== -->
+            <rect x="50" y="548" width="580" height="50" rx="10" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.5"/>
+            <text x="70" y="572" font-size="11" font-weight="700" fill="#92400E">⚠️ 配置ルール：</text>
+            <text x="190" y="572" font-size="11" fill="#374151">IGW → VPCにアタッチ（サブネットの外、VPC境界）</text>
+            <text x="190" y="590" font-size="11" fill="#374151">NAT-GW → パブリックサブネット内に配置（パブリックIPを持つ）</text>
+
+          </svg>
+          <p class="diagram-caption">図1：VPC全体構造 ─ IGWはVPCにアタッチ（サブネット外）、NAT-GWはパブリックサブネット内に配置</p>
+        </div>
+
+        <!-- パケットが辿る3ステップ -->
+        <h3 id="パケットが辿る-3つのステップ">📦 パケットが辿る 3つのステップ</h3>
+        <div class="journey-steps">
+          <div class="journey-step">
+            <div class="journey-step-number" aria-hidden="true">1</div>
+            <div class="journey-step-emoji" aria-hidden="true">📬</div>
+            <h4>宛先を確認</h4>
+            <p>パケットは自分のヘッダーにある「宛先IPアドレス」を確認します。「この荷物はどこ行き？」</p>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-number" aria-hidden="true">2</div>
+            <div class="journey-step-emoji" aria-hidden="true">🪧</div>
+            <h4>ルートテーブル参照</h4>
+            <p>所属するサブネットのルートテーブル（道路標識）で、宛先に最もマッチするルートを探します。</p>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-number" aria-hidden="true">3</div>
+            <div class="journey-step-emoji" aria-hidden="true">🚪</div>
+            <h4>ターゲットへ転送</h4>
+            <p>マッチしたルートの「ターゲット」（出口）にパケットが送り出されます。IGW? NAT-GW? local?</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- シナリオ別解説 -->
+      <section class="content-section" id="scenarios" aria-labelledby="scenarios-title">
+        <h2 id="scenarios-title">🛤️ シナリオ別：パケットの旅を追体験</h2>
+
+        <!-- シナリオ1：同じVPC内通信 -->
+        <div class="scenario-section">
+          <div class="scenario-header">
+            <span class="scenario-badge scenario-badge-basic">基本</span>
+            <h3 id="scenario-1">シナリオ1：同じVPC内の通信（local ルート）</h3>
+          </div>
+
+          <p>
+            パブリックサブネットの EC2（10.0.1.10）から、プライベートサブネットの EC2（10.0.2.20）へ通信する場合。
+            同じ街の中での配達のようなものです。
+          </p>
+
+          <div class="packet-thought">
+            <p>「宛先は 10.0.2.20 だな。ルートテーブルを見ると… 10.0.0.0/16 → local だ！同じ街の中だから、直接届けに行こう！」</p>
+          </div>
+
+          <div class="route-table-display">
+            <div class="route-table-title">パブリックサブネットのルートテーブル</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>宛先（Destination）</th>
+                  <th>ターゲット（Target）</th>
+                  <th>説明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="route-match">
+                  <td class="route-dest">10.0.0.0/16</td>
+                  <td class="route-target">local</td>
+                  <td>✅ マッチ！VPC内で直接配達</td>
+                </tr>
+                <tr>
+                  <td class="route-dest">0.0.0.0/0</td>
+                  <td class="route-target">igw-xxxxxxxx</td>
+                  <td>インターネットへの出口</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="diagram-container">
+            <svg role="img" aria-label="シナリオ1の図解：同じVPC内でパケットがlocal経由で直接配達される流れ" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" width="100%" height="auto">
+              <!-- EC2送信元 -->
+              <rect x="30" y="50" width="140" height="100" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+              <text x="58" y="90" font-size="13" font-weight="600" fill="#1E40AF">🖥️ EC2</text>
+              <text x="52" y="112" font-size="11" fill="#374151">10.0.1.10</text>
+              <text x="42" y="132" font-size="10" fill="#6B7280">パブリックSN</text>
+
+              <!-- パケット -->
+              <rect x="200" y="75" width="90" height="50" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="215" y="105" font-size="12" font-weight="600" fill="#92400E">📦→</text>
+
+              <!-- ルートテーブル -->
+              <rect x="320" y="55" width="120" height="90" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2"/>
+              <text x="337" y="82" font-size="12" font-weight="700" fill="#065F46">🪧 RT</text>
+              <text x="335" y="102" font-size="10" fill="#166534">10.0.0.0/16</text>
+              <text x="345" y="120" font-size="12" font-weight="700" fill="#10B981">→ local ✅</text>
+
+              <!-- 矢印: パケット→RT -->
+              <line x1="290" y1="100" x2="315" y2="100" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowOrange)"/>
+
+              <!-- 矢印: RT→EC2宛先 -->
+              <line x1="440" y1="100" x2="490" y2="100" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+              <text x="450" y="90" font-size="10" fill="#065F46" font-weight="600">直接配達</text>
+
+              <!-- EC2宛先 -->
+              <rect x="500" y="50" width="140" height="100" rx="12" fill="#EDE9FE" stroke="#6366F1" stroke-width="2"/>
+              <text x="528" y="90" font-size="13" font-weight="600" fill="#3730A3">🖥️ EC2</text>
+              <text x="522" y="112" font-size="11" fill="#374151">10.0.2.20</text>
+              <text x="516" y="132" font-size="10" fill="#6B7280">プライベートSN</text>
+            </svg>
+            <p class="diagram-caption">図2：VPC内通信 ─ local ルートで直接配達。ゲートウェイは通らない</p>
+          </div>
+
+          <div class="info-box info-box-tip">
+            <div class="info-box-title">💡 ポイント</div>
+            <p>
+              <strong>local ルート</strong>はVPC作成時に自動追加され、削除できません。
+              これは「同じ街の中なら、標識がなくても直接届けられる」という基本ルールです。
+              VPC内のすべてのサブネット間は、この local ルートで通信可能です。
+            </p>
+          </div>
+        </div>
+
+        <!-- シナリオ2：インターネットへ -->
+        <div class="scenario-section">
+          <div class="scenario-header">
+            <span class="scenario-badge scenario-badge-basic">基本</span>
+            <h3 id="scenario-2">シナリオ2：パブリックサブネットからインターネットへ</h3>
+          </div>
+
+          <p>
+            パブリックサブネットの EC2 から Google（8.8.8.8）にアクセスする場合。
+            街の外に荷物を届けるには、正面玄関（Internet Gateway）を通る必要があります。
+          </p>
+
+          <div class="packet-thought">
+            <p>「宛先は 8.8.8.8 だ。ルートテーブルを見ると… 10.0.0.0/16 にはマッチしない。0.0.0.0/0 → IGW がある！正面玄関からインターネットの世界へ出よう！」</p>
+          </div>
+
+          <div class="route-table-display">
+            <div class="route-table-title">パブリックサブネットのルートテーブル</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>宛先（Destination）</th>
+                  <th>ターゲット（Target）</th>
+                  <th>説明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="route-dest">10.0.0.0/16</td>
+                  <td class="route-target">local</td>
+                  <td>VPC内通信（今回はマッチしない）</td>
+                </tr>
+                <tr class="route-match">
+                  <td class="route-dest">0.0.0.0/0</td>
+                  <td class="route-target">igw-xxxxxxxx</td>
+                  <td>✅ マッチ！インターネットへの出口</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="diagram-container">
+            <svg role="img" aria-label="シナリオ2の図解：パブリックサブネットからIGW（VPCにアタッチ）経由でインターネットへ出る流れ" viewBox="0 0 830 220" xmlns="http://www.w3.org/2000/svg" width="100%" height="auto">
+
+              <!-- パブリックサブネット境界 -->
+              <rect x="15" y="15" width="385" height="190" rx="12" fill="#F0FDF4" stroke="#10B981" stroke-width="1.5" stroke-dasharray="6,3"/>
+              <text x="30" y="40" font-size="10" font-weight="600" fill="#065F46">🏘️ パブリックサブネット</text>
+
+              <!-- EC2 -->
+              <rect x="30" y="55" width="115" height="90" rx="10" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+              <text x="50" y="90" font-size="12" font-weight="600" fill="#1E40AF">🖥️ EC2</text>
+              <text x="40" y="110" font-size="10" fill="#374151">10.0.1.10</text>
+              <text x="35" y="130" font-size="9" fill="#6B7280">+ パブリックIP</text>
+
+              <!-- パケット -->
+              <rect x="165" y="70" width="80" height="45" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="177" y="98" font-size="11" font-weight="600" fill="#92400E">📦→</text>
+
+              <!-- RT -->
+              <rect x="268" y="50" width="115" height="100" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2"/>
+              <text x="285" y="78" font-size="11" font-weight="700" fill="#065F46">🪧 RT</text>
+              <line x1="278" y1="84" x2="373" y2="84" stroke="#D1D5DB" stroke-width="1"/>
+              <text x="278" y="102" font-size="9" fill="#6B7280">10.0.0.0/16→local</text>
+              <text x="278" y="120" font-size="9" font-weight="700" fill="#10B981">0.0.0.0/0→IGW ✅</text>
+
+              <!-- パケット→RT -->
+              <line x1="245" y1="92" x2="263" y2="92" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowOrange)"/>
+
+              <!-- IGW（VPC境界：サブネットの外） -->
+              <rect x="440" y="40" width="140" height="105" rx="16" fill="#10B981" stroke="#065F46" stroke-width="2.5"/>
+              <text x="472" y="78" font-size="14" font-weight="700" fill="#FFFFFF">🚪 IGW</text>
+              <text x="455" y="100" font-size="10" fill="#D1FAE5">Internet Gateway</text>
+              <rect x="455" y="110" width="110" height="22" rx="11" fill="#065F46"/>
+              <text x="462" y="125" font-size="9" font-weight="700" fill="#FFFFFF">⚡ VPCにアタッチ</text>
+
+              <!-- RT→IGW矢印 -->
+              <line x1="383" y1="100" x2="435" y2="92" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+
+              <!-- インターネット -->
+              <rect x="630" y="35" width="130" height="115" rx="57" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+              <text x="672" y="82" font-size="16" font-weight="700" fill="#1E40AF">🌍</text>
+              <text x="651" y="110" font-size="12" fill="#1E40AF">Internet</text>
+
+              <!-- IGW→Internet矢印 -->
+              <line x1="580" y1="92" x2="625" y2="92" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+
+            </svg>
+            <p class="diagram-caption">図3：パブリックサブネット → IGW（VPCにアタッチ）→ インターネット</p>
+          </div>
+
+          <div class="info-box info-box-info">
+            <div class="info-box-title">ℹ️ 補足：IGWの配置とパブリックサブネットの条件</div>
+            <p>
+              <strong>IGW はサブネットではなく VPC にアタッチ</strong>されます。街の「正面玄関」は特定の地区内にあるのではなく、街の境界に設置されるイメージです。
+              サブネットが「パブリック」と呼ばれるには、ルートテーブルに IGW へのルート（0.0.0.0/0 → igw-xxx）があり、
+              EC2 インスタンスにパブリック IP が割り当てられている必要があります。
+              道路標識に「正面玄関はこっち」と書いてあっても、入館証（パブリックIP）がないと外に出られません。
+            </p>
+          </div>
+        </div>
+
+        <!-- シナリオ3：プライベートサブネットからインターネットへ -->
+        <div class="scenario-section">
+          <div class="scenario-header">
+            <span class="scenario-badge scenario-badge-intermediate">中級</span>
+            <h3 id="scenario-3">シナリオ3：プライベートサブネットからインターネットへ（NAT Gateway）</h3>
+          </div>
+
+          <p>
+            プライベートサブネットの EC2 は直接インターネットに出られません。
+            代わりに NAT Gateway（代理で外出してくれる受付）を通じてインターネットにアクセスします。
+          </p>
+
+          <div class="packet-thought">
+            <p>「宛先は 8.8.8.8 だけど、僕はプライベートサブネットにいる。直接外には出られない…。ルートテーブルを見ると 0.0.0.0/0 → NAT-GW だ！受付さんに代わりに外に出てもらおう！」</p>
+          </div>
+
+          <div class="route-table-display">
+            <div class="route-table-title">プライベートサブネットのルートテーブル</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>宛先（Destination）</th>
+                  <th>ターゲット（Target）</th>
+                  <th>説明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="route-dest">10.0.0.0/16</td>
+                  <td class="route-target">local</td>
+                  <td>VPC内通信</td>
+                </tr>
+                <tr class="route-match">
+                  <td class="route-dest">0.0.0.0/0</td>
+                  <td class="route-target">nat-xxxxxxxx</td>
+                  <td>✅ マッチ！NAT-GW経由で外出</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="diagram-container">
+            <svg role="img" aria-label="シナリオ3の図解：プライベートサブネットからNAT-GW（パブリックSN内）経由、IGW（VPCにアタッチ）経由でインターネットへ出る流れ" viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" width="100%" height="auto">
+
+              <!-- プライベートサブネット境界 -->
+              <rect x="10" y="110" width="260" height="155" rx="12" fill="#F5F3FF" stroke="#6366F1" stroke-width="1.5" stroke-dasharray="6,3"/>
+              <text x="25" y="135" font-size="10" font-weight="600" fill="#3730A3">🏘️ プライベートサブネット</text>
+
+              <!-- EC2 -->
+              <rect x="25" y="148" width="105" height="90" rx="10" fill="#EDE9FE" stroke="#6366F1" stroke-width="2"/>
+              <text x="42" y="180" font-size="12" font-weight="600" fill="#3730A3">🖥️ EC2</text>
+              <text x="32" y="200" font-size="10" fill="#374151">10.0.2.20</text>
+
+              <!-- パケット -->
+              <rect x="25" y="210" width="105" height="30" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="39" y="230" font-size="10" font-weight="600" fill="#92400E">📦 パケット</text>
+
+              <!-- RT（プライベート） -->
+              <rect x="153" y="150" width="100" height="90" rx="8" fill="#EDE9FE" stroke="#6366F1" stroke-width="2"/>
+              <text x="167" y="173" font-size="10" font-weight="700" fill="#3730A3">🪧 RT</text>
+              <line x1="163" y1="179" x2="243" y2="179" stroke="#D1D5DB" stroke-width="1"/>
+              <text x="160" y="196" font-size="8.5" fill="#6B7280">10.0.0.0/16→local</text>
+              <text x="160" y="213" font-size="8.5" font-weight="700" fill="#6366F1">0.0.0.0/0→NAT ✅</text>
+
+              <!-- パケット→RT -->
+              <line x1="130" y1="215" x2="148" y2="200" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowOrange)"/>
+
+              <!-- パブリックサブネット境界 -->
+              <rect x="290" y="20" width="260" height="250" rx="12" fill="#F0FDF4" stroke="#10B981" stroke-width="2"/>
+              <text x="305" y="47" font-size="11" font-weight="700" fill="#065F46">🏘️ パブリックサブネット</text>
+
+              <!-- NAT-GW（パブリックサブネット内！） -->
+              <rect x="320" y="65" width="200" height="100" rx="14" fill="#F59E0B" stroke="#92400E" stroke-width="2.5"/>
+              <text x="375" y="100" font-size="14" font-weight="700" fill="#FFFFFF">🔄 NAT-GW</text>
+              <text x="365" y="122" font-size="10" fill="#FEF3C7">代理で外出してくれる受付</text>
+              <!-- NAT-GW配置ラベル -->
+              <rect x="345" y="138" width="150" height="20" rx="10" fill="#92400E"/>
+              <text x="353" y="152" font-size="9" font-weight="700" fill="#FFFFFF">📍 パブリックSN内に配置</text>
+
+              <!-- パブリックSN内のラベル注釈 -->
+              <text x="310" y="232" font-size="9" fill="#065F46">※ NAT-GWはパブリックIPを持ち</text>
+              <text x="310" y="248" font-size="9" fill="#065F46">　 IGW経由でインターネットに出る</text>
+
+              <!-- RT→NAT-GW矢印 -->
+              <line x1="253" y1="190" x2="315" y2="130" stroke="#6366F1" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+              <text x="264" y="152" font-size="9" fill="#3730A3" font-weight="600">NAT-GWへ</text>
+
+              <!-- IGW（VPC境界） -->
+              <rect x="590" y="60" width="130" height="90" rx="14" fill="#10B981" stroke="#065F46" stroke-width="2.5"/>
+              <text x="618" y="95" font-size="13" font-weight="700" fill="#FFFFFF">🚪 IGW</text>
+              <text x="605" y="118" font-size="10" fill="#D1FAE5">VPCにアタッチ</text>
+              <rect x="600" y="124" width="110" height="18" rx="9" fill="#065F46"/>
+              <text x="608" y="137" font-size="8" font-weight="700" fill="#FFFFFF">⚡ サブネット外</text>
+
+              <!-- NAT-GW→IGW矢印 -->
+              <line x1="520" y1="110" x2="585" y2="105" stroke="#92400E" stroke-width="2.5" marker-end="url(#arrowDark)"/>
+
+              <!-- インターネット -->
+              <rect x="770" y="50" width="115" height="110" rx="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+              <text x="805" y="97" font-size="16" font-weight="700" fill="#1E40AF">🌍</text>
+              <text x="790" y="123" font-size="11" fill="#1E40AF">Internet</text>
+
+              <!-- IGW→Internet矢印 -->
+              <line x1="720" y1="105" x2="765" y2="105" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+
+            </svg>
+            <p class="diagram-caption">図4：プライベートSN → NAT-GW（パブリックSN内）→ IGW（VPCにアタッチ）→ インターネット</p>
+          </div>
+
+          <div class="info-box info-box-warning">
+            <div class="info-box-title">⚠️ NAT Gateway の重要な特性</div>
+            <p>
+              NAT Gateway は「代理で外出してくれる受付」です。外出はできますが、外からの訪問者が直接プライベートサブネットに入ることはできません。
+              これにより、プライベートサブネットの EC2 はインターネットにアクセスしつつ、外部からのアクセスを遮断できます。
+              NAT Gateway 自体はパブリックサブネットに配置される点に注意してください。
+            </p>
+          </div>
+        </div>
+
+        <!-- シナリオ4：VPC Peering -->
+        <div class="scenario-section">
+          <div class="scenario-header">
+            <span class="scenario-badge scenario-badge-advanced">応用</span>
+            <h3 id="scenario-4">シナリオ4：別のVPCへの通信（VPC Peering）</h3>
+          </div>
+
+          <p>
+            別のVPC（172.16.0.0/16）のリソースにアクセスする場合。
+            これは「隣の街への専用トンネル」を通るイメージです。
+          </p>
+
+          <div class="packet-thought">
+            <p>「宛先は 172.16.1.50 だな。うちの街（10.0.0.0/16）ではない。ルートテーブルを見ると… 172.16.0.0/16 → pcx-xxxxxxxx だ！隣の街への専用トンネルが使えるぞ！」</p>
+          </div>
+
+          <div class="route-table-display">
+            <div class="route-table-title">ルートテーブル（VPC Peering設定済み）</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>宛先（Destination）</th>
+                  <th>ターゲット（Target）</th>
+                  <th>説明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="route-dest">10.0.0.0/16</td>
+                  <td class="route-target">local</td>
+                  <td>自分のVPC内通信</td>
+                </tr>
+                <tr class="route-match">
+                  <td class="route-dest">172.16.0.0/16</td>
+                  <td class="route-target">pcx-xxxxxxxx</td>
+                  <td>✅ マッチ！VPC Peering経由</td>
+                </tr>
+                <tr>
+                  <td class="route-dest">0.0.0.0/0</td>
+                  <td class="route-target">igw-xxxxxxxx</td>
+                  <td>インターネットへの出口</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="info-box info-box-tip">
+            <div class="info-box-title">💡 VPC Peering のルートは両方に設定が必要</div>
+            <p>
+              VPC Peering は「双方向の専用トンネル」です。トンネルを掘っただけでは不十分で、
+              両方のVPCのルートテーブルに相手方への道路標識を追加する必要があります。
+              片側だけに標識があっても、帰り道がわかりません！
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 最長プレフィックスマッチ -->
+      <section class="section-box" aria-labelledby="prefix-title">
+        <h2 id="prefix-title">🔍 最長プレフィックスマッチ：なぜ「詳しい住所」が優先されるのか</h2>
+        <p>
+          ルートテーブルに複数のルートがマッチする場合、最も具体的な（CIDRの範囲が狭い＝プレフィックスが長い）ルートが勝ちます。
+          配達で例えると「東京都」と「東京都渋谷区神宮前1-1-1」の両方の標識がある場合、より詳しい住所の標識が優先されるのと同じです。
+        </p>
+
+        <h3 id="例-宛先が-10.0.1.50-の場合">例：宛先が 10.0.1.50 の場合</h3>
+        <div class="prefix-match-visual">
+          <div class="prefix-card prefix-card-loser">
+            <div class="prefix-cidr">0.0.0.0/0</div>
+            <div class="prefix-bits">プレフィックス長：0ビット</div>
+            <p>「地球上のどこか」レベルの大雑把さ</p>
+            <div class="prefix-result prefix-result-lose">❌ 負け（広すぎる）</div>
+          </div>
+          <div class="prefix-card prefix-card-loser">
+            <div class="prefix-cidr">10.0.0.0/16</div>
+            <div class="prefix-bits">プレフィックス長：16ビット</div>
+            <p>「この街のどこか」レベル</p>
+            <div class="prefix-result prefix-result-lose">❌ 負け（まだ広い）</div>
+          </div>
+          <div class="prefix-card prefix-card-winner">
+            <div class="prefix-cidr">10.0.1.0/24</div>
+            <div class="prefix-bits">プレフィックス長：24ビット</div>
+            <p>「この地区のこの通り」レベル</p>
+            <div class="prefix-result prefix-result-win">✅ 勝ち！（最も具体的）</div>
+          </div>
+        </div>
+
+        <div class="info-box info-box-info">
+          <div class="info-box-title">ℹ️ 最長プレフィックスマッチのルール</div>
+          <p>
+            AWSでは、ルートテーブル内で宛先にマッチする全ルートの中から、プレフィックスが最も長い（CIDR範囲が最も狭い）ルートを選びます。
+            /24 は /16 より具体的で、/16 は /0 より具体的です。
+            これは「より詳しい住所を知っている道路標識に従え」というルールです。
+            同じプレフィックス長のルートが複数ある場合は、静的ルートが伝播ルートより優先されます。
+          </p>
+        </div>
+      </section>
+
+      <!-- メインルートテーブル vs カスタムルートテーブル -->
+      <section class="content-section" aria-labelledby="table-types-title">
+        <h2 id="table-types-title">📋 ルートテーブルの種類と使い分け</h2>
+        <p>VPCには「メインルートテーブル」と「カスタムルートテーブル」の2種類があります。</p>
+
+        <div class="comparison-grid">
+          <div class="comparison-card">
+            <h3>🏛️ メインルートテーブル</h3>
+            <p>VPC作成時に自動で作られるデフォルトのルートテーブルです。</p>
+            <p>
+              明示的にルートテーブルを関連付けていないサブネットは、自動的にこのメインルートテーブルを使います。
+              「地区ごとの標識がなければ、街全体の共通標識に従う」というイメージです。
+            </p>
+            <p><strong>ベストプラクティス：</strong>メインルートテーブルはデフォルト（local のみ）のままにし、各サブネットにカスタムルートテーブルを使うのが安全です。</p>
+          </div>
+          <div class="comparison-card">
+            <h3>🎨 カスタムルートテーブル</h3>
+            <p>自分で作成して、特定のサブネットに関連付けるルートテーブルです。</p>
+            <p>
+              パブリックサブネット用にはIGWルートを、プライベートサブネット用にはNAT-GWルートを設定するなど、
+              目的に応じた道路標識を設置できます。
+              「繁華街エリアには専用の道路標識を設置する」というイメージです。
+            </p>
+            <p><strong>ベストプラクティス：</strong>サブネットの役割（パブリック/プライベート/VPN専用）ごとに別のカスタムルートテーブルを作成しましょう。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- よくあるターゲット一覧 -->
+      <section class="section-box" aria-labelledby="targets-title">
+        <h2 id="targets-title">🚪 ターゲット早見表：パケットの出口一覧</h2>
+        <p>ルートテーブルで指定できる主なターゲット（パケットの次の行き先）をまとめます。</p>
+
+        <div class="route-table-display">
+          <table>
+            <thead>
+              <tr>
+                <th>ターゲット</th>
+                <th>たとえ話</th>
+                <th>主な用途</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="route-target">local</td>
+                <td>同じ街の中で直接配達</td>
+                <td>VPC内通信（自動設定・削除不可）</td>
+              </tr>
+              <tr>
+                <td class="route-target">igw-xxx</td>
+                <td>🚪 街の正面玄関</td>
+                <td>インターネットとの双方向通信（VPCにアタッチ・サブネット外）</td>
+              </tr>
+              <tr>
+                <td class="route-target">nat-xxx</td>
+                <td>🔄 代理で外出してくれる受付</td>
+                <td>プライベートSNからのインターネットアクセス（パブリックSN内に配置）</td>
+              </tr>
+              <tr>
+                <td class="route-target">pcx-xxx</td>
+                <td>🔗 隣の街への専用トンネル</td>
+                <td>VPC Peeringでの他VPC通信</td>
+              </tr>
+              <tr>
+                <td class="route-target">tgw-xxx</td>
+                <td>🚉 複数の街をつなぐ中央駅</td>
+                <td>Transit Gatewayで多数VPCを接続</td>
+              </tr>
+              <tr>
+                <td class="route-target">vgw-xxx</td>
+                <td>🏢 オフィスへの専用回線</td>
+                <td>VPN接続でオンプレミスと通信</td>
+              </tr>
+              <tr>
+                <td class="route-target">vpce-xxx</td>
+                <td>📮 街の中の専用ポスト</td>
+                <td>VPCエンドポイント（S3等にプライベート接続）</td>
+              </tr>
+              <tr>
+                <td class="route-target">eni-xxx</td>
+                <td>👤 特定の担当者に直接渡す</td>
+                <td>ネットワークインターフェイス（ファイアウォール等）</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- トラブルシューティング -->
+      <section class="content-section" aria-labelledby="troubleshoot-title">
+        <h2 id="troubleshoot-title">🔧 トラブルシューティング：パケットが迷子になったら</h2>
+        <p>ルーティングのトラブルで最もよくある原因と対処法をまとめます。</p>
+
+        <div class="troubleshoot-grid">
+          <div class="troubleshoot-card">
+            <div class="troubleshoot-symptom">😵 EC2からインターネットに出られない</div>
+            <p class="troubleshoot-cause">ルートテーブルに 0.0.0.0/0 → IGW のルートがない、またはパブリックIPが付与されていない可能性があります。</p>
+            <div class="troubleshoot-fix">
+              <p>✅ サブネットのルートテーブルにIGWルートがあるか確認し、EC2にパブリックIP / Elastic IPが割り当てられているか確認</p>
+            </div>
+          </div>
+          <div class="troubleshoot-card">
+            <div class="troubleshoot-symptom">😵 プライベートSNからapt/yumが使えない</div>
+            <p class="troubleshoot-cause">NAT Gateway のルートが設定されていない、またはNAT Gateway自体がパブリックSNに配置されていない可能性があります。</p>
+            <div class="troubleshoot-fix">
+              <p>✅ プライベートSNのルートテーブルに 0.0.0.0/0 → nat-xxx があるか確認。NAT-GW がパブリックSN内にあるかも確認</p>
+            </div>
+          </div>
+          <div class="troubleshoot-card">
+            <div class="troubleshoot-symptom">😵 VPC Peeringで通信できない</div>
+            <p class="troubleshoot-cause">片方のVPCにしかルートを追加していない。両方のVPCのルートテーブルに相手方CIDRへのルートが必要です。</p>
+            <div class="troubleshoot-fix">
+              <p>✅ 両方のVPCのルートテーブルに相手方CIDRのルートがあるか確認。セキュリティグループとNACLも確認</p>
+            </div>
+          </div>
+          <div class="troubleshoot-card">
+            <div class="troubleshoot-symptom">😵 意図しないルートが使われる</div>
+            <p class="troubleshoot-cause">最長プレフィックスマッチにより、より具体的なルートが意図せず優先されている可能性があります。</p>
+            <div class="troubleshoot-fix">
+              <p>✅ ルートテーブルの全ルートを確認し、宛先CIDRの粒度（プレフィックス長）を見直す</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="faq-section" id="faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">❓ よくある質問（FAQ）</h2>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span aria-hidden="true">🤔</span>
+            <span>ルートテーブルの local ルートは削除できる？</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              <strong>削除できません。</strong>
+              local ルートはVPC内通信を保証する基本ルールで、すべてのルートテーブルに自動的に存在します。
+              ただし、より具体的なルート（例：10.0.1.0/24 → 特定のENI）を追加することで、
+              localルートの一部を上書きすることは可能です（ミドルボックスルーティングなど）。
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span aria-hidden="true">🤔</span>
+            <span>1つのサブネットに複数のルートテーブルを関連付けられる？</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              <strong>1つのサブネットに関連付けられるルートテーブルは1つだけです。</strong>
+              ただし、1つのルートテーブルを複数のサブネットに関連付けることはできます。
+              「各地区に設置できる道路標識は1セットだけ。でも同じ標識を複数の地区で共有はOK」というイメージです。
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span aria-hidden="true">🤔</span>
+            <span>ルートテーブルにマッチするルートが1つもない場合、パケットはどうなる？</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              <strong>パケットは破棄（ドロップ）されます。</strong>
+              マッチするルートがなければ、パケットは行き場を失い、宛先に届きません。
+              「道路標識にない場所には行けない」ということです。
+              だからこそ、0.0.0.0/0（デフォルトルート）を設定して「それ以外はここへ」と指定することが重要です。
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span aria-hidden="true">🤔</span>
+            <span>ルートテーブルの変更はすぐに反映される？</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              <strong>はい、ルートテーブルの変更は即座に反映されます。</strong>
+              道路標識を書き換えた瞬間から、新しいルートに従ってパケットが転送されます。
+              ただし、既存のコネクションが突然切れる場合があるため、本番環境での変更は慎重に行いましょう。
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span aria-hidden="true">🤔</span>
+            <span>セキュリティグループや NACL とルートテーブルはどう違う？</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              <strong>ルートテーブルは「道順」、セキュリティグループと NACL は「検問所」です。</strong>
+              ルートテーブルはパケットの行き先を決めるもの。セキュリティグループはインスタンスレベルのファイアウォール（入口の警備員）、
+              NACLはサブネットレベルのファイアウォール（地区の入口ゲート）です。
+              パケットは「道順を調べる → 検問所を通過 → 配達」の順で処理されます。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- まとめ -->
+      <section class="summary-section" aria-labelledby="summary-title">
+        <h2 id="summary-title">🎓 まとめ</h2>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-card-emoji" aria-hidden="true">📦</div>
+            <strong>パケットは標識に従う</strong>
+            <p>ルートテーブル（道路標識）が唯一の道案内。宛先IPとルートを照合して次のターゲットを決定</p>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-emoji" aria-hidden="true">🔍</div>
+            <strong>詳しい住所が優先</strong>
+            <p>最長プレフィックスマッチにより、最も具体的なルートが常に勝つ。/24 > /16 > /0</p>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-emoji" aria-hidden="true">🏘️</div>
+            <strong>サブネットと1対1</strong>
+            <p>各サブネットに1つのルートテーブル。目的別にカスタムルートテーブルを作成するのがベスト</p>
+          </div>
+        </div>
+
+        <div class="summary-message">
+          パケットの気持ちになれば、VPCルーティングは怖くない！<br>
+          「宛先を確認 → 標識（ルートテーブル）を見る → 出口（ターゲット）へ進む」<br>
+          この3ステップを常に意識してネットワーク設計を行いましょう 🎉
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- フッター -->
+  <footer class="page-footer">
+    <p>&copy; 2026 AWS SAP学習リソース ─ パケットの気持ちになって辿る Amazon VPC のルーティング</p>
+  </footer>
+
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+</body>
+</html>
