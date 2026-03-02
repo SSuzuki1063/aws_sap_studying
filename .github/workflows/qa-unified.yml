@@ -7,10 +7,12 @@ on:
       - master
     paths:
       - '**.css'
-      - '**.html'
+      - 'src/**'
+      - 'public/**'
       - 'tests/**'
       - 'playwright.config.ts'
       - 'package.json'
+      - 'astro.config.mjs'
 
 jobs:
   # ── Job 1: Static validation (no browser, fast) ─────────────────────────────
@@ -40,11 +42,14 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: W3C HTML Validation (changed files only)
+      - name: Build site (generate data + astro build)
+        run: npm run build
+
+      - name: W3C HTML Validation (dist output)
         id: html-validate
         run: |
           mkdir -p qa-reports
-          if python3 scripts/ci/validate_html_w3c.py --pr-mode; then
+          if python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist; then
             echo '{"passed":true,"fileCount":0,"errorCount":0}' > qa-reports/html-validation-result.json
           else
             echo '{"passed":false,"fileCount":0,"errorCount":1}' > qa-reports/html-validation-result.json
@@ -89,6 +94,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
+      - name: Build site
+        run: npm run build
+
       - name: Download static validation reports
         uses: actions/download-artifact@v4
         with:
@@ -100,11 +108,6 @@ jobs:
 
       - name: CSS Validation Assertion (reads static report)
         run: npx playwright test --project=qa tests/e2e/qa/css-validation.spec.ts
-
-      - name: Set up Python for server
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
 
       - name: Accessibility Tests (concept-map specs)
         run: npx playwright test --project=chromium tests/e2e/concept-map/accessibility.spec.ts

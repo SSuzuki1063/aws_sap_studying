@@ -6,12 +6,13 @@ on:
       - gh-pages
       - master
     paths:
-      - '**.html'
-      - 'data.js'
-      - 'index.js'
-      - 'quiz-data-extended.js'
+      - 'src/**'
+      - 'public/**'
+      - 'scripts/**'
       - '**.css'
       - '**.py'
+      - 'astro.config.mjs'
+      - 'package.json'
 
 jobs:
   quality-checks:
@@ -28,42 +29,48 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install requests beautifulsoup4 lxml html5lib
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Check data integrity (data.js ⟷ index.js)
-        run: |
-          python3 scripts/ci/check_data_integrity.py
-        continue-on-error: false
+      - name: Install Python dependencies
+        run: pip install requests beautifulsoup4 lxml html5lib
 
-      - name: W3C HTML Validation (modified files only)
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build site (generate data + astro build)
+        run: npm run build
+
+      - name: W3C HTML Validation (dist output)
         run: |
-          python3 scripts/ci/validate_html_w3c.py --pr-mode
+          python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
         continue-on-error: false
 
       - name: Accessibility - Color Contrast Check
         run: |
-          python3 scripts/accessibility/check_contrast_ratio.py
+          python3 scripts/accessibility/check_contrast_ratio.py --base-dir dist
         continue-on-error: false
 
       - name: Accessibility - Heading Hierarchy Check
         run: |
-          python3 scripts/accessibility/check_heading_hierarchy.py
+          python3 scripts/accessibility/check_heading_hierarchy.py --base-dir dist
         continue-on-error: true  # Warning only
 
       - name: JavaScript Syntax Check
         run: |
-          node -c quiz-data-extended.js
-          node -c data.js
-          node -c render.js
-          node -c index.js
-          node -c quiz-app.js
+          node -c public/quiz-data-extended.js
+          node -c public/data.js
+          node -c public/render.js
+          node -c public/index.js
+          node -c public/quiz-app.js
         continue-on-error: false
 
       - name: Internal Links Validation
         run: |
-          python3 scripts/ci/check_internal_links.py
+          python3 scripts/ci/check_internal_links.py --base-dir dist
         continue-on-error: true  # Warning only
 
       - name: File Naming Convention Check
@@ -74,14 +81,14 @@ jobs:
       - name: Generate Quality Report
         if: always()
         run: |
-          echo "## 📊 Quality Check Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All critical checks completed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Checks Performed:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✓ Data Integrity (data.js ⟷ index.js)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✓ W3C HTML Validation" >> $GITHUB_STEP_SUMMARY
-          echo "- ✓ WCAG 2.1 AA Accessibility" >> $GITHUB_STEP_SUMMARY
-          echo "- ✓ JavaScript Syntax" >> $GITHUB_STEP_SUMMARY
-          echo "- ✓ Internal Links" >> $GITHUB_STEP_SUMMARY
-          echo "- ✓ File Naming Conventions" >> $GITHUB_STEP_SUMMARY
+          echo "## Quality Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "All critical checks completed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Checks Performed:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Astro Build (data generation + SSG)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- W3C HTML Validation (dist output)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- WCAG 2.1 AA Accessibility" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript Syntax" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Internal Links" >> "$GITHUB_STEP_SUMMARY"
+          echo "- File Naming Conventions" >> "$GITHUB_STEP_SUMMARY"
