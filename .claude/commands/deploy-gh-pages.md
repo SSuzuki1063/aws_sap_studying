@@ -1,9 +1,12 @@
 ---
 allowed-tools: Bash(git status:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push:*), Bash(git remote:*), Bash(git rev-parse:*), Bash(git show:*),Bash(git checkout:*)
-description: Push current branch to gh-pages for GitHub Pages
+description: "[DEPRECATED] Use /deploy instead — full Astro build pipeline"
 ---
 
-## Context
+> **This skill is deprecated.** gh-pages is now auto-deployed by GitHub Actions when master is pushed.
+> Use `/deploy` for the full pipeline: commit → merge to master → push → build → deploy.
+
+## Legacy fallback (direct push)
 
 - Current git status: !`git status`
 - Current branch: !`git branch --show-current`
@@ -12,7 +15,8 @@ description: Push current branch to gh-pages for GitHub Pages
 
 ## Your task
 
-1. Ensure working tree is clean (no unstaged or uncommitted changes).
-2. Ensure the current branch is `gh-pages` (or explicitly confirm what will be pushed).
-3. Push to GitHub: `git push origin gh-pages`
-4. Summarize what was pushed (latest commit hash and message).
+1. Recommend using `/deploy` instead.
+2. If the user insists on direct push:
+   - Ensure working tree is clean.
+   - `git push origin gh-pages`
+   - Summarize what was pushed.

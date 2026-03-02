@@ -9,9 +9,9 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 | Item | Value |
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
-| **Architecture** | Data-driven static site (NO build process) |
-| **Content** | 259+ HTML resources, 219 quiz questions, 8 categories |
-| **Branches** | `gh-pages` (production), `master` (development/PRs) |
+| **Architecture** | Astro SSG (build: `npm run build` → `dist/`) |
+| **Content** | 290+ resources (.astro), 219 quiz questions, 8 categories |
+| **Branches** | `master` (source), `gh-pages` (build output, CI-managed) |
 
 ## ⚠️ CRITICAL RULES
 
@@ -22,7 +22,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 2. **Three-Place Update Rule** — When adding resources, update `data.js` resources array + `data.js` updateHistory + `index.js` searchData. Details: `.claude/rules/data-navigation.md`
 3. **GitHub Pages Path Prefix** — All paths MUST include `/aws_sap_studying/`. Details: `.claude/rules/html-standards.md`
 4. **W3C Validation Required** — All HTML must pass validation before commit. `python3 scripts/ci/validate_html_w3c.py --pr-mode`. CSS files also require W3C validation: `npm run qa:css-validate:pr`.
-5. **Immediate Push After Commit** — `git add <files> && git commit -m "feat: ..." && git push origin gh-pages`
+5. **Deploy via `/deploy` Skill** — Commits, merges to master, pushes. GitHub Actions builds and deploys to gh-pages automatically.
 6. **Use `<h2>` for Section Headings** — `add_sidebar_toc.py` only recognizes `<h2>`/`<h3>`. Details: `.claude/rules/html-standards.md`
 
 ## Quick Start
@@ -97,8 +97,10 @@ CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no
 
 ## Deployment
 
-- Always commit AND deploy to gh-pages unless explicitly told otherwise
-- Standard workflow: implement → validate → git add → git commit → deploy to gh-pages
+- Use `/deploy` skill for the full pipeline: commit → merge to master → push → GitHub Actions build → gh-pages
+- GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically builds with `npm run build` and deploys `dist/` to gh-pages on master push
+- `master` = source code, `gh-pages` = build output only (managed by CI)
+- Standard workflow: implement → validate → `/deploy`
 
 ## Working Style
 
