@@ -191,7 +191,7 @@ def extract_page_scripts(src: str) -> str:
         if 'src=' in m.group(0):
             continue
         if sc:
-            scripts.append(f'<script is:inline>{sc}</script>')
+            scripts.append(f'<script>{sc}</script>')
     return '\n'.join(scripts)
 
 
@@ -219,8 +219,6 @@ def convert(html_path: str, cat_meta: dict):
     content = extract_content(src)
     pscripts = extract_page_scripts(src)
 
-    # Add is:inline to script tags in content
-    content = re.sub(r'<script(?!\s+is:inline)(\s|>)', r'<script is:inline\1', content)
 
     cat_info = cat_meta.get(cat, {})
     cat_label = bc.get('categoryLabel') or cat_info.get('label', cat)
