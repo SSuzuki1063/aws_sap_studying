@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 67,
+    count: 68,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -86,19 +86,19 @@ const categoriesData = [
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
         count: 11,
-        lastUpdated: '2026-03-03',
+        lastUpdated: '2026-02-28',
         resources: [
           { title: 'AWSネットワークゲートウェイの比較', href: 'networking/aws-gateways.html', priority: 'high' },
           { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' },
           { title: 'Cloud WAN / TGW ルート分離設計の極意', href: 'networking/cloud-wan-tgw-route-isolation-guide.html', priority: 'high' },
           { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', href: 'networking/route-analyzer-guide.html', priority: 'high' },
           { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html' },
+          { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', href: 'networking/tgw-isolated-shared-services.html' },
           { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html' },
           { title: 'AWS Transit Gateway Deep Dive 完全ガイド', href: 'networking/transit-gateway-deep-dive.html', priority: 'high' },
           { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', href: 'networking/transit-gateway-peering-guide.html', priority: 'high' },
           { title: 'AWS Transit Gateway共有の超簡単ガイド', href: 'organizational-complexity/aws-ram-tgw-sharing.html', priority: 'high' },
-          { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' },
-          { title: 'Transit Gateway 共有サービスによる分離VPCパターン', href: 'networking/tgw-isolated-shared-services.html', priority: 'high' }
+          { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' }
         ]
       }
     ]
@@ -579,7 +579,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 67
+    count: 68
   },
   {
     id: 'security-governance',
@@ -631,20 +631,12 @@ const siteStats = {
   minorCategories: 27,
   totalResources: '289+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/02'
+  lastUpdated: '2026/03/03'
 };
 
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
-  {
-    date: '2026-03-03',
-    type: 'content',
-    title: 'Transit Gateway 共有サービスによる分離VPCパターン追加',
-    description: 'Transit Gatewayの共有サービスVPCを使った分離VPCパターンを図解した学習リソースを追加。Association/Propagation設定マトリクス、構築手順、ユースケースを網羅。',
-    categories: ['networking'],
-    tags: ['Transit Gateway', 'VPC', 'Route Table', 'Shared Services']
-  },
   {
     date: '2026-02-28',
     type: 'content',

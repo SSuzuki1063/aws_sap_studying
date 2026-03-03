@@ -212,7 +212,7 @@ const searchData = [
   { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html' },
   { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html' },
   { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html' },
-  { title: 'AWS Transit Gateway 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html' },
+  { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html' },
   { title: 'AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション', category: 'ネットワーキング', file: 'networking/vpn-throughput-scaling-guide.html' },
   { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', category: 'ネットワーキング', file: 'networking/aws-vpn-with-direct-connect-guide.html' },
   { title: 'AWS プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/aws-prefix-list-guide.html' },
@@ -283,6 +283,7 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html' },
 ];
+
 
 
 // 検索機能
