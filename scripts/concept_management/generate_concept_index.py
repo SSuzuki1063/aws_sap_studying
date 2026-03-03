@@ -38,6 +38,7 @@ class ConceptIndexGenerator:
     def __init__(self):
         self.repo_root    = Path(__file__).parent.parent.parent
         self.concepts_dir = self.repo_root / "concepts"
+        self.public_dir   = self.repo_root / "public" / "concepts"
         self.errors       = []
         self.warnings     = []
 
@@ -186,22 +187,26 @@ class ConceptIndexGenerator:
             ok("Dry-run 完了（ファイル書き込みなし）")
             return True
 
-        (self.concepts_dir / "concept-index.json").write_text(
-            json.dumps({
-                "version":     "1.0.0",
-                "generated":   date.today().isoformat(),
-                "total_nodes": len(ci_entries),
-                "nodes":       ci_entries,
-            }, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+        ci_json = json.dumps({
+            "version":     "1.0.0",
+            "generated":   date.today().isoformat(),
+            "total_nodes": len(ci_entries),
+            "nodes":       ci_entries,
+        }, ensure_ascii=False, indent=2)
+        sr_json = json.dumps(sr_entries, ensure_ascii=False, indent=2)
+
+        (self.concepts_dir / "concept-index.json").write_text(ci_json, encoding="utf-8")
         ok(f"concept-index.json 生成完了（{len(ci_entries)} ノード）")
 
-        (self.concepts_dir / "search-index.json").write_text(
-            json.dumps(sr_entries, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+        (self.concepts_dir / "search-index.json").write_text(sr_json, encoding="utf-8")
         ok(f"search-index.json 生成完了（{len(sr_entries)} エントリ）")
+
+        # public/ にも同期（Astro ビルドで配信されるディレクトリ）
+        if self.public_dir.exists():
+            (self.public_dir / "concept-index.json").write_text(ci_json, encoding="utf-8")
+            (self.public_dir / "search-index.json").write_text(sr_json, encoding="utf-8")
+            ok("public/concepts/ にも同期完了")
+
         return True
 
 
