@@ -372,7 +372,6 @@ const quizData = {
                 correct: 2,
                 explanation: "Route 53でDNSSEC KSKを作成するには、KMSキーが2つの要件を満たす必要があります：(1) us-east-1リージョンに存在すること、(2) ECC_NIST_P256キー仕様の非対称キーであること。対称キーや他のリージョンのキーでは要件を満たしません。Route 53はグローバルサービスですが、DNSSEC署名のKMSキーはus-east-1に限定されます。（AWS ANS試験サンプル問題）",
                 relatedResources: [
-                    { title: "Route 53 DNSSECガイド", path: "content-delivery-dns/route53-dnssec-guide.html", type: "internal" },
                     { title: "KMS キータイプ", path: "security-governance/kms-key-types.html", type: "internal" },
                     { title: "Route 53 DNSSEC Documentation", url: "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring-dnssec.html", type: "external" }
                 ]

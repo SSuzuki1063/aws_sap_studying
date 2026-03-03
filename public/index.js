@@ -18,7 +18,6 @@ const searchData = [
   { title: 'OSI参照モデル × AWSサービス完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/osi-aws-services-guide.html' },
   { title: 'Route 53 Application Recovery Controller 解説', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-arc-infographic (1).html' },
   { title: 'Route 53 DNSSEC 完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-100.html' },
-  { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-guide.html' },
   { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html' },
   { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html' },
   { title: 'Route 53 プライベートホストゾーン クロスアカウント関連付け', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53_cross_account_guide.html' },

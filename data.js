@@ -348,7 +348,6 @@ const categoriesData = [
           { title: 'DNS インフォグラフィック', href: 'content-delivery-dns/aws-dns-infographic.html' },
           { title: 'Route53 ホストゾーン', href: 'new-solutions/route53_hosted_zones_infographic.html', priority: 'high' },
           { title: 'Route53 クロスアカウントガイド', href: 'content-delivery-dns/route53_cross_account_guide.html', priority: 'high' },
-          { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', href: 'content-delivery-dns/route53-dnssec-guide.html' },
           { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', href: 'content-delivery-dns/route53-private-hosted-zone-guide.html', priority: 'high' },
           { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', href: 'content-delivery-dns/route53-dns-firewall-guide.html', priority: 'high' },
           { title: 'Route 53 DNSSEC 完全ガイド（100問演習）', href: 'content-delivery-dns/route53-dnssec-100.html', priority: 'medium' },

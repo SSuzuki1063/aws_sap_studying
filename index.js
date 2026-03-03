@@ -119,7 +119,6 @@ const searchData = [
     { title: 'DNS インフォグラフィック', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-dns-infographic.html' },
     { title: 'Route53 ホストゾーン', category: 'コンテンツ配信・DNS', file: 'new-solutions/route53_hosted_zones_infographic.html' },
     { title: 'Route53 クロスアカウントガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53_cross_account_guide.html' },
-    { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-guide.html' },
     { title: 'OSI参照モデル × AWSサービス完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/osi-aws-services-guide.html' },
     { title: 'ACM DNS検証 - 超かんたん図解ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/acm-dns-simple-guide.html' },
     { title: 'ALB × PFS 暗号スイート完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/alb-pfs-cipher-suites-guide.html' },

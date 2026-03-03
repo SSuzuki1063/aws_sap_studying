@@ -365,7 +365,6 @@ const categoriesData = [
           { title: 'Route 53 Application Recovery Controller 解説', href: 'content-delivery-dns/route53-arc-infographic (1).html' },
           { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', href: 'content-delivery-dns/route53-dns-firewall-guide.html', priority: 'high' },
           { title: 'Route 53 DNSSEC 完全ガイド', href: 'content-delivery-dns/route53-dnssec-100.html', priority: 'medium' },
-          { title: 'Route 53 DNSSEC 完全ガイド - 公証役場のしくみで理解する DNS セキュリティ', href: 'content-delivery-dns/route53-dnssec-guide.html' },
           { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', href: 'content-delivery-dns/route53-private-hosted-zone-guide.html', priority: 'high' },
           { title: 'Route 53 プライベートホストゾーン クロスアカウント関連付け', href: 'content-delivery-dns/route53_cross_account_guide.html', priority: 'high' },
           { title: 'Route 53 Application Recovery Controller 解説', href: 'continuous-improvement/route53-arc-infographic.html' },
