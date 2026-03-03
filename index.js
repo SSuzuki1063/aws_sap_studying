@@ -285,7 +285,8 @@ const searchData = [
     { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN', category: 'ネットワーキング', file: 'networking/split-vs-full-tunnel-vpn.html' },
     { title: 'パケットの気持ちになって辿る Amazon VPC のルーティング', category: 'ネットワーキング', file: 'networking/vpc-routing-packet-journey.html' },
     { title: 'VPCトラフィックミラーリング vs VPC Flow Logs 使い分けガイド', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-vs-flow-logs.html' },
-    { title: 'Transit Gateway Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html' }
+    { title: 'Transit Gateway Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html' },
+    { title: 'Transit Gateway 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html' }
 ];
 
 // 検索機能

@@ -84,8 +84,8 @@ const categoriesData = [
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 10,
-        lastUpdated: '2026-02-12',
+        count: 11,
+        lastUpdated: '2026-03-03',
         resources: [
           { title: 'AWS ゲートウェイ', href: 'networking/aws-gateways.html', priority: 'high' },
           { title: 'Transit Gateway 共有', href: 'organizational-complexity/aws-ram-tgw-sharing.html', priority: 'high' },
@@ -96,7 +96,8 @@ const categoriesData = [
           { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html' },
           { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html' },
           { title: 'Cloud WAN / TGW ルート分離設計の極意', href: 'networking/cloud-wan-tgw-route-isolation-guide.html', priority: 'high' },
-          { title: 'Transit Gateway Route Analyzer 完全ガイド', href: 'networking/route-analyzer-guide.html', priority: 'high' }
+          { title: 'Transit Gateway Route Analyzer 完全ガイド', href: 'networking/route-analyzer-guide.html', priority: 'high' },
+          { title: 'Transit Gateway 共有サービスによる分離VPCパターン', href: 'networking/tgw-isolated-shared-services.html', priority: 'high' }
         ]
       }
     ]
@@ -563,6 +564,14 @@ const siteStats = {
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-03',
+    type: 'content',
+    title: 'Transit Gateway 共有サービスによる分離VPCパターン追加',
+    description: 'Transit Gatewayの共有サービスVPCを使った分離VPCパターンを図解した学習リソースを追加。Association/Propagation設定マトリクス、構築手順、ユースケースを網羅。',
+    categories: ['networking'],
+    tags: ['Transit Gateway', 'VPC', 'Route Table', 'Shared Services']
+  },
   {
     date: '2026-02-28',
     type: 'content',
