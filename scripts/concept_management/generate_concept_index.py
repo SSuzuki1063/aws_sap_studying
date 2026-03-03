@@ -38,7 +38,6 @@ class ConceptIndexGenerator:
     def __init__(self):
         self.repo_root    = Path(__file__).parent.parent.parent
         self.concepts_dir = self.repo_root / "concepts"
-        self.public_dir   = self.repo_root / "public" / "concepts"
         self.errors       = []
         self.warnings     = []
 
@@ -200,12 +199,6 @@ class ConceptIndexGenerator:
 
         (self.concepts_dir / "search-index.json").write_text(sr_json, encoding="utf-8")
         ok(f"search-index.json 生成完了（{len(sr_entries)} エントリ）")
-
-        # public/ にも同期（Astro ビルドで配信されるディレクトリ）
-        if self.public_dir.exists():
-            (self.public_dir / "concept-index.json").write_text(ci_json, encoding="utf-8")
-            (self.public_dir / "search-index.json").write_text(sr_json, encoding="utf-8")
-            ok("public/concepts/ にも同期完了")
 
         return True
 
