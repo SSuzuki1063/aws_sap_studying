@@ -15,6 +15,11 @@
   var _activeTab   = 'map'; // 'map' | 'detail'
   var _diagLoaded  = false; // DiagramRenderer.js 遅延ロード済みフラグ
 
+  /* ── アニメーション: prefers-reduced-motion 検出 ── */
+  var _prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.matchMedia('(prefers-reduced-motion: reduce)')
+    .addEventListener('change', function (e) { _prefersReducedMotion = e.matches; });
+
   /* ── プログレス・フィルタ・パンくず用 ── */
   var _visitedSvcs      = {};   // { [svcId]: true } 訪問済みL2サービス
   var _totalSvcCount    = 0;    // L2サービス総数
@@ -46,6 +51,73 @@
       cls: 'layer-badge l' + layerNum + '-badge',
       text: label || ('L' + layerNum)
     });
+  }
+
+  /* ============================================================
+   * アニメーション ヘルパー (アコーディオン開閉)
+   * ============================================================ */
+
+  /**
+   * アコーディオン展開: hidden 解除 → mm-enter-from → reflow → クラス除去
+   * @param {HTMLElement} el - .mm-node-children 要素
+   * @param {Function} [cb] - トランジション完了後のコールバック
+   */
+  function _animateOpen(el, cb) {
+    el.hidden = false;
+    if (_prefersReducedMotion) {
+      el.classList.remove('mm-enter-from', 'mm-leave-to');
+      if (cb) { cb(); }
+      return;
+    }
+    el.classList.remove('mm-leave-to');
+    el.classList.add('mm-enter-from');
+    /* reflow 強制 */
+    void el.offsetHeight;
+    el.classList.remove('mm-enter-from');
+    if (cb) {
+      var done = false;
+      var finish = function () {
+        if (done) { return; }
+        done = true;
+        el.removeEventListener('transitionend', onEnd);
+        cb();
+      };
+      var onEnd = function (e) {
+        if (e.target === el) { finish(); }
+      };
+      el.addEventListener('transitionend', onEnd);
+      setTimeout(finish, 300); /* fallback */
+    }
+  }
+
+  /**
+   * アコーディオン閉鎖: mm-leave-to 追加 → transitionend → hidden = true
+   * @param {HTMLElement} el - .mm-node-children 要素
+   * @param {Function} [cb] - トランジション完了後のコールバック
+   */
+  function _animateClose(el, cb) {
+    if (_prefersReducedMotion) {
+      el.hidden = true;
+      el.classList.remove('mm-enter-from', 'mm-leave-to');
+      if (cb) { cb(); }
+      return;
+    }
+    el.classList.remove('mm-enter-from');
+    el.classList.add('mm-leave-to');
+    var done = false;
+    var finish = function () {
+      if (done) { return; }
+      done = true;
+      el.removeEventListener('transitionend', onEnd);
+      el.classList.remove('mm-leave-to');
+      el.hidden = true;
+      if (cb) { cb(); }
+    };
+    var onEnd = function (e) {
+      if (e.target === el) { finish(); }
+    };
+    el.addEventListener('transitionend', onEnd);
+    setTimeout(finish, 300); /* fallback */
   }
 
   /* ============================================================
@@ -139,7 +211,8 @@
       var isOpen = btn.getAttribute('aria-expanded') === 'true';
       var nowOpen = !isOpen;
       btn.setAttribute('aria-expanded', String(nowOpen));
-      children.hidden = !nowOpen;
+      if (nowOpen) { _animateOpen(children); }
+      else         { _animateClose(children); }
       _selectNode(domain.id, 1, domain);
     });
 
@@ -191,7 +264,8 @@
       var isOpen = btn.getAttribute('aria-expanded') === 'true';
       var nowOpen = !isOpen;
       btn.setAttribute('aria-expanded', String(nowOpen));
-      children.hidden = !nowOpen;
+      if (nowOpen) { _animateOpen(children); }
+      else         { _animateClose(children); }
 
       /* 選択ハイライト + 詳細パネル（常に呼ぶ） */
       _selectNode(svc.id, 2, svc);
@@ -208,7 +282,22 @@
     return li;
   }
 
-  /** L3 概念リストを遅延ロードしてレンダー */
+  /**
+   * ラジアルバースト角度計算
+   * @param {number} i - インデックス
+   * @param {number} total - 総数
+   * @returns {{ x: number, y: number }}
+   */
+  function _burstOffset(i, total) {
+    if (total <= 1) { return { x: 0, y: -12 }; }
+    var angle = -Math.PI / 2 + (Math.PI * i / (total - 1));
+    return {
+      x: Math.round(Math.cos(angle) * 18),
+      y: Math.round(Math.sin(angle) * 18)
+    };
+  }
+
+  /** L3 概念リストを遅延ロードしてレンダー（ラジアルバースト付き） */
   function _loadAndRenderL3(svcId, ul, loadingLi) {
     _ensureLoaded(svcId).then(function (node) {
       /* ローディング表示を削除 */
@@ -216,9 +305,30 @@
         ul.removeChild(loadingLi);
       }
       if (!node || !node.key_concepts) { return; }
-      node.key_concepts.forEach(function (concept) {
-        ul.appendChild(_makeL3Item(concept));
+
+      var items = [];
+      var total = node.key_concepts.length;
+      node.key_concepts.forEach(function (concept, i) {
+        var li = _makeL3Item(concept);
+        /* バースト初期状態を設定 */
+        if (!_prefersReducedMotion) {
+          var offset = _burstOffset(i, total);
+          li.style.setProperty('--burst-x', offset.x + 'px');
+          li.style.setProperty('--burst-y', offset.y + 'px');
+          li.style.setProperty('--burst-delay', (i * 0.04) + 's');
+          li.classList.add('mm-burst-from');
+        }
+        ul.appendChild(li);
+        items.push(li);
       });
+
+      /* reflow 強制 → mm-burst-from 除去でトランジション発火 */
+      if (!_prefersReducedMotion && items.length) {
+        void ul.offsetHeight;
+        items.forEach(function (li) {
+          li.classList.remove('mm-burst-from');
+        });
+      }
 
       /* 現在 L2 が選択中なら詳細パネルを完全再描画 */
       if (_selectedId === svcId) {
@@ -928,6 +1038,8 @@
     while (cur) {
       if (cur.classList && cur.classList.contains('mm-node-children') && cur.hidden) {
         cur.hidden = false;
+        /* アニメーションクラスをクリーンアップ（即座に表示） */
+        cur.classList.remove('mm-enter-from', 'mm-leave-to');
         /* 親ボタンの aria-expanded を更新 */
         var parentLi = cur.parentElement;
         if (parentLi) {
@@ -995,14 +1107,14 @@
       if (!isOpen) {
         l2Btn.click(); /* L2展開 + L3ロード開始 */
       }
-      /* L3がレンダーされてから移動 */
+      /* L3がレンダーされてから移動（アニメーション時間考慮） */
       setTimeout(function () {
         var l3Btn = document.querySelector('[data-node-id="' + conceptId + '"]');
         if (l3Btn) {
           _scrollToBtn(l3Btn);
           _selectNode(conceptId, 3, conceptData);
         }
-      }, 300);
+      }, _prefersReducedMotion ? 100 : 500);
     }
   }
 
