@@ -14,6 +14,7 @@
   var _isMobile    = false; // ≤900px かどうか
   var _activeTab   = 'map'; // 'map' | 'detail'
   var _diagLoaded  = false; // DiagramRenderer.js 遅延ロード済みフラグ
+  var _focusedDomainId = null; // L1フォーカスモード中のドメインID（null = 全表示）
 
   /* ── アニメーション: prefers-reduced-motion 検出 ── */
   var _prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -121,6 +122,36 @@
   }
 
   /* ============================================================
+   * L1 フォーカスモード（選択L1以外を非表示）
+   * ============================================================ */
+  function _enterDomainFocus(domainId) {
+    _focusedDomainId = domainId;
+    var treeEl = document.getElementById('mm-tree');
+    if (!treeEl) return;
+    var items = treeEl.children;
+    for (var i = 0; i < items.length; i++) {
+      var li = items[i];
+      var btn = li.querySelector('.mm-l1-btn');
+      if (btn && btn.dataset.nodeId !== domainId) {
+        li.classList.add('mm-l1-focused-out');
+      } else {
+        li.classList.remove('mm-l1-focused-out');
+      }
+    }
+  }
+
+  function _exitDomainFocus() {
+    if (!_focusedDomainId) return;
+    _focusedDomainId = null;
+    var treeEl = document.getElementById('mm-tree');
+    if (!treeEl) return;
+    var items = treeEl.children;
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.remove('mm-l1-focused-out');
+    }
+  }
+
+  /* ============================================================
    * エントリポイント
    * ============================================================ */
   document.addEventListener('DOMContentLoaded', function () {
@@ -214,6 +245,7 @@
       if (nowOpen) { _animateOpen(children); }
       else         { _animateClose(children); }
       _selectNode(domain.id, 1, domain);
+      _enterDomainFocus(domain.id);
     });
 
     li.appendChild(btn);
@@ -995,6 +1027,7 @@
     var layer = entry.layer;
     if (layer === 1) {
       _scrollAndSelect(id, layer, entry);
+      _enterDomainFocus(id);
     } else if (layer === 2) {
       /* L2ボタンをクリックして展開 */
       var btn = document.querySelector('[data-node-id="' + id + '"]');
@@ -1428,6 +1461,7 @@
   }
 
   function _clearSelection() {
+    _exitDomainFocus();
     document.querySelectorAll('.mm-node-btn.mm-selected').forEach(function (el) {
       el.classList.remove('mm-selected');
     });
