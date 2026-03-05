@@ -331,7 +331,7 @@ const categoriesData = [
     id: 'content-delivery-dns',
     title: 'コンテンツ配信・DNS',
     icon: '🌍',
-    count: 23,
+    count: 22,
     sections: [
       {
         title: 'CloudFront & コンテンツ配信',
@@ -357,7 +357,7 @@ const categoriesData = [
       {
         title: 'Route53 & DNS管理',
         icon: '🌍',
-        count: 10,
+        count: 9,
         lastUpdated: '2026-02-24',
         resources: [
           { title: 'AWS条件付きフォワーダールール解説', href: 'content-delivery-dns/aws-dns-infographic.html' },
@@ -596,7 +596,7 @@ const categoryQuickNav = [
     id: 'content-delivery-dns',
     icon: '🚀',
     text: 'コンテンツ配信・DNS',
-    count: 23
+    count: 22
   },
   {
     id: 'development-deployment',
@@ -628,9 +628,9 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 27,
-  totalResources: '289+',
+  totalResources: '288+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/03'
+  lastUpdated: '2026/03/04'
 };
 
 // 更新履歴データ

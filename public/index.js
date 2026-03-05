@@ -285,6 +285,7 @@ const searchData = [
 
 
 
+
 // 検索機能
 function performSearch(query) {
     const searchResultsList = document.getElementById('searchResultsList');
