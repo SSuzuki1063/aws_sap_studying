@@ -7,7 +7,7 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 68,
+    count: 71,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
@@ -35,7 +35,7 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 42,
+        count: 43,
         lastUpdated: '2026-02-28',
         resources: [
           { title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD', href: 'networking/aws-directory-service-guide.html' },
@@ -71,6 +71,7 @@ const categoriesData = [
           { title: 'VPCフローログ フィールド完全ガイド', href: 'networking/vpc-flow-log-fields-guide.html', priority: 'medium' },
           { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', href: 'networking/vpc-network-access-analyzer-guide.html', priority: 'low' },
           { title: 'パケットの気持ちになって辿る Amazon VPC のルーティング | AWS学習リソース', href: 'networking/vpc-routing-packet-journey.html', priority: 'high' },
+          { title: 'VPCトラフィックミラーリング完全ガイド - 4つの構成要素を徹底図解', href: 'networking/vpc-traffic-mirroring-deep-guide.html' },
           { title: 'VPCトラフィックミラーリング vs VPC Flow Logs - 使い分けガイド', href: 'networking/vpc-traffic-mirroring-vs-flow-logs.html', priority: 'high' },
           { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', href: 'networking/vpn-acceleration-vs-global-accelerator.html', priority: 'low' },
           { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', href: 'networking/vpn-ike-dpd-recovery-guide.html', priority: 'low' },
@@ -99,6 +100,16 @@ const categoriesData = [
           { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', href: 'networking/transit-gateway-peering-guide.html', priority: 'high' },
           { title: 'AWS Transit Gateway共有の超簡単ガイド', href: 'organizational-complexity/aws-ram-tgw-sharing.html', priority: 'high' },
           { title: '【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)', href: 'BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf' }
+        ]
+      },
+      {
+        title: 'その他',
+        icon: '📄',
+        count: 2,
+        lastUpdated: '2026-02-28',
+        resources: [
+          { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html' },
+          { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html' }
         ]
       }
     ]
@@ -331,7 +342,7 @@ const categoriesData = [
     id: 'content-delivery-dns',
     title: 'コンテンツ配信・DNS',
     icon: '🌍',
-    count: 22,
+    count: 23,
     sections: [
       {
         title: 'CloudFront & コンテンツ配信',
@@ -369,6 +380,15 @@ const categoriesData = [
           { title: 'Route 53 プライベートホストゾーン クロスアカウント関連付け', href: 'content-delivery-dns/route53_cross_account_guide.html', priority: 'high' },
           { title: 'Route 53 Application Recovery Controller 解説', href: 'continuous-improvement/route53-arc-infographic.html' },
           { title: 'Route53 ホストゾーン完全ガイド', href: 'new-solutions/route53_hosted_zones_infographic.html', priority: 'high' }
+        ]
+      },
+      {
+        title: 'その他',
+        icon: '📄',
+        count: 1,
+        lastUpdated: '2026-02-24',
+        resources: [
+          { title: 'DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド', href: 'content-delivery-dns/dns-migration-guide.html' }
         ]
       }
     ]
@@ -578,7 +598,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 68
+    count: 71
   },
   {
     id: 'security-governance',
@@ -596,7 +616,7 @@ const categoryQuickNav = [
     id: 'content-delivery-dns',
     icon: '🚀',
     text: 'コンテンツ配信・DNS',
-    count: 22
+    count: 23
   },
   {
     id: 'development-deployment',
@@ -627,10 +647,10 @@ const categoryQuickNav = [
 // 統計データ
 const siteStats = {
   majorCategories: 8,
-  minorCategories: 27,
-  totalResources: '288+',
+  minorCategories: 29,
+  totalResources: '292+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/04'
+  lastUpdated: '2026/03/06'
 };
 
 // 更新履歴データ

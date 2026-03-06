@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPCトラフィックミラーリング完全ガイド - 4つの構成要素を徹底図解</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+  <meta name="description" content="VPCトラフィックミラーリングの4構成要素（ミラーソース・ターゲット・フィルター・セッション）を監視カメラシステムのたとえで初心者向けに図解">
+  <style>
+    /* ========================================
+       リセット・基本設定
+       ======================================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 20px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f6f8;
+      color: #374151;
+      line-height: 1.7;
+            padding-top: 70px;}
+
+    /* ========================================
+       ヘッダー
+       ======================================== */
+    .page-header {
+      background: linear-gradient(135deg, #232F3E 0%, #37475A 50%, #232F3E 100%);
+      padding: 3rem 2rem 2.5rem;
+      text-align: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-header::before {
+      content: "";
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .page-header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .page-badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      font-weight: 700;
+      padding: 0.3rem 1.2rem;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .page-header h1 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.35;
+      margin-bottom: 0.8rem;
+    }
+
+    .page-header h1 span {
+      color: #FF9900;
+    }
+
+    .page-header-sub {
+      color: #d1d5db;
+      font-size: 1rem;
+    }
+
+    /* ========================================
+       メインコンテナ
+       ======================================== */
+    .container {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    /* ========================================
+       結論ファースト
+       ======================================== */
+    .conclusion-box {
+      background: #fff;
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 4px 24px rgba(59, 130, 246, 0.08);
+    }
+
+    .conclusion-box h2 {
+      font-size: 1.3rem;
+      color: #1e3a5f;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #3b82f6;
+    }
+
+    .conclusion-text {
+      margin-bottom: 1.2rem;
+    }
+
+    .conclusion-4cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .conclusion-4card {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.9rem 1rem;
+      border-radius: 10px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+    }
+
+    .conclusion-4card-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .conclusion-4card-body strong {
+      display: block;
+      color: #1e40af;
+      margin-bottom: 0.15rem;
+    }
+
+    .conclusion-4card-body span {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+
+    .conclusion-oneliner {
+      text-align: center;
+      padding: 1rem;
+      background: #fef3c7;
+      border-radius: 10px;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    /* ========================================
+       セクション共通
+       ======================================== */
+    .section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      color: #1e3a5f;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #3b82f6;
+    }
+
+    .section h3 {
+      font-size: 1.1rem;
+      color: #374151;
+      margin-bottom: 0.8rem;
+      margin-top: 1.5rem;
+    }
+
+    .section p {
+      margin-bottom: 0.8rem;
+    }
+
+    /* ========================================
+       たとえ話：全体像
+       ======================================== */
+    .analogy-overview {
+      text-align: center;
+      padding: 1.5rem;
+      background: #f0f7ff;
+      border-radius: 14px;
+      margin-bottom: 2rem;
+      border: 1px solid #bfdbfe;
+    }
+
+    .analogy-overview-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .analogy-overview p {
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       全体像SVG
+       ======================================== */
+    .diagram-center {
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+
+    .diagram-center svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* ========================================
+       4構成要素カード（2x2均等グリッド）
+       ======================================== */
+    .components-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .comp-card {
+      border-radius: 14px;
+      padding: 1.5rem;
+      border: 2px solid;
+      position: relative;
+    }
+
+    .comp-card-source {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+    .comp-card-target {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+
+    .comp-card-filter {
+      background: #fefce8;
+      border-color: #fde047;
+    }
+
+    .comp-card-session {
+      background: #f5f3ff;
+      border-color: #c4b5fd;
+    }
+
+    .comp-card-number {
+      position: absolute;
+      top: -0.7rem;
+      left: 1rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+    }
+
+    .comp-card-source .comp-card-number { background: #ef4444; }
+    .comp-card-target .comp-card-number { background: #22c55e; }
+    .comp-card-filter .comp-card-number { background: #eab308; }
+    .comp-card-session .comp-card-number { background: #8b5cf6; }
+
+    .comp-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .comp-card-header-icon {
+      font-size: 1.6rem;
+    }
+
+    .comp-card-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .comp-card-source .comp-card-header h3 { color: #b91c1c; }
+    .comp-card-target .comp-card-header h3 { color: #15803d; }
+    .comp-card-filter .comp-card-header h3 { color: #a16207; }
+    .comp-card-session .comp-card-header h3 { color: #6d28d9; }
+
+    .comp-card-analogy {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 8px;
+      margin-bottom: 0.8rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .comp-card-source .comp-card-analogy { background: #fee2e2; color: #991b1b; }
+    .comp-card-target .comp-card-analogy { background: #dcfce7; color: #166534; }
+    .comp-card-filter .comp-card-analogy { background: #fef9c3; color: #854d0e; }
+    .comp-card-session .comp-card-analogy { background: #ede9fe; color: #5b21b6; }
+
+    .comp-card p {
+      margin-bottom: 0;
+      color: #374151;
+    }
+
+    /* ========================================
+       深掘りセクション
+       ======================================== */
+    .deep-section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      border-top: 4px solid;
+    }
+
+    .deep-source { border-top-color: #ef4444; }
+    .deep-target { border-top-color: #22c55e; }
+    .deep-filter { border-top-color: #eab308; }
+    .deep-session { border-top-color: #8b5cf6; }
+
+    .deep-section h2 {
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .deep-source h2 { color: #b91c1c; border-bottom: 2px solid #ef4444; }
+    .deep-target h2 { color: #15803d; border-bottom: 2px solid #22c55e; }
+    .deep-filter h2 { color: #a16207; border-bottom: 2px solid #eab308; }
+    .deep-session h2 { color: #6d28d9; border-bottom: 2px solid #8b5cf6; }
+
+    .deep-section h3 {
+      margin-top: 1.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    /* ========================================
+       対応可能リソースグリッド（均等）
+       ======================================== */
+    .resource-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .resource-card {
+      text-align: center;
+      padding: 1.2rem;
+      border-radius: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+
+    .resource-card-icon {
+      font-size: 2rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .resource-card-name {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .resource-card-desc {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    /* ========================================
+       ターゲット3種類の均等グリッド
+       ======================================== */
+    .target-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .target-card {
+      padding: 1.2rem;
+      border-radius: 12px;
+      text-align: center;
+      border: 2px solid #86efac;
+      background: #f0fdf4;
+    }
+
+    .target-card-icon {
+      font-size: 2rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .target-card-name {
+      font-weight: 700;
+      display: block;
+      color: #15803d;
+      margin-bottom: 0.3rem;
+    }
+
+    .target-card-desc {
+      font-size: 0.85rem;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .target-card-analogy {
+      font-size: 0.85rem;
+      color: #6b7280;
+      padding: 0.3rem 0.6rem;
+      background: #dcfce7;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    /* ========================================
+       フィルタールール表
+       ======================================== */
+    .filter-table-wrap {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    .filter-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 1rem;
+    }
+
+    .filter-table thead th {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      background: #a16207;
+      color: #fff;
+    }
+
+    .filter-table tbody td {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    .filter-table tbody tr:nth-child(even) {
+      background: #fefce8;
+    }
+
+    .filter-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .filter-badge-accept {
+      display: inline-block;
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 700;
+      padding: 0.15rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .filter-badge-reject {
+      display: inline-block;
+      background: #fee2e2;
+      color: #b91c1c;
+      font-weight: 700;
+      padding: 0.15rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    /* ========================================
+       セッション設定図
+       ======================================== */
+    .session-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin: 1.5rem 0;
+    }
+
+    .session-flow-box {
+      padding: 0.8rem 1.2rem;
+      border-radius: 10px;
+      font-weight: 700;
+      text-align: center;
+      min-width: 130px;
+    }
+
+    .session-flow-source {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 2px solid #fca5a5;
+    }
+
+    .session-flow-filter {
+      background: #fef9c3;
+      color: #a16207;
+      border: 2px solid #fde047;
+    }
+
+    .session-flow-target {
+      background: #dcfce7;
+      color: #15803d;
+      border: 2px solid #86efac;
+    }
+
+    .session-flow-arrow {
+      font-size: 1.3rem;
+      color: #9ca3af;
+    }
+
+    .session-param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .session-param-card {
+      background: #f5f3ff;
+      border: 1px solid #c4b5fd;
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .session-param-card strong {
+      display: block;
+      color: #6d28d9;
+      margin-bottom: 0.3rem;
+    }
+
+    .session-param-card p {
+      margin-bottom: 0;
+      color: #374151;
+      font-size: 0.9rem;
+    }
+
+    /* ========================================
+       たとえ話の全体対応表
+       ======================================== */
+    .mapping-table-wrap {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    .mapping-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 1rem;
+    }
+
+    .mapping-table thead th {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .mapping-table thead th:first-child {
+      background: #6b7280;
+    }
+
+    .mapping-table thead th:nth-child(2) {
+      background: #2563eb;
+    }
+
+    .mapping-table thead th:nth-child(3) {
+      background: #374151;
+    }
+
+    .mapping-table tbody td {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    .mapping-table tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .mapping-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ========================================
+       実践セクション：CLI例
+       ======================================== */
+    .cli-block {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+      margin-top: 1rem;
+      overflow-x: auto;
+    }
+
+    .cli-block code {
+      color: #e2e8f0;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    .cli-block .cli-comment {
+      color: #94a3b8;
+    }
+
+    .cli-block .cli-key {
+      color: #7dd3fc;
+    }
+
+    .cli-block .cli-val {
+      color: #86efac;
+    }
+
+    .cli-block .cli-cmd {
+      color: #fbbf24;
+    }
+
+    /* ========================================
+       注意・ベストプラクティス
+       ======================================== */
+    .tips-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .tips-card {
+      padding: 1.5rem;
+      border-radius: 14px;
+    }
+
+    .tips-card h3 {
+      margin-top: 0;
+      margin-bottom: 0.8rem;
+    }
+
+    .tips-card-warn {
+      background: #fef3c7;
+      border: 2px solid #fbbf24;
+    }
+
+    .tips-card-warn h3 {
+      color: #92400e;
+    }
+
+    .tips-card-best {
+      background: #eff6ff;
+      border: 2px solid #93c5fd;
+    }
+
+    .tips-card-best h3 {
+      color: #1e40af;
+    }
+
+    .tips-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .tips-list li {
+      padding: 0.4rem 0;
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+
+    .tips-list li span:first-child {
+      flex-shrink: 0;
+    }
+
+    /* ========================================
+       FAQ
+       ======================================== */
+    .faq-item {
+      padding: 1.2rem 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .faq-item:last-child {
+      border-bottom: none;
+    }
+
+    .faq-q {
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .faq-a {
+      padding-left: 1.8rem;
+      color: #374151;
+    }
+
+    .faq-a p {
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       まとめ
+       ======================================== */
+    .summary-box {
+      background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    .summary-box h2 {
+      color: #FF9900;
+      border-bottom: 2px solid #FF9900;
+      font-size: 1.3rem;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .summary-4cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .summary-4card {
+      padding: 1rem;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .summary-4card strong {
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .summary-4card-source strong { color: #fca5a5; }
+    .summary-4card-target strong { color: #86efac; }
+    .summary-4card-filter strong { color: #fde047; }
+    .summary-4card-session strong { color: #c4b5fd; }
+
+    .summary-4card span {
+      color: #d1d5db;
+      font-size: 0.9rem;
+    }
+
+    .summary-final {
+      text-align: center;
+      padding: 1rem;
+      background: rgba(255, 153, 0, 0.15);
+      border-radius: 10px;
+      color: #FF9900;
+      font-weight: 600;
+    }
+
+    /* ========================================
+       フッター
+       ======================================== */
+    .page-footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: #9ca3af;
+      font-size: 0.85rem;
+    }
+
+    /* ========================================
+       レスポンシブ
+       ======================================== */
+    @media (max-width: 768px) {
+      html {
+        font-size: 18px;
+      }
+
+      .page-header {
+        padding: 2rem 1rem;
+      }
+
+      .page-header h1 {
+        font-size: 1.35rem;
+      }
+
+      .container {
+        padding: 1.2rem 1rem 2rem;
+      }
+
+      .conclusion-4cards,
+      .components-grid,
+      .tips-grid,
+      .summary-4cards,
+      .session-param-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .resource-grid,
+      .target-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section,
+      .deep-section {
+        padding: 1.5rem;
+      }
+
+      .session-flow {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#結論ファースト-トラフィックミラーリングは4つのパーツでできている">🎯 結論ファースト：トラフィックミラーリングは4つのパーツでできている</a></li>
+            <li class="toc-h2"><a href="#たとえ話-ビルの監視カメラシステムで理解しよう">🏢 たとえ話：ビルの監視カメラシステムで理解しよう</a></li>
+            <li class="toc-h3"><a href="#たとえ話-→-AWS構成要素の対応">🔄 たとえ話 → AWS構成要素の対応</a></li>
+            <li class="toc-h2"><a href="#️-全体アーキテクチャ-4つの構成要素の関係">🏗️ 全体アーキテクチャ：4つの構成要素の関係</a></li>
+            <li class="toc-h3"><a href="#4つの構成要素のポイント">📌 4つの構成要素のポイント</a></li>
+            <li class="toc-h3"><a href="#ミラーソース">ミラーソース</a></li>
+            <li class="toc-h3"><a href="#ミラーターゲット">ミラーターゲット</a></li>
+            <li class="toc-h3"><a href="#ミラーフィルター">ミラーフィルター</a></li>
+            <li class="toc-h3"><a href="#ミラーセッション">ミラーセッション</a></li>
+            <li class="toc-h2"><a href="#①-ミラーソース-どこにカメラを置くか">📷 ① ミラーソース：「どこにカメラを置くか」</a></li>
+            <li class="toc-h3"><a href="#ミラーソースとして指定できるリソース">📋 ミラーソースとして指定できるリソース</a></li>
+            <li class="toc-h3"><a href="#⚠️-ソース指定の制約">⚠️ ソース指定の制約</a></li>
+            <li class="toc-h2"><a href="#️-②-ミラーターゲット-警備室のモニター">🖥️ ② ミラーターゲット：「警備室のモニター」</a></li>
+            <li class="toc-h3"><a href="#3種類のミラーターゲット">📋 3種類のミラーターゲット</a></li>
+            <li class="toc-h3"><a href="#ターゲット選択のポイント">💡 ターゲット選択のポイント</a></li>
+            <li class="toc-h2"><a href="#️-③-ミラーフィルター-何を録画するかのルール">🎚️ ③ ミラーフィルター：「何を録画するかのルール」</a></li>
+            <li class="toc-h3"><a href="#フィルタールールの設定項目">📋 フィルタールールの設定項目</a></li>
+            <li class="toc-h3"><a href="#フィルターの動作イメージ">🔍 フィルターの動作イメージ</a></li>
+            <li class="toc-h2"><a href="#④-ミラーセッション-すべてを結びつける配線">🔗 ④ ミラーセッション：「すべてを結びつける配線」</a></li>
+            <li class="toc-h3"><a href="#セッションが結びつける流れ">🔄 セッションが結びつける流れ</a></li>
+            <li class="toc-h3"><a href="#セッションの主要パラメータ">📋 セッションの主要パラメータ</a></li>
+            <li class="toc-h3"><a href="#AWS-CLIでセッションを作成する例">💻 AWS CLIでセッションを作成する例</a></li>
+            <li class="toc-h2"><a href="#️-実践的な構成パターン">🛠️ 実践的な構成パターン</a></li>
+            <li class="toc-h2"><a href="#⚠️-注意点-＆-ベストプラクティス">⚠️ 注意点 ＆ ベストプラクティス</a></li>
+            <li class="toc-h3"><a href="#⚠️-よくある落とし穴">⚠️ よくある落とし穴</a></li>
+            <li class="toc-h3"><a href="#✅-ベストプラクティス">✅ ベストプラクティス</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問FAQ">❓ よくある質問（FAQ）</a></li>
+            <li class="toc-h2"><a href="#まとめ">🎓 まとめ</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+
+  <!-- ページヘッダー -->
+  <header class="page-header">
+    <div class="page-header-inner">
+      <span class="page-badge">VPC ネットワークセキュリティ</span>
+      <h1>📹 <span>VPCトラフィックミラーリング</span> 完全ガイド<br>4つの構成要素を徹底図解</h1>
+      <p class="page-header-sub">「ビルの監視カメラシステム」のたとえで、ミラーソース・ターゲット・フィルター・セッションを完全理解</p>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="container">
+
+    <!-- ========================================
+         結論ファースト
+         ======================================== -->
+    <section class="conclusion-box" aria-label="結論サマリー">
+      <h2 id="結論ファースト-トラフィックミラーリングは4つのパーツでできている">🎯 結論ファースト：トラフィックミラーリングは4つのパーツでできている</h2>
+      <p class="conclusion-text">VPCトラフィックミラーリングは、EC2インスタンスなどのネットワーク通信を<strong>丸ごとコピー</strong>して、セキュリティ分析ツールに転送する機能です。この機能は、以下の<strong>4つの構成要素</strong>を組み合わせて動作します。</p>
+
+      <div class="conclusion-4cards">
+        <div class="conclusion-4card">
+          <span class="conclusion-4card-icon" aria-hidden="true">📷</span>
+          <div class="conclusion-4card-body">
+            <strong>① ミラーソース</strong>
+            <span>どこのトラフィックをコピーするか（カメラの設置場所）</span>
+          </div>
+        </div>
+        <div class="conclusion-4card">
+          <span class="conclusion-4card-icon" aria-hidden="true">🖥️</span>
+          <div class="conclusion-4card-body">
+            <strong>② ミラーターゲット</strong>
+            <span>コピーしたデータをどこに送るか（警備室のモニター）</span>
+          </div>
+        </div>
+        <div class="conclusion-4card">
+          <span class="conclusion-4card-icon" aria-hidden="true">🎚️</span>
+          <div class="conclusion-4card-body">
+            <strong>③ ミラーフィルター</strong>
+            <span>どのトラフィックをコピーするか（録画ルール）</span>
+          </div>
+        </div>
+        <div class="conclusion-4card">
+          <span class="conclusion-4card-icon" aria-hidden="true">🔗</span>
+          <div class="conclusion-4card-body">
+            <strong>④ ミラーセッション</strong>
+            <span>①②③を結びつける設定（配線チャンネル）</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="conclusion-oneliner">💡 「どこで撮る？」「どこに映す？」「何を撮る？」「全部つなげる設定」の4ステップ</div>
+    </section>
+
+    <!-- ========================================
+         たとえ話：ビルの監視カメラシステム
+         ======================================== -->
+    <section class="section" aria-label="たとえ話で理解する全体像">
+      <h2 id="たとえ話-ビルの監視カメラシステムで理解しよう">🏢 たとえ話：ビルの監視カメラシステムで理解しよう</h2>
+
+      <div class="analogy-overview">
+        <div class="analogy-overview-icon" aria-hidden="true">🏢📹</div>
+        <p>VPCトラフィックミラーリングは、<strong>ビルの監視カメラシステム</strong>とそっくりです。<br>ビル内の各フロアにカメラを設置して、映像を警備室のモニターに送り、録画条件を設定して、配線で全部つなげる——<br>AWSのネットワーク監視も、まったく同じ発想で構成されています。</p>
+      </div>
+
+      <!-- たとえ → AWS 対応表 -->
+      <h3 id="たとえ話-→-AWS構成要素の対応">🔄 たとえ話 → AWS構成要素の対応</h3>
+      <div class="mapping-table-wrap">
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th scope="col">監視カメラのたとえ</th>
+              <th scope="col">📹 AWSの構成要素</th>
+              <th scope="col">具体的な役割</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>📷 カメラの設置場所（どのフロアのどのドア前）</td>
+              <td>① ミラーソース（ENI）</td>
+              <td>EC2やNLBのネットワークインターフェースを指定して、通信をキャプチャする起点</td>
+            </tr>
+            <tr>
+              <td>🖥️ 警備室のモニター（映像の受信先）</td>
+              <td>② ミラーターゲット（NLB / ENI / GWLB）</td>
+              <td>コピーされたパケットの送信先。分析ツールが稼働するリソース</td>
+            </tr>
+            <tr>
+              <td>🎚️ 録画ルール（営業時間外のみ・特定エリアのみ）</td>
+              <td>③ ミラーフィルター</td>
+              <td>プロトコル・ポート・IPで条件を指定し、必要なパケットだけコピーする</td>
+            </tr>
+            <tr>
+              <td>🔗 カメラ→モニターの配線設定・チャンネル</td>
+              <td>④ ミラーセッション</td>
+              <td>ソース・ターゲット・フィルターを結び付けて、ミラーリングを有効にする</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================
+         全体アーキテクチャ図
+         ======================================== -->
+    <section class="section" aria-label="全体アーキテクチャ図">
+      <h2 id="️-全体アーキテクチャ-4つの構成要素の関係">🏗️ 全体アーキテクチャ：4つの構成要素の関係</h2>
+      <p>4つの構成要素がどのように連携してトラフィックミラーリングが動作するのか、全体の流れを図で確認しましょう。</p>
+
+      <div class="diagram-center">
+        <svg role="img" aria-label="VPCトラフィックミラーリングの全体アーキテクチャ図。ミラーソース（ENI）からミラーフィルターを通してミラーターゲットに送られ、これらをミラーセッションが結合する流れ" viewBox="0 0 760 420" width="760" height="420" xmlns="http://www.w3.org/2000/svg">
+          <!-- 背景 -->
+          <rect x="0" y="0" width="760" height="420" rx="16" fill="#f8fafc"/>
+
+          <!-- VPC枠 -->
+          <rect x="15" y="10" width="730" height="400" rx="14" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="8 4"/>
+          <text x="40" y="35" font-size="14" font-weight="700" fill="#1e40af">🌐 VPC</text>
+
+          <!-- ========= ① ミラーソース ========= -->
+          <rect x="35" y="60" width="195" height="170" rx="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+          <text x="132" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">📷 ① ミラーソース</text>
+          <text x="132" y="103" text-anchor="middle" font-size="11" fill="#6b7280">（カメラの設置場所）</text>
+
+          <rect x="55" y="115" width="155" height="40" rx="8" fill="#fff" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="132" y="133" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">🖥️ EC2 インスタンス</text>
+          <text x="132" y="149" text-anchor="middle" font-size="10" fill="#6b7280">ENI（eni-abc123）</text>
+
+          <rect x="55" y="165" width="155" height="40" rx="8" fill="#fff" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="132" y="183" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">⚖️ NLB ノード</text>
+          <text x="132" y="199" text-anchor="middle" font-size="10" fill="#6b7280">ENI（eni-def456）</text>
+
+          <!-- 矢印：ソース → フィルター -->
+          <line x1="230" y1="145" x2="280" y2="145" stroke="#ef4444" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+          <text x="253" y="137" text-anchor="middle" font-size="10" fill="#ef4444" font-weight="600">コピー</text>
+
+          <!-- ========= ③ ミラーフィルター ========= -->
+          <rect x="280" y="70" width="195" height="150" rx="12" fill="#fefce8" stroke="#fde047" stroke-width="2"/>
+          <text x="377" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#a16207">🎚️ ③ ミラーフィルター</text>
+          <text x="377" y="113" text-anchor="middle" font-size="11" fill="#6b7280">（録画ルール）</text>
+
+          <rect x="300" y="125" width="155" height="30" rx="6" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+          <text x="377" y="145" text-anchor="middle" font-size="11" fill="#15803d">✅ ACCEPT: TCP/443</text>
+
+          <rect x="300" y="162" width="155" height="30" rx="6" fill="#fee2e2" stroke="#fca5a5" stroke-width="1"/>
+          <text x="377" y="182" text-anchor="middle" font-size="11" fill="#b91c1c">❌ REJECT: UDP/*</text>
+
+          <!-- 矢印：フィルター → ターゲット -->
+          <line x1="475" y1="145" x2="530" y2="145" stroke="#22c55e" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+          <text x="500" y="137" text-anchor="middle" font-size="10" fill="#22c55e" font-weight="600">転送</text>
+
+          <!-- ========= ② ミラーターゲット ========= -->
+          <rect x="530" y="60" width="200" height="170" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+          <text x="630" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">🖥️ ② ミラーターゲット</text>
+          <text x="630" y="103" text-anchor="middle" font-size="11" fill="#6b7280">（警備室のモニター）</text>
+
+          <rect x="550" y="115" width="160" height="40" rx="8" fill="#fff" stroke="#86efac" stroke-width="1.5"/>
+          <text x="630" y="133" text-anchor="middle" font-size="12" font-weight="600" fill="#15803d">⚖️ NLB</text>
+          <text x="630" y="149" text-anchor="middle" font-size="10" fill="#6b7280">背後にセキュリティツール</text>
+
+          <rect x="550" y="165" width="160" height="40" rx="8" fill="#fff" stroke="#86efac" stroke-width="1.5"/>
+          <text x="630" y="183" text-anchor="middle" font-size="12" font-weight="600" fill="#15803d">🔬 分析ツール</text>
+          <text x="630" y="199" text-anchor="middle" font-size="10" fill="#6b7280">Suricata / Zeek 等</text>
+
+          <!-- ========= ④ ミラーセッション（下部帯） ========= -->
+          <rect x="35" y="280" width="695" height="115" rx="12" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="2"/>
+          <text x="382" y="308" text-anchor="middle" font-size="14" font-weight="700" fill="#6d28d9">🔗 ④ ミラーセッション（カメラ→モニターの配線設定）</text>
+          <text x="382" y="330" text-anchor="middle" font-size="12" fill="#6b7280">ソース・フィルター・ターゲットを1つに結び付け、ミラーリングを有効化する設定</text>
+
+          <!-- セッションの3要素 -->
+          <rect x="70" y="348" width="150" height="35" rx="8" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="145" y="370" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">📷 ソース指定</text>
+
+          <text x="245" y="370" text-anchor="middle" font-size="16" fill="#9ca3af">→</text>
+
+          <rect x="275" y="348" width="150" height="35" rx="8" fill="#fef9c3" stroke="#fde047" stroke-width="1.5"/>
+          <text x="350" y="370" text-anchor="middle" font-size="12" font-weight="600" fill="#a16207">🎚️ フィルター適用</text>
+
+          <text x="450" y="370" text-anchor="middle" font-size="16" fill="#9ca3af">→</text>
+
+          <rect x="480" y="348" width="150" height="35" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+          <text x="555" y="370" text-anchor="middle" font-size="12" font-weight="600" fill="#15803d">🖥️ ターゲット送信</text>
+
+          <!-- 接続線：セッション → ソース -->
+          <line x1="132" y1="280" x2="132" y2="230" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <!-- 接続線：セッション → フィルター -->
+          <line x1="377" y1="280" x2="377" y2="220" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <!-- 接続線：セッション → ターゲット -->
+          <line x1="630" y1="280" x2="630" y2="230" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+          <!-- マーカー定義 -->
+          <defs>
+            <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#ef4444"/>
+            </marker>
+            <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#22c55e"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- 4構成要素の概要カード（2x2） -->
+      <h3 id="4つの構成要素のポイント">📌 4つの構成要素のポイント</h3>
+      <div class="components-grid">
+        <div class="comp-card comp-card-source">
+          <span class="comp-card-number">1</span>
+          <div class="comp-card-header">
+            <span class="comp-card-header-icon" aria-hidden="true">📷</span>
+            <h3 id="ミラーソース">ミラーソース</h3>
+          </div>
+          <div class="comp-card-analogy">🏢 たとえ：カメラの設置場所</div>
+          <p>トラフィックをキャプチャする<strong>ENI（Elastic Network Interface）</strong>を指定する。EC2やNLBのネットワークインターフェースが対象。</p>
+        </div>
+        <div class="comp-card comp-card-target">
+          <span class="comp-card-number">2</span>
+          <div class="comp-card-header">
+            <span class="comp-card-header-icon" aria-hidden="true">🖥️</span>
+            <h3 id="ミラーターゲット">ミラーターゲット</h3>
+          </div>
+          <div class="comp-card-analogy">🏢 たとえ：警備室のモニター</div>
+          <p>コピーされたパケットの<strong>送信先</strong>。NLB、ENI、またはGateway Load Balancerエンドポイントを指定する。</p>
+        </div>
+        <div class="comp-card comp-card-filter">
+          <span class="comp-card-number">3</span>
+          <div class="comp-card-header">
+            <span class="comp-card-header-icon" aria-hidden="true">🎚️</span>
+            <h3 id="ミラーフィルター">ミラーフィルター</h3>
+          </div>
+          <div class="comp-card-analogy">🏢 たとえ：録画ルール設定</div>
+          <p><strong>どのトラフィックをコピーするか</strong>をルールで定義。プロトコル、ポート範囲、CIDR等で条件指定する。</p>
+        </div>
+        <div class="comp-card comp-card-session">
+          <span class="comp-card-number">4</span>
+          <div class="comp-card-header">
+            <span class="comp-card-header-icon" aria-hidden="true">🔗</span>
+            <h3 id="ミラーセッション">ミラーセッション</h3>
+          </div>
+          <div class="comp-card-analogy">🏢 たとえ：配線・チャンネル設定</div>
+          <p>ソース・フィルター・ターゲットを<strong>1つに結びつける設定</strong>。セッション番号で優先順位も管理できる。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         深掘り① ミラーソース
+         ======================================== -->
+    <section class="deep-section deep-source" aria-label="ミラーソース詳細">
+      <h2 id="①-ミラーソース-どこにカメラを置くか">📷 ① ミラーソース：「どこにカメラを置くか」</h2>
+
+      <p>ミラーソースは、パケットのコピーを取得する<strong>ネットワークインターフェース（ENI）</strong>です。ビルの例では「どのフロアのどのドア前にカメラを置くか」に相当します。</p>
+
+      <h3 id="ミラーソースとして指定できるリソース">📋 ミラーソースとして指定できるリソース</h3>
+      <div class="resource-grid">
+        <div class="resource-card">
+          <div class="resource-card-icon" aria-hidden="true">🖥️</div>
+          <span class="resource-card-name">EC2 インスタンス</span>
+          <span class="resource-card-desc">もっとも一般的なソース。WebサーバーやDBサーバーのENI</span>
+        </div>
+        <div class="resource-card">
+          <div class="resource-card-icon" aria-hidden="true">⚖️</div>
+          <span class="resource-card-name">NLB（Network LB）</span>
+          <span class="resource-card-desc">NLBノードのENIからロードバランサーを通過するトラフィックをキャプチャ</span>
+        </div>
+        <div class="resource-card">
+          <div class="resource-card-icon" aria-hidden="true">🌐</div>
+          <span class="resource-card-name">その他ENI</span>
+          <span class="resource-card-desc">NAT Gateway、Transit Gateway Attachment等のENI付きリソース</span>
+        </div>
+      </div>
+
+      <h3 id="⚠️-ソース指定の制約">⚠️ ソース指定の制約</h3>
+      <p><strong>Nitroベースのインスタンス</strong>のENIのみがミラーソースになれます。旧世代（t2, m4, c4等）のインスタンスは非対応です。たとえるなら「古いビルの旧型カメラ端子には新しい録画装置を接続できない」のと同じです。</p>
+      <p>1つのENIは<strong>最大3つのミラーセッション</strong>のソースとして使えます。これは1台のカメラの映像を最大3つのモニターに同時配信できるイメージです。</p>
+    </section>
+
+    <!-- ========================================
+         深掘り② ミラーターゲット
+         ======================================== -->
+    <section class="deep-section deep-target" aria-label="ミラーターゲット詳細">
+      <h2 id="️-②-ミラーターゲット-警備室のモニター">🖥️ ② ミラーターゲット：「警備室のモニター」</h2>
+
+      <p>ミラーターゲットは、コピーされたパケットの<strong>送信先</strong>です。ここにセキュリティ分析ツール（IDS/IPS等）が待ち構えており、パケットを受け取って解析します。</p>
+
+      <h3 id="3種類のミラーターゲット">📋 3種類のミラーターゲット</h3>
+      <div class="target-grid">
+        <div class="target-card">
+          <div class="target-card-icon" aria-hidden="true">⚖️</div>
+          <span class="target-card-name">Network Load Balancer</span>
+          <span class="target-card-desc">最も一般的。複数の分析インスタンスに負荷分散でき、高可用性を実現</span>
+          <span class="target-card-analogy">🏢 大型警備室に複数モニター</span>
+        </div>
+        <div class="target-card">
+          <div class="target-card-icon" aria-hidden="true">🔌</div>
+          <span class="target-card-name">ENI（単体）</span>
+          <span class="target-card-desc">特定の1台のEC2インスタンスに直接送信。小規模やテスト向き</span>
+          <span class="target-card-analogy">🏢 1台のモニターに直結</span>
+        </div>
+        <div class="target-card">
+          <div class="target-card-icon" aria-hidden="true">🚪</div>
+          <span class="target-card-name">GWLB エンドポイント</span>
+          <span class="target-card-desc">Gateway LBを経由してサードパーティのセキュリティアプライアンスに転送</span>
+          <span class="target-card-analogy">🏢 外部警備会社のシステム</span>
+        </div>
+      </div>
+
+      <h3 id="ターゲット選択のポイント">💡 ターゲット選択のポイント</h3>
+      <p><strong>本番環境</strong>ではNLBをターゲットに選ぶのがベストプラクティスです。NLBの背後に複数の分析インスタンスを配置すれば、1台が故障しても残りがカバーでき、大量トラフィックにも対応できます。</p>
+      <p>ミラーターゲットは<strong>ソースと同じVPC内</strong>、または<strong>VPCピアリング/Transit Gateway経由の別VPC</strong>に配置できます。たとえるなら、カメラの映像を同じビル内の警備室に送ることも、隣のビルの中央警備センターに送ることもできるということです。</p>
+    </section>
+
+    <!-- ========================================
+         深掘り③ ミラーフィルター
+         ======================================== -->
+    <section class="deep-section deep-filter" aria-label="ミラーフィルター詳細">
+      <h2 id="️-③-ミラーフィルター-何を録画するかのルール">🎚️ ③ ミラーフィルター：「何を録画するかのルール」</h2>
+
+      <p>ミラーフィルターは、<strong>どのトラフィックをキャプチャしてどれを除外するか</strong>をルールで定義します。全トラフィックをコピーするとコストが膨大になるため、必要なパケットだけを絞り込むのが現実的です。</p>
+
+      <h3 id="フィルタールールの設定項目">📋 フィルタールールの設定項目</h3>
+      <div class="filter-table-wrap">
+        <table class="filter-table">
+          <thead>
+            <tr>
+              <th scope="col">設定項目</th>
+              <th scope="col">説明</th>
+              <th scope="col">監視カメラのたとえ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>ルール番号</strong></td>
+              <td>ルールの優先順位（小さい番号ほど優先）</td>
+              <td>「ルール1が最優先、ルール2はその次…」</td>
+            </tr>
+            <tr>
+              <td><strong>アクション</strong></td>
+              <td><span class="filter-badge-accept">ACCEPT</span> = キャプチャする　<span class="filter-badge-reject">REJECT</span> = しない</td>
+              <td>「このフロアは録画する／しない」</td>
+            </tr>
+            <tr>
+              <td><strong>プロトコル</strong></td>
+              <td>TCP(6)、UDP(17)、ICMP(1) 等を番号で指定</td>
+              <td>「映像通話だけ録画」「電話だけ録画」</td>
+            </tr>
+            <tr>
+              <td><strong>送信元 CIDR</strong></td>
+              <td>送信元IPアドレスの範囲（0.0.0.0/0 で全通信）</td>
+              <td>「来訪者の出身エリアで絞る」</td>
+            </tr>
+            <tr>
+              <td><strong>宛先 CIDR</strong></td>
+              <td>宛先IPアドレスの範囲</td>
+              <td>「特定フロアへ向かう人だけ録画」</td>
+            </tr>
+            <tr>
+              <td><strong>送信元ポート範囲</strong></td>
+              <td>送信元ポートの範囲（例: 1024-65535）</td>
+              <td>「どの入口から来たか」</td>
+            </tr>
+            <tr>
+              <td><strong>宛先ポート範囲</strong></td>
+              <td>宛先ポートの範囲（例: 443-443 でHTTPSのみ）</td>
+              <td>「どの部屋に入ろうとしているか」</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="フィルターの動作イメージ">🔍 フィルターの動作イメージ</h3>
+      <div class="diagram-center">
+        <svg role="img" aria-label="ミラーフィルターの動作イメージ図。インバウンドとアウトバウンドそれぞれにルールが適用され、条件に合致したパケットだけがミラーターゲットに送られる流れ" viewBox="0 0 680 280" width="680" height="280" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="680" height="280" rx="14" fill="#fffbeb"/>
+
+          <!-- 全パケット -->
+          <rect x="20" y="40" width="130" height="60" rx="10" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+          <text x="85" y="65" text-anchor="middle" font-size="12" font-weight="700" fill="#374151">📦 全パケット</text>
+          <text x="85" y="83" text-anchor="middle" font-size="10" fill="#6b7280">ENIを通過する全通信</text>
+
+          <!-- 矢印 -->
+          <line x1="150" y1="70" x2="195" y2="70" stroke="#a16207" stroke-width="2" marker-end="url(#arrow-yellow)"/>
+
+          <!-- フィルター -->
+          <rect x="195" y="15" width="280" height="250" rx="12" fill="#fef9c3" stroke="#fde047" stroke-width="2"/>
+          <text x="335" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#a16207">🎚️ ミラーフィルター</text>
+
+          <!-- インバウンドルール -->
+          <rect x="215" y="55" width="240" height="85" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1"/>
+          <text x="335" y="75" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">⬇️ インバウンドルール</text>
+          <text x="225" y="95" font-size="10" fill="#15803d">✅ ルール100: TCP/443 ACCEPT</text>
+          <text x="225" y="112" font-size="10" fill="#15803d">✅ ルール200: TCP/80 ACCEPT</text>
+          <text x="225" y="129" font-size="10" fill="#b91c1c">❌ ルール300: ALL REJECT</text>
+
+          <!-- アウトバウンドルール -->
+          <rect x="215" y="150" width="240" height="85" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1"/>
+          <text x="335" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">⬆️ アウトバウンドルール</text>
+          <text x="225" y="190" font-size="10" fill="#15803d">✅ ルール100: TCP/* ACCEPT</text>
+          <text x="225" y="207" font-size="10" fill="#b91c1c">❌ ルール200: UDP/* REJECT</text>
+          <text x="225" y="224" font-size="10" fill="#15803d">✅ ルール300: ICMP ACCEPT</text>
+
+          <!-- 矢印 -->
+          <line x1="475" y1="140" x2="520" y2="140" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow-green2)"/>
+
+          <!-- 通過パケット -->
+          <rect x="520" y="85" width="140" height="110" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+          <text x="590" y="110" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d">✅ 通過パケット</text>
+          <text x="590" y="132" text-anchor="middle" font-size="10" fill="#374151">条件に合致した</text>
+          <text x="590" y="148" text-anchor="middle" font-size="10" fill="#374151">パケットだけが</text>
+          <text x="590" y="164" text-anchor="middle" font-size="10" fill="#374151">ターゲットに転送</text>
+          <text x="590" y="183" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">→ 🖥️ ターゲットへ</text>
+
+          <defs>
+            <marker id="arrow-yellow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#a16207"/>
+            </marker>
+            <marker id="arrow-green2" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#22c55e"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <p><strong>重要：</strong>フィルターにはインバウンド（受信）とアウトバウンド（送信）それぞれにルールを設定します。ルールはNACLのように番号順に評価され、最初にマッチしたルールが適用されます。</p>
+    </section>
+
+    <!-- ========================================
+         深掘り④ ミラーセッション
+         ======================================== -->
+    <section class="deep-section deep-session" aria-label="ミラーセッション詳細">
+      <h2 id="④-ミラーセッション-すべてを結びつける配線">🔗 ④ ミラーセッション：「すべてを結びつける配線」</h2>
+
+      <p>ミラーセッションは、ここまでの3つの構成要素を<strong>1つのセットとして結びつける設定</strong>です。ビルの例では「このカメラの映像を、このルールで録画して、この警備室モニターに送る」という配線チャンネルの設定に相当します。</p>
+
+      <h3 id="セッションが結びつける流れ">🔄 セッションが結びつける流れ</h3>
+      <div class="session-flow">
+        <div class="session-flow-box session-flow-source">📷 ミラーソース<br><small>ENI指定</small></div>
+        <span class="session-flow-arrow" aria-hidden="true">→</span>
+        <div class="session-flow-box session-flow-filter">🎚️ ミラーフィルター<br><small>ルール適用</small></div>
+        <span class="session-flow-arrow" aria-hidden="true">→</span>
+        <div class="session-flow-box session-flow-target">🖥️ ミラーターゲット<br><small>分析ツールへ</small></div>
+      </div>
+
+      <h3 id="セッションの主要パラメータ">📋 セッションの主要パラメータ</h3>
+      <div class="session-param-grid">
+        <div class="session-param-card">
+          <strong>🔢 セッション番号（Session Number）</strong>
+          <p>1つのENIに複数セッションがある場合の<strong>優先順位</strong>。番号が小さいほどパケットが先に評価される。同じパケットを複数のターゲットに送りたいときに使う。</p>
+        </div>
+        <div class="session-param-card">
+          <strong>📐 パケット長（Packet Length）</strong>
+          <p>ミラーリングするパケットの<strong>最大バイト数</strong>を指定。ヘッダーだけ必要な場合は短く設定してコスト削減。省略すると全体をコピー。</p>
+        </div>
+        <div class="session-param-card">
+          <strong>🔖 VNI（Virtual Network Identifier）</strong>
+          <p>VXLANカプセル化で使用する識別番号。ターゲット側で<strong>複数のセッションからのトラフィックを区別</strong>するために使う。</p>
+        </div>
+        <div class="session-param-card">
+          <strong>📝 説明（Description）</strong>
+          <p>セッションの<strong>用途をメモ</strong>する任意フィールド。「本番WebサーバーHTTPS監視用」のように、運用時にわかりやすい説明を付ける。</p>
+        </div>
+      </div>
+
+      <h3 id="AWS-CLIでセッションを作成する例">💻 AWS CLIでセッションを作成する例</h3>
+      <div class="cli-block">
+        <code><span class="cli-comment"># ミラーセッションの作成</span>
+<span class="cli-cmd">aws ec2 create-traffic-mirror-session</span> \
+  <span class="cli-key">--traffic-mirror-target-id</span> <span class="cli-val">tmt-0abcd1234efgh5678</span> \
+  <span class="cli-key">--network-interface-id</span>    <span class="cli-val">eni-0a1b2c3d4e5f6g7h8</span> \
+  <span class="cli-key">--traffic-mirror-filter-id</span> <span class="cli-val">tmf-0abcd1234efgh5678</span> \
+  <span class="cli-key">--session-number</span>           <span class="cli-val">1</span> \
+  <span class="cli-key">--description</span>              <span class="cli-val">"Web-server-HTTPS-monitoring"</span></code>
+      </div>
+    </section>
+
+    <!-- ========================================
+         実践的な構成パターン
+         ======================================== -->
+    <section class="section" aria-label="実践的な構成パターン">
+      <h2 id="️-実践的な構成パターン">🛠️ 実践的な構成パターン</h2>
+
+      <div class="diagram-center">
+        <svg role="img" aria-label="実践的な構成パターン図。複数のEC2ソースからNLBターゲット配下の分析ツール群にミラーパケットが送られる構成" viewBox="0 0 720 340" width="720" height="340" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="720" height="340" rx="16" fill="#f8fafc"/>
+
+          <!-- ラベル：本番ワークロード -->
+          <text x="110" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">📷 ミラーソース群</text>
+
+          <!-- EC2群 -->
+          <rect x="25" y="40" width="170" height="55" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+          <text x="110" y="63" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">🖥️ Web Server 1</text>
+          <text x="110" y="81" text-anchor="middle" font-size="10" fill="#6b7280">eni-web01</text>
+
+          <rect x="25" y="110" width="170" height="55" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+          <text x="110" y="133" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">🖥️ Web Server 2</text>
+          <text x="110" y="151" text-anchor="middle" font-size="10" fill="#6b7280">eni-web02</text>
+
+          <rect x="25" y="180" width="170" height="55" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+          <text x="110" y="203" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">🗄️ DB Server</text>
+          <text x="110" y="221" text-anchor="middle" font-size="10" fill="#6b7280">eni-db01</text>
+
+          <!-- フィルター -->
+          <rect x="250" y="60" width="150" height="110" rx="12" fill="#fefce8" stroke="#fde047" stroke-width="2"/>
+          <text x="325" y="85" text-anchor="middle" font-size="12" font-weight="700" fill="#a16207">🎚️ フィルター</text>
+          <text x="260" y="108" font-size="10" fill="#15803d">✅ TCP/443</text>
+          <text x="260" y="126" font-size="10" fill="#15803d">✅ TCP/3306</text>
+          <text x="260" y="144" font-size="10" fill="#b91c1c">❌ ICMP</text>
+          <text x="260" y="162" font-size="10" fill="#b91c1c">❌ その他UDP</text>
+
+          <!-- 矢印群 -->
+          <line x1="195" y1="67" x2="250" y2="100" stroke="#a16207" stroke-width="1.5"/>
+          <line x1="195" y1="137" x2="250" y2="115" stroke="#a16207" stroke-width="1.5"/>
+          <line x1="195" y1="207" x2="250" y2="140" stroke="#a16207" stroke-width="1.5"/>
+
+          <line x1="400" y1="115" x2="450" y2="115" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow-g3)"/>
+
+          <!-- NLBターゲット -->
+          <rect x="450" y="50" width="120" height="55" rx="10" fill="#dcfce7" stroke="#86efac" stroke-width="2"/>
+          <text x="510" y="73" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d">⚖️ NLB</text>
+          <text x="510" y="91" text-anchor="middle" font-size="10" fill="#6b7280">ミラーターゲット</text>
+
+          <!-- 分析ツール群 -->
+          <line x1="510" y1="105" x2="510" y2="130" stroke="#22c55e" stroke-width="1.5"/>
+
+          <rect x="450" y="130" width="120" height="45" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+          <text x="510" y="150" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">🔬 Suricata #1</text>
+          <text x="510" y="167" text-anchor="middle" font-size="10" fill="#6b7280">IDS/IPS</text>
+
+          <rect x="450" y="185" width="120" height="45" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+          <text x="510" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">🔬 Suricata #2</text>
+          <text x="510" y="222" text-anchor="middle" font-size="10" fill="#6b7280">IDS/IPS</text>
+
+          <!-- セッション帯 -->
+          <rect x="25" y="270" width="555" height="55" rx="10" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="2"/>
+          <text x="302" y="295" text-anchor="middle" font-size="12" font-weight="700" fill="#6d28d9">🔗 ミラーセッション ×3（各ソースに対して1セッション → 同じフィルター＆ターゲットを共有）</text>
+          <text x="302" y="315" text-anchor="middle" font-size="11" fill="#6b7280">Session #1: Web01 → Filter → NLB　｜　Session #2: Web02 → Filter → NLB　｜　Session #3: DB01 → Filter → NLB</text>
+
+          <defs>
+            <marker id="arrow-g3" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#22c55e"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <p>このパターンでは、3台のサーバーそれぞれに<strong>個別のミラーセッション</strong>を作成し、同じフィルターと同じNLBターゲットを共有しています。フィルターとターゲットは<strong>複数セッションで再利用可能</strong>なので、管理がシンプルに保てます。</p>
+    </section>
+
+    <!-- ========================================
+         注意点・ベストプラクティス
+         ======================================== -->
+    <section class="section" aria-label="注意点とベストプラクティス">
+      <h2 id="⚠️-注意点-＆-ベストプラクティス">⚠️ 注意点 ＆ ベストプラクティス</h2>
+
+      <div class="tips-grid">
+        <div class="tips-card tips-card-warn">
+          <h3 id="⚠️-よくある落とし穴">⚠️ よくある落とし穴</h3>
+          <ul class="tips-list">
+            <li>
+              <span aria-hidden="true">🔴</span>
+              <span><strong>非Nitroインスタンス</strong>ではミラーリング不可（t2, m4, c4等は非対応）</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🔴</span>
+              <span>フィルターなしの全パケットコピーは<strong>コストが急増</strong>する（帯域も消費）</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🔴</span>
+              <span>1つのENIにつき<strong>最大3セッション</strong>まで。それ以上はエラー</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🔴</span>
+              <span>ミラーリングされたパケットはVXLANでカプセル化される。分析ツールが<strong>VXLAN対応</strong>であること</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🔴</span>
+              <span>ソースのEC2に<strong>パフォーマンス影響</strong>が出る場合がある（高トラフィック時）</span>
+            </li>
+          </ul>
+        </div>
+        <div class="tips-card tips-card-best">
+          <h3 id="✅-ベストプラクティス">✅ ベストプラクティス</h3>
+          <ul class="tips-list">
+            <li>
+              <span aria-hidden="true">🟢</span>
+              <span>まず<strong>フィルターで対象を絞る</strong>（必要なポート・プロトコルだけ）</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🟢</span>
+              <span>ターゲットは<strong>NLBを使う</strong>（高可用性・スケーラビリティ）</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🟢</span>
+              <span><strong>パケット長を制限</strong>（ヘッダーだけで十分な場合はバイト数を指定）</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🟢</span>
+              <span><strong>セッション説明</strong>に目的と対象を明記（運用時に混乱防止）</span>
+            </li>
+            <li>
+              <span aria-hidden="true">🟢</span>
+              <span>テスト環境で検証してから本番導入。<strong>段階的に</strong>ソースを追加</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         FAQ
+         ======================================== -->
+    <section class="section" aria-label="よくある質問">
+      <h2 id="❓-よくある質問FAQ">❓ よくある質問（FAQ）</h2>
+
+      <div class="faq-item">
+        <div class="faq-q"><span>Q.</span>トラフィックミラーリングとVPC Flow Logsの違いは？</div>
+        <div class="faq-a"><p>Flow Logsはメタデータ（IP・ポート・バイト数等）だけを記録しますが、トラフィックミラーリングはパケットの<strong>中身（ペイロード）まで丸ごとコピー</strong>します。深い分析が必要ならミラーリング、ログ記録だけならFlow Logsを使います。</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>Q.</span>ミラーリングするとEC2のパフォーマンスに影響がある？</div>
+        <div class="faq-a"><p>Nitroベースのインスタンスではハードウェアレベルでパケットコピーが行われるため、影響は最小限です。ただし、大量のミラーリングトラフィックが発生すると、ネットワーク帯域を消費します。フィルタリングで対象を絞ることが重要です。</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>Q.</span>別のVPCのターゲットにパケットを送れる？</div>
+        <div class="faq-a"><p>はい。<strong>VPCピアリングまたはTransit Gateway</strong>を使えば、ソースとは別のVPCにあるターゲットにミラーパケットを送信できます。セキュリティ専用VPCに分析基盤を集約する構成が一般的です。</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>Q.</span>コストはどう計算される？</div>
+        <div class="faq-a"><p>ミラーリング自体の追加料金はありません。ただし、コピーされたパケットが通過する<strong>データ転送料金</strong>、ターゲット（NLB等）の利用料金、分析ツールのEC2コストが発生します。フィルタリングでトラフィック量を抑えるのがコスト最適化の鍵です。</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>Q.</span>Lambda関数やFargateのトラフィックもミラーリングできる？</div>
+        <div class="faq-a"><p>いいえ。ミラーソースに指定できるのは<strong>Nitroベースインスタンスに接続されたENI</strong>のみです。LambdaやFargateは自前のENIを持ちますが、現時点ではミラーソースとして指定できません。</p></div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         まとめ
+         ======================================== -->
+    <section class="summary-box" aria-label="まとめ">
+      <h2 id="まとめ">🎓 まとめ</h2>
+      <div class="summary-4cards">
+        <div class="summary-4card summary-4card-source">
+          <strong>📷 ① ミラーソース</strong>
+          <span>パケットをコピーするENI。Nitroベースのインスタンスが必要。1 ENIにつき最大3セッション。</span>
+        </div>
+        <div class="summary-4card summary-4card-target">
+          <strong>🖥️ ② ミラーターゲット</strong>
+          <span>パケットの送信先。NLB（推奨）/ ENI / GWLBエンドポイント。別VPCも可能。</span>
+        </div>
+        <div class="summary-4card summary-4card-filter">
+          <strong>🎚️ ③ ミラーフィルター</strong>
+          <span>キャプチャ条件を定義するルール。プロトコル・ポート・CIDRで絞り込みコスト最適化。</span>
+        </div>
+        <div class="summary-4card summary-4card-session">
+          <strong>🔗 ④ ミラーセッション</strong>
+          <span>ソース・フィルター・ターゲットを結合。セッション番号で優先順位管理。CLIやコンソールで作成。</span>
+        </div>
+      </div>
+      <div class="summary-final">🏆 覚え方：「どこで撮る（ソース）→ 何を撮る（フィルター）→ どこに映す（ターゲット）→ 全部つなげる（セッション）」</div>
+    </section>
+
+  </main>
+
+  <!-- フッター -->
+  <footer class="page-footer">
+    <p>AWS SAP 学習リソース — VPCトラフィックミラーリング 完全ガイド</p>
+  </footer>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+</body>
+</html>

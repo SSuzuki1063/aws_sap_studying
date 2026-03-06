@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド</title>
+<!-- 共通CSSファイル（データ駆動アーキテクチャ） -->
+<link href="/aws_sap_studying/css/variables.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/common.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/layout.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"/>
+<link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"/>
+<meta name="description" content="AWS Route 53へのDNS移行をダウンタイムゼロで実現する手順を、郵便局の転送届けのたとえで分かりやすく図解">
+<style>
+/* ========================================
+   CSS Variables
+   ======================================== */
+:root {
+  --color-aws-dark: #232F3E;
+  --color-aws-orange: #dc7600;
+  --color-aws-orange-original: #FF9900;
+  --color-text-primary: #374151;
+  --color-text-secondary: #6B7280;
+  --color-text-white: #FFFFFF;
+  --color-bg-light: #F9FAFB;
+  --color-bg-white: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  --color-step1: #6366F1;
+  --color-step2: #8B5CF6;
+  --color-step3: #EC4899;
+  --color-step4: #F59E0B;
+  --color-step5: #10B981;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* ========================================
+   Reset & Base
+   ======================================== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 20px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.7;
+  color: var(--color-text-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #9333EA 50%, #0369A1 75%, #00f2fe 100%);
+  padding: 1rem;
+  min-height: 100vh;
+            padding-top: 70px;}
+
+/* ========================================
+   Container
+   ======================================== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: var(--color-bg-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  padding-top: 1rem;
+}
+
+/* ========================================
+   Header
+   ======================================== */
+.page-header {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-white);
+}
+
+.page-header-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.page-header-sub {
+  font-size: 1rem;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+.category-badge {
+  display: inline-block;
+  background: var(--color-aws-orange-original);
+  color: var(--color-text-white);
+  padding: 0.2rem 0.8rem;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* ========================================
+   Conclusion First - Key Takeaways
+   ======================================== */
+.takeaway-box {
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFFBEB 100%);
+  border: 2px solid var(--color-aws-orange-original);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.takeaway-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-aws-orange);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.takeaway-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.takeaway-item {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.takeaway-item-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background: var(--color-aws-orange-original);
+  color: var(--color-text-white);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.takeaway-item-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* ========================================
+   Section Styles
+   ======================================== */
+.section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-aws-dark);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--color-aws-orange-original);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-subtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.8rem;
+  margin-top: 1rem;
+}
+
+.section-desc {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+/* ========================================
+   Analogy Table
+   ======================================== */
+.analogy-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.analogy-table thead th {
+  background: var(--color-aws-dark);
+  color: var(--color-text-white);
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.analogy-table tbody td {
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.analogy-table tbody tr:nth-child(even) td {
+  background: var(--color-bg-light);
+}
+
+.analogy-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.analogy-emoji {
+  font-size: 1.2rem;
+  margin-right: 0.3rem;
+}
+
+/* ========================================
+   SVG Diagrams
+   ======================================== */
+.diagram-wrapper {
+  background: var(--color-bg-light);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.diagram-caption {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* ========================================
+   Step Flow
+   ======================================== */
+.step-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 1.5rem;
+}
+
+.step-item {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  gap: 1rem;
+  align-items: start;
+  position: relative;
+}
+
+.step-badge-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-badge {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-white);
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.step-connector {
+  width: 3px;
+  height: 2rem;
+  background: var(--color-border);
+  margin: 0.3rem 0;
+}
+
+.step-content {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid transparent;
+  margin-bottom: 0.5rem;
+}
+
+.step-content h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.step-content p {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.step-analogy {
+  background: #FEF3C7;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #92400E;
+  line-height: 1.6;
+}
+
+.step1 .step-badge { background: var(--color-step1); }
+.step1 .step-content { border-left-color: var(--color-step1); }
+.step2 .step-badge { background: var(--color-step2); }
+.step2 .step-content { border-left-color: var(--color-step2); }
+.step3 .step-badge { background: var(--color-step3); }
+.step3 .step-content { border-left-color: var(--color-step3); }
+.step4 .step-badge { background: var(--color-step4); }
+.step4 .step-content { border-left-color: var(--color-step4); }
+.step5 .step-badge { background: var(--color-step5); }
+.step5 .step-content { border-left-color: var(--color-step5); }
+
+/* ========================================
+   TTL Explanation
+   ======================================== */
+.ttl-visual {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ttl-card {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.ttl-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.ttl-card-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.ttl-card-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.ttl-high .ttl-card-value { color: var(--color-error); }
+.ttl-low .ttl-card-value { color: var(--color-success); }
+
+/* ========================================
+   Comparison Grid
+   ======================================== */
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.compare-card {
+  border-radius: var(--radius-md);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.compare-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.compare-card-body {
+  font-size: 0.9rem;
+  line-height: 1.7;
+            padding-top: 70px;}
+
+.compare-dns {
+  background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+  border: 1px solid #C7D2FE;
+}
+
+.compare-dns .compare-card-title { color: #4338CA; }
+
+.compare-reg {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 1px solid #FCD34D;
+}
+
+.compare-reg .compare-card-title { color: #92400E; }
+
+/* ========================================
+   Warning / Info Boxes
+   ======================================== */
+.callout {
+  border-radius: var(--radius-md);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.callout-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  line-height: 1;
+  padding-top: 0.15rem;
+}
+
+.callout-warn {
+  background: #FEF3C7;
+  border: 1px solid #FCD34D;
+  color: #92400E;
+}
+
+.callout-info {
+  background: #EFF6FF;
+  border: 1px solid #93C5FD;
+  color: #1E40AF;
+}
+
+.callout-success {
+  background: #ECFDF5;
+  border: 1px solid #6EE7B7;
+  color: #065F46;
+}
+
+/* ========================================
+   Parallel Ops Diagram
+   ======================================== */
+.parallel-box {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.parallel-phase {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.parallel-phase-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.parallel-phase-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.phase-before .parallel-phase-title { color: var(--color-step1); border-bottom-color: var(--color-step1); }
+.phase-during .parallel-phase-title { color: var(--color-step3); border-bottom-color: var(--color-step3); }
+.phase-after .parallel-phase-title { color: var(--color-step5); border-bottom-color: var(--color-step5); }
+
+/* ========================================
+   Checklist
+   ======================================== */
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--color-bg-light);
+  border-radius: var(--radius-sm);
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.checklist-check {
+  color: var(--color-success);
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ========================================
+   Why This Order - State Tracking
+   ======================================== */
+.why-order-intro {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  line-height: 1.8;
+  margin-bottom: 1.2rem;
+}
+
+.why-order-premise {
+  background: var(--color-bg-light);
+  border-radius: var(--radius-md);
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--color-info);
+}
+
+.why-order-premise-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-info);
+  margin-bottom: 0.5rem;
+}
+
+.why-order-premise-list {
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.why-order-premise-list p {
+  margin-bottom: 0.3rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.why-order-premise-num {
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  color: var(--color-info);
+}
+
+.state-track-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.state-track-card {
+  border-radius: var(--radius-md);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.state-track-card-phase {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.state-track-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.state-track-card-body {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--color-text-primary);
+            padding-top: 70px;}
+
+.state-track-card-body p {
+  margin-bottom: 0.3rem;
+}
+
+.state-track-card-result {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.state-ok {
+  background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+  border: 1px solid #6EE7B7;
+}
+
+.state-ok .state-track-card-phase { color: #065F46; }
+.state-ok .state-track-card-title { color: #065F46; }
+.state-ok .state-track-card-result { background: #D1FAE5; color: #065F46; }
+
+.state-parallel {
+  background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+  border: 1px solid #C7D2FE;
+}
+
+.state-parallel .state-track-card-phase { color: #4338CA; }
+.state-parallel .state-track-card-title { color: #4338CA; }
+.state-parallel .state-track-card-result { background: #E0E7FF; color: #4338CA; }
+
+.state-propagating {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A50);
+  border: 1px solid #FCD34D;
+}
+
+.state-propagating .state-track-card-phase { color: #92400E; }
+.state-propagating .state-track-card-title { color: #92400E; }
+.state-propagating .state-track-card-result { background: #FEF3C7; color: #92400E; }
+
+.state-danger {
+  background: linear-gradient(135deg, #FEF2F2, #FECACA50);
+  border: 1px solid #FCA5A5;
+}
+
+.state-danger .state-track-card-phase { color: #991B1B; }
+.state-danger .state-track-card-title { color: #991B1B; }
+.state-danger .state-track-card-result { background: #FEE2E2; color: #991B1B; }
+
+.why-order-danger-card {
+  margin-bottom: 1.5rem;
+}
+
+.why-order-summary {
+  background: linear-gradient(135deg, #232F3E, #37475A);
+  border-radius: var(--radius-md);
+  padding: 1.2rem 1.5rem;
+  color: var(--color-text-white);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.why-order-summary-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  color: var(--color-aws-orange-original);
+}
+
+.why-order-summary-text {
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+/* ========================================
+   Role Detail Cards
+   ======================================== */
+.role-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.role-detail-card {
+  border-radius: var(--radius-md);
+  padding: 1.3rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.role-detail-card-header {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.role-detail-card-body {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+            padding-top: 70px;}
+
+.role-detail-card-body p {
+  margin-bottom: 0.5rem;
+  padding-left: 1.2rem;
+  position: relative;
+}
+
+.role-detail-card-body p::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: inherit;
+  font-weight: 700;
+}
+
+.role-detail-card-examples {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.role-registrar {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A40 100%);
+  border: 1px solid #FCD34D;
+}
+
+.role-registrar .role-detail-card-header {
+  color: #92400E;
+  border-bottom: 2px solid #FCD34D;
+}
+
+.role-registrar .role-detail-card-body p::before {
+  color: #D97706;
+}
+
+.role-registrar .role-detail-card-examples {
+  background: #FFFBEB;
+  color: #92400E;
+}
+
+.role-hosting {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF40 100%);
+  border: 1px solid #C7D2FE;
+}
+
+.role-hosting .role-detail-card-header {
+  color: #4338CA;
+  border-bottom: 2px solid #C7D2FE;
+}
+
+.role-hosting .role-detail-card-body p::before {
+  color: #6366F1;
+}
+
+.role-hosting .role-detail-card-examples {
+  background: #EEF2FF;
+  color: #4338CA;
+}
+
+/* ========================================
+   NS Explainer Box
+   ======================================== */
+.ns-explainer {
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+  border: 1px solid #7DD3FC;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ns-explainer-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0369A1;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ns-explainer-text {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+  margin-bottom: 0.8rem;
+}
+
+.ns-explainer-example {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-sm);
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  border-left: 4px solid #0EA5E9;
+}
+
+.ns-explainer-example code {
+  background: #F0F9FF;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  color: #0369A1;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* ========================================
+   FAQ Section
+   ======================================== */
+.faq-item {
+  background: var(--color-bg-light);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.8rem;
+}
+
+.faq-q {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-aws-dark);
+  margin-bottom: 0.4rem;
+}
+
+.faq-a {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+/* ========================================
+   Footer
+   ======================================== */
+.page-footer {
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+</style>
+</head>
+<body>
+
+<!-- 左サイドバー目次 -->
+<div id="sidebar-toc" class="sidebar-toc">
+    <div class="sidebar-toc-header">
+        <h2>📑 目次</h2>
+    </div>
+    <nav class="sidebar-toc-content">
+        <ul>
+            <li class="toc-h2"><a href="#⚡-結論ファースト-ダウンタイムゼロ移行の3つの鉄則">⚡ 結論ファースト：ダウンタイムゼロ移行の3つの鉄則</a></li>
+            <li class="toc-h2"><a href="#郵便局の転送届けで理解するDNS移行">📮 郵便局の転送届けで理解するDNS移行</a></li>
+            <li class="toc-h3"><a href="#補足-NSName-Serverレコードとは？">📡 補足：NS（Name Server）レコードとは？</a></li>
+            <li class="toc-h2"><a href="#DNSホスティング-と-ドメイン登録-の違い">🔀 DNSホスティング と ドメイン登録 の違い</a></li>
+            <li class="toc-h3"><a href="#DNSホスティングDNS-Service">📬 DNSホスティング（DNS Service）</a></li>
+            <li class="toc-h3"><a href="#️-ドメイン登録Domain-Registration">🏛️ ドメイン登録（Domain Registration）</a></li>
+            <li class="toc-h3"><a href="#それぞれの役割を詳しく見る">🔎 それぞれの役割を詳しく見る</a></li>
+            <li class="toc-h3"><a href="#なぜこの順番ならダウンタイムが発生しないのか？">🤔 なぜこの順番ならダウンタイムが発生しないのか？</a></li>
+            <li class="toc-h3"><a href="#⛔-逆の順番レジストラを先に移行だとなぜ危険か？">⛔ 逆の順番（レジストラを先に移行）だとなぜ危険か？</a></li>
+            <li class="toc-h2"><a href="#️-全体フロー-5ステップ移行マップ">🗺️ 全体フロー：5ステップ移行マップ</a></li>
+            <li class="toc-h2"><a href="#各ステップの詳細と郵便たとえ">📝 各ステップの詳細と郵便たとえ</a></li>
+            <li class="toc-h3"><a href="#移行元DNSでTTLを短縮する">移行元DNSでTTLを短縮する</a></li>
+            <li class="toc-h3"><a href="#Route-53にホストゾーンを作成-&amp;-レコードをコピー">Route 53にホストゾーンを作成 &amp; レコードをコピー</a></li>
+            <li class="toc-h3"><a href="#Route-53のレコードが正しく応答するかテスト">Route 53のレコードが正しく応答するかテスト</a></li>
+            <li class="toc-h3"><a href="#レジストラでネームサーバーをRoute-53に変更">レジストラでネームサーバーをRoute 53に変更</a></li>
+            <li class="toc-h3"><a href="#オプションドメイン登録もRoute-53に移管">（オプション）ドメイン登録もRoute 53に移管</a></li>
+            <li class="toc-h2"><a href="#⏱️-TTLTime-to-Liveの仕組みと調整戦略">⏱️ TTL（Time to Live）の仕組みと調整戦略</a></li>
+            <li class="toc-h3"><a href="#通常時高TTL">🐢 通常時（高TTL）</a></li>
+            <li class="toc-h3"><a href="#移行前に短縮低TTL">🐇 移行前に短縮（低TTL）</a></li>
+            <li class="toc-h2"><a href="#並行運用フェーズ-新旧DNSの同時稼働">🔄 並行運用フェーズ：新旧DNSの同時稼働</a></li>
+            <li class="toc-h3"><a href="#変更前">📌 変更前</a></li>
+            <li class="toc-h3"><a href="#⚡-伝播中並行運用">⚡ 伝播中（並行運用）</a></li>
+            <li class="toc-h3"><a href="#✅-伝播完了後">✅ 伝播完了後</a></li>
+            <li class="toc-h2"><a href="#確認コマンド集">🔍 確認コマンド集</a></li>
+            <li class="toc-h2"><a href="#✅-移行前チェックリスト">✅ 移行前チェックリスト</a></li>
+            <li class="toc-h2"><a href="#❓-よくある質問FAQ">❓ よくある質問（FAQ）</a></li>
+            <li class="toc-h2"><a href="#まとめ-郵便の転送届け-=-DNS移行">📋 まとめ：郵便の転送届け = DNS移行</a></li>
+        </ul>
+    </nav>
+</div>
+
+<!-- サイドバー折りたたみボタン -->
+<button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉">
+    <span id="sidebar-toc-toggle-icon">◀</span>
+</button>
+
+<script>
+    function toggleSidebarTOC() {
+        const sidebar = document.getElementById('sidebar-toc');
+        const body = document.body;
+        const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+        // モバイルかどうか判定
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // モバイル: サイドバーにopenクラスをトグル
+            sidebar.classList.toggle('open');
+            icon.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+        } else {
+            // デスクトップ: bodyとサイドバーにcollapsedクラスをトグル
+            body.classList.toggle('sidebar-collapsed');
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        }
+
+        // ローカルストレージに状態を保存
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarTOCCollapsed', isCollapsed);
+    }
+
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        const isMobile = window.innerWidth <= 768;
+        const savedState = localStorage.getItem('sidebarTOCCollapsed');
+
+        if (isMobile) {
+            // モバイル: デフォルトで折りたたみ
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+            icon.textContent = '▶';
+        } else {
+            // デスクトップ: 保存された状態を復元（デフォルトは展開）
+            if (savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                document.getElementById('sidebar-toc').classList.add('collapsed');
+                document.getElementById('sidebar-toc-toggle-icon').textContent = '▶';
+            }
+        }
+
+        // リサイズ時の処理
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebar = document.getElementById('sidebar-toc');
+            const body = document.body;
+            const icon = document.getElementById('sidebar-toc-toggle-icon');
+
+            if (isMobile) {
+                // モバイルに切り替わった時
+                sidebar.classList.remove('collapsed');
+                body.classList.remove('sidebar-collapsed');
+                if (!sidebar.classList.contains('open')) {
+                    icon.textContent = '▶';
+                }
+            } else {
+                // デスクトップに切り替わった時
+                sidebar.classList.remove('open');
+                const isCollapsed = localStorage.getItem('sidebarTOCCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    sidebar.classList.add('collapsed');
+                    icon.textContent = '▶';
+                } else {
+                    icon.textContent = '◀';
+                }
+            }
+        });
+    });
+</script>
+
+
+<!-- 固定ナビゲーションヘッダー -->
+<div class="fixed-nav-header">
+<div class="fixed-nav-container">
+<a class="fixed-nav-logo" href="/aws_sap_studying/index.html">
+     📚 AWS SAP
+    </a>
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">☰</span></button>
+<nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav">
+<a href="/aws_sap_studying/profile.html">自己紹介</a>
+<a href="/aws_sap_studying/learning-resources.html">学習リソース集</a>
+<a href="/aws_sap_studying/roadmap.html">🗺️ロードマップ</a>
+<a href="/aws_sap_studying/exam_guide.html">試験ガイド</a>
+<a href="/aws_sap_studying/knowledge-base.html">ナレッジベース</a>
+<a href="/aws_sap_studying/quiz.html">クイズ</a>
+<a href="/aws_sap_studying/bookmark.html">⭐ブックマーク</a>
+</nav>
+</div>
+</div>
+<!-- 読書進捗インジケーター -->
+<div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar">
+<div class="reading-progress-bar" id="readingProgressBar">
+</div>
+</div>
+<!-- トップに戻るボタン -->
+<button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+   ↑
+  </button>
+
+<div class="container">
+
+  <!-- ===== Header ===== -->
+  <header class="page-header">
+    <div class="category-badge">Route 53 / DNS移行</div>
+    <div class="page-header-icon" aria-hidden="true">🔄</div>
+    <h1>DNSサービスのダウンタイムなし移行プロセス</h1>
+    <p class="page-header-sub">「郵便局の転送届け」で理解する、サービス無停止のDNS切り替え戦略</p>
+  </header>
+
+  <!-- ===== Main Content ===== -->
+  <main>
+
+    <!-- ===== Key Takeaways ===== -->
+    <section class="takeaway-box" aria-label="結論ファースト：3つの鉄則">
+      <h2 id="⚡-結論ファースト-ダウンタイムゼロ移行の3つの鉄則" class="takeaway-title"><span aria-hidden="true">⚡</span> 結論ファースト：ダウンタイムゼロ移行の3つの鉄則</h2>
+      <div class="takeaway-grid">
+        <div class="takeaway-item">
+          <div class="takeaway-item-num">1</div>
+          <p class="takeaway-item-text">DNSホスティング → レジストラの順で分離移行する</p>
+        </div>
+        <div class="takeaway-item">
+          <div class="takeaway-item-num">2</div>
+          <p class="takeaway-item-text">移行前にTTLを短縮し、変更の伝播を高速化する</p>
+        </div>
+        <div class="takeaway-item">
+          <div class="takeaway-item-num">3</div>
+          <p class="takeaway-item-text">新旧DNSサービスを並行運用し、完全確認後に切り替える</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Analogy Section ===== -->
+    <section class="section">
+      <h2 id="郵便局の転送届けで理解するDNS移行" class="section-title"><span aria-hidden="true">📮</span> 郵便局の転送届けで理解するDNS移行</h2>
+      <p class="section-desc">DNS移行は「引っ越し時の郵便転送届け」とまったく同じ構造です。住所（ドメイン）宛の手紙（通信）が途切れないように、転送手続き（DNS設定変更）を正しい順番で行う必要があります。</p>
+
+      <!-- Analogy Mapping SVG -->
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="郵便の転送届けとDNS移行の対応関係を示す図。左側に郵便局のたとえ、右側にAWSの技術用語を配置" viewBox="0 0 900 420" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background -->
+          <rect x="0" y="0" width="900" height="420" rx="16" fill="#F9FAFB"/>
+
+          <!-- Left Column: 郵便のたとえ -->
+          <rect x="30" y="20" width="400" height="50" rx="12" fill="#232F3E"/>
+          <text x="230" y="52" text-anchor="middle" fill="#FFF" font-size="22" font-weight="700">📮 郵便の転送届け</text>
+
+          <rect x="30" y="85" width="400" height="60" rx="10" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5"/>
+          <text x="230" y="120" text-anchor="middle" fill="#4338CA" font-size="20" font-weight="600">🏠 自宅の住所 = ドメイン名</text>
+
+          <rect x="30" y="160" width="400" height="60" rx="10" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5"/>
+          <text x="230" y="195" text-anchor="middle" fill="#4338CA" font-size="20" font-weight="600">📬 郵便局 = DNSサーバー</text>
+
+          <rect x="30" y="235" width="400" height="60" rx="10" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5"/>
+          <text x="230" y="270" text-anchor="middle" fill="#4338CA" font-size="20" font-weight="600">📋 住所録の情報 = DNSレコード</text>
+
+          <rect x="30" y="310" width="400" height="60" rx="10" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5"/>
+          <text x="230" y="345" text-anchor="middle" fill="#4338CA" font-size="20" font-weight="600">🏛️ 登記所 = レジストラ（ドメイン登録）</text>
+
+          <!-- Right Column: AWS技術用語 -->
+          <rect x="470" y="20" width="400" height="50" rx="12" fill="#FF9900"/>
+          <text x="670" y="52" text-anchor="middle" fill="#FFF" font-size="22" font-weight="700">☁️ AWS技術用語</text>
+
+          <rect x="470" y="85" width="400" height="60" rx="10" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.5"/>
+          <text x="670" y="120" text-anchor="middle" fill="#92400E" font-size="20" font-weight="600">example.com（ドメイン名）</text>
+
+          <rect x="470" y="160" width="400" height="60" rx="10" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.5"/>
+          <text x="670" y="195" text-anchor="middle" fill="#92400E" font-size="20" font-weight="600">Route 53 ホストゾーン</text>
+
+          <rect x="470" y="235" width="400" height="60" rx="10" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.5"/>
+          <text x="670" y="270" text-anchor="middle" fill="#92400E" font-size="20" font-weight="600">A, CNAME, MX レコード等</text>
+
+          <rect x="470" y="310" width="400" height="60" rx="10" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.5"/>
+          <text x="670" y="345" text-anchor="middle" fill="#92400E" font-size="20" font-weight="600">Route 53 ドメイン登録</text>
+
+          <!-- Arrows -->
+          <line x1="430" y1="115" x2="470" y2="115" stroke="#FF9900" stroke-width="3" marker-end="url(#arrowOrange)"/>
+          <line x1="430" y1="190" x2="470" y2="190" stroke="#FF9900" stroke-width="3" marker-end="url(#arrowOrange)"/>
+          <line x1="430" y1="265" x2="470" y2="265" stroke="#FF9900" stroke-width="3" marker-end="url(#arrowOrange)"/>
+          <line x1="430" y1="340" x2="470" y2="340" stroke="#FF9900" stroke-width="3" marker-end="url(#arrowOrange)"/>
+
+          <defs>
+            <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#FF9900"/>
+            </marker>
+          </defs>
+
+          <!-- Bottom Note -->
+          <rect x="100" y="385" width="700" height="30" rx="6" fill="#232F3E" opacity="0.08"/>
+          <text x="450" y="406" text-anchor="middle" fill="#374151" font-size="18">💡 「郵便局を変える」のと「住所登記を変える」のは別の手続き！</text>
+        </svg>
+        <p class="diagram-caption">図1：郵便システムとDNSの対応関係マッピング</p>
+      </div>
+
+      <!-- Analogy Table -->
+      <table class="analogy-table">
+        <thead>
+          <tr>
+            <th><span class="analogy-emoji" aria-hidden="true">📮</span>郵便のたとえ</th>
+            <th><span class="analogy-emoji" aria-hidden="true">☁️</span>AWS / DNS用語</th>
+            <th>役割</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>自宅の住所</td>
+            <td>ドメイン名（example.com）</td>
+            <td>あなたを一意に識別する名前</td>
+          </tr>
+          <tr>
+            <td>管轄の郵便局</td>
+            <td>DNSホスティングサービス</td>
+            <td>「この住所の人はここにいる」と教える場所</td>
+          </tr>
+          <tr>
+            <td>住所録の個別記載情報</td>
+            <td>DNSレコード（A, CNAME, MX等）</td>
+            <td>実際の配送先の詳細情報</td>
+          </tr>
+          <tr>
+            <td>住所の登記所</td>
+            <td>レジストラ（ドメイン登録業者）</td>
+            <td>「どの郵便局が担当か」を管理する公的機関</td>
+          </tr>
+          <tr>
+            <td>転送届け</td>
+            <td>ネームサーバー変更</td>
+            <td>「担当の郵便局が変わりました」と届け出ること</td>
+          </tr>
+          <tr>
+            <td>転送有効期間</td>
+            <td>TTL（Time to Live）</td>
+            <td>古い情報をキャッシュしておく期間</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- NS Record Explainer -->
+      <div class="ns-explainer">
+        <h3 id="補足-NSName-Serverレコードとは？" class="ns-explainer-title"><span aria-hidden="true">📡</span> 補足：NS（Name Server）レコードとは？</h3>
+        <p class="ns-explainer-text">NSレコードは「このドメインのDNS情報は、どのネームサーバーが管理しているか」を示す特別なレコードです。郵便のたとえなら、NSレコードは「この住所の管轄郵便局は○○局です」という登記情報にあたります。</p>
+        <p class="ns-explainer-text">世界中のDNSリゾルバは、以下の流れで名前解決を行います：</p>
+
+        <!-- NS Resolution Flow SVG -->
+        <div class="diagram-wrapper">
+          <svg role="img" aria-label="NSレコードを使った名前解決の流れ。リゾルバがNSレコードを参照し、担当ネームサーバーに問い合わせてIPアドレスを取得する3段階の図" viewBox="0 0 880 170" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="880" height="170" rx="12" fill="#FFFFFF"/>
+
+            <!-- Step 1 -->
+            <rect x="20" y="20" width="240" height="80" rx="10" fill="#E0F2FE" stroke="#7DD3FC" stroke-width="1.5"/>
+            <text x="140" y="50" text-anchor="middle" fill="#0369A1" font-size="17" font-weight="700">❶ NSレコードを確認</text>
+            <text x="140" y="76" text-anchor="middle" fill="#0C4A6E" font-size="15">「example.comの担当は？」</text>
+
+            <!-- Arrow 1 -->
+            <text x="285" y="65" text-anchor="middle" fill="#0EA5E9" font-size="28" font-weight="700">→</text>
+
+            <!-- Step 2 -->
+            <rect x="310" y="20" width="260" height="80" rx="10" fill="#E0F2FE" stroke="#7DD3FC" stroke-width="1.5"/>
+            <text x="440" y="50" text-anchor="middle" fill="#0369A1" font-size="17" font-weight="700">❷ 担当NSに問い合わせ</text>
+            <text x="440" y="76" text-anchor="middle" fill="#0C4A6E" font-size="15">ns-123.awsdns-45.netへ</text>
+
+            <!-- Arrow 2 -->
+            <text x="595" y="65" text-anchor="middle" fill="#0EA5E9" font-size="28" font-weight="700">→</text>
+
+            <!-- Step 3 -->
+            <rect x="620" y="20" width="240" height="80" rx="10" fill="#0EA5E9"/>
+            <text x="740" y="50" text-anchor="middle" fill="#FFF" font-size="17" font-weight="700">❸ IPアドレス取得</text>
+            <text x="740" y="76" text-anchor="middle" fill="#E0F2FE" font-size="15">192.0.2.1 を返却</text>
+
+            <!-- Bottom note -->
+            <rect x="100" y="120" width="680" height="36" rx="6" fill="#F0F9FF" stroke="#BAE6FD" stroke-width="1"/>
+            <text x="440" y="144" text-anchor="middle" fill="#0369A1" font-size="16">NSレコード = 「問い合わせ先の案内板」。移行Step 4でこの案内先をRoute 53に切り替える</text>
+          </svg>
+        </div>
+
+        <div class="ns-explainer-example">
+          <strong>Route 53での具体例：</strong>ホストゾーンを作成すると、<code>ns-123.awsdns-45.net</code> のような4つのネームサーバーが割り当てられます。移行Step 4でレジストラのNSをこの4つに書き換えることで、「このドメインの問い合わせ先はRoute 53です」と世界中に通知されます。
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===== DNS Hosting vs Domain Registration ===== -->
+    <section class="section">
+      <h2 id="DNSホスティング-と-ドメイン登録-の違い" class="section-title"><span aria-hidden="true">🔀</span> DNSホスティング と ドメイン登録 の違い</h2>
+      <p class="section-desc">多くの人がこの2つを混同しますが、まったく別のサービスです。引っ越しに例えると、「どの郵便局を使うか」と「住所の登記をどこで管理するか」は別の話。だから個別に移行できるのです。</p>
+
+      <div class="compare-grid">
+        <div class="compare-card compare-dns">
+          <h3 id="DNSホスティングDNS-Service" class="compare-card-title"><span aria-hidden="true">📬</span> DNSホスティング（DNS Service）</h3>
+          <div class="compare-card-body">
+            <p>ドメインに対応するIPアドレスやメールサーバーの情報を保持し、問い合わせに応答するサービス。</p>
+            <p>たとえ：「この住所に届いた手紙を、実際にどこに届けるか」を管理する<strong>郵便局</strong>の業務。</p>
+          </div>
+        </div>
+        <div class="compare-card compare-reg">
+          <h3 id="️-ドメイン登録Domain-Registration" class="compare-card-title"><span aria-hidden="true">🏛️</span> ドメイン登録（Domain Registration）</h3>
+          <div class="compare-card-body">
+            <p>ドメイン名の所有権を公的に管理し、「どのDNSサーバーが担当か」を記録するサービス。</p>
+            <p>たとえ：「この住所の管轄郵便局はどこか」を記録している<strong>登記所</strong>の業務。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role Detail Cards -->
+      <h3 id="それぞれの役割を詳しく見る" class="section-subtitle"><span aria-hidden="true">🔎</span> それぞれの役割を詳しく見る</h3>
+      <div class="role-detail-grid">
+        <div class="role-detail-card role-registrar">
+          <div class="role-detail-card-header"><span aria-hidden="true">🏛️</span> DNSレジストラ（ドメイン登録）</div>
+          <div class="role-detail-card-body">
+            <p>ドメイン名の登録と管理を担当する</p>
+            <p>ドメイン名とそのネームサーバー（NS）レコードを管理する</p>
+          </div>
+          <div class="role-detail-card-examples"><span aria-hidden="true">🏢</span> 例：Amazon Route 53、GoDaddy、Namecheap など</div>
+        </div>
+        <div class="role-detail-card role-hosting">
+          <div class="role-detail-card-header"><span aria-hidden="true">📬</span> DNSホスティング（DNS Service）</div>
+          <div class="role-detail-card-body">
+            <p>ドメインのDNSレコード（A、CNAME、MX、TXTなど）を保存・提供する</p>
+            <p>DNSクエリに応答し、ドメイン名をIPアドレスに解決する</p>
+          </div>
+          <div class="role-detail-card-examples"><span aria-hidden="true">🏢</span> 例：Amazon Route 53、Cloudflare、Google Cloud DNS など</div>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <div><strong>移行の鉄則：</strong>DNSホスティングを先に移行 → 安定確認 → ドメイン登録を後から移行。この順番を守ることで、常にどちらかのサービスがリクエストに応答でき、ダウンタイムが発生しません。</div>
+      </div>
+
+      <!-- Why This Order Subsection -->
+      <h3 id="なぜこの順番ならダウンタイムが発生しないのか？" class="section-subtitle"><span aria-hidden="true">🤔</span> なぜこの順番ならダウンタイムが発生しないのか？</h3>
+      <p class="why-order-intro">「DNSホスティングを先に移行すれば安全」と言える理由を、各時点の状態を追って確認してみましょう。</p>
+
+      <!-- Premise -->
+      <div class="why-order-premise">
+        <div class="why-order-premise-title"><span aria-hidden="true">🔑</span> 前提：DNS解決が成功する2つの条件</div>
+        <div class="why-order-premise-list">
+          <p><span class="why-order-premise-num">❶</span>レジストラ（登記所）が「このドメインの担当NSはここ」と正しく指し示していること</p>
+          <p><span class="why-order-premise-num">❷</span>その指し示された先のDNSホスティングに、正しいレコードが存在すること</p>
+        </div>
+      </div>
+
+      <!-- State Tracking SVG -->
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="DNS移行の各段階でレジストラとDNSホスティングの接続状態を示す図。全段階でどちらかのDNSが正しく応答可能であることを可視化" viewBox="0 0 900 520" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="900" height="520" rx="16" fill="#F9FAFB"/>
+
+          <!-- Title -->
+          <text x="450" y="35" text-anchor="middle" fill="#374151" font-size="21" font-weight="700">各時点の「指し示す側」と「応答する側」の状態</text>
+
+          <!-- Column Headers -->
+          <rect x="30" y="55" width="180" height="36" rx="8" fill="#6B7280"/>
+          <text x="120" y="80" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">フェーズ</text>
+          <rect x="230" y="55" width="280" height="36" rx="8" fill="#232F3E"/>
+          <text x="370" y="80" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">🏛️ レジストラが指す先</text>
+          <rect x="530" y="55" width="170" height="36" rx="8" fill="#6366F1"/>
+          <text x="615" y="80" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">旧DNS</text>
+          <rect x="720" y="55" width="155" height="36" rx="8" fill="#FF9900"/>
+          <text x="797" y="80" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">Route 53</text>
+
+          <!-- Row 1: Before -->
+          <rect x="30" y="105" width="845" height="70" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+          <text x="120" y="135" text-anchor="middle" fill="#065F46" font-size="17" font-weight="700">移行前</text>
+          <text x="120" y="158" text-anchor="middle" fill="#065F46" font-size="15">（初期状態）</text>
+          <text x="370" y="145" text-anchor="middle" fill="#374151" font-size="18">→ 旧NSを指す</text>
+          <text x="615" y="138" text-anchor="middle" fill="#065F46" font-size="17" font-weight="600">レコードあり</text>
+          <text x="615" y="160" text-anchor="middle" fill="#10B981" font-size="22" font-weight="700">✅ 応答OK</text>
+          <text x="797" y="145" text-anchor="middle" fill="#9CA3AF" font-size="17">（未使用）</text>
+
+          <!-- Arrow between rows -->
+          <text x="450" y="193" text-anchor="middle" fill="#9CA3AF" font-size="22">▼</text>
+
+          <!-- Row 2: After record copy -->
+          <rect x="30" y="205" width="845" height="70" rx="8" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1"/>
+          <text x="120" y="235" text-anchor="middle" fill="#4338CA" font-size="17" font-weight="700">レコードコピー後</text>
+          <text x="120" y="258" text-anchor="middle" fill="#4338CA" font-size="15">（NS変更前）</text>
+          <text x="370" y="245" text-anchor="middle" fill="#374151" font-size="18">→ まだ旧NSを指す</text>
+          <text x="615" y="238" text-anchor="middle" fill="#065F46" font-size="17" font-weight="600">レコードあり</text>
+          <text x="615" y="260" text-anchor="middle" fill="#10B981" font-size="22" font-weight="700">✅ 応答OK</text>
+          <text x="797" y="238" text-anchor="middle" fill="#4338CA" font-size="16" font-weight="600">レコード準備済</text>
+          <text x="797" y="260" text-anchor="middle" fill="#9CA3AF" font-size="16">（待機中）</text>
+
+          <!-- Arrow between rows -->
+          <text x="450" y="293" text-anchor="middle" fill="#9CA3AF" font-size="22">▼</text>
+
+          <!-- Row 3: NS changed, propagating -->
+          <rect x="30" y="305" width="845" height="90" rx="8" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1"/>
+          <text x="120" y="340" text-anchor="middle" fill="#92400E" font-size="17" font-weight="700">NS変更 → 伝播中</text>
+          <text x="120" y="363" text-anchor="middle" fill="#92400E" font-size="15">（並行運用）</text>
+          <text x="370" y="338" text-anchor="middle" fill="#374151" font-size="17">キャッシュ古い → 旧NS</text>
+          <text x="370" y="363" text-anchor="middle" fill="#374151" font-size="17">キャッシュ更新済 → 新NS</text>
+          <text x="615" y="343" text-anchor="middle" fill="#065F46" font-size="17" font-weight="600">レコードあり</text>
+          <text x="615" y="370" text-anchor="middle" fill="#10B981" font-size="22" font-weight="700">✅ 応答OK</text>
+          <text x="797" y="343" text-anchor="middle" fill="#065F46" font-size="17" font-weight="600">レコードあり</text>
+          <text x="797" y="370" text-anchor="middle" fill="#10B981" font-size="22" font-weight="700">✅ 応答OK</text>
+
+          <!-- Arrow between rows -->
+          <text x="450" y="413" text-anchor="middle" fill="#9CA3AF" font-size="22">▼</text>
+
+          <!-- Row 4: Propagation complete -->
+          <rect x="30" y="425" width="845" height="70" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+          <text x="120" y="455" text-anchor="middle" fill="#065F46" font-size="17" font-weight="700">伝播完了</text>
+          <text x="120" y="478" text-anchor="middle" fill="#065F46" font-size="15">（移行完了）</text>
+          <text x="370" y="465" text-anchor="middle" fill="#374151" font-size="18">→ 新NS（Route 53）を指す</text>
+          <text x="615" y="465" text-anchor="middle" fill="#9CA3AF" font-size="17">（解約可能）</text>
+          <text x="797" y="458" text-anchor="middle" fill="#065F46" font-size="17" font-weight="600">レコードあり</text>
+          <text x="797" y="480" text-anchor="middle" fill="#10B981" font-size="22" font-weight="700">✅ 応答OK</text>
+        </svg>
+        <p class="diagram-caption">図：各フェーズでの状態追跡 — どの時点でも必ず「指す先」に「正しいレコード」が存在する</p>
+      </div>
+
+      <!-- State Cards - 4 equal -->
+      <div class="state-track-grid">
+        <div class="state-track-card state-ok">
+          <div class="state-track-card-phase">Phase 1</div>
+          <h4 class="state-track-card-title"><span aria-hidden="true">🟢</span> 移行前（初期状態）</h4>
+          <div class="state-track-card-body">
+            <p>レジストラ → 旧NSを指す</p>
+            <p>旧DNS → レコードあり ✅</p>
+          </div>
+          <div class="state-track-card-result">何も変わっていないので当然正常 ✅</div>
+        </div>
+        <div class="state-track-card state-parallel">
+          <div class="state-track-card-phase">Phase 2</div>
+          <h4 class="state-track-card-title"><span aria-hidden="true">🔵</span> レコードコピー後（NS変更前）</h4>
+          <div class="state-track-card-body">
+            <p>レジストラ → まだ旧NSを指す</p>
+            <p>旧DNS → レコードあり ✅</p>
+            <p>Route 53 → レコード準備済（待機中）</p>
+          </div>
+          <div class="state-track-card-result">NSを変えていないので何も壊れない ✅</div>
+        </div>
+        <div class="state-track-card state-propagating">
+          <div class="state-track-card-phase">Phase 3</div>
+          <h4 class="state-track-card-title"><span aria-hidden="true">🟡</span> NS変更後（伝播中 = 並行運用）</h4>
+          <div class="state-track-card-body">
+            <p>旧キャッシュ利用 → 旧DNS → レコードあり ✅</p>
+            <p>新NS参照 → Route 53 → レコードあり ✅</p>
+          </div>
+          <div class="state-track-card-result">どちらに聞いても正しい応答が返る ✅</div>
+        </div>
+        <div class="state-track-card state-ok">
+          <div class="state-track-card-phase">Phase 4</div>
+          <h4 class="state-track-card-title"><span aria-hidden="true">🟢</span> 伝播完了（移行完了）</h4>
+          <div class="state-track-card-body">
+            <p>レジストラ → Route 53を指す</p>
+            <p>Route 53 → レコードあり ✅</p>
+          </div>
+          <div class="state-track-card-result">全クエリがRoute 53に集約、旧DNS解約可 ✅</div>
+        </div>
+      </div>
+
+      <!-- Reverse Order Warning -->
+      <h3 id="⛔-逆の順番レジストラを先に移行だとなぜ危険か？" class="section-subtitle"><span aria-hidden="true">⛔</span> 逆の順番（レジストラを先に移行）だとなぜ危険か？</h3>
+
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="逆の順番で移行した場合の危険性を示す図。レジストラ移管中にNS設定が不整合になりダウンタイムが発生するリスクを可視化" viewBox="0 0 900 210" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="900" height="210" rx="16" fill="#FEF2F2"/>
+
+          <text x="450" y="35" text-anchor="middle" fill="#991B1B" font-size="21" font-weight="700">⛔ NG例：レジストラを先に移行した場合</text>
+
+          <!-- Flow -->
+          <rect x="40" y="60" width="220" height="60" rx="10" fill="#FCA5A5" stroke="#EF4444" stroke-width="1.5"/>
+          <text x="150" y="86" text-anchor="middle" fill="#7F1D1D" font-size="18" font-weight="600">新レジストラに移管</text>
+          <text x="150" y="108" text-anchor="middle" fill="#991B1B" font-size="16">（NS設定が不安定に）</text>
+
+          <text x="290" y="95" text-anchor="middle" fill="#EF4444" font-size="28" font-weight="700">→</text>
+
+          <rect x="320" y="60" width="260" height="60" rx="10" fill="#FCA5A5" stroke="#EF4444" stroke-width="1.5"/>
+          <text x="450" y="86" text-anchor="middle" fill="#7F1D1D" font-size="18" font-weight="600">NS参照先が一時不整合</text>
+          <text x="450" y="108" text-anchor="middle" fill="#991B1B" font-size="16">（旧NS？新NS？どっち？）</text>
+
+          <text x="610" y="95" text-anchor="middle" fill="#EF4444" font-size="28" font-weight="700">→</text>
+
+          <rect x="640" y="60" width="220" height="60" rx="10" fill="#EF4444"/>
+          <text x="750" y="86" text-anchor="middle" fill="#FFF" font-size="18" font-weight="700">解決失敗</text>
+          <text x="750" y="108" text-anchor="middle" fill="#FEE2E2" font-size="18" font-weight="700">❌ ダウンタイム</text>
+
+          <!-- Explanation -->
+          <rect x="40" y="140" width="820" height="55" rx="8" fill="#FFFFFF" stroke="#FCA5A5" stroke-width="1"/>
+          <text x="450" y="163" text-anchor="middle" fill="#991B1B" font-size="17">レジストラ移管中はNS設定が一時的に不整合になるリスクがあり、</text>
+          <text x="450" y="185" text-anchor="middle" fill="#991B1B" font-size="17">「指す先」と「応答する側」のペアが崩れ得る</text>
+        </svg>
+        <p class="diagram-caption">図：逆順移行の危険性 — 「指す側」を先に変えると不整合が発生し得る</p>
+      </div>
+
+      <div class="state-track-card state-danger why-order-danger-card">
+        <div class="state-track-card-phase">NG Pattern</div>
+        <h4 class="state-track-card-title"><span aria-hidden="true">🔴</span> レジストラを先に移管した場合のリスク</h4>
+        <div class="state-track-card-body">
+          <p>新レジストラ →（NSがまだ旧のまま、or 移管中の設定不備）→ 正しいDNSに到達できない ❌</p>
+          <p>「指し示す側」を先に変えてしまうと、「指す先」と「応答する側」のペアが崩れる瞬間が生まれるリスクがある</p>
+        </div>
+        <div class="state-track-card-result">レジストラ移管中にDNS解決が失敗する可能性あり ❌</div>
+      </div>
+
+      <!-- Summary -->
+      <div class="why-order-summary">
+        <div class="why-order-summary-title"><span aria-hidden="true">✨</span> 一言でまとめると</div>
+        <p class="why-order-summary-text">「応答できる側（DNSホスティング）を先に準備万端にしておき、最後に参照先（レジストラのNS）を切り替える」からこそ安全。<br>郵便のたとえなら「新しい郵便局に住所録を全部置いてから、登記所の管轄を変更する」ので、どこに問い合わせが行っても正しく配達できる。</p>
+      </div>
+
+    </section>
+
+    <!-- ===== Migration Flow Diagram ===== -->
+    <section class="section">
+      <h2 id="️-全体フロー-5ステップ移行マップ" class="section-title"><span aria-hidden="true">🗺️</span> 全体フロー：5ステップ移行マップ</h2>
+      <p class="section-desc">以下の5ステップを順番に実行することで、ユーザーに気づかれることなくDNSサービスをRoute 53へ移行できます。</p>
+
+      <!-- Overview Flow SVG -->
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="DNS移行の5ステップ全体フロー図。TTL短縮→レコードコピー→確認テスト→ネームサーバー切替→ドメイン登録移行の順" viewBox="0 0 900 200" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="900" height="200" rx="16" fill="#F9FAFB"/>
+
+          <!-- Step 1 -->
+          <rect x="20" y="30" width="148" height="90" rx="12" fill="#6366F1"/>
+          <text x="94" y="66" text-anchor="middle" fill="#FFF" font-size="20" font-weight="700">STEP 1</text>
+          <text x="94" y="96" text-anchor="middle" fill="#FFF" font-size="18">TTL短縮</text>
+
+          <!-- Arrow 1 -->
+          <polygon points="178,75 200,75 193,62 210,75 193,88 200,75" fill="#9CA3AF"/>
+
+          <!-- Step 2 -->
+          <rect x="208" y="30" width="148" height="90" rx="12" fill="#8B5CF6"/>
+          <text x="282" y="66" text-anchor="middle" fill="#FFF" font-size="20" font-weight="700">STEP 2</text>
+          <text x="282" y="96" text-anchor="middle" fill="#FFF" font-size="17">レコードコピー</text>
+
+          <!-- Arrow 2 -->
+          <polygon points="366,75 388,75 381,62 398,75 381,88 388,75" fill="#9CA3AF"/>
+
+          <!-- Step 3 -->
+          <rect x="396" y="30" width="148" height="90" rx="12" fill="#EC4899"/>
+          <text x="470" y="66" text-anchor="middle" fill="#FFF" font-size="20" font-weight="700">STEP 3</text>
+          <text x="470" y="96" text-anchor="middle" fill="#FFF" font-size="18">確認テスト</text>
+
+          <!-- Arrow 3 -->
+          <polygon points="554,75 576,75 569,62 586,75 569,88 576,75" fill="#9CA3AF"/>
+
+          <!-- Step 4 -->
+          <rect x="584" y="30" width="148" height="90" rx="12" fill="#F59E0B"/>
+          <text x="658" y="66" text-anchor="middle" fill="#FFF" font-size="20" font-weight="700">STEP 4</text>
+          <text x="658" y="96" text-anchor="middle" fill="#FFF" font-size="16">ネームサーバー変更</text>
+
+          <!-- Arrow 4 -->
+          <polygon points="742,75 764,75 757,62 774,75 757,88 764,75" fill="#9CA3AF"/>
+
+          <!-- Step 5 -->
+          <rect x="772" y="30" width="110" height="90" rx="12" fill="#10B981"/>
+          <text x="827" y="66" text-anchor="middle" fill="#FFF" font-size="20" font-weight="700">STEP 5</text>
+          <text x="827" y="96" text-anchor="middle" fill="#FFF" font-size="16">ドメイン移管</text>
+
+          <!-- Timeline bar -->
+          <rect x="20" y="145" width="862" height="8" rx="4" fill="#E5E7EB"/>
+          <rect x="20" y="145" width="580" height="8" rx="4" fill="#6366F1" opacity="0.7"/>
+          <rect x="600" y="145" width="282" height="8" rx="4" fill="#10B981" opacity="0.7"/>
+
+          <text x="310" y="180" text-anchor="middle" fill="#6366F1" font-size="17" font-weight="600">← DNSホスティング移行 →</text>
+          <text x="741" y="180" text-anchor="middle" fill="#10B981" font-size="17" font-weight="600">← レジストラ移行 →</text>
+        </svg>
+        <p class="diagram-caption">図2：DNS移行5ステップの全体フロー（ホスティング移行 → レジストラ移行の順）</p>
+      </div>
+    </section>
+
+    <!-- ===== Step-by-Step Detail ===== -->
+    <section class="section">
+      <h2 id="各ステップの詳細と郵便たとえ" class="section-title"><span aria-hidden="true">📝</span> 各ステップの詳細と郵便たとえ</h2>
+
+      <div class="step-flow">
+        <!-- Step 1 -->
+        <div class="step-item step1">
+          <div class="step-badge-col">
+            <div class="step-badge">1</div>
+            <div class="step-connector"></div>
+          </div>
+          <div class="step-content">
+            <h3 id="移行元DNSでTTLを短縮する">移行元DNSでTTLを短縮する</h3>
+            <p>現在のDNSプロバイダーで、すべてのレコードのTTL（Time to Live）を短い値（60〜300秒）に変更します。これにより、後のネームサーバー変更時に古いキャッシュが素早く消えます。</p>
+            <div class="step-analogy"><span aria-hidden="true">📮</span> たとえ：転送届けの前に「郵便物の保管期間を最短にしてください」と依頼するようなもの。保管期間が短いほど、転送先の変更が早く反映される。</div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-item step2">
+          <div class="step-badge-col">
+            <div class="step-badge">2</div>
+            <div class="step-connector"></div>
+          </div>
+          <div class="step-content">
+            <h3 id="Route-53にホストゾーンを作成-&amp;-レコードをコピー">Route 53にホストゾーンを作成 &amp; レコードをコピー</h3>
+            <p>Route 53で新しいホストゾーンを作成し、現在のDNSプロバイダーにあるすべてのレコード（A, AAAA, CNAME, MX, TXT等）を正確にコピーします。SOAレコードとNSレコードはRoute 53が自動生成するため、コピー不要です。</p>
+            <div class="step-analogy"><span aria-hidden="true">📮</span> たとえ：新しい郵便局に「住所録のコピー」を渡して、まったく同じ配達情報を準備しておく。この時点ではまだ旧郵便局が稼働中。</div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-item step3">
+          <div class="step-badge-col">
+            <div class="step-badge">3</div>
+            <div class="step-connector"></div>
+          </div>
+          <div class="step-content">
+            <h3 id="Route-53のレコードが正しく応答するかテスト">Route 53のレコードが正しく応答するかテスト</h3>
+            <p><code>dig</code> コマンド等でRoute 53のネームサーバーに直接問い合わせ、各レコードが正しい値を返すことを確認します。ここでミスがあると切り替え後に障害が発生するため、全レコードを慎重にテストします。</p>
+            <div class="step-analogy"><span aria-hidden="true">📮</span> たとえ：新しい郵便局の窓口に直接行って「テスト便を送ってみる」こと。実際に転送届けを出す前の予行演習。</div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-item step4">
+          <div class="step-badge-col">
+            <div class="step-badge">4</div>
+            <div class="step-connector"></div>
+          </div>
+          <div class="step-content">
+            <h3 id="レジストラでネームサーバーをRoute-53に変更">レジストラでネームサーバーをRoute 53に変更</h3>
+            <p>ドメインの現在のレジストラ管理画面で、ネームサーバーをRoute 53が発行した4つのNSレコード値に変更します。この変更が全世界に伝播するまで最大48時間かかります（Step 1でTTLを短縮済みなら大幅に短縮）。</p>
+            <div class="step-analogy"><span aria-hidden="true">📮</span> たとえ：ついに登記所で「管轄の郵便局を新しいところに変更します」と転送届けを提出！ただし全支局に通知が行き渡るまで少し時間がかかる。</div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step-item step5">
+          <div class="step-badge-col">
+            <div class="step-badge">5</div>
+          </div>
+          <div class="step-content">
+            <h3 id="オプションドメイン登録もRoute-53に移管">（オプション）ドメイン登録もRoute 53に移管</h3>
+            <p>DNSホスティングの移行が安定したら、ドメイン登録自体もRoute 53に移管できます。これにより、DNS管理とドメイン管理をAWSに一元化できます。移管にはロック解除と認証コードの取得が必要です。</p>
+            <div class="step-analogy"><span aria-hidden="true">📮</span> たとえ：郵便局の変更が完全に終わった後、住所の登記所も新しいところに変更する。急がなくてOK — 郵便局が正しく機能していれば、登記所の移行は後からゆっくり進められる。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TTL Deep Dive ===== -->
+    <section class="section">
+      <h2 id="⏱️-TTLTime-to-Liveの仕組みと調整戦略" class="section-title"><span aria-hidden="true">⏱️</span> TTL（Time to Live）の仕組みと調整戦略</h2>
+      <p class="section-desc">TTLは「DNSレコードがキャッシュに保存される秒数」です。郵便のたとえで言えば「古い住所録をいつまで信用するか」の期限です。</p>
+
+      <!-- TTL Visual Cards -->
+      <div class="ttl-visual">
+        <div class="ttl-card ttl-high">
+          <h3 id="通常時高TTL" class="ttl-card-title"><span aria-hidden="true">🐢</span> 通常時（高TTL）</h3>
+          <div class="ttl-card-value">86,400秒</div>
+          <p class="ttl-card-desc">= 24時間キャッシュ。変更が伝播するまで最長1日。DNSサーバーの負荷は低い。</p>
+        </div>
+        <div class="ttl-card ttl-low">
+          <h3 id="移行前に短縮低TTL" class="ttl-card-title"><span aria-hidden="true">🐇</span> 移行前に短縮（低TTL）</h3>
+          <div class="ttl-card-value">60〜300秒</div>
+          <p class="ttl-card-desc">= 1〜5分でキャッシュ更新。変更が数分で世界中に伝播。ただし問い合わせ頻度が増加。</p>
+        </div>
+      </div>
+
+      <!-- TTL Timeline SVG -->
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="TTL調整のタイムライン図。移行2日前にTTL短縮、移行当日にネームサーバー変更、移行後にTTL復元を示す" viewBox="0 0 900 260" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="900" height="260" rx="16" fill="#F9FAFB"/>
+
+          <!-- Title -->
+          <text x="450" y="35" text-anchor="middle" fill="#374151" font-size="20" font-weight="700">TTL調整タイムライン</text>
+
+          <!-- Timeline Base -->
+          <line x1="60" y1="100" x2="840" y2="100" stroke="#D1D5DB" stroke-width="4"/>
+
+          <!-- Phase 1: Before -->
+          <circle cx="150" cy="100" r="14" fill="#6366F1"/>
+          <text x="150" y="80" text-anchor="middle" fill="#6366F1" font-size="17" font-weight="700">2日前〜</text>
+          <rect x="60" y="120" width="180" height="75" rx="8" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1"/>
+          <text x="150" y="146" text-anchor="middle" fill="#4338CA" font-size="17" font-weight="600">TTLを短縮</text>
+          <text x="150" y="172" text-anchor="middle" fill="#6B7280" font-size="16">86400→60〜300秒</text>
+
+          <!-- Phase 2: Migration -->
+          <circle cx="450" cy="100" r="14" fill="#EC4899"/>
+          <text x="450" y="80" text-anchor="middle" fill="#EC4899" font-size="17" font-weight="700">移行当日</text>
+          <rect x="340" y="120" width="220" height="75" rx="8" fill="#FDF2F8" stroke="#FBCFE8" stroke-width="1"/>
+          <text x="450" y="146" text-anchor="middle" fill="#BE185D" font-size="17" font-weight="600">ネームサーバー変更</text>
+          <text x="450" y="172" text-anchor="middle" fill="#6B7280" font-size="16">短TTLで高速伝播</text>
+
+          <!-- Phase 3: After -->
+          <circle cx="750" cy="100" r="14" fill="#10B981"/>
+          <text x="750" y="80" text-anchor="middle" fill="#10B981" font-size="17" font-weight="700">安定確認後</text>
+          <rect x="650" y="120" width="190" height="75" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+          <text x="745" y="146" text-anchor="middle" fill="#065F46" font-size="17" font-weight="600">TTLを元に戻す</text>
+          <text x="745" y="172" text-anchor="middle" fill="#6B7280" font-size="16">300→86400秒</text>
+
+          <!-- Bottom note -->
+          <rect x="150" y="220" width="600" height="30" rx="6" fill="#FEF3C7"/>
+          <text x="450" y="242" text-anchor="middle" fill="#92400E" font-size="17">⚠️ TTL短縮は「元のTTL値以上」前に実施すること（例：24h TTL→2日前に短縮）</text>
+        </svg>
+        <p class="diagram-caption">図3：TTL調整のタイムライン（事前短縮 → 移行 → 事後復元）</p>
+      </div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <div><strong>重要：</strong>TTL短縮は必ず「現在のTTL値」以上の時間を空けて事前に行ってください。TTLが86400秒（24時間）なら、少なくとも移行の2日前には短縮しておく必要があります。古いキャッシュが完全に失効するまでは、短縮の効果が現れません。</div>
+      </div>
+    </section>
+
+    <!-- ===== Parallel Operation ===== -->
+    <section class="section">
+      <h2 id="並行運用フェーズ-新旧DNSの同時稼働" class="section-title"><span aria-hidden="true">🔄</span> 並行運用フェーズ：新旧DNSの同時稼働</h2>
+      <p class="section-desc">ダウンタイムゼロの鍵は「並行運用期間」です。ネームサーバー変更後も、一部のDNSリゾルバは旧ネームサーバーのキャッシュを保持しています。旧DNSサービスは伝播完了まで維持してください。</p>
+
+      <div class="parallel-box">
+        <div class="parallel-phase phase-before">
+          <h3 id="変更前" class="parallel-phase-title"><span aria-hidden="true">📌</span> 変更前</h3>
+          <p class="parallel-phase-desc">旧DNSのみ稼働。TTL短縮済み。Route 53にレコードコピー完了。</p>
+        </div>
+        <div class="parallel-phase phase-during">
+          <h3 id="⚡-伝播中並行運用" class="parallel-phase-title"><span aria-hidden="true">⚡</span> 伝播中（並行運用）</h3>
+          <p class="parallel-phase-desc">新旧両方が応答可能。世界中のリゾルバが順次新NSに切替。旧DNSは削除しない！</p>
+        </div>
+        <div class="parallel-phase phase-after">
+          <h3 id="✅-伝播完了後" class="parallel-phase-title"><span aria-hidden="true">✅</span> 伝播完了後</h3>
+          <p class="parallel-phase-desc">Route 53のみ応答。旧DNSサービスを安全に解約可能。TTLを元に戻す。</p>
+        </div>
+      </div>
+
+      <!-- Parallel Operation SVG Diagram -->
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="並行運用期間のシーケンス図。ユーザーのDNSクエリが旧DNSから新DNS（Route 53）へ順次切り替わる様子を表示" viewBox="0 0 900 350" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="900" height="350" rx="16" fill="#F9FAFB"/>
+
+          <!-- Title -->
+          <text x="450" y="35" text-anchor="middle" fill="#374151" font-size="20" font-weight="700">並行運用期間のクエリ遷移</text>
+
+          <!-- Actors -->
+          <rect x="40" y="55" width="160" height="40" rx="8" fill="#232F3E"/>
+          <text x="120" y="82" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">ユーザー</text>
+
+          <rect x="300" y="55" width="200" height="40" rx="8" fill="#6366F1"/>
+          <text x="400" y="82" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">旧DNSサービス</text>
+
+          <rect x="620" y="55" width="220" height="40" rx="8" fill="#FF9900"/>
+          <text x="730" y="82" text-anchor="middle" fill="#FFF" font-size="18" font-weight="600">Route 53（新DNS）</text>
+
+          <!-- Lifelines -->
+          <line x1="120" y1="95" x2="120" y2="340" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="6,4"/>
+          <line x1="400" y1="95" x2="400" y2="340" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="6,4"/>
+          <line x1="730" y1="95" x2="730" y2="340" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="6,4"/>
+
+          <!-- Phase labels -->
+          <rect x="10" y="110" width="85" height="25" rx="4" fill="#EEF2FF"/>
+          <text x="52" y="128" text-anchor="middle" fill="#4338CA" font-size="14" font-weight="600">変更前</text>
+
+          <rect x="10" y="170" width="85" height="25" rx="4" fill="#FDF2F8"/>
+          <text x="52" y="188" text-anchor="middle" fill="#BE185D" font-size="14" font-weight="600">伝播中</text>
+
+          <rect x="10" y="265" width="85" height="25" rx="4" fill="#ECFDF5"/>
+          <text x="52" y="283" text-anchor="middle" fill="#065F46" font-size="14" font-weight="600">伝播完了</text>
+
+          <!-- Query 1: Before -->
+          <line x1="120" y1="125" x2="400" y2="125" stroke="#6366F1" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+          <text x="260" y="118" text-anchor="middle" fill="#6366F1" font-size="16">DNS問合せ</text>
+          <line x1="400" y1="140" x2="120" y2="140" stroke="#6366F1" stroke-width="2.5" stroke-dasharray="5,3" marker-end="url(#arrowBlueR)"/>
+          <text x="260" y="158" text-anchor="middle" fill="#6366F1" font-size="16">応答 ✓</text>
+
+          <!-- Query 2: During (some go to old) -->
+          <line x1="120" y1="190" x2="400" y2="190" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arrowGray)"/>
+          <text x="260" y="183" text-anchor="middle" fill="#9CA3AF" font-size="15">一部キャッシュ利用</text>
+          <line x1="400" y1="205" x2="120" y2="205" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowGrayR)"/>
+          <text x="260" y="223" text-anchor="middle" fill="#9CA3AF" font-size="15">応答 ✓</text>
+
+          <!-- Query 3: During (some go to new) -->
+          <line x1="120" y1="235" x2="730" y2="235" stroke="#FF9900" stroke-width="2.5" marker-end="url(#arrowOrangeSeq)"/>
+          <text x="425" y="228" text-anchor="middle" fill="#dc7600" font-size="15">新NS参照開始</text>
+          <line x1="730" y1="250" x2="120" y2="250" stroke="#FF9900" stroke-width="2.5" stroke-dasharray="5,3" marker-end="url(#arrowOrangeSeqR)"/>
+          <text x="425" y="268" text-anchor="middle" fill="#dc7600" font-size="15">応答 ✓</text>
+
+          <!-- Query 4: After -->
+          <line x1="120" y1="290" x2="730" y2="290" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+          <text x="425" y="283" text-anchor="middle" fill="#10B981" font-size="16">全クエリRoute 53へ</text>
+          <line x1="730" y1="305" x2="120" y2="305" stroke="#10B981" stroke-width="2.5" stroke-dasharray="5,3" marker-end="url(#arrowGreenR)"/>
+          <text x="425" y="323" text-anchor="middle" fill="#10B981" font-size="16">応答 ✓</text>
+
+          <!-- X mark on old DNS -->
+          <text x="400" y="305" text-anchor="middle" fill="#EF4444" font-size="26" font-weight="700">✗</text>
+
+          <defs>
+            <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6366F1"/></marker>
+            <marker id="arrowBlueR" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#6366F1"/></marker>
+            <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#9CA3AF"/></marker>
+            <marker id="arrowGrayR" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#9CA3AF"/></marker>
+            <marker id="arrowOrangeSeq" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#FF9900"/></marker>
+            <marker id="arrowOrangeSeqR" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#FF9900"/></marker>
+            <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#10B981"/></marker>
+            <marker id="arrowGreenR" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#10B981"/></marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">図4：並行運用期間中のDNSクエリ遷移（旧DNS → Route 53への段階的切替）</p>
+      </div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <div><strong>旧DNSの早期解約は厳禁！</strong>ネームサーバー変更後もキャッシュが残っている期間は、旧DNSサービスにクエリが飛ぶ可能性があります。最低でも伝播完了（48時間〜72時間）まで旧サービスを維持してください。</div>
+      </div>
+    </section>
+
+    <!-- ===== Verification Commands ===== -->
+    <section class="section">
+      <h2 id="確認コマンド集" class="section-title"><span aria-hidden="true">🔍</span> 確認コマンド集</h2>
+      <p class="section-desc">移行の各フェーズで使える確認コマンドです。Route 53のネームサーバー（ns-xxx.awsdns-xx.xxx）に直接問い合わせることで、切り替え前にレコードの正しさを検証できます。</p>
+
+      <div class="diagram-wrapper">
+        <svg role="img" aria-label="DNS確認コマンドの一覧。digコマンドによるレコード確認、ネームサーバー確認、伝播確認の3つ" viewBox="0 0 900 300" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="900" height="300" rx="16" fill="#1E293B"/>
+
+          <text x="450" y="35" text-anchor="middle" fill="#94A3B8" font-size="18" font-weight="600">DNS確認コマンド集</text>
+
+          <!-- Command 1 -->
+          <rect x="30" y="55" width="840" height="65" rx="8" fill="#0F172A"/>
+          <text x="45" y="78" fill="#22D3EE" font-size="18" font-family="monospace" font-weight="600"># Route 53に直接問い合わせてAレコード確認</text>
+          <text x="45" y="105" fill="#E2E8F0" font-size="20" font-family="monospace">dig example.com A @ns-xxx.awsdns-xx.net</text>
+
+          <!-- Command 2 -->
+          <rect x="30" y="135" width="840" height="65" rx="8" fill="#0F172A"/>
+          <text x="45" y="158" fill="#22D3EE" font-size="18" font-family="monospace" font-weight="600"># 現在のネームサーバーを確認</text>
+          <text x="45" y="185" fill="#E2E8F0" font-size="20" font-family="monospace">dig example.com NS +short</text>
+
+          <!-- Command 3 -->
+          <rect x="30" y="215" width="840" height="65" rx="8" fill="#0F172A"/>
+          <text x="45" y="238" fill="#22D3EE" font-size="18" font-family="monospace" font-weight="600"># 世界各地のDNSで伝播状況を確認（Google DNS）</text>
+          <text x="45" y="265" fill="#E2E8F0" font-size="20" font-family="monospace">dig example.com NS @8.8.8.8 +short</text>
+        </svg>
+        <p class="diagram-caption">図5：移行前後に使用するDNS確認コマンド</p>
+      </div>
+    </section>
+
+    <!-- ===== Pre-Migration Checklist ===== -->
+    <section class="section">
+      <h2 id="✅-移行前チェックリスト" class="section-title"><span aria-hidden="true">✅</span> 移行前チェックリスト</h2>
+
+      <div class="checklist">
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>現在のDNSプロバイダーから全レコードをエクスポート済み</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>Route 53でホストゾーンを作成し、レコードをコピー済み</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>TTLを60〜300秒に短縮し、旧TTL以上の時間を待機済み</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>Route 53のNSに直接digして全レコードの応答を確認済み</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>レジストラでドメインの移管ロックを確認（解除不要な段階）</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>変更作業をトラフィックの少ない時間帯に予定済み</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>ロールバック手順を文書化済み（旧NSに戻す方法）</span>
+        </div>
+        <div class="checklist-item">
+          <span class="checklist-check" aria-hidden="true">☐</span>
+          <span>関係者（インフラチーム、アプリチーム）に移行日時を共有済み</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section class="section">
+      <h2 id="❓-よくある質問FAQ" class="section-title"><span aria-hidden="true">❓</span> よくある質問（FAQ）</h2>
+
+      <div class="faq-item">
+        <p class="faq-q">Q. TTLを1秒にすれば最速で伝播するのでは？</p>
+        <p class="faq-a">A. 技術的には可能ですが、DNSリゾルバへの問い合わせが爆発的に増え、応答速度の低下やDNSサーバーの負荷増大を招きます。実用的には60〜300秒が推奨値です。</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Q. ネームサーバー変更後、どのくらいで伝播が完了しますか？</p>
+        <p class="faq-a">A. TTLを事前に短縮していれば、ほとんどのリゾルバは数分〜数時間で更新されます。ただし一部のISPや企業DNSは独自キャッシュを持つため、完全伝播には最大48〜72時間を見込んでおくと安全です。</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Q. ドメイン登録の移管は必ず必要ですか？</p>
+        <p class="faq-a">A. いいえ。DNSホスティングだけRoute 53に移行し、ドメイン登録は元のレジストラに残すことも可能です。ただし管理の一元化を望む場合はRoute 53への移管がおすすめです。</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Q. 移行中にWebサイトやメールが止まることはありますか？</p>
+        <p class="faq-a">A. 正しい手順（TTL短縮→レコードコピー→確認→NS変更→並行運用）を守れば、ダウンタイムは発生しません。最も多い失敗原因は「レコードのコピー漏れ」と「旧DNSの早期解約」です。</p>
+      </div>
+    </section>
+
+    <!-- ===== Summary ===== -->
+    <section class="section">
+      <h2 id="まとめ-郵便の転送届け-=-DNS移行" class="section-title"><span aria-hidden="true">📋</span> まとめ：郵便の転送届け = DNS移行</h2>
+
+      <div class="callout callout-success">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <div>
+          <strong>DNS移行の本質は「郵便局の変更届け」</strong> — ①新しい郵便局に住所録をコピーし（レコードコピー）、②転送有効期間を短くして（TTL短縮）、③登記所で管轄変更を届け出る（NS変更）。旧郵便局を急いで閉めず、並行運用すれば手紙は1通も届かなくなりません。
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="page-footer">
+    <p>AWS Route 53 DNS移行ガイド — ダウンタイムゼロ戦略</p>
+  </footer>
+
+</div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+<button style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;" onclick="window.location.href='../learning-resources.html'" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';">🏠 リソース集に戻る</button>
+
+</body>
+</html>

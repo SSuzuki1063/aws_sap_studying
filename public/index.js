@@ -13,6 +13,7 @@ const searchData = [
   { title: 'CloudFront HTTPSハンドシェイク完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/cloudfront-https-guide.html' },
   { title: 'CloudFront オリジンフェイルオーバー完全ガイド | AWS学習リソース', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/cloudfront-origin-failover-guide.html' },
   { title: 'CloudFrontのカスタムHTTPヘッダーとCache-Control入門ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/cloudfront-cache-infographic.html' },
+  { title: 'DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/dns-migration-guide.html' },
   { title: 'DNSレコード完全ガイド - 住所録で理解するAWS Route 53', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/dns-records-guide.html' },
   { title: 'Lambda@Edge Origin Response X-Frame-Options完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/lambda-edge-x-frame-options-guide.html' },
   { title: 'OSI参照モデル × AWSサービス完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/osi-aws-services-guide.html' },
@@ -236,11 +237,14 @@ const searchData = [
   { title: 'S3バケットポリシー Principal要素 完全ガイド', category: 'ネットワーキング', file: 'networking/s3-bucket-policy-principal-guide.html' },
   { title: 'Transit Gateway Connect 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-connect-guide.html' },
   { title: 'Transit Gateway アプライアンスモード 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-appliance-mode-guide.html' },
+  { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', category: 'ネットワーキング', file: 'networking/traffic-mirroring-udp-guide.html' },
   { title: 'VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース', category: 'ネットワーキング', file: 'networking/vpc-dual-stack-networking-guide.html' },
   { title: 'VPCトラフィックミラーリング vs VPC Flow Logs - 使い分けガイド', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-vs-flow-logs.html' },
+  { title: 'VPCトラフィックミラーリング完全ガイド - 4つの構成要素を徹底図解', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-deep-guide.html' },
   { title: 'VPCフローログ フィールド完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-flow-log-fields-guide.html' },
   { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', category: 'ネットワーキング', file: 'networking/vpn-acceleration-vs-global-accelerator.html' },
   { title: 'VPNピアリングとPrivatelinkの比較', category: 'ネットワーキング', file: 'new-solutions/vpn-vs-privatelink.html' },
+  { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', category: 'ネットワーキング', file: 'networking/cross-region-ec2-communication.html' },
   { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', category: 'ネットワーキング', file: 'networking/jumbo-frame-mtu-guide.html' },
   { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN | AWS SAP学習リソース', category: 'ネットワーキング', file: 'networking/split-vs-full-tunnel-vpn.html' },
   { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', category: 'ネットワーキング', file: 'networking/nacl-sg-comparison-guide.html' },
@@ -282,6 +286,7 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html' },
 ];
+
 
 
 

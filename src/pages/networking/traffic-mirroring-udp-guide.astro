@@ -1,0 +1,1817 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: '',
+  pageTitle: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: '',
+  slug: 'traffic-mirroring-udp-guide',
+  pageCss: undefined,
+  tocItems: [
+    { level: 'h2', id: '⚡-まず結論', text: '⚡ まず結論' },
+    { level: 'h2', id: '️-たとえ話-高速道路の監視カメラシステム', text: '🛣️ たとえ話：高速道路の監視カメラシステム' },
+    { level: 'h3', id: '全体イメージ図', text: '📐 全体イメージ図' },
+    { level: 'h2', id: 'なぜUDPのキャプチャが重要なのか？', text: '📦 なぜ「UDP」のキャプチャが重要なのか？' },
+    { level: 'h3', id: 'UDPがセキュリティの盲点になる理由', text: '🔍 UDPが「セキュリティの盲点」になる理由' },
+    { level: 'h2', id: 'Traffic-Mirroring-×-UDP-の主なユースケース', text: '🎯 Traffic Mirroring × UDP の主なユースケース' },
+    { level: 'h2', id: 'Traffic-Mirroring-の4つの構成要素', text: '🧩 Traffic Mirroring の4つの構成要素' },
+    { level: 'h3', id: '構成要素の関係図', text: '🔗 構成要素の関係図' },
+    { level: 'h2', id: 'VXLANカプセル化とは？', text: '📦 VXLANカプセル化とは？' },
+    { level: 'h3', id: 'VXLANカプセル化の構造入れ子の箱', text: '📐 VXLANカプセル化の構造（入れ子の箱）' },
+    { level: 'h2', id: '️-UDP-キャプチャのセットアップ手順', text: '🛠️ UDP キャプチャのセットアップ手順' },
+    { level: 'h3', id: 'AWS-CLI-サンプルコマンド', text: '💻 AWS CLI サンプルコマンド' },
+    { level: 'h2', id: '全体フロー-UDPパケットの旅', text: '🔄 全体フロー：UDPパケットの旅' },
+    { level: 'h3', id: 'UDPパケットがキャプチャされて分析されるまで', text: 'UDPパケットがキャプチャされて分析されるまで' },
+    { level: 'h2', id: '⚠️-よくある落とし穴と注意点', text: '⚠️ よくある落とし穴と注意点' },
+    { level: 'h2', id: 'ベストプラクティス', text: '💡 ベストプラクティス' },
+    { level: 'h2', id: 'ターゲットの選び方', text: '🔀 ターゲットの選び方' },
+    { level: 'h2', id: '❓-よくある質問', text: '❓ よくある質問' },
+    { level: 'h2', id: 'まとめ', text: '🎯 まとめ' }
+  ],
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 1,
+  pageTotal: 1,
+};
+
+const rawContent = `<style>/* ========================================
+       リセット・ベース
+       ======================================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #1f2937;
+      line-height: 1.7;
+      font-size: 20px;
+      padding: 20px;
+            padding-top: 70px;}
+
+    /* ========================================
+       コンテナ
+       ======================================== */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ========================================
+       ヘッダー
+       ======================================== */
+    .header {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 50px 40px;
+      text-align: center;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border-top: 6px solid #0ea5e9;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      background: linear-gradient(180deg, rgba(14,165,233,0.04) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .header-icon {
+      font-size: 60px;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #0c4a6e;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .header-sub {
+      font-size: 22px;
+      color: #475569;
+      font-weight: 400;
+    }
+
+    /* ========================================
+       結論ファーストセクション
+       ======================================== */
+    .conclusion-first {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 35px 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border-left: 6px solid #f59e0b;
+    }
+
+    .conclusion-first h2 {
+      font-size: 26px;
+      color: #92400e;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .conclusion-points {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .conclusion-point {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      padding: 18px 20px;
+      font-size: 20px;
+      line-height: 1.6;
+    }
+
+    .conclusion-point strong {
+      color: #92400e;
+    }
+
+    /* ========================================
+       セクション共通
+       ======================================== */
+    .section {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 35px 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .section h2 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 22px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section h3 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #334155;
+    }
+
+    .section p {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: #374151;
+    }
+
+    /* ========================================
+       たとえ話セクション
+       ======================================== */
+    .analogy-section {
+      border-top: 5px solid #10b981;
+    }
+
+    .analogy-section h2 {
+      color: #065f46;
+    }
+
+    .analogy-intro {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+      font-size: 21px;
+      line-height: 1.7;
+      color: #065f46;
+      text-align: center;
+    }
+
+    .analogy-intro strong {
+      color: #047857;
+    }
+
+    /* たとえ話マッピンググリッド */
+    .analogy-mapping {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .mapping-card {
+      background: #f0fdf4;
+      border: 2px solid #86efac;
+      border-radius: 14px;
+      padding: 22px;
+      text-align: center;
+    }
+
+    .mapping-card .mapping-emoji {
+      font-size: 42px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .mapping-card .mapping-real {
+      font-size: 20px;
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 6px;
+    }
+
+    .mapping-card .mapping-analogy {
+      font-size: 20px;
+      color: #374151;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 8px 14px;
+      display: inline-block;
+      margin-top: 6px;
+    }
+
+    /* ========================================
+       大きな図解: 高速道路監視カメラシステム
+       ======================================== */
+    .big-diagram {
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 30px 25px;
+      margin: 25px 0;
+    }
+
+    .big-diagram h3 {
+      text-align: center;
+      color: #0f172a;
+      margin-bottom: 24px;
+      font-size: 24px;
+    }
+
+    .highway-diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* 道路ヘッダーラベル */
+    .highway-label {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 700;
+      padding: 12px 30px;
+      border-radius: 10px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* 道路本体 */
+    .highway-road {
+      background: #475569;
+      width: 92%;
+      border-radius: 14px;
+      padding: 10px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 道路の中央線（テキストの後ろに配置） */
+    .highway-road::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 5%;
+      right: 5%;
+      height: 0;
+      border-top: 4px dashed #fbbf24;
+      transform: translateY(-50%);
+      opacity: 0.5;
+      z-index: 0;
+    }
+
+    /* 車の行 */
+    .highway-cars {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+      padding: 14px 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .car-item {
+      background: rgba(255,255,255,0.95);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .car-item .car-emoji {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .car-item-tcp {
+      color: #1e40af;
+      border-bottom: 3px solid #3b82f6;
+    }
+
+    .car-item-udp {
+      color: #9d174d;
+      border-bottom: 3px solid #ec4899;
+      background: rgba(255,240,245,0.95);
+    }
+
+    /* カメラ行 */
+    .camera-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 92%;
+    }
+
+    .camera-icon {
+      font-size: 38px;
+      flex-shrink: 0;
+    }
+
+    .camera-label {
+      background: #dbeafe;
+      border: 2px solid #93c5fd;
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e40af;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ミラー矢印 */
+    .mirror-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 20px;
+      color: #6366f1;
+      font-weight: 600;
+    }
+
+    .mirror-arrow .arrow-line {
+      font-size: 28px;
+    }
+
+    /* 監視センター */
+    .monitor-center {
+      background: #ede9fe;
+      border: 2px solid #a78bfa;
+      border-radius: 14px;
+      padding: 22px;
+      text-align: center;
+      width: 92%;
+    }
+
+    .monitor-center .monitor-emoji {
+      font-size: 42px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .monitor-center .monitor-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #5b21b6;
+    }
+
+    .monitor-center .monitor-desc {
+      font-size: 20px;
+      color: #4c1d95;
+      margin-top: 6px;
+    }
+
+    /* ========================================
+       技術アーキテクチャ図
+       ======================================== */
+    .arch-diagram {
+      background: #ffffff;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 30px;
+      margin: 25px 0;
+    }
+
+    .arch-diagram h3 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .arch-flow {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .arch-node {
+      flex: 1;
+      min-width: 180px;
+      max-width: 220px;
+      text-align: center;
+      padding: 20px 14px;
+      border-radius: 14px;
+      position: relative;
+    }
+
+    .arch-node .node-icon {
+      font-size: 44px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .arch-node .node-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .arch-node .node-desc {
+      font-size: 20px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .arch-node-source {
+      background: #dbeafe;
+      border: 2px solid #93c5fd;
+    }
+
+    .arch-node-source .node-title { color: #1e40af; }
+
+    .arch-node-filter {
+      background: #fef3c7;
+      border: 2px solid #fcd34d;
+    }
+
+    .arch-node-filter .node-title { color: #92400e; }
+
+    .arch-node-session {
+      background: #e0e7ff;
+      border: 2px solid #a5b4fc;
+    }
+
+    .arch-node-session .node-title { color: #3730a3; }
+
+    .arch-node-target {
+      background: #ede9fe;
+      border: 2px solid #c4b5fd;
+    }
+
+    .arch-node-target .node-title { color: #5b21b6; }
+
+    .arch-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 32px;
+      color: #94a3b8;
+      padding: 0 4px;
+    }
+
+    /* ========================================
+       UDPとは何かセクション
+       ======================================== */
+    .udp-section {
+      border-top: 5px solid #8b5cf6;
+    }
+
+    .udp-section h2 {
+      color: #5b21b6;
+    }
+
+    .protocol-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .protocol-card {
+      border-radius: 14px;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .protocol-card .proto-emoji {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .protocol-card .proto-name {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .protocol-card .proto-analogy {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .protocol-card .proto-features {
+      font-size: 20px;
+      text-align: left;
+      line-height: 1.8;
+    }
+
+    .proto-tcp {
+      background: #dbeafe;
+      border: 2px solid #93c5fd;
+    }
+
+    .proto-tcp .proto-name { color: #1e40af; }
+
+    .proto-udp {
+      background: #fce7f3;
+      border: 2px solid #f9a8d4;
+    }
+
+    .proto-udp .proto-name { color: #9d174d; }
+
+    /* ========================================
+       4コンポーネント解説
+       ======================================== */
+    .components-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .component-card {
+      border-radius: 14px;
+      padding: 25px;
+      position: relative;
+    }
+
+    .component-card .comp-num {
+      position: absolute;
+      top: -12px;
+      left: 20px;
+      background: #0f172a;
+      color: #ffffff;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .component-card .comp-icon {
+      font-size: 40px;
+      display: block;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .component-card .comp-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .component-card .comp-analogy {
+      font-size: 20px;
+      text-align: center;
+      margin-bottom: 10px;
+      font-style: italic;
+      color: #475569;
+    }
+
+    .component-card .comp-desc {
+      font-size: 20px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .comp-source {
+      background: #eff6ff;
+      border: 2px solid #bfdbfe;
+    }
+
+    .comp-source .comp-title { color: #1e40af; }
+
+    .comp-filter {
+      background: #fefce8;
+      border: 2px solid #fde68a;
+    }
+
+    .comp-filter .comp-title { color: #854d0e; }
+
+    .comp-session {
+      background: #eef2ff;
+      border: 2px solid #c7d2fe;
+    }
+
+    .comp-session .comp-title { color: #3730a3; }
+
+    .comp-target {
+      background: #faf5ff;
+      border: 2px solid #e9d5ff;
+    }
+
+    .comp-target .comp-title { color: #6b21a8; }
+
+    /* ========================================
+       UDP監視ユースケース
+       ======================================== */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      margin: 20px 0;
+    }
+
+    .usecase-card {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 22px;
+      text-align: center;
+    }
+
+    .usecase-card .uc-emoji {
+      font-size: 42px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .usecase-card .uc-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .usecase-card .uc-desc {
+      font-size: 20px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    /* ========================================
+       VXLANカプセル化説明
+       ======================================== */
+    .vxlan-diagram {
+      background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+      border: 2px solid #fde68a;
+      border-radius: 16px;
+      padding: 30px;
+      margin: 25px 0;
+    }
+
+    .vxlan-diagram h3 {
+      text-align: center;
+      color: #854d0e;
+      margin-bottom: 20px;
+    }
+
+    .vxlan-layers {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .vxlan-layer {
+      border-radius: 12px;
+      padding: 16px 30px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 600;
+      width: 80%;
+      position: relative;
+    }
+
+    .vxlan-outer {
+      background: #fbbf24;
+      color: #78350f;
+      border: 2px solid #f59e0b;
+      border-radius: 14px 14px 0 0;
+      z-index: 1;
+    }
+
+    .vxlan-vxlan {
+      background: #fb923c;
+      color: #7c2d12;
+      border: 2px solid #f97316;
+      border-top: none;
+      width: 70%;
+    }
+
+    .vxlan-original {
+      background: #34d399;
+      color: #064e3b;
+      border: 2px solid #10b981;
+      border-top: none;
+      border-radius: 0 0 14px 14px;
+      width: 60%;
+    }
+
+    .vxlan-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 20px;
+      color: #78350f;
+      margin-top: 12px;
+    }
+
+    /* ========================================
+       セットアップ手順
+       ======================================== */
+    .setup-section {
+      border-top: 5px solid #0ea5e9;
+    }
+
+    .setup-section h2 {
+      color: #0c4a6e;
+    }
+
+    .setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin: 20px 0;
+    }
+
+    .setup-step {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 14px;
+      padding: 22px;
+    }
+
+    .step-number {
+      background: #0ea5e9;
+      color: #ffffff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-content .step-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0c4a6e;
+      margin-bottom: 6px;
+    }
+
+    .step-content .step-desc {
+      font-size: 20px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .step-content .step-analogy {
+      font-size: 20px;
+      color: #047857;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* ========================================
+       コードブロック
+       ======================================== */
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 22px;
+      margin: 18px 0;
+      overflow-x: auto;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .code-block .code-comment {
+      color: #94a3b8;
+    }
+
+    .code-block .code-keyword {
+      color: #38bdf8;
+    }
+
+    .code-block .code-value {
+      color: #4ade80;
+    }
+
+    /* ========================================
+       注意点セクション
+       ======================================== */
+    .caution-section {
+      border-top: 5px solid #ef4444;
+    }
+
+    .caution-section h2 {
+      color: #991b1b;
+    }
+
+    .caution-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 20px 0;
+    }
+
+    .caution-card {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      border-radius: 14px;
+      padding: 22px;
+    }
+
+    .caution-card .caution-icon {
+      font-size: 36px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .caution-card .caution-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 8px;
+    }
+
+    .caution-card .caution-desc {
+      font-size: 20px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    /* ========================================
+       ベストプラクティス
+       ======================================== */
+    .tips-section {
+      border-top: 5px solid #10b981;
+    }
+
+    .tips-section h2 {
+      color: #065f46;
+    }
+
+    .tips-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 20px 0;
+    }
+
+    .tip-card {
+      background: #ecfdf5;
+      border: 2px solid #a7f3d0;
+      border-radius: 14px;
+      padding: 22px;
+    }
+
+    .tip-card .tip-icon {
+      font-size: 36px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .tip-card .tip-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #065f46;
+      margin-bottom: 8px;
+    }
+
+    .tip-card .tip-desc {
+      font-size: 20px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    /* ========================================
+       FAQ
+       ======================================== */
+    .faq-section {
+      border-top: 5px solid #6366f1;
+    }
+
+    .faq-section h2 {
+      color: #3730a3;
+    }
+
+    .faq-item {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 15px;
+    }
+
+    .faq-item .faq-q {
+      font-size: 22px;
+      font-weight: 700;
+      color: #3730a3;
+      margin-bottom: 10px;
+    }
+
+    .faq-item .faq-a {
+      font-size: 20px;
+      color: #374151;
+      line-height: 1.7;
+    }
+
+    /* ========================================
+       フロー全体図
+       ======================================== */
+    .full-flow {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 30px;
+      margin: 25px 0;
+    }
+
+    .full-flow h3 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .flow-box {
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 160px;
+    }
+
+    .flow-arrow-down {
+      text-align: center;
+      font-size: 30px;
+      color: #94a3b8;
+      margin: 6px 0;
+    }
+
+    .flow-source {
+      background: #dbeafe;
+      border: 2px solid #93c5fd;
+      color: #1e40af;
+    }
+
+    .flow-filter {
+      background: #fef3c7;
+      border: 2px solid #fcd34d;
+      color: #92400e;
+    }
+
+    .flow-session {
+      background: #e0e7ff;
+      border: 2px solid #a5b4fc;
+      color: #3730a3;
+    }
+
+    .flow-vxlan {
+      background: #ffedd5;
+      border: 2px solid #fdba74;
+      color: #9a3412;
+    }
+
+    .flow-target {
+      background: #ede9fe;
+      border: 2px solid #c4b5fd;
+      color: #5b21b6;
+    }
+
+    .flow-analyze {
+      background: #ecfdf5;
+      border: 2px solid #86efac;
+      color: #065f46;
+    }
+
+    .flow-arrow-right {
+      font-size: 28px;
+      color: #94a3b8;
+    }
+
+    /* ========================================
+       まとめ
+       ======================================== */
+    .summary-section {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 35px 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border-top: 5px solid #0ea5e9;
+      text-align: center;
+    }
+
+    .summary-section h2 {
+      font-size: 26px;
+      color: #0c4a6e;
+      justify-content: center;
+      border-bottom: none;
+    }
+
+    .summary-text {
+      font-size: 22px;
+      color: #374151;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.8;
+    }
+
+    /* ========================================
+       レスポンシブ
+       ======================================== */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+        font-size: 18px;
+            padding-top: 70px;}
+
+      .header h1 {
+        font-size: 26px;
+      }
+
+      .conclusion-points,
+      .analogy-mapping,
+      .protocol-comparison,
+      .components-grid,
+      .caution-grid,
+      .tips-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .usecase-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .arch-flow {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .arch-arrow {
+        transform: rotate(90deg);
+      }
+
+      .flow-row {
+        flex-direction: column;
+      }
+
+      .flow-arrow-right {
+        transform: rotate(90deg);
+      }
+    }</style>
+<!-- ヘッダー -->
+    <header class="header">
+      <span class="header-icon" aria-hidden="true">📡</span>
+      <h1>VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド</h1>
+      <p class="header-sub">高速道路の監視カメラシステムで理解する、ネットワーク通信の「コピー＆分析」</p>
+    </header>
+
+    <main>
+
+      <!-- 結論ファースト -->
+      <section class="conclusion-first">
+        <h2 id="⚡-まず結論">⚡ まず結論</h2>
+        <div class="conclusion-points">
+          <div class="conclusion-point">
+            <strong>Traffic Mirroringとは：</strong>EC2のネットワーク通信を、本番に影響なくコピーして別の場所で分析できるAWSのサービス
+          </div>
+          <div class="conclusion-point">
+            <strong>UDPが重要な理由：</strong>DNS、VoIP、ゲーム通信など、速度重視の通信はUDPを使っており、セキュリティ監視の盲点になりやすい
+          </div>
+          <div class="conclusion-point">
+            <strong>仕組み：</strong>パケットをVXLANでカプセル化してターゲットに転送。元の通信には一切影響しない
+          </div>
+          <div class="conclusion-point">
+            <strong>用途：</strong>不正DNS通信の検出、DDoS攻撃分析、VoIP品質監視、コンプライアンス対応など
+          </div>
+        </div>
+      </section>
+
+      <!-- たとえ話セクション -->
+      <section class="section analogy-section">
+        <h2 id="️-たとえ話-高速道路の監視カメラシステム">🛣️ たとえ話：高速道路の監視カメラシステム</h2>
+
+        <div class="analogy-intro">
+          VPC Traffic Mirroring は、<strong>高速道路に設置された監視カメラ</strong>のようなもの。<br>
+          道路を走る車（パケット）を止めることなく、その映像（通信データ）をコピーして監視センター（分析ツール）に送る仕組みです。
+        </div>
+
+        <!-- たとえ話マッピング 2×2 均等グリッド -->
+        <div class="analogy-mapping">
+          <div class="mapping-card">
+            <span class="mapping-emoji" aria-hidden="true">🛣️</span>
+            <div class="mapping-real">VPC内のENI（ネットワークIF）</div>
+            <div class="mapping-analogy">= 監視対象の高速道路</div>
+          </div>
+          <div class="mapping-card">
+            <span class="mapping-emoji" aria-hidden="true">📹</span>
+            <div class="mapping-real">Traffic Mirror Session</div>
+            <div class="mapping-analogy">= 監視カメラの録画設定</div>
+          </div>
+          <div class="mapping-card">
+            <span class="mapping-emoji" aria-hidden="true">🎯</span>
+            <div class="mapping-real">Traffic Mirror Filter</div>
+            <div class="mapping-analogy">= 「トラックだけ撮影」などのルール</div>
+          </div>
+          <div class="mapping-card">
+            <span class="mapping-emoji" aria-hidden="true">🖥️</span>
+            <div class="mapping-real">Traffic Mirror Target</div>
+            <div class="mapping-analogy">= 監視センターのモニター室</div>
+          </div>
+        </div>
+
+        <!-- 大きな図解 -->
+        <div class="big-diagram">
+          <h3 id="全体イメージ図">📐 全体イメージ図</h3>
+          <div class="highway-diagram">
+
+            <!-- 道路ラベル -->
+            <div class="highway-label">🛣️ VPC内のENI（高速道路）</div>
+
+            <!-- 道路＋走行中の車 -->
+            <div class="highway-road">
+              <div class="highway-cars">
+                <div class="car-item car-item-tcp">
+                  <span class="car-emoji" aria-hidden="true">🚗</span>
+                  TCP
+                </div>
+                <div class="car-item car-item-udp">
+                  <span class="car-emoji" aria-hidden="true">🚚</span>
+                  UDP
+                </div>
+                <div class="car-item car-item-tcp">
+                  <span class="car-emoji" aria-hidden="true">🚙</span>
+                  TCP
+                </div>
+                <div class="car-item car-item-udp">
+                  <span class="car-emoji" aria-hidden="true">🚛</span>
+                  UDP
+                </div>
+              </div>
+            </div>
+
+            <!-- カメラ行 -->
+            <div class="camera-row">
+              <span class="camera-icon" aria-hidden="true">📹</span>
+              <div class="camera-label">
+                Traffic Mirror Filter<br>
+                「🚚 UDPトラックだけ撮影せよ」
+              </div>
+              <span class="camera-icon" aria-hidden="true">📹</span>
+            </div>
+
+            <!-- 転送矢印 -->
+            <div class="mirror-arrow">
+              <span class="arrow-line" aria-hidden="true">⬇️</span>
+              コピーした映像（VXLANでカプセル化）を転送
+              <span class="arrow-line" aria-hidden="true">⬇️</span>
+            </div>
+
+            <!-- 監視センター -->
+            <div class="monitor-center">
+              <span class="monitor-emoji" aria-hidden="true">🖥️</span>
+              <div class="monitor-title">Traffic Mirror Target（監視センター）</div>
+              <div class="monitor-desc">NLB / ENI / Gateway LB で受信 → 分析ツールで解析</div>
+            </div>
+
+          </div>
+        </div>
+
+        <p style="text-align: center; color: #065f46; font-weight: 600;">
+          ポイント：車（パケット）を止めずに映像（データのコピー）だけを送る = 本番通信に影響ゼロ！
+        </p>
+      </section>
+
+      <!-- UDPとは何か -->
+      <section class="section udp-section">
+        <h2 id="なぜUDPのキャプチャが重要なのか？">📦 なぜ「UDP」のキャプチャが重要なのか？</h2>
+
+        <p>
+          まず、TCPとUDPの違いを「郵便の仕組み」で理解しましょう。
+        </p>
+
+        <div class="protocol-comparison">
+          <div class="protocol-card proto-tcp">
+            <span class="proto-emoji" aria-hidden="true">📮</span>
+            <div class="proto-name">TCP（書留郵便）</div>
+            <div class="proto-analogy">確実に届く。受領印あり。</div>
+            <div class="proto-features">
+              ✅ 送達確認あり（ACK）<br>
+              ✅ 順番保証あり<br>
+              ✅ 再送あり<br>
+              ⚠️ その分だけ遅い
+            </div>
+          </div>
+          <div class="protocol-card proto-udp">
+            <span class="proto-emoji" aria-hidden="true">📨</span>
+            <div class="proto-name">UDP（ポスト投函）</div>
+            <div class="proto-analogy">とにかく速い。届いたかは未確認。</div>
+            <div class="proto-features">
+              ✅ 高速・軽量<br>
+              ✅ リアルタイム通信に最適<br>
+              ❌ 送達確認なし<br>
+              ⚠️ 悪用されやすい
+            </div>
+          </div>
+        </div>
+
+        <h3 id="UDPがセキュリティの盲点になる理由">🔍 UDPが「セキュリティの盲点」になる理由</h3>
+        <p>
+          UDPは「送りっぱなし」で確認がないため、攻撃者が悪意あるデータを紛れ込ませやすい通信方式です。
+          DNS通信（ポート53）を悪用したデータ流出や、UDPフラッド攻撃によるDDoSなど、
+          UDPを監視しないと見逃してしまう脅威が多数あります。
+        </p>
+      </section>
+
+      <!-- UDPユースケース -->
+      <section class="section">
+        <h2 id="Traffic-Mirroring-×-UDP-の主なユースケース">🎯 Traffic Mirroring × UDP の主なユースケース</h2>
+
+        <div class="usecase-grid">
+          <div class="usecase-card">
+            <span class="uc-emoji" aria-hidden="true">🌐</span>
+            <div class="uc-title">DNS通信の監視</div>
+            <div class="uc-desc">ポート53のUDP通信を監視し、不審なドメインへの問い合わせやDNSトンネリングを検出</div>
+          </div>
+          <div class="usecase-card">
+            <span class="uc-emoji" aria-hidden="true">🛡️</span>
+            <div class="uc-title">DDoS攻撃の分析</div>
+            <div class="uc-desc">大量のUDPフラッドパケットをキャプチャし、攻撃パターンや発信元を特定</div>
+          </div>
+          <div class="usecase-card">
+            <span class="uc-emoji" aria-hidden="true">📞</span>
+            <div class="uc-title">VoIP品質監視</div>
+            <div class="uc-desc">SIP/RTP通信のパケットロスやジッターを分析し、通話品質の問題を診断</div>
+          </div>
+          <div class="usecase-card">
+            <span class="uc-emoji" aria-hidden="true">🎮</span>
+            <div class="uc-title">ゲーム通信の監視</div>
+            <div class="uc-desc">リアルタイムゲーム通信のレイテンシーやパケットロスを分析</div>
+          </div>
+          <div class="usecase-card">
+            <span class="uc-emoji" aria-hidden="true">📋</span>
+            <div class="uc-title">コンプライアンス</div>
+            <div class="uc-desc">規制要件に基づくネットワーク通信の記録・保存・監査対応</div>
+          </div>
+          <div class="usecase-card">
+            <span class="uc-emoji" aria-hidden="true">🔬</span>
+            <div class="uc-title">フォレンジック調査</div>
+            <div class="uc-desc">セキュリティインシデント発生時の通信ログの事後分析・証拠保全</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4つのコンポーネント -->
+      <section class="section">
+        <h2 id="Traffic-Mirroring-の4つの構成要素">🧩 Traffic Mirroring の4つの構成要素</h2>
+
+        <p>
+          監視カメラシステムに例えると、それぞれの役割がわかりやすくなります。
+        </p>
+
+        <div class="components-grid">
+          <div class="component-card comp-source">
+            <span class="comp-num">1</span>
+            <span class="comp-icon" aria-hidden="true">🛣️</span>
+            <div class="comp-title">Mirror Source（ソース）</div>
+            <div class="comp-analogy">= 監視対象の道路</div>
+            <div class="comp-desc">
+              トラフィックをコピーする元のENI（Elastic Network Interface）。EC2インスタンスに紐づくネットワークインターフェースを指定します。
+            </div>
+          </div>
+
+          <div class="component-card comp-filter">
+            <span class="comp-num">2</span>
+            <span class="comp-icon" aria-hidden="true">🎯</span>
+            <div class="comp-title">Mirror Filter（フィルター）</div>
+            <div class="comp-analogy">= 「トラックだけ撮影」のルール</div>
+            <div class="comp-desc">
+              どのトラフィックをコピーするかのルール。プロトコル（UDP=17）、ポート番号、方向（Ingress/Egress）などを指定できます。
+            </div>
+          </div>
+
+          <div class="component-card comp-session">
+            <span class="comp-num">3</span>
+            <span class="comp-icon" aria-hidden="true">📹</span>
+            <div class="comp-title">Mirror Session（セッション）</div>
+            <div class="comp-analogy">= カメラの録画設定</div>
+            <div class="comp-desc">
+              ソースとターゲットを紐づける設定。フィルターの適用、VXLAN IDの設定、セッションの有効化/無効化を管理します。
+            </div>
+          </div>
+
+          <div class="component-card comp-target">
+            <span class="comp-num">4</span>
+            <span class="comp-icon" aria-hidden="true">🖥️</span>
+            <div class="comp-title">Mirror Target（ターゲット）</div>
+            <div class="comp-analogy">= 監視センターのモニター</div>
+            <div class="comp-desc">
+              コピーされた通信を受け取る先。ENI、NLB（Network Load Balancer）、Gateway Load Balancerのいずれかを指定します。
+            </div>
+          </div>
+        </div>
+
+        <!-- アーキテクチャフロー図 -->
+        <div class="arch-diagram">
+          <h3 id="構成要素の関係図">🔗 構成要素の関係図</h3>
+          <div class="arch-flow">
+            <div class="arch-node arch-node-source">
+              <span class="node-icon" aria-hidden="true">🛣️</span>
+              <div class="node-title">Source ENI</div>
+              <div class="node-desc">EC2のENI</div>
+            </div>
+            <div class="arch-arrow" aria-hidden="true">→</div>
+            <div class="arch-node arch-node-filter">
+              <span class="node-icon" aria-hidden="true">🎯</span>
+              <div class="node-title">Filter</div>
+              <div class="node-desc">UDP:17を許可</div>
+            </div>
+            <div class="arch-arrow" aria-hidden="true">→</div>
+            <div class="arch-node arch-node-session">
+              <span class="node-icon" aria-hidden="true">📹</span>
+              <div class="node-title">Session</div>
+              <div class="node-desc">VXLAN カプセル化</div>
+            </div>
+            <div class="arch-arrow" aria-hidden="true">→</div>
+            <div class="arch-node arch-node-target">
+              <span class="node-icon" aria-hidden="true">🖥️</span>
+              <div class="node-title">Target</div>
+              <div class="node-desc">NLB / ENI</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VXLANカプセル化 -->
+      <section class="section">
+        <h2 id="VXLANカプセル化とは？">📦 VXLANカプセル化とは？</h2>
+
+        <p>
+          ミラーリングされたパケットは、そのまま送られるのではなく、
+          「VXLAN」という封筒に入れて転送されます。
+          宅配便に例えると、元の荷物をさらに大きな箱に入れて送るイメージです。
+        </p>
+
+        <div class="vxlan-diagram">
+          <h3 id="VXLANカプセル化の構造入れ子の箱">📐 VXLANカプセル化の構造（入れ子の箱）</h3>
+          <div class="vxlan-layers">
+            <div class="vxlan-layer vxlan-outer">
+              📦 外側のUDP/IPヘッダー（宛先 = ターゲットのIP）
+            </div>
+            <div class="vxlan-layer vxlan-vxlan">
+              🏷️ VXLANヘッダー（VXLAN ID で識別）
+            </div>
+            <div class="vxlan-layer vxlan-original">
+              💌 元のパケット（キャプチャしたUDP通信そのもの）
+            </div>
+          </div>
+          <div class="vxlan-label">
+            ⬆️ 元のパケットをそのまま保持したまま、外側に転送用の情報を追加
+          </div>
+        </div>
+
+        <p>
+          <strong>なぜVXLAN？</strong>
+          元のパケットを一切変更せずに転送できるため、ターゲット側の分析ツールで
+          完全なオリジナルパケットを復元できます。
+          VXLANポートは<strong>UDP 4789</strong>を使用します。
+        </p>
+      </section>
+
+      <!-- セットアップ手順 -->
+      <section class="section setup-section">
+        <h2 id="️-UDP-キャプチャのセットアップ手順">🛠️ UDP キャプチャのセットアップ手順</h2>
+
+        <div class="setup-steps">
+          <div class="setup-step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <div class="step-title">Mirror Targetを作成する</div>
+              <div class="step-desc">
+                キャプチャデータの受け先を先に用意。NLBの場合はUDP 4789を受け付けるリスナーを設定。
+                ターゲットのセキュリティグループでUDP 4789を許可することを忘れずに。
+              </div>
+              <div class="step-analogy">
+                🏗️ たとえ：まず監視センターのモニター室を建設する
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <div class="step-title">Mirror Filterを作成する</div>
+              <div class="step-desc">
+                UDPプロトコル（番号17）を対象にしたInbound/Outboundルールを設定。
+                特定ポート（例：DNS=53、SNMP=161）に絞ることも可能。
+              </div>
+              <div class="step-analogy">
+                📋 たとえ：「UDPトラックだけ撮影せよ」という撮影ルールを書く
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <div class="step-title">Mirror Sessionを作成する</div>
+              <div class="step-desc">
+                ソースENI、ターゲット、フィルターを紐づけてセッションを起動。
+                Session Numberで優先度を設定（数値が小さい方が優先）。
+              </div>
+              <div class="step-analogy">
+                🎬 たとえ：カメラを設置し、録画ルールとモニター室を接続して録画開始！
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <div class="step-title">ターゲットで受信・分析する</div>
+              <div class="step-desc">
+                受信したVXLANパケットをデカプセル化し、Wireshark、Zeek、Suricataなどの
+                IDS/分析ツールでUDP通信の内容を解析。
+              </div>
+              <div class="step-analogy">
+                🔍 たとえ：監視センターで映像を再生し、不審な車両を特定する
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLIサンプル -->
+        <h3 id="AWS-CLI-サンプルコマンド">💻 AWS CLI サンプルコマンド</h3>
+
+        <div class="code-block">
+          <span class="code-comment"># 1. Mirror Targetの作成（NLBの場合）</span><br>
+          <span class="code-keyword">aws</span> ec2 create-traffic-mirror-target \\<br>
+          &nbsp;&nbsp;--network-load-balancer-arn <span class="code-value">arn:aws:elasticloadbalancing:...</span> \\<br>
+          &nbsp;&nbsp;--description <span class="code-value">"UDP capture target"</span><br><br>
+
+          <span class="code-comment"># 2. Mirror Filterの作成（UDPのみ対象）</span><br>
+          <span class="code-keyword">aws</span> ec2 create-traffic-mirror-filter \\<br>
+          &nbsp;&nbsp;--description <span class="code-value">"UDP only filter"</span><br><br>
+
+          <span class="code-comment"># 3. FilterルールでUDP（プロトコル17）を許可</span><br>
+          <span class="code-keyword">aws</span> ec2 create-traffic-mirror-filter-rule \\<br>
+          &nbsp;&nbsp;--traffic-mirror-filter-id <span class="code-value">tmf-xxxxxxxxx</span> \\<br>
+          &nbsp;&nbsp;--traffic-direction <span class="code-value">ingress</span> \\<br>
+          &nbsp;&nbsp;--rule-number <span class="code-value">100</span> \\<br>
+          &nbsp;&nbsp;--rule-action <span class="code-value">accept</span> \\<br>
+          &nbsp;&nbsp;--protocol <span class="code-value">17</span> \\<br>
+          &nbsp;&nbsp;--source-cidr-block <span class="code-value">0.0.0.0/0</span> \\<br>
+          &nbsp;&nbsp;--destination-cidr-block <span class="code-value">0.0.0.0/0</span><br><br>
+
+          <span class="code-comment"># 4. Mirror Sessionの作成</span><br>
+          <span class="code-keyword">aws</span> ec2 create-traffic-mirror-session \\<br>
+          &nbsp;&nbsp;--network-interface-id <span class="code-value">eni-xxxxxxxxx</span> \\<br>
+          &nbsp;&nbsp;--traffic-mirror-target-id <span class="code-value">tmt-xxxxxxxxx</span> \\<br>
+          &nbsp;&nbsp;--traffic-mirror-filter-id <span class="code-value">tmf-xxxxxxxxx</span> \\<br>
+          &nbsp;&nbsp;--session-number <span class="code-value">1</span> \\<br>
+          &nbsp;&nbsp;--description <span class="code-value">"UDP traffic capture session"</span>
+        </div>
+      </section>
+
+      <!-- 全体フロー図 -->
+      <section class="section">
+        <h2 id="全体フロー-UDPパケットの旅">🔄 全体フロー：UDPパケットの旅</h2>
+
+        <div class="full-flow">
+          <h3 id="UDPパケットがキャプチャされて分析されるまで">UDPパケットがキャプチャされて分析されるまで</h3>
+
+          <div class="flow-row">
+            <div class="flow-box flow-source">🛣️ Source ENI<br>（EC2のネットワークIF）</div>
+            <span class="flow-arrow-right" aria-hidden="true">→</span>
+            <div class="flow-box flow-filter">🎯 Filter<br>（UDP:17 を選別）</div>
+            <span class="flow-arrow-right" aria-hidden="true">→</span>
+            <div class="flow-box flow-session">📹 Session<br>（パケットをコピー）</div>
+          </div>
+
+          <div class="flow-arrow-down" aria-hidden="true">⬇️</div>
+
+          <div class="flow-row">
+            <div class="flow-box flow-vxlan">📦 VXLAN カプセル化<br>（UDP 4789で転送）</div>
+            <span class="flow-arrow-right" aria-hidden="true">→</span>
+            <div class="flow-box flow-target">🖥️ Target<br>（NLB / ENI で受信）</div>
+            <span class="flow-arrow-right" aria-hidden="true">→</span>
+            <div class="flow-box flow-analyze">🔬 分析ツール<br>（Wireshark / Zeek）</div>
+          </div>
+        </div>
+
+        <p style="text-align: center; font-weight: 600; color: #0c4a6e;">
+          元のUDP通信は一切止まらない。コピーされたパケットだけがターゲットに届く！
+        </p>
+      </section>
+
+      <!-- 注意点 -->
+      <section class="section caution-section">
+        <h2 id="⚠️-よくある落とし穴と注意点">⚠️ よくある落とし穴と注意点</h2>
+
+        <div class="caution-grid">
+          <div class="caution-card">
+            <span class="caution-icon" aria-hidden="true">📏</span>
+            <div class="caution-title">MTUサイズ超過に注意</div>
+            <div class="caution-desc">
+              VXLANカプセル化で約54バイト増加する。元のパケットが大きいとMTU超過でトランケート（切り詰め）される。
+              ジャンボフレーム（MTU 9001）の利用を検討。
+            </div>
+          </div>
+          <div class="caution-card">
+            <span class="caution-icon" aria-hidden="true">💰</span>
+            <div class="caution-title">コスト増に注意</div>
+            <div class="caution-desc">
+              ミラーリングトラフィックにもデータ転送料金が発生する。
+              フィルターで本当に必要な通信だけに絞ることがコスト最適化の鍵。
+            </div>
+          </div>
+          <div class="caution-card">
+            <span class="caution-icon" aria-hidden="true">🔒</span>
+            <div class="caution-title">セキュリティグループの設定</div>
+            <div class="caution-desc">
+              ターゲットのセキュリティグループでUDP 4789（VXLANポート）を許可しないと
+              ミラーリングされたパケットが到達できない。
+            </div>
+          </div>
+          <div class="caution-card">
+            <span class="caution-icon" aria-hidden="true">📊</span>
+            <div class="caution-title">パフォーマンス影響</div>
+            <div class="caution-desc">
+              ソースENIの帯域をミラーリングトラフィックが消費する。
+              大量のミラーリングはソースインスタンスのネットワークスループットに影響しうる。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ベストプラクティス -->
+      <section class="section tips-section">
+        <h2 id="ベストプラクティス">💡 ベストプラクティス</h2>
+
+        <div class="tips-grid">
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">🎯</span>
+            <div class="tip-title">フィルターは最小限に</div>
+            <div class="tip-desc">
+              「全トラフィック」ではなく、UDP 53（DNS）やUDP 161（SNMP）など
+              目的に応じたポートに絞ることでコストと処理負荷を削減。
+            </div>
+          </div>
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">⚖️</span>
+            <div class="tip-title">NLBで負荷分散</div>
+            <div class="tip-desc">
+              ターゲットにNLBを使えば、複数の分析インスタンスに負荷分散できる。
+              大量のUDPトラフィックを安定してキャプチャ可能。
+            </div>
+          </div>
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">📈</span>
+            <div class="tip-title">CloudWatch で監視</div>
+            <div class="tip-desc">
+              MirrorPacketsIn / MirrorPacketsOut メトリクスでミラーリングの状態を監視。
+              異常なトラフィック増加をアラームで検知。
+            </div>
+          </div>
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">🏗️</span>
+            <div class="tip-title">別VPCターゲットも可能</div>
+            <div class="tip-desc">
+              ターゲットは別のVPCにも設置可能（VPCピアリングまたはTransit Gateway経由）。
+              セキュリティ分析を専用VPCに集約する構成が推奨。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ターゲット比較表 -->
+      <section class="section">
+        <h2 id="ターゲットの選び方">🔀 ターゲットの選び方</h2>
+
+        <p>
+          Mirror Targetは3種類から選べます。用途に応じて使い分けましょう。
+        </p>
+
+        <div class="components-grid">
+          <div class="component-card comp-source">
+            <span class="comp-icon" aria-hidden="true">🖧</span>
+            <div class="comp-title">ENI（単体インスタンス）</div>
+            <div class="comp-analogy">= 1台のモニターで監視</div>
+            <div class="comp-desc">
+              シンプル構成。小規模環境やテスト用途に最適。1対1の直接転送。
+            </div>
+          </div>
+
+          <div class="component-card comp-filter">
+            <span class="comp-icon" aria-hidden="true">⚖️</span>
+            <div class="comp-title">NLB（Network LB）</div>
+            <div class="comp-analogy">= 複数モニターに分配</div>
+            <div class="comp-desc">
+              大規模環境向け。複数の分析インスタンスに負荷分散。本番運用で最も推奨される構成。
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <div class="component-card comp-session" style="max-width: 100%;">
+            <span class="comp-icon" aria-hidden="true">🌐</span>
+            <div class="comp-title" style="text-align: center;">Gateway Load Balancer（GLB）</div>
+            <div class="comp-analogy" style="text-align: center;">= サードパーティ製の高機能監視システムへの接続</div>
+            <div class="comp-desc" style="text-align: center;">
+              サードパーティ製のセキュリティアプライアンス（Palo Alto、Fortinet等）と連携する場合に使用。
+              AWS Marketplaceの IDS/IPS ソリューションとの統合に最適。
+            </div>
+          </div>
+          <p style="text-align: center; margin-top: 12px; color: #3730a3; font-weight: 600; font-size: 20px;">
+            ⬆️ 上の2つとは用途が異なる「サードパーティ連携用」のターゲットタイプ
+          </p>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="section faq-section">
+        <h2 id="❓-よくある質問">❓ よくある質問</h2>
+
+        <div class="faq-item">
+          <div class="faq-q">Q. Traffic Mirroringで本番通信が遅くなることはある？</div>
+          <div class="faq-a">
+            基本的にはありません。ミラーリングはパケットの「コピー」を送るだけで、
+            元の通信フローには介入しません。ただし、大量ミラーリングでENIの帯域上限に近づくと、
+            ソースインスタンスのネットワーク性能に影響が出る可能性があります。
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Q. UDPだけでなくTCPもまとめてキャプチャできる？</div>
+          <div class="faq-a">
+            はい、Filterルールで複数のプロトコルを設定できます。
+            UDPとTCPそれぞれにAcceptルールを作成すれば両方キャプチャ可能です。
+            ただし、対象を広げるほどコストとデータ量が増えるため、目的に応じた絞り込みが重要です。
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Q. VXLANのデカプセル化はどうやるの？</div>
+          <div class="faq-a">
+            分析ツール側で対応します。WiresharkはVXLANを標準でデコードできます。
+            Zeek（旧Bro）やSuricataも設定すればVXLANの内部パケットを解析可能です。
+            Linuxサーバーなら<code>vxlan</code>インターフェースを作成してOSレベルでデカプセル化することもできます。
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Q. Nitro以外の古いインスタンスでも使える？</div>
+          <div class="faq-a">
+            Traffic MirroringはNitroベースのインスタンスで利用可能です。
+            旧世代（t2、m4等）のインスタンスではサポートされていません。
+            対象インスタンスタイプはAWSドキュメントで確認してください。
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Q. 1つのENIに複数のMirror Sessionを設定できる？</div>
+          <div class="faq-a">
+            はい、1つのソースENIに対して複数のセッション（最大3つ）を設定できます。
+            Session Numberで優先度を管理し、それぞれ異なるフィルター・ターゲットを指定可能です。
+          </div>
+        </div>
+      </section>
+
+      <!-- まとめ -->
+      <section class="summary-section">
+        <h2 id="まとめ">🎯 まとめ</h2>
+        <p class="summary-text">
+          VPC Traffic Mirroringは、本番通信に影響を与えずにパケットをコピーして分析できる強力なサービスです。
+          特にUDPは「送りっぱなし」の性質上セキュリティの盲点になりがちですが、
+          Traffic Mirroringで可視化することで、DNS悪用やDDoS攻撃などの脅威を早期に発見できます。
+          高速道路の監視カメラのように「通行を妨げず、記録だけを残す」 — それがTraffic Mirroringの本質です。
+        </p>
+      </section>
+
+    </main>
+
+    <!-- フッター -->
+    <footer style="text-align: center; padding: 20px; color: #94a3b8; font-size: 18px;">
+      <p>VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド</p>
+    </footer>
+
+  </div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
