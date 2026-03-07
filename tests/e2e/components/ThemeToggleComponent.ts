@@ -13,9 +13,9 @@ export class ThemeToggleComponent {
     this.toggleBtn = page.locator('.theme-toggle');
   }
 
-  /** Click the theme toggle button. */
+  /** Click the theme toggle button. Uses dispatchEvent to work even when the button is outside the viewport (e.g. navbar overflow). */
   async toggle(): Promise<void> {
-    await this.toggleBtn.click();
+    await this.toggleBtn.dispatchEvent('click');
   }
 
   /** Get the current data-theme attribute value (e.g., "dark" or undefined). */

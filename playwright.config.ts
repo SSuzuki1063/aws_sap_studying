@@ -13,10 +13,12 @@ export default defineConfig({
   ],
   snapshotDir: 'tests/e2e/__snapshots__',
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:4321',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
+    locale: 'en-US',
+    timezoneId: 'UTC',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
@@ -31,10 +33,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'python3 server.py',
-    url: 'http://localhost:8080/',
+    command: 'npm run preview:test',
+    url: 'http://localhost:4321/aws_sap_studying/',
     reuseExistingServer: !process.env.CI,
-    timeout: 15_000,
+    timeout: 120_000,
   },
   timeout: 15_000,
   expect: { timeout: 8_000 },

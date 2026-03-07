@@ -56,8 +56,6 @@ test.describe('Visual regression — desktop dark', () => {
   test('index page', async ({ page }) => {
     const indexPage = new IndexPage(page);
     await indexPage.goto();
-    const hasToggle = await indexPage.themeToggle.isVisible().catch(() => false);
-    test.skip(!hasToggle, 'Theme toggle not present — dark mode screenshots require Astro build');
     await indexPage.themeToggleComponent.toggle();
     await page.waitForTimeout(300);
     await expect(page).toHaveScreenshot('index-desktop-dark.png', screenshotOpts);
@@ -66,8 +64,6 @@ test.describe('Visual regression — desktop dark', () => {
   test('concept-map page', async ({ page }) => {
     const conceptMapPage = new ConceptMapPage(page);
     await conceptMapPage.goto();
-    const hasToggle = await conceptMapPage.themeToggle.isVisible().catch(() => false);
-    test.skip(!hasToggle, 'Theme toggle not present — dark mode screenshots require Astro build');
     await conceptMapPage.themeToggleComponent.toggle();
     await page.waitForTimeout(300);
     await expect(page).toHaveScreenshot('concept-map-desktop-dark.png', screenshotOpts);
@@ -76,8 +72,6 @@ test.describe('Visual regression — desktop dark', () => {
   test('learning-resources page', async ({ page }) => {
     const lrPage = new LearningResourcesPage(page);
     await lrPage.goto();
-    const hasToggle = await lrPage.themeToggle.isVisible().catch(() => false);
-    test.skip(!hasToggle, 'Theme toggle not present — dark mode screenshots require Astro build');
     await lrPage.themeToggleComponent.toggle();
     await page.waitForTimeout(300);
     await expect(page).toHaveScreenshot('learning-resources-desktop-dark.png', screenshotOpts);
