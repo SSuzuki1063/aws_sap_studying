@@ -22,6 +22,7 @@ const searchData = [
   { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html' },
   { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html' },
   { title: 'Route 53 プライベートホストゾーン クロスアカウント関連付け', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53_cross_account_guide.html' },
+  { title: 'サブドメイン委任（Subdomain Delegation）完全ガイド - Route 53', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/subdomain-delegation-guide.html' },
   { title: 'ALB ターゲットグループ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb-target-group-guide.html' },
   { title: 'ALBスティッキーセッション完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb_sticky_session_infographic.html' },
   { title: 'Amazon AppStream 2.0 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/appstream-infographic.html' },
@@ -212,6 +213,7 @@ const searchData = [
   { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html' },
   { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html' },
   { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html' },
+  { title: 'AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信', category: 'ネットワーキング', file: 'networking/tgw-multicast-guide.html' },
   { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html' },
   { title: 'AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション', category: 'ネットワーキング', file: 'networking/vpn-throughput-scaling-guide.html' },
   { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', category: 'ネットワーキング', file: 'networking/aws-vpn-with-direct-connect-guide.html' },
@@ -233,6 +235,7 @@ const searchData = [
   { title: 'Gateway Load Balancer によるディープパケットインスペクション', category: 'ネットワーキング', file: 'networking/gwlb-deep-packet-inspection-guide.html' },
   { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', category: 'ネットワーキング', file: 'networking/guardduty-credential-exfiltration-guide-v2.html' },
   { title: 'LAG × ハイブリッドBGP - 階層的冗長性システム完全ガイド', category: 'ネットワーキング', file: 'networking/lag_hybrid_bgp_relationship.html' },
+  { title: 'NAT ゲートウェイのタイムアウト動作 完全ガイド', category: 'ネットワーキング', file: 'networking/nat-gateway-timeout-guide.html' },
   { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', category: 'ネットワーキング', file: 'networking/s3-vpc-endpoint-policy-guide.html' },
   { title: 'S3バケットポリシー Principal要素 完全ガイド', category: 'ネットワーキング', file: 'networking/s3-bucket-policy-principal-guide.html' },
   { title: 'Transit Gateway Connect 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-connect-guide.html' },
@@ -286,6 +289,19 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html' },
 ];
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

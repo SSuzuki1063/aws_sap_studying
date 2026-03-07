@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 71,
+    count: 73,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
         count: 15,
-        lastUpdated: '2026-02-28',
+        lastUpdated: '2026-03-08',
         resources: [
           { title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう', href: 'networking/aws-direct-connect-guide.html', priority: 'high' },
           { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', href: 'networking/aws-vpn-with-direct-connect-guide.html', priority: 'high' },
@@ -35,8 +35,8 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 43,
-        lastUpdated: '2026-02-28',
+        count: 44,
+        lastUpdated: '2026-03-08',
         resources: [
           { title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD', href: 'networking/aws-directory-service-guide.html' },
           { title: 'AWS ENI（Elastic Network Interface）初心者向け図解', href: 'networking/aws-eni-infographic.html', priority: 'low' },
@@ -61,6 +61,7 @@ const categoriesData = [
           { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', href: 'networking/hybrid-dns-architecture-guide.html', priority: 'high' },
           { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', href: 'networking/jumbo-frame-mtu-guide.html', priority: 'low' },
           { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', href: 'networking/nacl-sg-comparison-guide.html', priority: 'high' },
+          { title: 'NAT ゲートウェイのタイムアウト動作 完全ガイド', href: 'networking/nat-gateway-timeout-guide.html' },
           { title: 'プレフィックスリスト × AWS RAM 完全ガイド - マルチアカウントIP管理ソリューション', href: 'networking/prefix-list-ram-guide.html', priority: 'medium' },
           { title: 'S3バケットポリシー Principal要素 完全ガイド', href: 'networking/s3-bucket-policy-principal-guide.html' },
           { title: 'S3バケットポリシー × VPCエンドポイント完全ガイド', href: 'networking/s3-vpc-endpoint-policy-guide.html', priority: 'high' },
@@ -86,8 +87,8 @@ const categoriesData = [
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 11,
-        lastUpdated: '2026-02-28',
+        count: 12,
+        lastUpdated: '2026-03-08',
         resources: [
           { title: 'AWSネットワークゲートウェイの比較', href: 'networking/aws-gateways.html', priority: 'high' },
           { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html' },
@@ -95,6 +96,7 @@ const categoriesData = [
           { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', href: 'networking/route-analyzer-guide.html', priority: 'high' },
           { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html' },
           { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', href: 'networking/tgw-isolated-shared-services.html' },
+          { title: 'AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信', href: 'networking/tgw-multicast-guide.html' },
           { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html' },
           { title: 'AWS Transit Gateway Deep Dive 完全ガイド', href: 'networking/transit-gateway-deep-dive.html', priority: 'high' },
           { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', href: 'networking/transit-gateway-peering-guide.html', priority: 'high' },
@@ -106,7 +108,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-02-28',
+        lastUpdated: '2026-03-08',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html' }
@@ -342,13 +344,13 @@ const categoriesData = [
     id: 'content-delivery-dns',
     title: 'コンテンツ配信・DNS',
     icon: '🌍',
-    count: 23,
+    count: 24,
     sections: [
       {
         title: 'CloudFront & コンテンツ配信',
         icon: '⚡',
         count: 13,
-        lastUpdated: '2026-02-24',
+        lastUpdated: '2026-03-08',
         resources: [
           { title: 'ACM + ALB + EC2 TLS証明書設定 完全ガイド', href: 'content-delivery-dns/acm-alb-ec2-tls-guide.html' },
           { title: 'ACM DNS検証 - 超かんたん図解ガイド', href: 'content-delivery-dns/acm-dns-simple-guide.html' },
@@ -369,7 +371,7 @@ const categoriesData = [
         title: 'Route53 & DNS管理',
         icon: '🌍',
         count: 9,
-        lastUpdated: '2026-02-24',
+        lastUpdated: '2026-03-08',
         resources: [
           { title: 'AWS条件付きフォワーダールール解説', href: 'content-delivery-dns/aws-dns-infographic.html' },
           { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド', href: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html', priority: 'medium' },
@@ -385,10 +387,11 @@ const categoriesData = [
       {
         title: 'その他',
         icon: '📄',
-        count: 1,
-        lastUpdated: '2026-02-24',
+        count: 2,
+        lastUpdated: '2026-03-08',
         resources: [
-          { title: 'DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド', href: 'content-delivery-dns/dns-migration-guide.html' }
+          { title: 'DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド', href: 'content-delivery-dns/dns-migration-guide.html' },
+          { title: 'サブドメイン委任（Subdomain Delegation）完全ガイド - Route 53', href: 'content-delivery-dns/subdomain-delegation-guide.html' }
         ]
       }
     ]
@@ -598,7 +601,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 71
+    count: 73
   },
   {
     id: 'security-governance',
@@ -616,7 +619,7 @@ const categoryQuickNav = [
     id: 'content-delivery-dns',
     icon: '🚀',
     text: 'コンテンツ配信・DNS',
-    count: 23
+    count: 24
   },
   {
     id: 'development-deployment',
@@ -648,14 +651,31 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '292+',
+  totalResources: '295+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/06'
+  lastUpdated: '2026/03/08'
 };
 
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-08',
+    type: 'content',
+    title: 'ネットワーキング・DNS 3リソース追加 — TGWマルチキャスト, NATタイムアウト, サブドメイン委任',
+    description: 'Transit Gatewayマルチキャスト完全ガイド、NAT Gatewayタイムアウト動作ガイド、Route 53サブドメイン委任ガイドの3件を追加。',
+    categories: [
+      'networking',
+      'content-delivery-dns'
+    ],
+    tags: [
+      'Transit Gateway',
+      'Multicast',
+      'NAT Gateway',
+      'Route 53',
+      'DNS'
+    ]
+  },
   {
     date: '2026-02-28',
     type: 'content',
