@@ -1,5 +1,6 @@
 import { type Page, type Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { SearchComponent } from '../components/SearchComponent';
 
 /**
  * Page Object Model for index.html (home page).
@@ -7,6 +8,9 @@ import { BasePage } from './BasePage';
  */
 export class IndexPage extends BasePage {
   readonly pagePath = '/aws_sap_studying/';
+
+  // ── Component Objects ─────────────────────────────────────────────────────
+  readonly search: SearchComponent;
 
   // ── Page-specific locators ──────────────────────────────────────────────
   readonly heroTitle: Locator;
@@ -18,6 +22,7 @@ export class IndexPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
+    this.search        = new SearchComponent(page);
     this.heroTitle     = page.locator('.hero-title');
     this.heroCta       = page.locator('.hero-cta');
     this.heroCards     = page.locator('.hero-card');
@@ -26,9 +31,9 @@ export class IndexPage extends BasePage {
     this.hero          = page.locator('.hero');
   }
 
-  /** Wait for the hero section to be visible (page-specific load signal). */
+  /** Wait for the main content to be visible (page-specific load signal). */
   override async waitForReady(): Promise<void> {
-    await this.hero.waitFor({ state: 'visible', timeout: 10_000 });
+    await this.mainContent.waitFor({ state: 'visible', timeout: 10_000 });
   }
 
   // ── Navigation ──────────────────────────────────────────────────────────

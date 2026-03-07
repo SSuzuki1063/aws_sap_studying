@@ -1,15 +1,24 @@
 import { type Page, type Locator } from '@playwright/test';
+import { NavbarComponent } from '../components/NavbarComponent';
+import { ThemeToggleComponent } from '../components/ThemeToggleComponent';
+import { ScrollToTopComponent } from '../components/ScrollToTopComponent';
 
 /**
  * Base Page Object shared by all page-specific POM classes.
- * Provides common locators (header, nav, search, theme toggle)
- * and shared methods (goto, getAllLinks, theme management).
+ * Provides common locators (header, nav, search, theme toggle),
+ * shared methods (goto, getAllLinks, theme management),
+ * and Component Object composition for finer-grained access.
  */
 export abstract class BasePage {
   readonly page: Page;
 
   /** Subclasses MUST define the URL path for this page. */
   abstract readonly pagePath: string;
+
+  // ── Component Objects ─────────────────────────────────────────────────────
+  readonly navbar: NavbarComponent;
+  readonly themeToggleComponent: ThemeToggleComponent;
+  readonly scrollToTopComponent: ScrollToTopComponent;
 
   // ── Shared locators (present on all pages) ──────────────────────────────
   readonly header: Locator;
@@ -25,6 +34,13 @@ export abstract class BasePage {
 
   constructor(page: Page) {
     this.page = page;
+
+    // Component Objects
+    this.navbar                = new NavbarComponent(page);
+    this.themeToggleComponent  = new ThemeToggleComponent(page);
+    this.scrollToTopComponent  = new ScrollToTopComponent(page);
+
+    // Locators (preserved for backward compatibility)
     this.header             = page.locator('.fixed-nav-header');
     this.hamburgerBtn       = page.locator('#hamburgerBtn');
     this.mainNav            = page.locator('#mainNav');

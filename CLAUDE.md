@@ -67,24 +67,45 @@ npm run qa:all   # css-validate + css-runtime + unified report → qa-reports/in
 ### Playwright test architecture
 `tests/` has two distinct layers:
 - **`tests/e2e/concept-map/`** — 7 spec files, 58 tests (tabs, filters, accessibility, hierarchy, navigation, related-links, dom-snapshot)
+- **`tests/e2e/navigation/`** — navbar regression tests (links, mobile hamburger, cross-page navigation)
+- **`tests/e2e/links/`** — link validation tests (internal HTTP 200, external URL format, no empty hrefs)
+- **`tests/e2e/interaction/`** — interaction tests (theme toggle, search, scroll-to-top)
+- **`tests/e2e/visual/`** — visual regression screenshot tests (desktop/mobile, light/dark)
 - **`tests/e2e/qa/`** — QA specs that read JSON reports: `css-validation.spec.ts`, `css-runtime.spec.ts`
 - **`tests/e2e/helpers/`** — Page Object Model classes (see below)
+- **`tests/e2e/components/`** — Component Object Model classes (see below)
 - **`tests/modules/`** — Shared TypeScript modules: `types/`, `validators/`, `runtime/`, `accessibility/`, `dom/`, `ui-regression/`, `report/`
 - **`tests/config/css-runtime-expectations.json`** — Per-page CSS property expectations (desktop + mobile viewports)
 
-### Page Object Model (POM)
-All test specs use Page Object classes from `tests/e2e/helpers/`:
+### Page Object Model (POM) + Component Object Model (COM)
+All test specs use Page Object classes from `tests/e2e/helpers/`, which compose Component Objects from `tests/e2e/components/`:
 
 ```text
-BasePage (abstract)          — shared locators (header, nav, search, theme toggle) + goto(), getAllLinks()
-├── IndexPage                — index.html: hero, cards, CTA buttons
+Component Objects (tests/e2e/components/)
+├── NavbarComponent          — .fixed-nav-header: nav links, mobile hamburger, page routing
+├── SearchComponent          — #searchInput: fill, clear, result count, has-results
+├── ThemeToggleComponent     — .theme-toggle: toggle, getTheme, isDarkMode
+└── ScrollToTopComponent     — #scrollToTop: click, isVisible, waitForVisible
+
+Page Objects (tests/e2e/helpers/) — compose Component Objects as readonly properties
+BasePage (abstract)          — navbar, themeToggleComponent, scrollToTopComponent + goto(), getAllLinks()
+├── IndexPage                — search (SearchComponent) + index.html-specific locators
 ├── ConceptMapPage           — concept-map.html: L1/L2/L3 hierarchy, filters, breadcrumbs, detail panel
-└── LearningResourcesPage   — learning-resources.html: categories, resources, sidebar TOC
+└── LearningResourcesPage   — search (SearchComponent) + learning-resources.html-specific locators
 ```
 
-Import via barrel: `import { IndexPage, ConceptMapPage } from '../helpers'`
+Import via barrel: `import { IndexPage, ConceptMapPage, NavbarComponent } from '../helpers'`
 
-When writing new test specs, always use Page Object methods — never write raw CSS selectors in spec files.
+When writing new test specs, always use Page Object/Component Object methods — never write raw CSS selectors in spec files.
+
+### Regression test commands
+```bash
+npx playwright test --project=chromium tests/e2e/navigation/   # navbar regression
+npx playwright test --project=chromium tests/e2e/links/         # link validation
+npx playwright test --project=chromium tests/e2e/interaction/   # theme, search, scroll-to-top
+npx playwright test --project=chromium tests/e2e/visual/        # visual regression screenshots
+npx playwright test --project=chromium tests/e2e/visual/ --update-snapshots  # regenerate baselines
+```
 
 CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no browser) → runtime-validation (Playwright) → visual-regression (`if: false`, pending baselines) → publish-report.
 
@@ -128,6 +149,8 @@ CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no
 ## Active Technologies
 - TypeScript 5.4.5 (existing), Node.js 20+ + `@playwright/test` 1.44.0 (existing), `@axe-core/playwright` 4.10.1 (existing), `tsx` 4.21.0 (existing) (001-playwright-regression-tests)
 - File-based screenshot baselines in `tests/__screenshots__/`; JSON reports in `qa-reports/` (001-playwright-regression-tests)
+- TypeScript 5.4.5 + @playwright/test 1.44.0, @axe-core/playwright 4.10.1, tsx 4.21.0 (003-page-object-model)
+- N/A (test infrastructure only) (003-page-object-model)
 
 ## Recent Changes
 - 001-playwright-regression-tests: Added TypeScript 5.4.5 (existing), Node.js 20+ + `@playwright/test` 1.44.0 (existing), `@axe-core/playwright` 4.10.1 (existing), `tsx` 4.21.0 (existing)

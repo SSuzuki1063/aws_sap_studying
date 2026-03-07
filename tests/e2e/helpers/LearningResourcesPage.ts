@@ -1,5 +1,6 @@
 import { type Page, type Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { SearchComponent } from '../components/SearchComponent';
 
 /**
  * Page Object Model for learning-resources.html.
@@ -7,6 +8,9 @@ import { BasePage } from './BasePage';
  */
 export class LearningResourcesPage extends BasePage {
   readonly pagePath = '/aws_sap_studying/learning-resources.html';
+
+  // ── Component Objects ─────────────────────────────────────────────────────
+  readonly search: SearchComponent;
 
   // ── Page-specific locators ──────────────────────────────────────────────
   readonly categoryNav: Locator;
@@ -19,6 +23,7 @@ export class LearningResourcesPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
+    this.search        = new SearchComponent(page);
     this.categoryNav   = page.locator('.category-nav');
     this.categoryLinks = page.locator('.category-link');
     this.resourceList  = page.locator('.resource-list');
