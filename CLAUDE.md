@@ -44,10 +44,12 @@ npm ci
 
 ## Testing & QA
 
-### Playwright E2E tests (concept-map.html)
+### Playwright E2E tests
 ```bash
-npm run test:e2e:chromium          # run existing concept-map specs (chromium only)
-npx playwright test --project=qa   # run QA spec suite only
+npm run test:e2e:chromium                              # all concept-map specs (chromium only)
+npx playwright test --project=chromium tests/e2e/concept-map/filters.spec.ts  # single spec file
+npx playwright test --project=qa                       # QA spec suite only
+npx playwright test --headed                           # visible browser (debugging)
 ```
 
 ### CSS & HTML validation (before committing)
@@ -62,12 +64,27 @@ python3 server.py &
 npm run qa:all   # css-validate + css-runtime + unified report → qa-reports/index.html
 ```
 
-### Playwright QA architecture
+### Playwright test architecture
 `tests/` has two distinct layers:
-- **`tests/e2e/concept-map/`** — existing interactive specs (tabs, filters, accessibility, DOM)
-- **`tests/e2e/qa/`** — QA specs that read JSON reports: `css-validation.spec.ts` (asserts on static analysis output), `css-runtime.spec.ts` (getComputedStyle + BoundingRect checks)
+- **`tests/e2e/concept-map/`** — 7 spec files, 58 tests (tabs, filters, accessibility, hierarchy, navigation, related-links, dom-snapshot)
+- **`tests/e2e/qa/`** — QA specs that read JSON reports: `css-validation.spec.ts`, `css-runtime.spec.ts`
+- **`tests/e2e/helpers/`** — Page Object Model classes (see below)
 - **`tests/modules/`** — Shared TypeScript modules: `types/`, `validators/`, `runtime/`, `accessibility/`, `dom/`, `ui-regression/`, `report/`
 - **`tests/config/css-runtime-expectations.json`** — Per-page CSS property expectations (desktop + mobile viewports)
+
+### Page Object Model (POM)
+All test specs use Page Object classes from `tests/e2e/helpers/`:
+
+```text
+BasePage (abstract)          — shared locators (header, nav, search, theme toggle) + goto(), getAllLinks()
+├── IndexPage                — index.html: hero, cards, CTA buttons
+├── ConceptMapPage           — concept-map.html: L1/L2/L3 hierarchy, filters, breadcrumbs, detail panel
+└── LearningResourcesPage   — learning-resources.html: categories, resources, sidebar TOC
+```
+
+Import via barrel: `import { IndexPage, ConceptMapPage } from '../helpers'`
+
+When writing new test specs, always use Page Object methods — never write raw CSS selectors in spec files.
 
 CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no browser) → runtime-validation (Playwright) → visual-regression (`if: false`, pending baselines) → publish-report.
 
@@ -107,3 +124,10 @@ CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no
 - Minimize planning phases — move to implementation quickly
 - Do not spend entire sessions in planning/exploration mode without producing code
 - When working with large files or PDFs, be aware of token limits and chunk output proactively
+
+## Active Technologies
+- TypeScript 5.4.5 (existing), Node.js 20+ + `@playwright/test` 1.44.0 (existing), `@axe-core/playwright` 4.10.1 (existing), `tsx` 4.21.0 (existing) (001-playwright-regression-tests)
+- File-based screenshot baselines in `tests/__screenshots__/`; JSON reports in `qa-reports/` (001-playwright-regression-tests)
+
+## Recent Changes
+- 001-playwright-regression-tests: Added TypeScript 5.4.5 (existing), Node.js 20+ + `@playwright/test` 1.44.0 (existing), `@axe-core/playwright` 4.10.1 (existing), `tsx` 4.21.0 (existing)

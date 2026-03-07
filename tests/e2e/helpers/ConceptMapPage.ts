@@ -1,11 +1,12 @@
 import { type Page, type Locator, expect } from '@playwright/test';
+import { BasePage } from './BasePage';
 
 /**
  * Page Object Model for concept-map.html
  * Encapsulates all selectors and interactions for the AWS Concept Map page.
  */
-export class ConceptMapPage {
-  readonly page: Page;
+export class ConceptMapPage extends BasePage {
+  readonly pagePath = '/aws_sap_studying/concept-map.html';
 
   // Key locators
   readonly loadingMsg: Locator;
@@ -21,7 +22,7 @@ export class ConceptMapPage {
   readonly tabDetail: Locator;
 
   constructor(page: Page) {
-    this.page = page;
+    super(page);
     this.loadingMsg        = page.locator('#loading-msg');
     this.filterStatus      = page.locator('#mm-filter-status[aria-live="polite"]');
     this.filterClear       = page.locator('#mm-filter-clear');
@@ -35,10 +36,8 @@ export class ConceptMapPage {
     this.tabDetail         = page.locator('#mm-tab-detail');
   }
 
-  /** Navigate to the concept map and wait for initial load to complete. */
-  async goto(): Promise<void> {
-    await this.page.goto('/aws_sap_studying/concept-map.html');
-    // Wait for loading spinner to disappear
+  /** Wait for the concept map loading spinner to disappear. */
+  override async waitForReady(): Promise<void> {
     await this.loadingMsg.waitFor({ state: 'hidden', timeout: 10_000 });
   }
 
