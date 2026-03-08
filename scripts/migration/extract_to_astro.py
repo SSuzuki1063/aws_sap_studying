@@ -141,7 +141,22 @@ def extract_content(src: str) -> str:
         if cont:
             start = body_start + cont.end()
         else:
-            return '<!-- CONTENT EXTRACTION FAILED -->'
+            # Fallback: content starts after the scroll-to-top button
+            # (injected by integration scripts for files without breadcrumbs)
+            scroll_btn = re.search(r'<button[^>]*class="scroll-to-top"[^>]*>.*?</button>', body, re.DOTALL)
+            if scroll_btn:
+                start = body_start + scroll_btn.end()
+            else:
+                # Last resort: look for <header class="hero"> or bare <main>
+                hero = re.search(r'<header\s+class="hero">', body)
+                if hero:
+                    start = body_start + hero.start()
+                else:
+                    main_tag = re.search(r'<main\b[^>]*>', body)
+                    if main_tag:
+                        start = body_start + main_tag.start()
+                    else:
+                        return '<!-- CONTENT EXTRACTION FAILED -->'
 
     remaining = src[start:]
 

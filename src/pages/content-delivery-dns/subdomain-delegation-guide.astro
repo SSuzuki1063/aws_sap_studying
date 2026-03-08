@@ -886,7 +886,753 @@ p {
         padding: var(--spacing-base);
     }
 }</style>
-<!-- CONTENT EXTRACTION FAILED -->
+<main>
+    <!-- ========================================
+         Hero Section - 結論ファースト
+         ======================================== -->
+    <header class="hero">
+        <span class="hero-badge" aria-hidden="true">Route 53 / DNS</span>
+        <h1>サブドメイン委任（Subdomain Delegation）</h1>
+        <p class="hero-subtitle">「本社と支社」で理解する、DNSの権限委譲のしくみ</p>
+
+        <div class="takeaway-grid">
+            <div class="takeaway-card">
+                <div class="takeaway-icon" aria-hidden="true">🏢</div>
+                <div class="takeaway-title">独立した管理</div>
+                <div class="takeaway-desc">サブドメインを別のホストゾーンで独立管理でき、親に影響を与えない</div>
+            </div>
+            <div class="takeaway-card">
+                <div class="takeaway-icon" aria-hidden="true">🔗</div>
+                <div class="takeaway-title">NSレコードで接続</div>
+                <div class="takeaway-desc">親ドメインにNSレコードを設定するだけで委任が完了する</div>
+            </div>
+            <div class="takeaway-card">
+                <div class="takeaway-icon" aria-hidden="true">🔄</div>
+                <div class="takeaway-title">DNS解決は自動</div>
+                <div class="takeaway-desc">クライアントはNSレコードをたどって自動的に正しいサーバーへ問い合わせる</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================
+         たとえ話：本社と支社
+         ======================================== -->
+    <section class="section">
+        <span class="section-label">たとえ話で理解</span>
+        <h2 id="本社と支社で理解するサブドメイン委任"><span aria-hidden="true">🏢</span> 本社と支社で理解するサブドメイン委任</h2>
+
+        <p class="analogy-intro">
+            サブドメイン委任は、<span class="analogy-highlight">大企業の本社が支社に業務を委任する</span>ことと同じです。<br>
+            本社の受付は「支社のことは支社に聞いてください」と案内し、<br>
+            支社は独自に来訪者を対応します。
+        </p>
+
+        <!-- 4つの登場人物（2×2均等グリッド） -->
+        <div class="analogy-grid">
+            <div class="analogy-card analogy-card--parent">
+                <div class="analogy-emoji" aria-hidden="true">🏛️</div>
+                <div class="analogy-card-title">本社の受付</div>
+                <div class="analogy-card-desc">親ドメインのネームサーバー<br>（example.com の Hosted Zone）</div>
+            </div>
+            <div class="analogy-card analogy-card--child">
+                <div class="analogy-emoji" aria-hidden="true">🏬</div>
+                <div class="analogy-card-title">支社の受付</div>
+                <div class="analogy-card-desc">サブドメインのネームサーバー<br>（staging.example.com の Hosted Zone）</div>
+            </div>
+            <div class="analogy-card analogy-card--client">
+                <div class="analogy-emoji" aria-hidden="true">🧑‍💼</div>
+                <div class="analogy-card-title">来訪者</div>
+                <div class="analogy-card-desc">DNSクライアント<br>（Webブラウザやアプリケーション）</div>
+            </div>
+            <div class="analogy-card analogy-card--ns">
+                <div class="analogy-emoji" aria-hidden="true">📋</div>
+                <div class="analogy-card-title">支社の連絡先リスト</div>
+                <div class="analogy-card-desc">NSレコード<br>（支社のネームサーバー一覧）</div>
+            </div>
+        </div>
+
+        <!-- たとえ話マッピングテーブル -->
+        <h3 id="たとえ話の対応表"><span aria-hidden="true">🔄</span> たとえ話の対応表</h3>
+        <table class="mapping-table">
+            <thead>
+                <tr>
+                    <th><span class="table-emoji" aria-hidden="true">🏢</span>本社・支社のたとえ</th>
+                    <th><span class="table-emoji" aria-hidden="true">☁️</span>AWSの実際の概念</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>本社（example.com）</td>
+                    <td>親ドメインの Hosted Zone</td>
+                </tr>
+                <tr>
+                    <td>支社（staging部門）</td>
+                    <td>サブドメイン用の Hosted Zone（staging.example.com）</td>
+                </tr>
+                <tr>
+                    <td>本社の受付デスク</td>
+                    <td>親ドメインのネームサーバー（NS）</td>
+                </tr>
+                <tr>
+                    <td>支社の受付デスク</td>
+                    <td>サブドメインのネームサーバー（NS）</td>
+                </tr>
+                <tr>
+                    <td>本社に貼ってある「支社の連絡先」</td>
+                    <td>親ドメインに設定するNSレコード</td>
+                </tr>
+                <tr>
+                    <td>来訪者が支社の部屋番号を知る</td>
+                    <td>クライアントがIPアドレスを取得する</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ========================================
+         アーキテクチャ図 (SVG)
+         ======================================== -->
+    <section class="section">
+        <span class="section-label section-label--purple">アーキテクチャ図</span>
+        <h2 id="サブドメイン委任の全体像"><span aria-hidden="true">📐</span> サブドメイン委任の全体像</h2>
+        <p>親ドメインのホストゾーンにNSレコードを追加し、サブドメインの問い合わせを別のホストゾーンへ委任する構成です。</p>
+
+        <div class="diagram-container">
+            <!-- ============================================================
+                 SVG: サブドメイン委任 構成と DNS 解決フロー
+                 ============================================================
+                 【ノード配置表】
+                 | Node       | x   | y   | w   | h  | center_x | title_y | sub_y | rec_y |
+                 |------------|-----|-----|-----|----|----------|---------|-------|-------|
+                 | Client     |  60 | 296 | 220 | 96 |  170     |  324    |  348  |  —    |
+                 | Parent HZ  | 400 | 120 | 240 | 96 |  520     |  148    |  172  |  —    |
+                 | NS Record  | 400 | 276 | 240 | 80 |  520     |  304    |  328  |  —    |
+                 | Child HZ   | 400 | 450 | 240 | 96 |  520     |  478    |  502  |  526  |
+                 | Parent NS  | 840 | 140 | 240 | 96 |  960     |  168    |  192  |  216  |
+                 | Child NS   | 840 | 470 | 240 | 96 |  960     |  498    |  522  |  546  |
+
+                 【矢印ラベル検証】
+                 | Arrow | label_y | nearest gap |
+                 |-------|---------|-------------|
+                 | ①     |  218    | 34px to ②  |
+                 | ②     |  262    | 34px from ①|
+                 | ③     |  400    | 50px to ④  |
+                 | ④     |  456    | 50px from ③|
+                 全ラベル間隔 30px以上 → 重なりなし ✓
+                 ============================================================ -->
+            <svg viewBox="0 0 1200 680" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="サブドメイン委任のアーキテクチャ図：親ドメインのホストゾーンからサブドメインのホストゾーンへNSレコードで委任する構成">
+                <defs>
+                    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+                    </marker>
+                    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#8B5CF6"/>
+                    </marker>
+                    <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#EA580C"/>
+                    </marker>
+                    <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+                    </filter>
+                    <style>
+                        .svg-title { font-family: -apple-system, 'Noto Sans JP', sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                        .svg-label { font-family: -apple-system, 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 600; }
+                        .svg-sub   { font-family: -apple-system, 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 500; fill: #475569; }
+                        .svg-arrow-label { font-family: -apple-system, 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 600; }
+                    </style>
+                </defs>
+
+                <!-- ===== Background ===== -->
+                <rect x="0" y="0" width="1200" height="680" fill="#F3F4F6"/>
+
+                <!-- ===== Outer card ===== -->
+                <rect x="24" y="24" width="1152" height="632" rx="22" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+
+                <!-- ===== Title ===== -->
+                <text x="600" y="66" text-anchor="middle" class="svg-title">サブドメイン委任 — 構成とDNS解決フロー</text>
+
+                <!-- ===== Inner panel ===== -->
+                <rect x="40" y="86" width="1120" height="554" rx="18" fill="#F8FAFC"/>
+
+                <!-- =========================================================
+                     Node 1: Client (x=60, y=296, w=220, h=96)
+                     center_x=170, title_y=324, sub_y=348
+                     "クライアント" = 7 chars ✓
+                     "(来訪者)" = 5 chars ✓
+                     ========================================================= -->
+                <g>
+                    <rect x="60" y="296" width="220" height="96" rx="16" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="2"/>
+                    <text x="170" y="324" text-anchor="middle" dominant-baseline="middle" class="svg-label" fill="#059669">
+                        <tspan x="170">クライアント</tspan>
+                    </text>
+                    <text x="170" y="348" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="170">(来訪者)</tspan>
+                    </text>
+                </g>
+
+                <!-- =========================================================
+                     Node 2: Parent Hosted Zone (x=400, y=120, w=240, h=96)
+                     center_x=520, title_y=148, sub_y=172
+                     "親 Hosted Zone" = 12 chars ✓
+                     "example.com" = 11 chars ✓
+                     ========================================================= -->
+                <g>
+                    <rect x="400" y="120" width="240" height="96" rx="16" fill="#EFF6FF" stroke="#93C5FD" stroke-width="2"/>
+                    <text x="520" y="148" text-anchor="middle" dominant-baseline="middle" class="svg-label" fill="#3B82F6">
+                        <tspan x="520">親 Hosted Zone</tspan>
+                    </text>
+                    <text x="520" y="172" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="520">example.com</tspan>
+                    </text>
+                </g>
+
+                <!-- =========================================================
+                     Node 3: NS Record (x=400, y=276, w=240, h=80)
+                     center_x=520, title_y=304, sub_y=328
+                     "NSレコード(委任用)" = 11 chars ✓
+                     "staging → 子NS" = 10 chars ✓
+                     ========================================================= -->
+                <g>
+                    <rect x="400" y="276" width="240" height="80" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="520" y="304" text-anchor="middle" dominant-baseline="middle" class="svg-label" fill="#EA580C">
+                        <tspan x="520">NSレコード(委任用)</tspan>
+                    </text>
+                    <text x="520" y="328" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="520">staging → 子NS</tspan>
+                    </text>
+                </g>
+
+                <!-- =========================================================
+                     Node 4: Child Hosted Zone (x=400, y=450, w=240, h=96)
+                     center_x=520, title_y=478, sub_y=502, rec_y=526
+                     "子 Hosted Zone" = 10 chars ✓
+                     "staging." = 8 chars ✓
+                     "example.com" = 11 chars ✓
+                     ========================================================= -->
+                <g>
+                    <rect x="400" y="450" width="240" height="96" rx="16" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="2"/>
+                    <text x="520" y="474" text-anchor="middle" dominant-baseline="middle" class="svg-label" fill="#8B5CF6">
+                        <tspan x="520">子 Hosted Zone</tspan>
+                    </text>
+                    <text x="520" y="498" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="520">staging.</tspan>
+                    </text>
+                    <text x="520" y="526" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="520">example.com</tspan>
+                    </text>
+                </g>
+
+                <!-- =========================================================
+                     Node 5: Parent NS Server (x=840, y=140, w=240, h=96)
+                     center_x=960, title_y=168, sub_y=192, rec_y=216
+                     "親NSサーバー" = 8 chars ✓
+                     "ns-xxx.awsdns-" = 14 chars ✓
+                     "xx.com" = 6 chars ✓
+                     ========================================================= -->
+                <g>
+                    <rect x="840" y="140" width="240" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="960" y="168" text-anchor="middle" dominant-baseline="middle" class="svg-label" fill="#EA580C">
+                        <tspan x="960">親NSサーバー</tspan>
+                    </text>
+                    <text x="960" y="192" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="960">ns-xxx.awsdns-</tspan>
+                    </text>
+                    <text x="960" y="216" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="960">xx.com</tspan>
+                    </text>
+                </g>
+
+                <!-- =========================================================
+                     Node 6: Child NS Server (x=840, y=470, w=240, h=96)
+                     center_x=960, title_y=498, sub_y=522, rec_y=546
+                     "子NSサーバー" = 8 chars ✓
+                     "ns-yyy.awsdns-" = 14 chars ✓
+                     "yy.com" = 6 chars ✓
+                     ========================================================= -->
+                <g>
+                    <rect x="840" y="470" width="240" height="96" rx="16" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="2"/>
+                    <text x="960" y="498" text-anchor="middle" dominant-baseline="middle" class="svg-label" fill="#8B5CF6">
+                        <tspan x="960">子NSサーバー</tspan>
+                    </text>
+                    <text x="960" y="522" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="960">ns-yyy.awsdns-</tspan>
+                    </text>
+                    <text x="960" y="546" text-anchor="middle" dominant-baseline="middle" class="svg-sub">
+                        <tspan x="960">yy.com</tspan>
+                    </text>
+                </g>
+
+                <!-- =========================================================
+                     Arrows: DNS解決フロー (4本)
+                     ========================================================= -->
+
+                <!-- Arrow ①: Client → Parent HZ (問い合わせ)
+                     line: (280, 316) → (395, 168)
+                     label_y = midpoint_y(242) - 16 = 226 → use 218 -->
+                <line x1="280" y1="316" x2="395" y2="168" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+                <text x="306" y="218" text-anchor="start" class="svg-arrow-label" fill="#3B82F6">
+                    <tspan x="306">① 問い合わせ</tspan>
+                </text>
+
+                <!-- Arrow ②: Parent HZ → Client (NS参照応答, dashed)
+                     line: (400, 196) → (285, 330)
+                     label_y = midpoint_y(263) - 16 = 247 → use 262 (below ①, gap=44px) -->
+                <line x1="400" y1="196" x2="285" y2="330" stroke="#EA580C" stroke-width="2.5" marker-end="url(#arrow-orange)" stroke-dasharray="6 4"/>
+                <text x="308" y="262" text-anchor="start" class="svg-arrow-label" fill="#EA580C">
+                    <tspan x="308">② NS参照応答</tspan>
+                </text>
+
+                <!-- Arrow ③: Client → Child HZ (再問い合わせ)
+                     line: (280, 370) → (395, 490)
+                     label_y = midpoint_y(430) - 16 = 414 → use 400 -->
+                <line x1="280" y1="370" x2="395" y2="490" stroke="#8B5CF6" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+                <text x="290" y="400" text-anchor="start" class="svg-arrow-label" fill="#8B5CF6">
+                    <tspan x="290">③ 再問い合わせ</tspan>
+                </text>
+
+                <!-- Arrow ④: Child HZ → Client (IP応答, dashed)
+                     line: (400, 516) → (285, 380)
+                     label_y = midpoint_y(448) + 8 = 456 (below ③, gap=56px) -->
+                <line x1="400" y1="516" x2="285" y2="380" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)" stroke-dasharray="6 4"/>
+                <text x="310" y="456" text-anchor="start" class="svg-arrow-label" fill="#10B981">
+                    <tspan x="310">④ IP応答</tspan>
+                </text>
+
+                <!-- =========================================================
+                     Horizontal dashed lines: HZ → NS Servers
+                     ========================================================= -->
+                <!-- Parent HZ right → Parent NS left -->
+                <line x1="640" y1="188" x2="835" y2="188" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 3"/>
+                <!-- Child HZ right → Child NS left -->
+                <line x1="640" y1="518" x2="835" y2="518" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                <!-- =========================================================
+                     Vertical: Parent HZ → NS Record → Child HZ (NS委任)
+                     ========================================================= -->
+                <!-- Parent HZ bottom → NS Record top -->
+                <line x1="520" y1="216" x2="520" y2="271" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 3"/>
+                <!-- NS Record bottom → Child HZ top (delegation arrow) -->
+                <path d="M 520 356 L 520 445" stroke="#EA580C" stroke-width="3" marker-end="url(#arrow-orange)"/>
+                <!-- NS委任 label badge -->
+                <rect x="548" y="384" width="96" height="30" rx="6" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                <text x="596" y="404" text-anchor="middle" dominant-baseline="middle" class="svg-sub" fill="#EA580C">
+                    <tspan x="596">NS委任</tspan>
+                </text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- ========================================
+         設定プロセス（2ステップ）
+         ======================================== -->
+    <section class="section">
+        <span class="section-label section-label--orange">設定手順</span>
+        <h2 id="⚙️-サブドメイン委任の設定プロセス"><span aria-hidden="true">⚙️</span> サブドメイン委任の設定プロセス</h2>
+        <p>必要な作業はたった2ステップです。「支社を設立し、本社に連絡先を掲示する」だけで完了します。</p>
+
+        <div class="process-steps">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-title">サブドメイン用ホストゾーンを作成</div>
+                <div class="step-desc">
+                    Route 53 で <strong>staging.example.com</strong> の Hosted Zone を新規作成します。作成すると、AWSが自動的にNSレコードとSOAレコードを割り当てます。
+                </div>
+                <div class="step-analogy">
+                    <div class="step-analogy-label" aria-hidden="true">🏢 たとえると…</div>
+                    新しい支社を開設し、支社専用の受付デスクと電話番号を用意する段階です。
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-title">親ドメインにNSレコードを追加</div>
+                <div class="step-desc">
+                    親の Hosted Zone（example.com）に <strong>staging.example.com</strong> のNSレコードを作成し、値にはステップ1で割り当てられたネームサーバーのリストを設定します。
+                </div>
+                <div class="step-analogy">
+                    <div class="step-analogy-label" aria-hidden="true">🏢 たとえると…</div>
+                    本社の受付に「staging部門の問い合わせは支社（電話番号: xxx）へ」と案内板を設置する段階です。
+                </div>
+            </div>
+        </div>
+
+        <!-- コード例 -->
+        <div class="code-section">
+            <h3 id="設定コマンド例"><span aria-hidden="true">💻</span> 設定コマンド例</h3>
+            <div class="code-tabs">
+                <button class="code-tab active" onclick="switchTab(event, 'tab-cli')" type="button">AWS CLI</button>
+                <button class="code-tab" onclick="switchTab(event, 'tab-cf')" type="button">CloudFormation</button>
+            </div>
+
+            <pre class="code-block active" id="tab-cli"><code><span class="code-comment"># ステップ1: サブドメイン用ホストゾーンを作成</span>
+aws route53 create-hosted-zone \\
+  --name <span class="code-string">staging.example.com</span> \\
+  --caller-reference <span class="code-string">"staging-$(date +%s)"</span>
+
+<span class="code-comment"># → レスポンスからNSレコードの値を確認</span>
+<span class="code-comment"># "NameServers": [</span>
+<span class="code-comment">#   "ns-111.awsdns-11.com",</span>
+<span class="code-comment">#   "ns-222.awsdns-22.net",</span>
+<span class="code-comment">#   "ns-333.awsdns-33.co.uk",</span>
+<span class="code-comment">#   "ns-444.awsdns-44.org"</span>
+<span class="code-comment"># ]</span>
+
+<span class="code-comment"># ステップ2: 親ドメインにNSレコードを追加</span>
+aws route53 change-resource-record-sets \\
+  --hosted-zone-id <span class="code-string">Z_PARENT_ZONE_ID</span> \\
+  --change-batch <span class="code-string">'{
+    "Changes": [{
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "staging.example.com",
+        "Type": "NS",
+        "TTL": 300,
+        "ResourceRecords": [
+          {"Value": "ns-111.awsdns-11.com"},
+          {"Value": "ns-222.awsdns-22.net"},
+          {"Value": "ns-333.awsdns-33.co.uk"},
+          {"Value": "ns-444.awsdns-44.org"}
+        ]
+      }
+    }]
+  }'</span></code></pre>
+
+            <pre class="code-block" id="tab-cf"><code><span class="code-comment"># CloudFormation テンプレート</span>
+<span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Description:</span> <span class="code-string">'Subdomain Delegation Setup'</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-comment"># ステップ1: サブドメイン用ホストゾーン</span>
+  <span class="code-keyword">StagingHostedZone:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::Route53::HostedZone</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">Name:</span> <span class="code-string">staging.example.com</span>
+
+  <span class="code-comment"># ステップ2: 親ドメインにNSレコードを追加</span>
+  <span class="code-keyword">DelegationNSRecord:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::Route53::RecordSet</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">HostedZoneId:</span> <span class="code-string">Z_PARENT_ZONE_ID</span>
+      <span class="code-keyword">Name:</span> <span class="code-string">staging.example.com</span>
+      <span class="code-keyword">Type:</span> <span class="code-string">NS</span>
+      <span class="code-keyword">TTL:</span> <span class="code-value">'300'</span>
+      <span class="code-keyword">ResourceRecords:</span>
+        - <span class="code-string">!GetAtt StagingHostedZone.NameServers.0</span>
+        - <span class="code-string">!GetAtt StagingHostedZone.NameServers.1</span>
+        - <span class="code-string">!GetAtt StagingHostedZone.NameServers.2</span>
+        - <span class="code-string">!GetAtt StagingHostedZone.NameServers.3</span></code></pre>
+        </div>
+    </section>
+
+    <!-- ========================================
+         DNS解決の流れ
+         ======================================== -->
+    <section class="section">
+        <span class="section-label section-label--green">DNS解決フロー</span>
+        <h2 id="DNS解決のステップバイステップ"><span aria-hidden="true">🔄</span> DNS解決のステップバイステップ</h2>
+        <p>クライアントが <strong>staging.example.com</strong> にアクセスするとき、DNSはどのように解決されるのかを追いかけてみましょう。</p>
+
+        <div class="flow-container">
+            <!-- Step 1 -->
+            <div class="flow-step">
+                <div class="flow-icon flow-icon--client">①</div>
+                <div class="flow-content">
+                    <div class="flow-label">クライアントが親ドメインのNSに問い合わせ</div>
+                    <div class="flow-detail">
+                        クライアントが「staging.example.com のIPアドレスを教えてください」と、まず <strong>example.com</strong> のネームサーバーに問い合わせます。
+                    </div>
+                    <div class="flow-analogy-badge" aria-hidden="true">🏢 来訪者が本社の受付に「staging部門はどこ？」と尋ねる</div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flow-step">
+                <div class="flow-icon flow-icon--parent">②</div>
+                <div class="flow-content">
+                    <div class="flow-label">親NSが「サブドメインの管轄は別です」と応答</div>
+                    <div class="flow-detail">
+                        example.com のNSは、staging.example.com のNSレコードを返します。これは「そのサブドメインは別のネームサーバーが管理しています」という<strong>参照応答（referral）</strong>です。
+                    </div>
+                    <div class="flow-analogy-badge" aria-hidden="true">🏢 本社受付が「staging部門は支社にあります。連絡先はこちら」と案内する</div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flow-step">
+                <div class="flow-icon flow-icon--child">③</div>
+                <div class="flow-content">
+                    <div class="flow-label">クライアントがサブドメインのNSに再問い合わせ</div>
+                    <div class="flow-detail">
+                        クライアントは教えられたサブドメイン用のネームサーバーに対して、改めて「staging.example.com のIPアドレスを教えてください」と問い合わせます。
+                    </div>
+                    <div class="flow-analogy-badge" aria-hidden="true">🏢 来訪者が支社に電話して「○○さんの部屋番号を教えてください」と聞く</div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="flow-step">
+                <div class="flow-icon flow-icon--client">④</div>
+                <div class="flow-content">
+                    <div class="flow-label">サブドメインNSがIPアドレスを返却</div>
+                    <div class="flow-detail">
+                        staging.example.com のネームサーバーが、目的のリソースの<strong>IPアドレス（Aレコード）</strong>やCNAMEなどを返し、クライアントはリソースにアクセスできるようになります。
+                    </div>
+                    <div class="flow-analogy-badge" aria-hidden="true">🏢 支社の受付が「○○さんの部屋は3階の301号室です」と回答する</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         委任 あり vs なし 比較
+         ======================================== -->
+    <section class="section">
+        <span class="section-label">比較</span>
+        <h2 id="⚖️-サブドメイン委任-あり-vs-なし"><span aria-hidden="true">⚖️</span> サブドメイン委任 あり vs なし</h2>
+
+        <div class="comparison-grid">
+            <div class="comparison-card comparison-card--with">
+                <div class="comparison-header">
+                    <span aria-hidden="true">✅</span> 委任あり（別 Hosted Zone）
+                </div>
+                <div class="comparison-item">サブドメインのDNSレコードを<strong>独立して管理</strong>でき、親への影響ゼロ</div>
+                <div class="comparison-item">チームごとに<strong>異なるAWSアカウント</strong>で管理できる</div>
+                <div class="comparison-item">サブドメイン管理者が<strong>自由にレコードを作成・変更・削除</strong>できる</div>
+                <div class="comparison-item">環境ごと（dev / staging / prod）の<strong>分離が容易</strong></div>
+            </div>
+            <div class="comparison-card comparison-card--without">
+                <div class="comparison-header">
+                    <span aria-hidden="true">❌</span> 委任なし（同一 Hosted Zone）
+                </div>
+                <div class="comparison-item">すべてのレコードを<strong>1つのホストゾーンで管理</strong>するため混雑しやすい</div>
+                <div class="comparison-item">サブドメインの変更にも<strong>親ゾーンの管理権限が必要</strong></div>
+                <div class="comparison-item">チーム間で<strong>IAMポリシーの細かい分離が困難</strong></div>
+                <div class="comparison-item">小規模な構成では<strong>シンプルで管理コストが低い</strong></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         ユースケース
+         ======================================== -->
+    <section class="section">
+        <span class="section-label section-label--purple">ユースケース</span>
+        <h2 id="こんなときにサブドメイン委任を使う"><span aria-hidden="true">💡</span> こんなときにサブドメイン委任を使う</h2>
+
+        <div class="usecase-grid">
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">🧪</div>
+                <div class="usecase-title">マルチ環境の分離</div>
+                <div class="usecase-desc">dev.example.com、staging.example.com、prod.example.com をそれぞれ独立したHosted Zoneで管理</div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">👥</div>
+                <div class="usecase-title">チーム別のDNS管理</div>
+                <div class="usecase-desc">各チームが担当サブドメインを独自のAWSアカウントで管理し、親への依存を排除</div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">🌐</div>
+                <div class="usecase-title">マルチリージョン構成</div>
+                <div class="usecase-desc">リージョン別のサブドメイン（us.example.com, ap.example.com）を各リージョンのアカウントに委任</div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">🏢</div>
+                <div class="usecase-title">組織統合・M&amp;A</div>
+                <div class="usecase-desc">買収した企業のドメインをサブドメインとして統合しつつ、DNS管理は委任して独立性を維持</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         ベストプラクティス
+         ======================================== -->
+    <section class="section">
+        <span class="section-label section-label--green">ベストプラクティス</span>
+        <h2 id="️-運用のベストプラクティス"><span aria-hidden="true">🛡️</span> 運用のベストプラクティス</h2>
+
+        <div class="best-practices-grid">
+            <div class="bp-card">
+                <div class="bp-title">NSレコードの値を正確にコピーする</div>
+                <div class="bp-desc">サブドメインのHosted Zone作成時に割り当てられたNSの値を、親のNSレコードに正確にコピーしましょう。1文字でも違うと解決に失敗します。</div>
+            </div>
+            <div class="bp-card">
+                <div class="bp-title">TTL を適切に設定する</div>
+                <div class="bp-desc">NSレコードのTTLは 172800（48時間）や 86400（24時間）が一般的です。短くしすぎるとDNS問い合わせが増え、長すぎると変更の反映が遅れます。</div>
+            </div>
+            <div class="bp-card">
+                <div class="bp-title">SOAレコードは編集しない</div>
+                <div class="bp-desc">親ゾーンに作成するのはNSレコードだけです。SOAレコードはサブドメインのHosted Zone内に自動作成されるので、親側には不要です。</div>
+            </div>
+            <div class="bp-card">
+                <div class="bp-title">dig コマンドで委任を確認する</div>
+                <div class="bp-desc"><code>dig staging.example.com NS</code> を実行し、サブドメインのNSが正しく返されるか必ず検証しましょう。</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         試験対策ポイント
+         ======================================== -->
+    <section class="exam-tip">
+        <div class="exam-tip-header">
+            <span aria-hidden="true">📝</span> AWS認定試験で狙われるポイント
+        </div>
+        <div class="exam-tip-item">
+            <strong>Q: サブドメインを別アカウントで管理するには？</strong><br>
+            → サブドメイン用のHosted Zoneを別アカウントで作成し、親のHosted ZoneにNSレコードを追加して委任する。
+        </div>
+        <div class="exam-tip-item">
+            <strong>Q: NSレコードとCNAMEの違いは？</strong><br>
+            → NSレコードは「このドメインの権威サーバーはどこか」を示す。CNAMEは「このドメインの別名」を示す。委任にはNSレコードを使う。
+        </div>
+        <div class="exam-tip-item">
+            <strong>Q: 親ゾーンにサブドメインのSOAレコードは必要？</strong><br>
+            → 不要。SOAはサブドメインのHosted Zone内に自動生成される。親にはNSレコードのみ設定する。
+        </div>
+        <div class="exam-tip-item">
+            <strong>Q: サブドメイン委任が正しく機能しない場合の原因は？</strong><br>
+            → 親のNSレコードの値が、サブドメインHosted Zoneの実際のNSと一致していないことが最も多い原因。
+        </div>
+    </section>
+
+    <!-- ========================================
+         FAQ
+         ======================================== -->
+    <section class="section">
+        <span class="section-label">FAQ</span>
+        <h2 id="❓-よくある質問"><span aria-hidden="true">❓</span> よくある質問</h2>
+
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-question" type="button" onclick="toggleFaq(this)">
+                    サブドメイン委任には追加料金がかかりますか？
+                </button>
+                <div class="faq-answer">
+                    Route 53のHosted Zone料金（月額 $0.50/ゾーン）とクエリ料金が追加で発生します。サブドメイン用にHosted Zoneを作成するため、親とは別に1つ分の料金がかかります。小規模な構成ではコスト面も考慮して、同一Hosted Zoneでの管理を検討してもよいでしょう。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" onclick="toggleFaq(this)">
+                    サブドメイン委任と CNAME の違いは何ですか？
+                </button>
+                <div class="faq-answer">
+                    CNAMEは1つのドメイン名を別のドメイン名にマッピングするレコードですが、ゾーンの頂点（Zone Apex）には使えません。サブドメイン委任はNSレコードでDNS管理権限そのものを別のサーバーに移すため、サブドメイン配下のすべてのレコードが独立して管理できます。「名前の転送」ではなく「管理権の委譲」という根本的な違いがあります。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" onclick="toggleFaq(this)">
+                    親と子で異なるAWSアカウントを使えますか？
+                </button>
+                <div class="faq-answer">
+                    はい、まさにそれがサブドメイン委任の大きなメリットです。子アカウントでHosted Zoneを作成し、そのNS値を親アカウントのHosted Zoneに設定するだけです。AWS Organizationsとの組み合わせで、マルチアカウント戦略の一部として広く使われています。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" onclick="toggleFaq(this)">
+                    委任を解除するにはどうすればいいですか？
+                </button>
+                <div class="faq-answer">
+                    親ドメインのHosted Zoneから、サブドメインのNSレコードを削除するだけです。削除後はTTLの期間が過ぎれば、キャッシュが消えて委任は解除されます。サブドメインのHosted Zoneも不要であれば削除します。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" onclick="toggleFaq(this)">
+                    多段階の委任（孫ドメイン）は可能ですか？
+                </button>
+                <div class="faq-answer">
+                    はい、可能です。例えば staging.example.com に対してさらに api.staging.example.com を別のHosted Zoneに委任できます。仕組みは同じで、staging.example.com のHosted Zoneに api.staging.example.com のNSレコードを追加します。ただし、階層が深くなるとDNS解決のレイテンシーが増えるため、設計には注意が必要です。
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         まとめ
+         ======================================== -->
+    <section class="summary-box">
+        <h2 id="まとめ"><span aria-hidden="true">🎓</span> まとめ</h2>
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-item-title">仕組み</div>
+                <div class="summary-item-desc">親ドメインのHosted ZoneにNSレコードを追加し、サブドメインのDNS管理を別のHosted Zoneに委任する</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-item-title">設定は2ステップ</div>
+                <div class="summary-item-desc">① サブドメイン用Hosted Zone作成 → ② 親のHosted ZoneにNSレコード追加</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-item-title">たとえるなら</div>
+                <div class="summary-item-desc">本社の受付に「支社の連絡先」を掲示して、来訪者を支社に案内するのと同じ仕組み</div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ========================================
+     JavaScript
+     ======================================== -->
+<script>
+function switchTab(event, tabId) {
+    var tabs = document.querySelectorAll('.code-tab');
+    var blocks = document.querySelectorAll('.code-block');
+
+    tabs.forEach(function(tab) { tab.classList.remove('active'); });
+    blocks.forEach(function(block) { block.classList.remove('active'); });
+
+    event.target.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+
+function toggleFaq(button) {
+    var item = button.parentElement;
+    item.classList.toggle('open');
+}
+</script>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
 <script>function switchTab(event, tabId) {
     var tabs = document.querySelectorAll('.code-tab');
     var blocks = document.querySelectorAll('.code-block');
