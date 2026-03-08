@@ -28,13 +28,14 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 ## Quick Start
 
 ```bash
-# Python (HTML generation, validation scripts)
+# Python (validation scripts)
 uv venv && source .venv/bin/activate
 uv pip install beautifulsoup4 lxml html5lib requests
-python3 server.py  # → http://localhost:8080/
 
-# Node.js (Playwright E2E tests + QA system)
+# Node.js (Astro build + Playwright E2E tests + QA system)
 npm ci
+npx astro dev     # → http://localhost:4321/aws_sap_studying (dev server)
+npx astro preview # → http://localhost:4321/aws_sap_studying (production preview)
 ```
 
 ## Environment
@@ -58,9 +59,9 @@ python3 scripts/ci/validate_html_w3c.py --pr-mode   # HTML: changed files only
 npm run qa:css-validate:pr                           # CSS W3C: changed files only
 ```
 
-### Full QA pipeline (after starting server)
+### Full QA pipeline (after starting preview server)
 ```bash
-python3 server.py &
+npm run build && npx astro preview &
 npm run qa:all   # css-validate + css-runtime + unified report → qa-reports/index.html
 ```
 
