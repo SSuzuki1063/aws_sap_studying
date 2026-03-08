@@ -224,14 +224,28 @@ function renderUpdateHistoryToDOM(containerId, historyData) {
 }
 
 /**
+ * タイトル文字列からURL安全なスラッグIDを生成
+ * @param {string} title - セクションタイトル
+ * @returns {string} スラッグ化されたID
+ */
+function generateSectionSlug(title) {
+  return 'section-' + title
+    .replace(/[\s&・／/]+/g, '-')
+    .replace(/[^\w\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
  * セクション（小カテゴリ）をレンダリング
  * @param {Object} section - セクションデータ
  * @returns {string} HTML文字列
  */
 function renderSection(section) {
+  const sectionId = generateSectionSlug(section.title);
   return `
     <div class="toc-section">
-      <h2>
+      <h2 id="${sectionId}">
         <span class="section-icon">${section.icon}</span>
         ${section.title}
         <span class="resource-count">${section.count}</span>
