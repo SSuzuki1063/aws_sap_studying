@@ -30,6 +30,8 @@ const categoryMeta = JSON.parse(readFileSync(join(ROOT, 'src/data/category-meta.
 const resourceRegistry = JSON.parse(readFileSync(join(ROOT, 'src/data/resource-registry.json'), 'utf-8'));
 const sectionIcons = JSON.parse(readFileSync(join(ROOT, 'src/data/section-icons.json'), 'utf-8'));
 const updateHistory = JSON.parse(readFileSync(join(ROOT, 'src/data/update-history.json'), 'utf-8'));
+const serviceRegistryData = JSON.parse(readFileSync(join(ROOT, 'src/data/service-registry.json'), 'utf-8'));
+const SERVICE_RULES = serviceRegistryData.services;
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 
@@ -140,6 +142,22 @@ function determineSection(href, fileDir, slug, subcategory) {
   return DEFAULT_SECTION;
 }
 
+// ─── Determine AWS service for a resource ───────────────────────────────────
+
+function determineService(slug, title) {
+  const lowerSlug = slug.toLowerCase();
+  const lowerTitle = (title || '').toLowerCase();
+
+  for (const rule of SERVICE_RULES) {
+    for (const kw of rule.keywords) {
+      if (lowerSlug.includes(kw) || lowerTitle.includes(kw)) {
+        return rule.service;
+      }
+    }
+  }
+  return '';
+}
+
 // ─── Build categoriesData ──────────────────────────────────────────────────
 
 function buildCategoriesData(pages) {
@@ -168,6 +186,8 @@ function buildCategoriesData(pages) {
     const resource = { title: page.pageTitle, href: page.href };
     const priority = reg?.priority;
     if (priority) resource.priority = priority;
+    const service = determineService(page.slug, page.pageTitle);
+    if (service) resource.service = service;
 
     sectionMap.get(section).push(resource);
   }
@@ -184,8 +204,11 @@ function buildCategoriesData(pages) {
       // Check if already added
       const existing = sectionMap.get(reg.section);
       if (!existing.find(r => r.href === href)) {
-        const resource = { title: getRegistryTitle(href), href };
+        const title = getRegistryTitle(href);
+        const resource = { title, href };
         if (reg.priority) resource.priority = reg.priority;
+        const service = determineService(basename(href, '.pdf'), title);
+        if (service) resource.service = service;
         existing.push(resource);
       }
     }
@@ -255,21 +278,28 @@ function buildSearchData(pages) {
   const data = [];
 
   for (const page of pages) {
-    data.push({
+    const entry = {
       title: page.pageTitle,
       category: page.categoryLabel || getCategoryLabel(page.fileDir),
       file: page.href,
-    });
+    };
+    const service = determineService(page.slug, page.pageTitle);
+    if (service) entry.service = service;
+    data.push(entry);
   }
 
   // Add BlackBelt PDFs from registry
   for (const [href, reg] of Object.entries(resourceRegistry)) {
     if (href.endsWith('.pdf')) {
-      data.push({
-        title: getRegistryTitle(href),
+      const title = getRegistryTitle(href);
+      const entry = {
+        title,
         category: getCategoryLabel(reg.displayCategory),
         file: href,
-      });
+      };
+      const service = determineService(basename(href, '.pdf'), title);
+      if (service) entry.service = service;
+      data.push(entry);
     }
   }
 
@@ -277,6 +307,31 @@ function buildSearchData(pages) {
   data.sort((a, b) => a.category.localeCompare(b.category, 'ja') || a.title.localeCompare(b.title, 'ja'));
 
   return data;
+}
+
+// ─── Build serviceIndex ──────────────────────────────────────────────────
+
+function buildServiceIndex(categoriesData) {
+  const serviceMap = new Map();
+
+  for (const cat of categoriesData) {
+    for (const section of cat.sections) {
+      for (const resource of section.resources) {
+        const svc = resource.service || '';
+        if (!svc) continue;
+        if (!serviceMap.has(svc)) {
+          serviceMap.set(svc, { name: svc, count: 0, categories: new Set() });
+        }
+        const entry = serviceMap.get(svc);
+        entry.count++;
+        entry.categories.add(cat.id);
+      }
+    }
+  }
+
+  return Array.from(serviceMap.values())
+    .map(s => ({ name: s.name, count: s.count, categories: Array.from(s.categories) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function getCategoryLabel(catId) {
@@ -289,7 +344,7 @@ function getCategoryLabel(catId) {
 
 // ─── Generate data.js ──────────────────────────────────────────────────────
 
-function generateDataJs(categoriesData, pages) {
+function generateDataJs(categoriesData, pages, serviceIndex) {
   const categoryQuickNav = categoriesData.map(cat => ({
     id: cat.id,
     icon: DISPLAY_CATEGORY_META[cat.id].navIcon,
@@ -326,6 +381,10 @@ function generateDataJs(categoriesData, pages) {
   output += '// 統計データ\n';
   output += `const siteStats = ${formatJsValue(siteStats, 0)};\n\n`;
 
+  // serviceIndex
+  output += '// サービスインデックス（自動生成）\n';
+  output += `const serviceIndex = ${formatJsValue(serviceIndex, 0)};\n\n`;
+
   // updateHistory
   output += '// 更新履歴データ\n';
   output += '// type: \'content\'(コンテンツ追加) | \'feature\'(機能追加) | \'exam\'(試験変更対応) | \'fix\'(修正)\n';
@@ -352,7 +411,7 @@ function formatJsValue(value, indent) {
     // Check if it's an array of simple objects (like resources)
     const isSimpleObjArray = value.every(v =>
       typeof v === 'object' && !Array.isArray(v) &&
-      Object.keys(v).length <= 4 &&
+      Object.keys(v).length <= 5 &&
       Object.values(v).every(vv => typeof vv === 'string' || typeof vv === 'number')
     );
 
@@ -393,7 +452,8 @@ function generateSearchDataBlock(searchData) {
     const title = item.title.replace(/'/g, "\\'");
     const cat = item.category.replace(/'/g, "\\'");
     const file = item.file.replace(/'/g, "\\'");
-    output += `  { title: '${title}', category: '${cat}', file: '${file}' },\n`;
+    const svc = (item.service || '').replace(/'/g, "\\'");
+    output += `  { title: '${title}', category: '${cat}', file: '${file}', service: '${svc}' },\n`;
   }
   output += '];\n';
   return output;
@@ -436,7 +496,7 @@ function updateIndexJs(searchData) {
 
 // ─── Generate resources.ts (ESM module for Astro build-time imports) ────────
 
-function generateResourcesTs(categoriesData, pages) {
+function generateResourcesTs(categoriesData, pages, serviceIndex) {
   const categoryQuickNav = categoriesData.map(cat => ({
     id: cat.id,
     icon: DISPLAY_CATEGORY_META[cat.id].navIcon,
@@ -462,14 +522,17 @@ function generateResourcesTs(categoriesData, pages) {
   output += '// This file provides build-time data for Astro components.\n\n';
 
   // TypeScript interfaces
-  output += `export interface Resource {\n  title: string;\n  href: string;\n  priority?: 'high' | 'medium' | 'low';\n}\n\n`;
+  output += `export interface Resource {\n  title: string;\n  href: string;\n  priority?: 'high' | 'medium' | 'low';\n  service?: string;\n}\n\n`;
   output += `export interface Section {\n  title: string;\n  icon: string;\n  count: number;\n  lastUpdated: string;\n  resources: Resource[];\n}\n\n`;
   output += `export interface Category {\n  id: string;\n  title: string;\n  icon: string;\n  count: number;\n  sections: Section[];\n}\n\n`;
   output += `export interface QuickNavItem {\n  id: string;\n  icon: string;\n  text: string;\n  count: number;\n}\n\n`;
   output += `export interface SiteStats {\n  majorCategories: number;\n  minorCategories: number;\n  totalResources: string;\n  offlineSupport: string;\n  lastUpdated: string;\n}\n\n`;
 
+  output += `export interface ServiceIndexItem {\n  name: string;\n  count: number;\n  categories: string[];\n}\n\n`;
+
   output += `export const categoriesData: Category[] = ${JSON.stringify(categoriesData, null, 2)};\n\n`;
   output += `export const categoryQuickNav: QuickNavItem[] = ${JSON.stringify(categoryQuickNav, null, 2)};\n\n`;
+  output += `export const serviceIndex: ServiceIndexItem[] = ${JSON.stringify(serviceIndex, null, 2)};\n\n`;
   output += `export const siteStats: SiteStats = ${JSON.stringify(siteStats, null, 2)};\n`;
 
   return output;
@@ -489,6 +552,10 @@ for (const cat of categoriesData) {
   console.log(`  ${cat.id}: ${cat.count} resources in ${cat.sections.length} sections`);
 }
 
+console.log('Building serviceIndex...');
+const serviceIndex = buildServiceIndex(categoriesData);
+console.log(`  ${serviceIndex.length} unique services`);
+
 console.log('Building searchData...');
 const searchData = buildSearchData(pages);
 console.log(`  ${searchData.length} searchable entries`);
@@ -502,7 +569,7 @@ if (dryRun) {
   console.log(`\nTotal resources: ${totalResources}`);
 } else {
   console.log('\nWriting public/data.js...');
-  const dataJs = generateDataJs(categoriesData, pages);
+  const dataJs = generateDataJs(categoriesData, pages, serviceIndex);
   writeFileSync(join(ROOT, 'public/data.js'), dataJs, 'utf-8');
 
   console.log('Updating searchData in public/index.js...');
@@ -510,7 +577,7 @@ if (dryRun) {
   if (!ok) process.exit(1);
 
   console.log('Writing src/data/resources.ts...');
-  const resourcesTs = generateResourcesTs(categoriesData, pages);
+  const resourcesTs = generateResourcesTs(categoriesData, pages, serviceIndex);
   writeFileSync(join(ROOT, 'src/data/resources.ts'), resourcesTs, 'utf-8');
 
   console.log('Done!');

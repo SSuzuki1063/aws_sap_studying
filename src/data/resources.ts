@@ -5,6 +5,7 @@ export interface Resource {
   title: string;
   href: string;
   priority?: 'high' | 'medium' | 'low';
+  service?: string;
 }
 
 export interface Section {
@@ -38,6 +39,12 @@ export interface SiteStats {
   lastUpdated: string;
 }
 
+export interface ServiceIndexItem {
+  name: string;
+  count: number;
+  categories: string[];
+}
+
 export const categoriesData: Category[] = [
   {
     "id": "networking",
@@ -54,49 +61,59 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
             "href": "networking/aws-direct-connect-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Direct Connect"
           },
           {
             "title": "AWS VPN接続を郵便システムで理解しよう + Direct Connect比較",
             "href": "networking/aws-vpn-with-direct-connect-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Direct Connect"
           },
           {
             "title": "BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮",
             "href": "networking/bfd-failover-optimization-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Direct Connect"
           },
           {
             "title": "AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド",
-            "href": "networking/direct-connect-bgp-routing-guide.html"
+            "href": "networking/direct-connect-bgp-routing-guide.html",
+            "service": "Direct Connect"
           },
           {
             "title": "Direct Connect CloudWatchメトリクス 完全ガイド",
             "href": "networking/direct-connect-cloudwatch-metrics-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Direct Connect"
           },
           {
             "title": "AWS Direct Connect 接続タイプ完全ガイド",
             "href": "networking/direct-connect-connection-types-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Direct Connect"
           },
           {
             "title": "AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド",
-            "href": "networking/direct-connect-route-summarization-guide.html"
+            "href": "networking/direct-connect-route-summarization-guide.html",
+            "service": "Direct Connect"
           },
           {
             "title": "Direct Connect暗号化ガイド - VPNで実現するセキュアな専用線",
-            "href": "networking/direct_connect_encryption_vpn.html"
+            "href": "networking/direct_connect_encryption_vpn.html",
+            "service": "Direct Connect"
           },
           {
             "title": "Direct Connect Gateway・VGW・VIF 完全ガイド | AWS SAP学習リソース",
             "href": "networking/dx-gateway-vgw-vif-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Direct Connect"
           },
           {
             "title": "Direct Connect ルーティングポリシーと BGP コミュニティ - AWS図解ガイド",
             "href": "networking/dx-routing-bgp-community-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Direct Connect"
           },
           {
             "title": "LAG × ハイブリッドBGP - 階層的冗長性システム完全ガイド",
@@ -105,16 +122,19 @@ export const categoriesData: Category[] = [
           {
             "title": "Direct Connect LAG環境でのMACsec実装ガイド",
             "href": "networking/macsec-lag-implementation-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Direct Connect"
           },
           {
             "title": "AWS Direct Connect仮想ゲートウェイ解説",
             "href": "new-solutions/aws-direct-connect-vgw.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Direct Connect"
           },
           {
             "title": "VPNピアリングとPrivatelinkの比較",
-            "href": "new-solutions/vpn-vs-privatelink.html"
+            "href": "new-solutions/vpn-vs-privatelink.html",
+            "service": "VPC PrivateLink"
           },
           {
             "title": "【Black Belt】AWS Site-to-Site VPN (2021年10月)",
@@ -131,12 +151,14 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
-            "href": "networking/aws-directory-service-guide.html"
+            "href": "networking/aws-directory-service-guide.html",
+            "service": "Directory Service"
           },
           {
             "title": "AWS ENI（Elastic Network Interface）初心者向け図解",
             "href": "networking/aws-eni-infographic.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ENI"
           },
           {
             "title": "AWSグローバルインフラストラクチャ完全ガイド | AWS初心者向けインフォグラフィック",
@@ -146,7 +168,8 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム",
             "href": "networking/aws-hyperplane-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Hyperplane"
           },
           {
             "title": "AWS IPv6サポート完全ガイド - 住所体系の大革命",
@@ -155,21 +178,25 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "AWS プレフィックスリスト完全ガイド",
-            "href": "networking/aws-prefix-list-guide.html"
+            "href": "networking/aws-prefix-list-guide.html",
+            "service": "Prefix List"
           },
           {
             "title": "AWS PrivateLink & VPC エンドポイントサービス 完全ガイド",
             "href": "networking/aws-privatelink-vpc-endpoint-service-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC PrivateLink"
           },
           {
             "title": "AWS Site-to-Site VPN 完全ガイド",
             "href": "networking/aws-site-to-site-vpn-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPN"
           },
           {
             "title": "AWS Site-to-Site VPN 非対称ルーティング問題の解決方法",
-            "href": "networking/aws-vpn-asymmetric-routing-guide.html"
+            "href": "networking/aws-vpn-asymmetric-routing-guide.html",
+            "service": "VPN"
           },
           {
             "title": "BGPルート選択アルゴリズム完全ガイド",
@@ -179,153 +206,185 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む",
             "href": "networking/byoip-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "VPC"
           },
           {
             "title": "CIDRブロック集約と許可プレフィックスリスト完全ガイド",
-            "href": "networking/cidr-aggregation-prefix-list-guide.html"
+            "href": "networking/cidr-aggregation-prefix-list-guide.html",
+            "service": "VPC"
           },
           {
             "title": "CIDRブロックの重複とVPC接続 完全ガイド",
             "href": "networking/cidr-vpc-connectivity-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC"
           },
           {
             "title": "CloudFront HTTPセキュリティヘッダー完全ガイド",
             "href": "networking/cloudfront-security-headers-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudFront"
           },
           {
             "title": "DNS64 & NAT64 完全図解ガイド",
             "href": "networking/dns64-nat64-guide.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "NAT Gateway"
           },
           {
             "title": "📦 EC2インスタンスのネットワークMTU完全ガイド - 宅配便で理解するパケットサイズ",
             "href": "networking/ec2-mtu-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "EC2"
           },
           {
             "title": "Amazon EKS セキュリティ完全図解ガイド",
-            "href": "networking/eks-security-visual-guide.html"
+            "href": "networking/eks-security-visual-guide.html",
+            "service": "EKS"
           },
           {
             "title": "AWS Global Accelerator × VPN パフォーマンス向上ガイド",
             "href": "networking/global-accelerator-vpn-performance-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "VPN"
           },
           {
             "title": "GuardDuty InstanceCredentialExfiltration 完全対処ガイド",
-            "href": "networking/guardduty-credential-exfiltration-guide-v2.html"
+            "href": "networking/guardduty-credential-exfiltration-guide-v2.html",
+            "service": "GuardDuty"
           },
           {
             "title": "Gateway Load Balancer によるディープパケットインスペクション",
             "href": "networking/gwlb-deep-packet-inspection-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Gateway Load Balancer"
           },
           {
             "title": "ハイブリッド DNS アーキテクチャ 完全ガイド",
             "href": "networking/hybrid-dns-architecture-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Route 53"
           },
           {
             "title": "ジャンボフレーム＆MTU問題 完全図解ガイド",
             "href": "networking/jumbo-frame-mtu-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "EC2"
           },
           {
             "title": "ネットワークACL vs セキュリティグループ 完全ガイド",
             "href": "networking/nacl-sg-comparison-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC"
           },
           {
             "title": "NAT ゲートウェイのタイムアウト動作 完全ガイド",
-            "href": "networking/nat-gateway-timeout-guide.html"
+            "href": "networking/nat-gateway-timeout-guide.html",
+            "service": "NAT Gateway"
           },
           {
             "title": "プレフィックスリスト × AWS RAM 完全ガイド - マルチアカウントIP管理ソリューション",
             "href": "networking/prefix-list-ram-guide.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "Prefix List"
           },
           {
             "title": "S3バケットポリシー Principal要素 完全ガイド",
-            "href": "networking/s3-bucket-policy-principal-guide.html"
+            "href": "networking/s3-bucket-policy-principal-guide.html",
+            "service": "S3"
           },
           {
             "title": "S3バケットポリシー × VPCエンドポイント完全ガイド",
             "href": "networking/s3-vpc-endpoint-policy-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC PrivateLink"
           },
           {
             "title": "AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド",
-            "href": "networking/site-to-site-vpn-route53-resolver-guide.html"
+            "href": "networking/site-to-site-vpn-route53-resolver-guide.html",
+            "service": "VPN"
           },
           {
             "title": "スプリットトンネル vs フルトンネル VPN - AWS Client VPN | AWS SAP学習リソース",
             "href": "networking/split-vs-full-tunnel-vpn.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPN"
           },
           {
             "title": "Amazon VPC CNI 完全ガイド",
             "href": "networking/vpc-cni-guide.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "VPC"
           },
           {
             "title": "VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース",
             "href": "networking/vpc-dual-stack-networking-guide.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "VPC"
           },
           {
             "title": "VPCフローログ フィールド完全ガイド",
             "href": "networking/vpc-flow-log-fields-guide.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "VPC"
           },
           {
             "title": "Amazon VPC Network Access Analyzer 完全図解ガイド",
             "href": "networking/vpc-network-access-analyzer-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "VPC"
           },
           {
             "title": "パケットの気持ちになって辿る Amazon VPC のルーティング | AWS学習リソース",
             "href": "networking/vpc-routing-packet-journey.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC"
           },
           {
             "title": "VPCトラフィックミラーリング完全ガイド - 4つの構成要素を徹底図解",
-            "href": "networking/vpc-traffic-mirroring-deep-guide.html"
+            "href": "networking/vpc-traffic-mirroring-deep-guide.html",
+            "service": "VPC"
           },
           {
             "title": "VPCトラフィックミラーリング vs VPC Flow Logs - 使い分けガイド",
             "href": "networking/vpc-traffic-mirroring-vs-flow-logs.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC"
           },
           {
             "title": "VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説",
             "href": "networking/vpn-acceleration-vs-global-accelerator.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "VPN"
           },
           {
             "title": "AWS Site-to-Site VPN IKEセッション復旧ガイド",
             "href": "networking/vpn-ike-dpd-recovery-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "VPN"
           },
           {
             "title": "AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション",
-            "href": "networking/vpn-throughput-scaling-guide.html"
+            "href": "networking/vpn-throughput-scaling-guide.html",
+            "service": "VPN"
           },
           {
             "title": "AWS EIP &amp; NATゲートウェイ 超初心者ガイド",
             "href": "new-solutions/aws_eip_nat_infographic.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "NAT Gateway"
           },
           {
             "title": "ネットワーク層とアプリケーション層の違い",
             "href": "new-solutions/vpc_privatelink_cidr_overlap.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC PrivateLink"
           },
           {
             "title": "AWS RAM VPCプレフィックスリスト共有ガイド",
-            "href": "organizational-complexity/aws_ram_vpc_prefix_infographic.html"
+            "href": "organizational-complexity/aws_ram_vpc_prefix_infographic.html",
+            "service": "VPC"
           },
           {
             "title": "【Black Belt】AWS VPC (2020年10月)",
@@ -352,52 +411,63 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "AWS Cloud WAN アタッチメント承認ポリシー完全ガイド",
-            "href": "networking/cloud-wan-attachment-policy-guide.html"
+            "href": "networking/cloud-wan-attachment-policy-guide.html",
+            "service": "Cloud WAN"
           },
           {
             "title": "Cloud WAN / TGW ルート分離設計の極意",
             "href": "networking/cloud-wan-tgw-route-isolation-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Transit Gateway"
           },
           {
             "title": "AWS Transit Gateway Network Manager Route Analyzer 完全ガイド",
             "href": "networking/route-analyzer-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Transit Gateway Route Analyzer"
           },
           {
             "title": "Transit Gateway アプライアンスモード 完全ガイド",
-            "href": "networking/tgw-appliance-mode-guide.html"
+            "href": "networking/tgw-appliance-mode-guide.html",
+            "service": "Transit Gateway"
           },
           {
             "title": "AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン",
-            "href": "networking/tgw-isolated-shared-services.html"
+            "href": "networking/tgw-isolated-shared-services.html",
+            "service": "Transit Gateway"
           },
           {
             "title": "AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信",
-            "href": "networking/tgw-multicast-guide.html"
+            "href": "networking/tgw-multicast-guide.html",
+            "service": "Transit Gateway"
           },
           {
             "title": "Transit Gateway Connect 完全ガイド",
-            "href": "networking/transit-gateway-connect-guide.html"
+            "href": "networking/transit-gateway-connect-guide.html",
+            "service": "Transit Gateway"
           },
           {
             "title": "AWS Transit Gateway Deep Dive 完全ガイド",
             "href": "networking/transit-gateway-deep-dive.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Transit Gateway"
           },
           {
             "title": "AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する",
             "href": "networking/transit-gateway-peering-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Transit Gateway"
           },
           {
             "title": "AWS Transit Gateway共有の超簡単ガイド",
             "href": "organizational-complexity/aws-ram-tgw-sharing.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Transit Gateway"
           },
           {
             "title": "【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)",
-            "href": "BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf"
+            "href": "BlackBelt/AWS-Black-Belt_2025_AWS-Transit-Gateway-deepdive_0122_v1.pdf",
+            "service": "Transit Gateway"
           }
         ]
       },
@@ -409,11 +479,13 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
-            "href": "networking/cross-region-ec2-communication.html"
+            "href": "networking/cross-region-ec2-communication.html",
+            "service": "EC2"
           },
           {
             "title": "VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド",
-            "href": "networking/traffic-mirroring-udp-guide.html"
+            "href": "networking/traffic-mirroring-udp-guide.html",
+            "service": "VPC Traffic Mirroring"
           }
         ]
       }
@@ -433,29 +505,35 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS Elastic Disaster Recovery を災害対策で理解しよう",
-            "href": "continuous-improvement/aws_edr_infographic.html"
+            "href": "continuous-improvement/aws_edr_infographic.html",
+            "service": "Disaster Recovery"
           },
           {
             "title": "AWS Systems Manager Run Command を会社経営で理解しよう",
-            "href": "continuous-improvement/aws_ssm_runcommand_infographic.html"
+            "href": "continuous-improvement/aws_ssm_runcommand_infographic.html",
+            "service": "Systems Manager"
           },
           {
             "title": "AWS WAF Web ACLルールモード - 警備システムで理解する",
             "href": "continuous-improvement/aws_waf_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "WAF"
           },
           {
             "title": "AWS CloudTrail Lake 初心者ガイド",
-            "href": "continuous-improvement/cloudtrail-lake-infographic.html"
+            "href": "continuous-improvement/cloudtrail-lake-infographic.html",
+            "service": "CloudTrail"
           },
           {
             "title": "AWS Session Manager セキュリティコントロール強化ガイド",
-            "href": "continuous-improvement/session-manager-security-guide.html"
+            "href": "continuous-improvement/session-manager-security-guide.html",
+            "service": "Systems Manager"
           },
           {
             "title": "ALB TLSセキュリティポリシー完全ガイド",
             "href": "security-governance/alb-tls-security-policy-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ACM"
           },
           {
             "title": "EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall",
@@ -464,40 +542,48 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "AWS CloudTrail Lake 初心者ガイド",
-            "href": "security-governance/cloudtrail-lake-infographic.html"
+            "href": "security-governance/cloudtrail-lake-infographic.html",
+            "service": "CloudTrail"
           },
           {
             "title": "ECS Exec 完全ガイド - コンテナモニタリングの決定版",
             "href": "security-governance/ecs-exec-monitoring-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ECS"
           },
           {
             "title": "GuardDuty EKS Protection 完全ガイド",
             "href": "security-governance/guardduty-eks-protection-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "GuardDuty"
           },
           {
             "title": "GuardDuty EKS/RDS Protection 完全ガイド",
             "href": "security-governance/guardduty-eks-rds-protection-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "GuardDuty"
           },
           {
             "title": "GuardDuty ログソース完全ガイド - 最大カバレッジ設定",
             "href": "security-governance/guardduty-log-sources-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "GuardDuty"
           },
           {
             "title": "GuardDutyによるトラフィックパターン分析 完全ガイド",
             "href": "security-governance/guardduty-traffic-analysis-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "GuardDuty"
           },
           {
             "title": "Amazon Security Lake 完全ガイド - セキュリティ情報の総合図書館",
-            "href": "security-governance/security-lake-guide.html"
+            "href": "security-governance/security-lake-guide.html",
+            "service": "Security Lake"
           },
           {
             "title": "VPC トラフィックミラーリング完全ガイド",
-            "href": "security-governance/vpc-traffic-mirroring-guide.html"
+            "href": "security-governance/vpc-traffic-mirroring-guide.html",
+            "service": "VPC"
           },
           {
             "title": "【Black Belt】AWS Network Firewall Basic (2021年6月)",
@@ -515,15 +601,18 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS IAM フェデレーション入門",
             "href": "continuous-improvement/iam_federation_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "AWS ABAC完全ガイド - PrincipalTag vs ResourceTag",
-            "href": "security-governance/abac-principaltag-resourcetag-guide.html"
+            "href": "security-governance/abac-principaltag-resourcetag-guide.html",
+            "service": "IAM"
           },
           {
             "title": "API Gateway認証・認可方式 図解版",
-            "href": "security-governance/api_gateway_auth_infographic.html"
+            "href": "security-governance/api_gateway_auth_infographic.html",
+            "service": "API Gateway"
           },
           {
             "title": "AWS CLI 認証情報の指定方法 完全ガイド",
@@ -532,7 +621,8 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "AWS Cognito ユーザープールとIDプールの違い",
-            "href": "security-governance/aws-cognito-infographic.html"
+            "href": "security-governance/aws-cognito-infographic.html",
+            "service": "Cognito"
           },
           {
             "title": "AWS ログインユーザーの種類 - 完全ガイド",
@@ -546,59 +636,71 @@ export const categoriesData: Category[] = [
           {
             "title": "Amazon Cognito Pre Sign-up Lambda トリガー 完全ガイド",
             "href": "security-governance/cognito-pre-signup-trigger-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Cognito"
           },
           {
             "title": "IAM Access Analyzer 完全ガイド - AWS初心者向け図解",
-            "href": "security-governance/iam-access-analyzer-guide.html"
+            "href": "security-governance/iam-access-analyzer-guide.html",
+            "service": "IAM"
           },
           {
             "title": "IAM Access Analyzer ポリシー生成機能 完全ガイド",
-            "href": "security-governance/iam-access-analyzer-policy-generation-guide.html"
+            "href": "security-governance/iam-access-analyzer-policy-generation-guide.html",
+            "service": "IAM"
           },
           {
             "title": "IAM 認証情報レポート完全ガイド",
-            "href": "security-governance/iam-credential-report-guide.html"
+            "href": "security-governance/iam-credential-report-guide.html",
+            "service": "IAM"
           },
           {
             "title": "IAM認証情報レポート - セキュリティインシデント初動調査ガイド",
             "href": "security-governance/iam-credential-report-incident-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "IAM"
           },
           {
             "title": "IAM Identity Center 完全ガイド - Organizations一括管理",
             "href": "security-governance/iam-identity-center-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "IAM MFA緊急時の救済ガイド - コンソールの限界とAPI直接操作",
             "href": "security-governance/iam-mfa-emergency-rescue-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "IAM"
           },
           {
             "title": "IAM パーミッションバウンダリー 完全ガイド",
             "href": "security-governance/iam-permission-boundary-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "IAM 権限評価モデル &amp; 操作経路 完全ガイド",
             "href": "security-governance/iam-permission-evaluation-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "IAM ロール：権限ポリシー vs 信頼ポリシー完全ガイド",
             "href": "security-governance/iam-role-policies-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "SAML証明書ローテーション完全ガイド - IAM IDプロバイダー設定更新",
             "href": "security-governance/saml-certificate-rotation-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "SAML Federation"
           },
           {
             "title": "sts:ExternalId 完全マスターガイド",
             "href": "security-governance/sts-externalid-complete-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "STS"
           }
         ]
       },
@@ -611,25 +713,30 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Organizations SCPの継承：超シンプル解説",
             "href": "organizational-complexity/aws-scp-simplified.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Organizations"
           },
           {
             "title": "AWS Organizations &amp; Control Tower - 視覚的プロセス図解",
-            "href": "organizational-complexity/aws_org_infographic.html"
+            "href": "organizational-complexity/aws_org_infographic.html",
+            "service": "Organizations"
           },
           {
             "title": "AWS Control Tower 自動展開完全ガイド",
-            "href": "organizational-complexity/control-tower-cfct-guide.html"
+            "href": "organizational-complexity/control-tower-cfct-guide.html",
+            "service": "Control Tower"
           },
           {
             "title": "OSログローテーション × CloudWatch Logs エージェント 適合確認ガイド",
             "href": "organizational-complexity/log-rotation-cloudwatch-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudWatch"
           },
           {
             "title": "Amazon Inspector エージェントレス脆弱性評価 完全ガイド",
             "href": "security-governance/amazon-inspector-agentless-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Amazon Inspector"
           },
           {
             "title": "Amazon Q Business アクセス制御 &amp; ガードレール完全ガイド",
@@ -644,34 +751,41 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Config access-keys-rotated 完全ガイド",
             "href": "security-governance/aws-config-access-keys-rotated-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "AWS Config"
           },
           {
             "title": "AWS Config 管理ルール＆CloudTrail修復アクション完全ガイド",
-            "href": "security-governance/aws-config-cloudtrail-remediation-guide.html"
+            "href": "security-governance/aws-config-cloudtrail-remediation-guide.html",
+            "service": "CloudTrail"
           },
           {
             "title": "AWS Config コンフォーマンスパック &amp; StackSets 完全ガイド",
-            "href": "security-governance/aws-config-conformance-stacksets-guide.html"
+            "href": "security-governance/aws-config-conformance-stacksets-guide.html",
+            "service": "AWS Config"
           },
           {
             "title": "AWS Config × Organizations 完全ガイド",
             "href": "security-governance/aws-config-organizations-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "AWS Config"
           },
           {
             "title": "AWS Config S3配信エラー解決ガイド",
             "href": "security-governance/aws-config-s3-delivery-error-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "AWS Config"
           },
           {
             "title": "AWS Config - S3パブリックアクセス検出完全ガイド",
-            "href": "security-governance/aws-config-s3-public-access-guide.html"
+            "href": "security-governance/aws-config-s3-public-access-guide.html",
+            "service": "AWS Config"
           },
           {
             "title": "AWS Control Tower ガードレール解説",
             "href": "security-governance/aws-control-tower-guardrails.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Control Tower"
           },
           {
             "title": "AWS マネージドポリシー vs カスタマーマネージドポリシー 完全ガイド",
@@ -679,110 +793,133 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "AWS CloudTrail + CloudWatch + SNS 運用監視完全ガイド",
-            "href": "security-governance/aws-monitoring-guide.html"
+            "href": "security-governance/aws-monitoring-guide.html",
+            "service": "CloudTrail"
           },
           {
             "title": "AWS Organization と AWS Control Tower の関係",
             "href": "security-governance/aws-organization-control-tower.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Control Tower"
           },
           {
             "title": "AWS Well-Architected フレームワーク 完全図解ガイド",
             "href": "security-governance/aws-well-architected-complete-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Well-Architected"
           },
           {
             "title": "CIS AWS Foundations ベンチマーク継続評価ガイド",
             "href": "security-governance/cis-benchmark-security-hub-config-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Security Hub"
           },
           {
             "title": "CloudFormationドリフト検出と自動修復完全ガイド",
-            "href": "security-governance/cloudformation-drift-detection-auto-remediation-guide.html"
+            "href": "security-governance/cloudformation-drift-detection-auto-remediation-guide.html",
+            "service": "CloudFormation"
           },
           {
             "title": "CloudTrail 管理イベント vs データイベント 完全ガイド",
             "href": "security-governance/cloudtrail-events-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudTrail"
           },
           {
             "title": "CloudTrail 整合性検証 &amp; ダイジェストファイル 完全ガイド",
-            "href": "security-governance/cloudtrail-integrity-validation-guide.html"
+            "href": "security-governance/cloudtrail-integrity-validation-guide.html",
+            "service": "CloudTrail"
           },
           {
             "title": "CloudTrail ログプレフィックス完全ガイド",
             "href": "security-governance/cloudtrail-log-prefix-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudTrail"
           },
           {
             "title": "AWS CloudTrail主要操作 完全図解ガイド",
-            "href": "security-governance/cloudtrail-operations-guide.html"
+            "href": "security-governance/cloudtrail-operations-guide.html",
+            "service": "CloudTrail"
           },
           {
             "title": "CloudWatch Logs 集中集約完全ガイド",
-            "href": "security-governance/cloudwatch-logs-subscription-guide.html"
+            "href": "security-governance/cloudwatch-logs-subscription-guide.html",
+            "service": "CloudWatch"
           },
           {
             "title": "AWS CodeArtifact 完全ガイド",
             "href": "security-governance/codeartifact-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CodeArtifact"
           },
           {
             "title": "Cognito IDプールIAMロール完全ガイド",
-            "href": "security-governance/cognito-identity-pool-roles-guide.html"
+            "href": "security-governance/cognito-identity-pool-roles-guide.html",
+            "service": "Cognito"
           },
           {
             "title": "EKS コントロールプレーンログ &amp; CloudTrail 監査ログ 完全図解ガイド",
             "href": "security-governance/eks-control-plane-logging-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudTrail"
           },
           {
             "title": "AWS Firewall Manager セキュリティグループポリシー 完全ガイド",
             "href": "security-governance/firewall-manager-sg-policy-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Firewall Manager"
           },
           {
             "title": "AWS認証サービス完全比較ガイド - IAM Identity Center vs IAM vs Cognito",
             "href": "security-governance/iam-identity-center-comparison-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Cognito"
           },
           {
             "title": "AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド",
             "href": "security-governance/iam-resource-policy-deny-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "IAM Roles Anywhere 完全ガイド",
-            "href": "security-governance/iam-roles-anywhere-guide.html"
+            "href": "security-governance/iam-roles-anywhere-guide.html",
+            "service": "IAM"
           },
           {
             "title": "Amazon Inspector Lambda関数スキャン 完全図解ガイド",
             "href": "security-governance/inspector-lambda-scan-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Amazon Inspector"
           },
           {
             "title": "AWS Nitro Enclaves 完全ガイド",
             "href": "security-governance/nitro-enclaves-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Nitro Enclaves"
           },
           {
             "title": "OpenSearch Dashboards によるログデータの可視化 - 完全ガイド",
             "href": "security-governance/opensearch-dashboards-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "RDS"
           },
           {
             "title": "AWS SCP構文 完全図解ガイド",
             "href": "security-governance/scp-syntax-visual-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Organizations"
           },
           {
             "title": "AWS Security Hub 設定ポリシー完全図解ガイド",
-            "href": "security-governance/securityhub-configuration-policies-guide.html"
+            "href": "security-governance/securityhub-configuration-policies-guide.html",
+            "service": "Security Hub"
           },
           {
             "title": "Storage Gateway RefreshCache 自動化完全ガイド",
             "href": "security-governance/storage-gateway-refreshcache-automation-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Storage Gateway"
           }
         ]
       },
@@ -794,30 +931,36 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS KMS BYOK 完全ガイド",
-            "href": "organizational-complexity/kms_byok_infographic.html"
+            "href": "organizational-complexity/kms_byok_infographic.html",
+            "service": "KMS"
           },
           {
             "title": "AWS ACMでSANを利用した複数ドメインSSL証明書取得ガイド",
             "href": "security-governance/acm-san-infographic.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ACM"
           },
           {
             "title": "AWS CMK（暗号化キー）を銀行の貸金庫で理解しよう",
-            "href": "security-governance/aws_cmk_infographic.html"
+            "href": "security-governance/aws_cmk_infographic.html",
+            "service": "KMS"
           },
           {
             "title": "AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み",
             "href": "security-governance/kms-grants-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "KMS"
           },
           {
             "title": "AWS KMS キーの種類 完全ガイド",
             "href": "security-governance/kms-key-types.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "KMS"
           },
           {
             "title": "AWS KMS スロットリング対策 &amp; Encryption SDK キャッシュ完全ガイド",
-            "href": "security-governance/kms-throttling-encryption-sdk-guide.html"
+            "href": "security-governance/kms-throttling-encryption-sdk-guide.html",
+            "service": "KMS"
           }
         ]
       }
@@ -838,37 +981,45 @@ export const categoriesData: Category[] = [
           {
             "title": "なぜALBはVPCエンドポイントサービスとして使えないのか？",
             "href": "compute-applications/alb-nlb-privatelink-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "VPC PrivateLink"
           },
           {
             "title": "ALB ターゲットグループ完全ガイド",
-            "href": "compute-applications/alb-target-group-guide.html"
+            "href": "compute-applications/alb-target-group-guide.html",
+            "service": "ALB"
           },
           {
             "title": "ALBスティッキーセッション完全ガイド",
-            "href": "compute-applications/alb_sticky_session_infographic.html"
+            "href": "compute-applications/alb_sticky_session_infographic.html",
+            "service": "ALB"
           },
           {
             "title": "大規模瞬間スケール完全図解",
             "href": "compute-applications/auto_scaling_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Auto Scaling"
           },
           {
             "title": "Auto Scaling インスタンスリフレッシュ完全ガイド",
-            "href": "compute-applications/autoscaling-instance-refresh-guide.html"
+            "href": "compute-applications/autoscaling-instance-refresh-guide.html",
+            "service": "Auto Scaling"
           },
           {
             "title": "Auto Scaling ライフサイクル完全ガイド",
             "href": "compute-applications/autoscaling-lifecycle-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Auto Scaling"
           },
           {
             "title": "Auto Scaling安全なOSアップデート戦略完全ガイド",
-            "href": "compute-applications/autoscaling-safe-os-update-guide.html"
+            "href": "compute-applications/autoscaling-safe-os-update-guide.html",
+            "service": "Auto Scaling"
           },
           {
             "title": "AWS AutoScaling Warm Pool 完全ガイド",
-            "href": "compute-applications/autoscaling_warmpool_infographic.html"
+            "href": "compute-applications/autoscaling_warmpool_infographic.html",
+            "service": "Auto Scaling"
           },
           {
             "title": "AWSグローバルアーキテクチャ完全ガイド",
@@ -878,78 +1029,94 @@ export const categoriesData: Category[] = [
           {
             "title": "CloudWatch Agent Procstat 完全ガイド",
             "href": "compute-applications/cloudwatch-procstat-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudWatch"
           },
           {
             "title": "CloudWatch カスタムメトリクス &amp; PutMetricData 完全ガイド",
-            "href": "compute-applications/cloudwatch-putmetricdata-guide.html"
+            "href": "compute-applications/cloudwatch-putmetricdata-guide.html",
+            "service": "CloudWatch"
           },
           {
             "title": "CodePipeline Deploy Stage と DeploymentGroup の関係",
             "href": "compute-applications/codepipeline-deploymentgroup-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CodePipeline"
           },
           {
             "title": "EC2 Auto Scaling SNS通知完全ガイド",
             "href": "compute-applications/ec2-autoscaling-notifications-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "EC2"
           },
           {
             "title": "EC2終了前ログ退避設計ガイド",
             "href": "compute-applications/ec2-log-backup-before-termination-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "EC2"
           },
           {
             "title": "CodeシリーズでECS Fargateローリングデプロイ完全ガイド",
-            "href": "compute-applications/ecs-fargate-rolling-deploy-complete-guide.html"
+            "href": "compute-applications/ecs-fargate-rolling-deploy-complete-guide.html",
+            "service": "ECS"
           },
           {
             "title": "AWS Elastic Load Balancing (ELB) 完全ガイド - ALB vs NLB",
             "href": "compute-applications/elb-types-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "ELB"
           },
           {
             "title": "Amazon EventBridge イベントパターン完全図解ガイド",
-            "href": "compute-applications/eventbridge-event-patterns-guide.html"
+            "href": "compute-applications/eventbridge-event-patterns-guide.html",
+            "service": "EventBridge"
           },
           {
             "title": "Fargate awslogsログドライバ完全ガイド",
             "href": "compute-applications/fargate-awslogs-complete-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ECS"
           },
           {
             "title": "Gateway Load Balancer (GWLB) 完全ガイド",
             "href": "compute-applications/gwlb-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Gateway Load Balancer"
           },
           {
             "title": "IAM PassRole vs AssumeRole 完全ガイド",
             "href": "compute-applications/iam-passrole-vs-assumerole-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "NLB + TCPリスナー + mTLS + EKS 完全ガイド",
             "href": "compute-applications/nlb-mtls-eks-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "NLB"
           },
           {
             "title": "NLB ターゲットタイプ 完全解説",
             "href": "compute-applications/nlb-target-types.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "NLB"
           },
           {
             "title": "VPC DHCP オプションとカスタム DNS 完全ガイド",
             "href": "compute-applications/vpc-dhcp-options-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "VPC"
           },
           {
             "title": "Auto Scaling ウォームプール運用モード完全ガイド",
-            "href": "compute-applications/warmpool-modes-infographic.html"
+            "href": "compute-applications/warmpool-modes-infographic.html",
+            "service": "Auto Scaling"
           },
           {
             "title": "EC2 Auto Scaling ライフサイクルフックの図解",
             "href": "new-solutions/ec2-autoscaling-lifecycle-hooks.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "EC2"
           }
         ]
       },
@@ -962,29 +1129,35 @@ export const categoriesData: Category[] = [
           {
             "title": "Amazon AppStream 2.0 完全ガイド",
             "href": "compute-applications/appstream-infographic.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "AppStream"
           },
           {
             "title": "AWS ECSを料理店経営で理解しよう",
             "href": "compute-applications/aws_ecs_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "ECS"
           },
           {
             "title": "AWS SQS Dead-letter Queue &amp; Redrive Policy 完全ガイド",
-            "href": "compute-applications/sqs-dlq-redrive-guide.html"
+            "href": "compute-applications/sqs-dlq-redrive-guide.html",
+            "service": "SQS"
           },
           {
             "title": "AWS SQS DLQ &amp; Redrive Policy インフォグラフィック",
             "href": "compute-applications/sqs_dlq_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "SQS"
           },
           {
             "title": "AWS Systems Manager 機能解説",
-            "href": "continuous-improvement/aws_systems_manager_infographic.html"
+            "href": "continuous-improvement/aws_systems_manager_infographic.html",
+            "service": "Systems Manager"
           },
           {
             "title": "AWS SSM ドキュメントを料理レシピで理解しよう",
-            "href": "continuous-improvement/ssm_document_guide.html"
+            "href": "continuous-improvement/ssm_document_guide.html",
+            "service": "Systems Manager"
           }
         ]
       },
@@ -997,42 +1170,51 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS EC2のInsufficientInstanceCapacityエラーと再起動による解決メカニズム",
             "href": "compute-applications/aws-ec2-capacity-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "EC2"
           },
           {
             "title": "AWS クラスタプレイスメントグループ + EFA 解説",
-            "href": "compute-applications/aws_cluster_pg_efa_infographic.html"
+            "href": "compute-applications/aws_cluster_pg_efa_infographic.html",
+            "service": "EC2"
           },
           {
             "title": "EC2 Auto Recovery完全ガイド",
             "href": "compute-applications/ec2-auto-recovery-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "EC2"
           },
           {
             "title": "EC2ステータスチェック図解ガイド",
-            "href": "compute-applications/ec2-status-check-guide.html"
+            "href": "compute-applications/ec2-status-check-guide.html",
+            "service": "EC2"
           },
           {
             "title": "AWS Placement Group — Infographic",
             "href": "compute-applications/placement-group-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "EC2"
           },
           {
             "title": "AWS Fault Injection Simulator 完全ガイド",
-            "href": "continuous-improvement/aws_fis_infographic.html"
+            "href": "continuous-improvement/aws_fis_infographic.html",
+            "service": "FIS"
           },
           {
             "title": "Amazon CloudWatch Synthetics 完全ガイド",
-            "href": "continuous-improvement/cloudwatch_synthetics_infographic.html"
+            "href": "continuous-improvement/cloudwatch_synthetics_infographic.html",
+            "service": "CloudWatch"
           },
           {
             "title": "EC2ブートストラップ入門ガイド",
-            "href": "new-solutions/ec2-bootstrap-infographic.html"
+            "href": "new-solutions/ec2-bootstrap-infographic.html",
+            "service": "EC2"
           },
           {
             "title": "Amazon EC2 Elastic Fabric Adapter (EFA) 完全ガイド",
             "href": "new-solutions/efa_infographic.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "EFA"
           }
         ]
       },
@@ -1045,37 +1227,45 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Lambda Invocationメトリクスの完全ガイド",
             "href": "compute-applications/aws-lambda-metrics-perfect.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Lambda"
           },
           {
             "title": "AWS Lambda Invocationメトリクスの解説",
             "href": "compute-applications/aws-lambda-metrics.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Lambda"
           },
           {
             "title": "Amazon EventBridge 概要",
-            "href": "compute-applications/eventbridge_infographic (1).html"
+            "href": "compute-applications/eventbridge_infographic (1).html",
+            "service": "EventBridge"
           },
           {
             "title": "Amazon EventBridge 概要",
-            "href": "compute-applications/eventbridge_infographic.html"
+            "href": "compute-applications/eventbridge_infographic.html",
+            "service": "EventBridge"
           },
           {
             "title": "Amazon EventBridge 概要",
-            "href": "continuous-improvement/eventbridge_infographic.html"
+            "href": "continuous-improvement/eventbridge_infographic.html",
+            "service": "EventBridge"
           },
           {
             "title": "AWS Lambda ベストプラクティス - レストランキッチンで理解しよう",
-            "href": "continuous-improvement/lambda_best_practices_guide.html"
+            "href": "continuous-improvement/lambda_best_practices_guide.html",
+            "service": "Lambda"
           },
           {
             "title": "Lambda 予約済み同時実行数とは？",
-            "href": "cost-control/lambda_reserved_concurrency_infographic.html"
+            "href": "cost-control/lambda_reserved_concurrency_infographic.html",
+            "service": "Lambda"
           },
           {
             "title": "Lambda関数のエイリアス＆カナリアリリース解説",
             "href": "new-solutions/lambda-alias-canary.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Lambda"
           }
         ]
       },
@@ -1088,11 +1278,13 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Patch Manager - 大規模環境での自動パッチ適用",
             "href": "compute-applications/aws_patch_manager_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Systems Manager"
           },
           {
             "title": "AWS Systems Manager OpsCenter 完全ガイド",
-            "href": "compute-applications/opscenter-guide.html"
+            "href": "compute-applications/opscenter-guide.html",
+            "service": "OpsCenter"
           },
           {
             "title": "AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析",
@@ -1102,30 +1294,36 @@ export const categoriesData: Category[] = [
           {
             "title": "CloudWatch INSIGHT_RULE_METRIC 完全ガイド",
             "href": "continuous-improvement/cloudwatch-insight-rule-metric-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudWatch"
           },
           {
             "title": "CloudWatch Logs データ保護ポリシー完全ガイド",
             "href": "continuous-improvement/cloudwatch-logs-data-protection-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudWatch"
           },
           {
             "title": "EC2 Image Builder 完全ガイド",
-            "href": "continuous-improvement/ec2-image-builder-guide.html"
+            "href": "continuous-improvement/ec2-image-builder-guide.html",
+            "service": "EC2"
           },
           {
             "title": "AWS Config ec2-managedinstance-applications-required 完全ガイド",
             "href": "continuous-improvement/ec2-managedinstance-applications-required-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "EC2"
           },
           {
             "title": "AWS ECR イメージスキャン完全ガイド",
-            "href": "continuous-improvement/ecr-image-scanning-guide.html"
+            "href": "continuous-improvement/ecr-image-scanning-guide.html",
+            "service": "ECR"
           },
           {
             "title": "AWS Systems Manager完全ガイド",
             "href": "continuous-improvement/systems-manager-hybrid-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Systems Manager"
           }
         ]
       }
@@ -1145,49 +1343,59 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "ACM + ALB + EC2 TLS証明書設定 完全ガイド",
-            "href": "content-delivery-dns/acm-alb-ec2-tls-guide.html"
+            "href": "content-delivery-dns/acm-alb-ec2-tls-guide.html",
+            "service": "ACM"
           },
           {
             "title": "ACM DNS検証 - 超かんたん図解ガイド",
-            "href": "content-delivery-dns/acm-dns-simple-guide.html"
+            "href": "content-delivery-dns/acm-dns-simple-guide.html",
+            "service": "ACM"
           },
           {
             "title": "ALB × PFS 暗号スイート完全ガイド",
             "href": "content-delivery-dns/alb-pfs-cipher-suites-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ACM"
           },
           {
             "title": "ALB セキュリティポリシー完全ガイド",
             "href": "content-delivery-dns/alb-security-policy-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "ALB"
           },
           {
             "title": "CloudFrontのカスタムHTTPヘッダーとCache-Control入門ガイド",
             "href": "content-delivery-dns/cloudfront-cache-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFront"
           },
           {
             "title": "CloudFront HTTPSハンドシェイク完全ガイド",
-            "href": "content-delivery-dns/cloudfront-https-guide.html"
+            "href": "content-delivery-dns/cloudfront-https-guide.html",
+            "service": "CloudFront"
           },
           {
             "title": "CloudFront オリジンフェイルオーバー完全ガイド | AWS学習リソース",
             "href": "content-delivery-dns/cloudfront-origin-failover-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFront"
           },
           {
             "title": "DNSレコード完全ガイド - 住所録で理解するAWS Route 53",
             "href": "content-delivery-dns/dns-records-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Route 53"
           },
           {
             "title": "AWS Global Accelerator 完全ガイド",
             "href": "content-delivery-dns/global_accelerator_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Global Accelerator"
           },
           {
             "title": "Lambda@Edge Origin Response X-Frame-Options完全ガイド",
-            "href": "content-delivery-dns/lambda-edge-x-frame-options-guide.html"
+            "href": "content-delivery-dns/lambda-edge-x-frame-options-guide.html",
+            "service": "CloudFront"
           },
           {
             "title": "OSI参照モデル × AWSサービス完全ガイド",
@@ -1196,12 +1404,14 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "Amazon S3 マルチリージョンアクセスポイント",
-            "href": "content-delivery-dns/s3-mrap-infographic.html"
+            "href": "content-delivery-dns/s3-mrap-infographic.html",
+            "service": "CloudFront"
           },
           {
             "title": "AWS CloudFront オリジングループ簡単解説",
             "href": "new-solutions/cloudfront-origin-groups.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFront"
           }
         ]
       },
@@ -1218,40 +1428,48 @@ export const categoriesData: Category[] = [
           {
             "title": "Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド",
             "href": "content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "Route 53"
           },
           {
             "title": "Route 53 Application Recovery Controller 解説",
-            "href": "content-delivery-dns/route53-arc-infographic (1).html"
+            "href": "content-delivery-dns/route53-arc-infographic (1).html",
+            "service": "Route 53"
           },
           {
             "title": "Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ",
             "href": "content-delivery-dns/route53-dns-firewall-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Route 53"
           },
           {
             "title": "Route 53 DNSSEC 完全ガイド",
             "href": "content-delivery-dns/route53-dnssec-100.html",
-            "priority": "medium"
+            "priority": "medium",
+            "service": "Route 53"
           },
           {
             "title": "Amazon Route 53 プライベートホストゾーン完全ガイド",
             "href": "content-delivery-dns/route53-private-hosted-zone-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Route 53"
           },
           {
             "title": "Route 53 プライベートホストゾーン クロスアカウント関連付け",
             "href": "content-delivery-dns/route53_cross_account_guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Route 53"
           },
           {
             "title": "Route 53 Application Recovery Controller 解説",
-            "href": "continuous-improvement/route53-arc-infographic.html"
+            "href": "continuous-improvement/route53-arc-infographic.html",
+            "service": "Route 53"
           },
           {
             "title": "Route53 ホストゾーン完全ガイド",
             "href": "new-solutions/route53_hosted_zones_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Route 53"
           }
         ]
       },
@@ -1263,11 +1481,13 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド",
-            "href": "content-delivery-dns/dns-migration-guide.html"
+            "href": "content-delivery-dns/dns-migration-guide.html",
+            "service": "Route 53"
           },
           {
             "title": "サブドメイン委任（Subdomain Delegation）完全ガイド - Route 53",
-            "href": "content-delivery-dns/subdomain-delegation-guide.html"
+            "href": "content-delivery-dns/subdomain-delegation-guide.html",
+            "service": "Route 53"
           }
         ]
       }
@@ -1287,7 +1507,8 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS CI/CDパイプライン - レシピ開発から出版まで",
-            "href": "continuous-improvement/aws_pipeline_infographic.html"
+            "href": "continuous-improvement/aws_pipeline_infographic.html",
+            "service": "CI/CD Pipeline"
           },
           {
             "title": "Elastic Beanstalk Blue/Green デプロイメント",
@@ -1295,19 +1516,23 @@ export const categoriesData: Category[] = [
           },
           {
             "title": "Elastic Beanstalk ブルー/グリーンデプロイ完全ガイド",
-            "href": "continuous-improvement/blue_green_deploy_infographic.html"
+            "href": "continuous-improvement/blue_green_deploy_infographic.html",
+            "service": "CodeDeploy"
           },
           {
             "title": "AWS CodeBuild buildspec.yaml 完全ガイド",
-            "href": "continuous-improvement/buildspec_infographic.html"
+            "href": "continuous-improvement/buildspec_infographic.html",
+            "service": "CodeBuild"
           },
           {
             "title": "CanaryとLinearデプロイメントの違い",
-            "href": "continuous-improvement/canary_linear_infographic.html"
+            "href": "continuous-improvement/canary_linear_infographic.html",
+            "service": "CodeDeploy"
           },
           {
             "title": "AWS CodeDeploy を劇場システムで理解しよう",
-            "href": "continuous-improvement/codedeploy_infographic.html"
+            "href": "continuous-improvement/codedeploy_infographic.html",
+            "service": "CodeDeploy"
           }
         ]
       },
@@ -1319,58 +1544,70 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS CloudFormation変更セットを建築業界で理解しよう",
-            "href": "continuous-improvement/cloudformation_changeset_infographic.html"
+            "href": "continuous-improvement/cloudformation_changeset_infographic.html",
+            "service": "CloudFormation"
           },
           {
             "title": "Amazon Inspector ECRスキャン完全ガイド",
             "href": "development-deployment/amazon-inspector-ecr-scanning-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "Amazon Inspector"
           },
           {
             "title": "AWS CloudFormation テンプレート作成ガイド",
             "href": "development-deployment/aws-cloudformation-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFormation"
           },
           {
             "title": "AWS SAM レストラン経営で理解しよう",
-            "href": "development-deployment/aws_sam_infographic.html"
+            "href": "development-deployment/aws_sam_infographic.html",
+            "service": "SAM"
           },
           {
             "title": "AWS CDKを家づくり設計で理解しよう",
-            "href": "development-deployment/cdk_infographic.html"
+            "href": "development-deployment/cdk_infographic.html",
+            "service": "CDK"
           },
           {
             "title": "CloudFormation Guard (cfn-guard) 完全ガイド",
-            "href": "development-deployment/cfn-guard-infographic.html"
+            "href": "development-deployment/cfn-guard-infographic.html",
+            "service": "CloudFormation"
           },
           {
             "title": "CloudFormation リソース保持メカニズム",
             "href": "development-deployment/cloudformation-protection-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFormation"
           },
           {
             "title": "CloudWatch Logs ログ保持期間 完全ガイド",
             "href": "development-deployment/cloudwatch-logs-retention-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "CloudWatch"
           },
           {
             "title": "CodePipeline &amp; タスク概要 完全ガイド",
             "href": "development-deployment/codepipeline_infographic_v2.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CodePipeline"
           },
           {
             "title": "AWS GuardDuty 抑制ルール（Suppression Rule）完全ガイド",
-            "href": "development-deployment/guardduty-suppression-rules.html"
+            "href": "development-deployment/guardduty-suppression-rules.html",
+            "service": "GuardDuty"
           },
           {
             "title": "CloudFormation StackSets 詳細図解",
             "href": "development-deployment/stacksets_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFormation"
           },
           {
             "title": "CloudFormationからAWS Service Catalog製品を作成する方法",
             "href": "organizational-complexity/cf-service-catalog-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CloudFormation"
           }
         ]
       },
@@ -1383,16 +1620,19 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS API Gateway をレストランで理解しよう",
             "href": "development-deployment/api_gateway_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "API Gateway"
           },
           {
             "title": "AWS EventBridge API宛先と入力トランスフォーマー機能の解説",
             "href": "development-deployment/aws-eventbridge-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "EventBridge"
           },
           {
             "title": "AWS AppSync - 初心者向けガイド",
-            "href": "development-deployment/aws_appsync_infographic.html"
+            "href": "development-deployment/aws_appsync_infographic.html",
+            "service": "AppSync"
           }
         ]
       },
@@ -1404,7 +1644,8 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "CodePipeline アクションタイプ図解ガイド",
-            "href": "development-deployment/codepipeline-actions-guide.html"
+            "href": "development-deployment/codepipeline-actions-guide.html",
+            "service": "CodePipeline"
           }
         ]
       }
@@ -1424,32 +1665,38 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS S3 ストレージクラスを家の収納で理解しよう",
-            "href": "cost-control/s3_storage_classes_infographic.html"
+            "href": "cost-control/s3_storage_classes_infographic.html",
+            "service": "S3"
           },
           {
             "title": "AWS S3 機能解説 - 初心者向けガイド",
             "href": "storage-database/aws_s3_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "S3"
           },
           {
             "title": "OpenSearch Service ISM ポリシー完全ガイド",
             "href": "storage-database/opensearch-ism-policy-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "OpenSearch"
           },
           {
             "title": "QuickSight vs OpenSearch Dashboards 完全比較ガイド",
             "href": "storage-database/quicksight-opensearch-comparison-guide.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "OpenSearch"
           },
           {
             "title": "Amazon S3 セキュリティ機能の違い",
             "href": "storage-database/s3-security-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "S3"
           },
           {
             "title": "AWS S3 ストレージクラスを家の収納で理解しよう",
             "href": "storage-database/s3_storage_classes_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "S3"
           }
         ]
       },
@@ -1462,29 +1709,35 @@ export const categoriesData: Category[] = [
           {
             "title": "Amazon MSK をレストランの注文システムで理解しよう",
             "href": "storage-database/amazon_msk_infographic.html",
-            "priority": "low"
+            "priority": "low",
+            "service": "MSK"
           },
           {
             "title": "Aurora Data API &amp; IAM認証 完全ガイド",
             "href": "storage-database/aurora_dataapi_iam_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "IAM"
           },
           {
             "title": "ElastiCache 可用性・スケーラビリティ機能 詳細ガイド",
             "href": "storage-database/elasticache_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "ElastiCache"
           },
           {
             "title": "Amazon OpenSearch Service 完全ガイド",
-            "href": "storage-database/opensearch-guide.html"
+            "href": "storage-database/opensearch-guide.html",
+            "service": "OpenSearch"
           },
           {
             "title": "Redis クラスターモード完全図解",
-            "href": "storage-database/redis_cluster_mode_infographic.html"
+            "href": "storage-database/redis_cluster_mode_infographic.html",
+            "service": "ElastiCache"
           },
           {
             "title": "Amazon Redshift Data Sharing 完全ガイド",
-            "href": "storage-database/redshift-data-sharing-guide.html"
+            "href": "storage-database/redshift-data-sharing-guide.html",
+            "service": "Redshift"
           }
         ]
       },
@@ -1497,11 +1750,13 @@ export const categoriesData: Category[] = [
           {
             "title": "Amazon EBS高速スナップショット復元(FSR)初心者ガイド",
             "href": "storage-database/aws-ebs-fsr-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "EBS"
           },
           {
             "title": "AWS EFS マウントターゲットの説明",
-            "href": "storage-database/aws-efs-mount-target-infographic.html"
+            "href": "storage-database/aws-efs-mount-target-infographic.html",
+            "service": "EFS"
           }
         ]
       }
@@ -1522,7 +1777,8 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS災害復旧戦略をレストランで理解しよう",
             "href": "migration/aws-dr-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Disaster Recovery"
           }
         ]
       },
@@ -1535,20 +1791,24 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Migration Hub 超わかりやすいガイド",
             "href": "migration/aws-migration-hub-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Migration Hub"
           },
           {
             "title": "AWS Migration Hubを引っ越し会社で理解しよう",
-            "href": "migration/aws_migration_hub_infographic.html"
+            "href": "migration/aws_migration_hub_infographic.html",
+            "service": "Migration Hub"
           },
           {
             "title": "AWS移行戦略7Rと移行サービス群",
             "href": "migration/aws_migration_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Migration Hub"
           },
           {
             "title": "AWS移行サービス群 完全ガイド",
-            "href": "migration/aws_migration_services_infographic.html"
+            "href": "migration/aws_migration_services_infographic.html",
+            "service": "Migration Hub"
           },
           {
             "title": "AWS Relocate（再配置）戦略 - 完全解説",
@@ -1557,7 +1817,8 @@ export const categoriesData: Category[] = [
           {
             "title": "ブルー/グリーン vs イミュータブル - 完全図解ガイド",
             "href": "migration/blue-green-vs-immutable-visual-guide.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "CodeDeploy"
           }
         ]
       },
@@ -1569,22 +1830,26 @@ export const categoriesData: Category[] = [
         "resources": [
           {
             "title": "AWS SCT &amp; DMS データベース移行を図書館の引っ越しで理解しよう",
-            "href": "migration/aws_database_migration_infographic.html"
+            "href": "migration/aws_database_migration_infographic.html",
+            "service": "DMS"
           },
           {
             "title": "AWS DMS Change Data Capture ガイド",
             "href": "migration/aws_dms_cdc_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "DMS"
           },
           {
             "title": "AWS DMS機能詳細ガイド",
             "href": "migration/aws_dms_features_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "DMS"
           },
           {
             "title": "AWS SCT・DMS オンラインマイグレーション完全ガイド",
             "href": "migration/aws_sct_dms_migration_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "DMS"
           }
         ]
       }
@@ -1605,7 +1870,8 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS コスト管理ツール比較",
             "href": "analytics-bigdata/aws-cost-tools.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Cost Explorer"
           },
           {
             "title": "AWS EC2ディスクメトリクスの違い",
@@ -1624,7 +1890,8 @@ export const categoriesData: Category[] = [
           {
             "title": "Amazon Kinesis Data Streamsをベルトコンベアで理解しよう",
             "href": "analytics-bigdata/kinesis-infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Kinesis"
           }
         ]
       },
@@ -1637,15 +1904,18 @@ export const categoriesData: Category[] = [
           {
             "title": "Kinesis Data Firehose 高度機能完全図解",
             "href": "analytics-bigdata/kinesis_firehose_infographic.html",
-            "priority": "high"
+            "priority": "high",
+            "service": "Kinesis"
           },
           {
             "title": "Redshift スケーリング手段完全図解",
-            "href": "analytics-bigdata/redshift_scaling_infographic.html"
+            "href": "analytics-bigdata/redshift_scaling_infographic.html",
+            "service": "Redshift"
           },
           {
             "title": "サーバーレスデータパイプライン完全図解",
-            "href": "analytics-bigdata/serverless_data_pipeline_infographic.html"
+            "href": "analytics-bigdata/serverless_data_pipeline_infographic.html",
+            "service": "CI/CD Pipeline"
           }
         ]
       },
@@ -1740,10 +2010,572 @@ export const categoryQuickNav: QuickNavItem[] = [
   }
 ];
 
+export const serviceIndex: ServiceIndexItem[] = [
+  {
+    "name": "ACM",
+    "count": 5,
+    "categories": [
+      "security-governance",
+      "content-delivery-dns"
+    ]
+  },
+  {
+    "name": "ALB",
+    "count": 3,
+    "categories": [
+      "compute-applications",
+      "content-delivery-dns"
+    ]
+  },
+  {
+    "name": "Amazon Inspector",
+    "count": 3,
+    "categories": [
+      "security-governance",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "API Gateway",
+    "count": 2,
+    "categories": [
+      "security-governance",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "AppStream",
+    "count": 1,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "AppSync",
+    "count": 1,
+    "categories": [
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "Auto Scaling",
+    "count": 6,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "AWS Config",
+    "count": 5,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "CDK",
+    "count": 1,
+    "categories": [
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "CI/CD Pipeline",
+    "count": 2,
+    "categories": [
+      "development-deployment",
+      "analytics-operations"
+    ]
+  },
+  {
+    "name": "Cloud WAN",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "CloudFormation",
+    "count": 7,
+    "categories": [
+      "security-governance",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "CloudFront",
+    "count": 7,
+    "categories": [
+      "networking",
+      "content-delivery-dns"
+    ]
+  },
+  {
+    "name": "CloudTrail",
+    "count": 9,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "CloudWatch",
+    "count": 8,
+    "categories": [
+      "security-governance",
+      "compute-applications",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "CodeArtifact",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "CodeBuild",
+    "count": 1,
+    "categories": [
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "CodeDeploy",
+    "count": 4,
+    "categories": [
+      "development-deployment",
+      "migration"
+    ]
+  },
+  {
+    "name": "CodePipeline",
+    "count": 3,
+    "categories": [
+      "compute-applications",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "Cognito",
+    "count": 4,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Control Tower",
+    "count": 3,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Cost Explorer",
+    "count": 1,
+    "categories": [
+      "analytics-operations"
+    ]
+  },
+  {
+    "name": "Direct Connect",
+    "count": 12,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "Directory Service",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "Disaster Recovery",
+    "count": 2,
+    "categories": [
+      "security-governance",
+      "migration"
+    ]
+  },
+  {
+    "name": "DMS",
+    "count": 4,
+    "categories": [
+      "migration"
+    ]
+  },
+  {
+    "name": "EBS",
+    "count": 1,
+    "categories": [
+      "storage-database"
+    ]
+  },
+  {
+    "name": "EC2",
+    "count": 14,
+    "categories": [
+      "networking",
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "ECR",
+    "count": 1,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "ECS",
+    "count": 4,
+    "categories": [
+      "security-governance",
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "EFA",
+    "count": 1,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "EFS",
+    "count": 1,
+    "categories": [
+      "storage-database"
+    ]
+  },
+  {
+    "name": "EKS",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "ElastiCache",
+    "count": 2,
+    "categories": [
+      "storage-database"
+    ]
+  },
+  {
+    "name": "ELB",
+    "count": 1,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "ENI",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "EventBridge",
+    "count": 5,
+    "categories": [
+      "compute-applications",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "Firewall Manager",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "FIS",
+    "count": 1,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "Gateway Load Balancer",
+    "count": 2,
+    "categories": [
+      "networking",
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "Global Accelerator",
+    "count": 1,
+    "categories": [
+      "content-delivery-dns"
+    ]
+  },
+  {
+    "name": "GuardDuty",
+    "count": 6,
+    "categories": [
+      "networking",
+      "security-governance",
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "Hyperplane",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "IAM",
+    "count": 15,
+    "categories": [
+      "security-governance",
+      "compute-applications",
+      "storage-database"
+    ]
+  },
+  {
+    "name": "Kinesis",
+    "count": 2,
+    "categories": [
+      "analytics-operations"
+    ]
+  },
+  {
+    "name": "KMS",
+    "count": 5,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Lambda",
+    "count": 5,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "Migration Hub",
+    "count": 4,
+    "categories": [
+      "migration"
+    ]
+  },
+  {
+    "name": "MSK",
+    "count": 1,
+    "categories": [
+      "storage-database"
+    ]
+  },
+  {
+    "name": "NAT Gateway",
+    "count": 3,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "Nitro Enclaves",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "NLB",
+    "count": 2,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "OpenSearch",
+    "count": 3,
+    "categories": [
+      "storage-database"
+    ]
+  },
+  {
+    "name": "OpsCenter",
+    "count": 1,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "Organizations",
+    "count": 3,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Prefix List",
+    "count": 2,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "RDS",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Redshift",
+    "count": 2,
+    "categories": [
+      "storage-database",
+      "analytics-operations"
+    ]
+  },
+  {
+    "name": "Route 53",
+    "count": 12,
+    "categories": [
+      "networking",
+      "content-delivery-dns"
+    ]
+  },
+  {
+    "name": "S3",
+    "count": 5,
+    "categories": [
+      "networking",
+      "storage-database"
+    ]
+  },
+  {
+    "name": "SAM",
+    "count": 1,
+    "categories": [
+      "development-deployment"
+    ]
+  },
+  {
+    "name": "SAML Federation",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Security Hub",
+    "count": 2,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Security Lake",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "SQS",
+    "count": 2,
+    "categories": [
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "Storage Gateway",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "STS",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Systems Manager",
+    "count": 6,
+    "categories": [
+      "security-governance",
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "Transit Gateway",
+    "count": 9,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "Transit Gateway Route Analyzer",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "VPC",
+    "count": 14,
+    "categories": [
+      "networking",
+      "security-governance",
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "VPC PrivateLink",
+    "count": 5,
+    "categories": [
+      "networking",
+      "compute-applications"
+    ]
+  },
+  {
+    "name": "VPC Traffic Mirroring",
+    "count": 1,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "VPN",
+    "count": 8,
+    "categories": [
+      "networking"
+    ]
+  },
+  {
+    "name": "WAF",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  },
+  {
+    "name": "Well-Architected",
+    "count": 1,
+    "categories": [
+      "security-governance"
+    ]
+  }
+];
+
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
   "totalResources": "295+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/03/08"
+  "lastUpdated": "2026/03/09"
 };
