@@ -43,6 +43,31 @@ npx astro preview # → http://localhost:4321/aws_sap_studying (production previ
 - Use `uv` instead of `pip` for Python package management
 - Always create/activate a virtual environment before installing packages
 
+## Build Pipeline
+
+The build (`npm run build`) runs these steps in order:
+1. `sync:concepts` — copies `concepts/` → `public/concepts/` (concept map JSON data)
+2. `sync:static` — copies `css/`, `js/`, `output_images/` → `public/` (source CSS/JS lives at repo root, NOT in `src/`)
+3. `generate-data.mjs` — produces **two outputs**:
+   - `public/data.js` — runtime data for index, knowledge-base, bookmark pages (loaded via `<script>`)
+   - `src/data/resources.ts` — build-time TypeScript data imported by `learning-resources.astro`
+4. `astro build` — SSG build → `dist/`
+
+### Astro Configuration
+
+- `build.format: 'file'` — produces `networking/foo.html` (NOT `networking/foo/index.html`)
+- Asset filenames are NOT hashed — `assetFileNames: '[name][extname]'` preserves original paths
+- Base path: `/aws_sap_studying` (critical — already enforced by Critical Rule #3)
+- Resource pages live in `src/pages/<category>/` subdirectories (8 categories matching data.js)
+
+### Key Layouts
+
+| Layout | Used by |
+|--------|---------|
+| `BaseLayout.astro` | Most pages (index, quiz, concept-map, etc.) |
+| `ResourceLayout.astro` | Individual resource pages (`src/pages/<category>/*.astro`) |
+| `LearningResourcesLayout.astro` | `learning-resources.astro` (build-time rendered catalog) |
+
 ## Testing & QA
 
 ### Playwright E2E tests
@@ -110,30 +135,6 @@ npx playwright test --project=chromium tests/e2e/visual/ --update-snapshots  # r
 
 CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no browser) → runtime-validation (Playwright) → visual-regression (`if: false`, pending baselines) → publish-report.
 
-## Documentation Reference
-
-| Topic | File |
-|-------|------|
-| **HTML rules** (paths, W3C, WCAG, headings) | `.claude/rules/html-standards.md` |
-| **Data/navigation rules** (data.js, render.js) | `.claude/rules/data-navigation.md` |
-| **CSS rules** (colors, z-index, responsive) | `.claude/rules/css-standards.md` |
-| **JS rules** (vanilla JS, conventions) | `.claude/rules/javascript-standards.md` |
-| **Integration workflow** (scripts, categorization) | `.claude/rules/integration-workflow.md` |
-| Architecture, Key Files, render.js | `.claude/docs/architecture.md` |
-| Workflows, File Placement, Key Scripts | `.claude/docs/workflows.md` |
-| WCAG Colors, Deprecated Colors, CI/CD Pipeline | `.claude/docs/accessibility.md` |
-| Pre-Commit Checklist, Hook Info | `.claude/docs/pre-commit.md` |
-| Available Skills, Speckit Commands | `.claude/docs/skills.md` |
-| Concept Map System | `.claude/docs/concept-map.md` |
-| Architecture (detailed) | `docs/ARCHITECTURE.md` |
-| Development Guide | `docs/DEVELOPMENT_GUIDE.md` |
-| Git Workflow | `docs/GIT_WORKFLOW.md` |
-| Coding Standards | `docs/CODING_STANDARDS.md` |
-| CI/CD Pipeline | `docs/CI_CD_GUIDE.md` |
-| Accessibility | `docs/WCAG21_GUIDELINES.md` |
-| QA CI workflow (CSS + runtime) | `.github/workflows/qa-unified.yml` |
-| QA shared types | `tests/modules/types/index.ts` |
-
 ## Deployment
 
 - Use `/deploy` skill for the full pipeline: commit → merge to master → push → GitHub Actions build → gh-pages
@@ -141,17 +142,39 @@ CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no
 - `master` = source code, `gh-pages` = build output only (managed by CI)
 - Standard workflow: implement → validate → `/deploy`
 
+## Documentation Reference
+
+**Auto-loaded rules** (triggered when editing matching files):
+
+| Rule | File |
+|------|------|
+| HTML (paths, W3C, WCAG, headings) | `.claude/rules/html-standards.md` |
+| Data/navigation (data.js, render.js) | `.claude/rules/data-navigation.md` |
+| CSS (colors, z-index, responsive) | `.claude/rules/css-standards.md` |
+| JS (vanilla JS, conventions) | `.claude/rules/javascript-standards.md` |
+| Integration workflow | `.claude/rules/integration-workflow.md` |
+
+**Extended docs** (read on demand):
+
+| Topic | File |
+|-------|------|
+| Architecture, Key Files, render.js | `.claude/docs/architecture.md` |
+| Workflows, File Placement, Key Scripts | `.claude/docs/workflows.md` |
+| WCAG Colors, CI/CD Pipeline | `.claude/docs/accessibility.md` |
+| Pre-Commit Checklist | `.claude/docs/pre-commit.md` |
+| Available Skills | `.claude/docs/skills.md` |
+| Concept Map System | `.claude/docs/concept-map.md` |
+| Architecture (detailed) | `docs/ARCHITECTURE.md` |
+| Development Guide | `docs/DEVELOPMENT_GUIDE.md` |
+| Git Workflow | `docs/GIT_WORKFLOW.md` |
+| Coding Standards | `docs/CODING_STANDARDS.md` |
+| CI/CD Pipeline | `docs/CI_CD_GUIDE.md` |
+| Accessibility | `docs/WCAG21_GUIDELINES.md` |
+| QA CI workflow | `.github/workflows/qa-unified.yml` |
+| QA shared types | `tests/modules/types/index.ts` |
+
 ## Working Style
 
 - Minimize planning phases — move to implementation quickly
 - Do not spend entire sessions in planning/exploration mode without producing code
 - When working with large files or PDFs, be aware of token limits and chunk output proactively
-
-## Active Technologies
-- TypeScript 5.4.5 (existing), Node.js 20+ + `@playwright/test` 1.44.0 (existing), `@axe-core/playwright` 4.10.1 (existing), `tsx` 4.21.0 (existing) (001-playwright-regression-tests)
-- File-based screenshot baselines in `tests/__screenshots__/`; JSON reports in `qa-reports/` (001-playwright-regression-tests)
-- TypeScript 5.4.5 + @playwright/test 1.44.0, @axe-core/playwright 4.10.1, tsx 4.21.0 (003-page-object-model)
-- N/A (test infrastructure only) (003-page-object-model)
-
-## Recent Changes
-- 001-playwright-regression-tests: Added TypeScript 5.4.5 (existing), Node.js 20+ + `@playwright/test` 1.44.0 (existing), `@axe-core/playwright` 4.10.1 (existing), `tsx` 4.21.0 (existing)
