@@ -8,6 +8,7 @@ const searchData = [
   { title: 'ALB セキュリティポリシー完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/alb-security-policy-guide.html', service: 'ALB' },
   { title: 'Amazon Route 53 プライベートホストゾーン完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-private-hosted-zone-guide.html', service: 'Route 53' },
   { title: 'Amazon S3 マルチリージョンアクセスポイント', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/s3-mrap-infographic.html', service: 'CloudFront' },
+  { title: 'AWS Global Accelerator × IoT デバイス接続 完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-global-accelerator-iot-guide.html', service: 'Global Accelerator' },
   { title: 'AWS Global Accelerator 完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/global_accelerator_infographic.html', service: 'Global Accelerator' },
   { title: 'AWS条件付きフォワーダールール解説', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-dns-infographic.html', service: '' },
   { title: 'CloudFront HTTPSハンドシェイク完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/cloudfront-https-guide.html', service: 'CloudFront' },
@@ -179,6 +180,7 @@ const searchData = [
   { title: 'Storage Gateway RefreshCache 自動化完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/storage-gateway-refreshcache-automation-guide.html', service: 'Storage Gateway' },
   { title: 'sts:ExternalId 完全マスターガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/sts-externalid-complete-guide.html', service: 'STS' },
   { title: 'VPC トラフィックミラーリング完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/vpc-traffic-mirroring-guide.html', service: 'VPC' },
+  { title: 'エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2', category: 'セキュリティ・ガバナンス', file: 'security-governance/e2e-encryption-guide.html', service: 'CloudFront' },
   { title: 'Amazon EC2 Elastic Fabric Adapter (EFA) 完全ガイド', category: 'その他', file: 'new-solutions/efa_infographic.html', service: 'EFA' },
   { title: 'AWS CloudFront オリジングループ簡単解説', category: 'その他', file: 'new-solutions/cloudfront-origin-groups.html', service: 'CloudFront' },
   { title: 'EC2 Auto Scaling ライフサイクルフックの図解', category: 'その他', file: 'new-solutions/ec2-autoscaling-lifecycle-hooks.html', service: 'EC2' },
@@ -240,6 +242,7 @@ const searchData = [
   { title: 'S3バケットポリシー Principal要素 完全ガイド', category: 'ネットワーキング', file: 'networking/s3-bucket-policy-principal-guide.html', service: 'S3' },
   { title: 'Transit Gateway Connect 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-connect-guide.html', service: 'Transit Gateway' },
   { title: 'Transit Gateway アプライアンスモード 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-appliance-mode-guide.html', service: 'Transit Gateway' },
+  { title: 'VPC DNS設定 完全ガイド — enableDnsSupport & enableDnsHostnames', category: 'ネットワーキング', file: 'networking/vpc-dns-settings-guide.html', service: 'VPC' },
   { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', category: 'ネットワーキング', file: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' },
   { title: 'VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース', category: 'ネットワーキング', file: 'networking/vpc-dual-stack-networking-guide.html', service: 'VPC' },
   { title: 'VPCトラフィックミラーリング vs VPC Flow Logs - 使い分けガイド', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-vs-flow-logs.html', service: 'VPC' },
@@ -289,6 +292,11 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline' },
 ];
+
+
+
+
+
 
 
 

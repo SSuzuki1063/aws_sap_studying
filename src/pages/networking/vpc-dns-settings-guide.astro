@@ -1,0 +1,870 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Vpc Dns Settings Guide',
+  pageTitle: 'VPC DNS設定 完全ガイド — enableDnsSupport & enableDnsHostnames',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'VPC & ネットワーク基礎',
+  slug: 'vpc-dns-settings-guide',
+  pageCss: '/aws_sap_studying/css/pages/vpc-dns-settings-guide.css',
+  tocItems: [
+    { level: 'h2', id: 'たとえ話VPCは「マンション」、DNSは「管理人室の電話帳」', text: 'たとえ話：VPCは「マンション」、DNSは「管理人室の電話帳」' },
+    { level: 'h2', id: '128218-現実世界とAWSの対応表', text: '&#128218; 現実世界とAWSの対応表' },
+    { level: 'h2', id: '9881-2つの設定を詳しく理解する', text: '&#9881; 2つの設定を詳しく理解する' },
+    { level: 'h2', id: '128065-VPC内のDNS解決フロー', text: '&#128065; VPC内のDNS解決フロー' },
+    { level: 'h2', id: '128200-設定の組合せと動作', text: '&#128200; 設定の組合せと動作' },
+    { level: 'h2', id: '128274-Route-53-プライベートホストゾーンの必須条件', text: '&#128274; Route 53 プライベートホストゾーンの必須条件' },
+    { level: 'h2', id: '128736-どの設定を選ぶべき-判断フロー', text: '&#128736; どの設定を選ぶべき？ 判断フロー' },
+    { level: 'h2', id: '128187-ユースケース別の推奨設定', text: '&#128187; ユースケース別の推奨設定' },
+    { level: 'h2', id: '128187-実装例', text: '&#128187; 実装例' },
+    { level: 'h2', id: '9889-ベストプラクティス-amp-アンチパターン', text: '&#9889; ベストプラクティス &amp; アンチパターン' },
+    { level: 'h2', id: '128269-よくあるトラブルと対処法', text: '&#128269; よくあるトラブルと対処法' },
+    { level: 'h2', id: '10067-FAQよくある質問', text: '&#10067; FAQ（よくある質問）' },
+    { level: 'h2', id: '128220-まとめチートシート', text: '&#128220; まとめチートシート' },
+  ],
+};
+
+const rawContent = `
+
+  <!-- Skip Link -->
+  <a href="#main-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--color-aws-orange);color:#fff;padding:8px 16px;text-decoration:none;border-radius:0 0 4px 0;font-weight:700;z-index:1100;transition:top 0.3s;">本文へスキップ</a>
+
+  <!-- Fixed Navigation Header -->
+  <header class="fixed-nav-header">
+    <nav class="fixed-nav-container" aria-label="メインナビゲーション">
+      <a href="#" class="fixed-nav-logo" aria-label="AWS学習リソース ホーム"><span aria-hidden="true">&#9729;</span> AWS学習リソース</a>
+      <div class="fixed-nav-links">
+        <a href="#analogy">たとえ話</a>
+        <a href="#settings-detail">設定詳細</a>
+        <a href="#combination">組合せ表</a>
+        <a href="#implementation">実装</a>
+        <a href="#faq">FAQ</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Reading Progress -->
+  <div class="reading-progress" id="readingProgress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+    <div class="reading-progress-bar" id="readingProgressBar"></div>
+  </div>
+
+  <main id="main-content" class="container">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+      <a href="#" class="breadcrumb-home"><span aria-hidden="true">&#127968;</span> ホーム</a>
+      <span class="breadcrumb-separator" aria-hidden="true">&#9654;</span>
+      <span>VPC &amp; ネットワーキング</span>
+      <span class="breadcrumb-separator" aria-hidden="true">&#9654;</span>
+      <span class="breadcrumb-current">VPC DNS設定</span>
+    </nav>
+
+    <!-- ============================================================
+         Hero Section - 結論ファースト
+         ============================================================ -->
+    <section class="hero" aria-label="概要と重要ポイント">
+      <div class="hero-badge">VPC &amp; ネットワーキング</div>
+      <h1>VPC DNS設定 完全ガイド</h1>
+      <p class="hero-sub">enableDnsSupport と enableDnsHostnames — たった2つの設定が、VPCのDNS機能すべてを左右する</p>
+
+      <div class="takeaway-grid">
+        <div class="takeaway-card">
+          <div class="takeaway-num" aria-hidden="true">1</div>
+          <div class="takeaway-title">enableDnsSupport = 電話帳サービス</div>
+          <div class="takeaway-desc">AWSの内線電話帳（DNS resolver 169.254.169.253）を使うかどうか。デフォルトtrue。基本的にOFFにしない。</div>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num" aria-hidden="true">2</div>
+          <div class="takeaway-title">enableDnsHostnames = 表札の自動配布</div>
+          <div class="takeaway-desc">パブリックIPを持つインスタンスに、自動的にDNS名（表札）を割り当てるか。デフォルトVPCはtrue、カスタムVPCはfalse。</div>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num" aria-hidden="true">3</div>
+          <div class="takeaway-title">両方true = Route 53連携の必須条件</div>
+          <div class="takeaway-desc">プライベートホストゾーンを使うには、enableDnsSupport + enableDnsHostnames の両方をtrueにする必要がある。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Analogy Section - マンションのたとえ話
+         ============================================================ -->
+    <section class="analogy-hero" id="analogy" aria-label="たとえ話で理解する">
+      <div class="emoji-big" aria-hidden="true">&#127970;</div>
+      <h2>たとえ話：VPCは「マンション」、DNSは「管理人室の電話帳」</h2>
+      <p>AWS VPCを大きなマンションだと想像してみましょう。各部屋（EC2インスタンス）には住人（アプリケーション）がいて、お互いに連絡を取り合う必要があります。</p>
+    </section>
+
+    <section class="section" aria-label="たとえ話の対応表">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128218;</span> 現実世界とAWSの対応表</h2>
+      <table class="mapping-table" role="table">
+        <thead>
+          <tr>
+            <th scope="col">マンションの世界 <span aria-hidden="true">&#127970;</span></th>
+            <th scope="col">AWSの世界 <span aria-hidden="true">&#9729;</span></th>
+            <th scope="col">ポイント</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>マンション全体</td>
+            <td>VPC（Virtual Private Cloud）</td>
+            <td>ネットワークの境界</td>
+          </tr>
+          <tr>
+            <td>各部屋</td>
+            <td>EC2インスタンス</td>
+            <td>個別のサーバーリソース</td>
+          </tr>
+          <tr>
+            <td>管理人室の内線電話帳</td>
+            <td>AmazonProvidedDNS（169.254.169.253）</td>
+            <td>名前 → IPの変換サービス</td>
+          </tr>
+          <tr>
+            <td>電話帳サービスを使う / 使わない</td>
+            <td>enableDnsSupport（true / false）</td>
+            <td>DNS解決機能そのもの</td>
+          </tr>
+          <tr>
+            <td>部屋のドアに表札を出す / 出さない</td>
+            <td>enableDnsHostnames（true / false）</td>
+            <td>パブリックDNS名の自動付与</td>
+          </tr>
+          <tr>
+            <td>マンション専用の内線電話帳</td>
+            <td>Route 53 プライベートホストゾーン</td>
+            <td>VPC内だけのカスタムDNS</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         Setting Detail Section
+         ============================================================ -->
+    <section class="section" id="settings-detail" aria-label="各設定の詳細">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#9881;</span> 2つの設定を詳しく理解する</h2>
+
+      <div class="settings-grid">
+        <!-- enableDnsSupport -->
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon setting-icon-dns" aria-hidden="true">&#128214;</div>
+            <div>
+              <div class="setting-name">DNS解決の有効化</div>
+              <span class="setting-code">enableDnsSupport</span>
+            </div>
+          </div>
+          <p class="setting-desc">AWSが提供するDNSサーバー（AmazonProvidedDNS）を使用するかどうかを決定します。マンションでいうと「管理人室の内線電話帳を使えるかどうか」に相当します。</p>
+          <div class="setting-details">
+            <div class="detail-item">
+              <div class="detail-dot dot-blue" aria-hidden="true"></div>
+              <span>デフォルト値：<strong>true</strong>（有効）</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-green" aria-hidden="true"></div>
+              <span>true：VPC内インスタンスがAWSのDNSリゾルバ（169.254.169.253）を使用できる</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-orange" aria-hidden="true"></div>
+              <span>false：AWSのDNSサーバーは使えず、カスタムDNSを自前で用意する必要あり</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- enableDnsHostnames -->
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon setting-icon-hostname" aria-hidden="true">&#127991;</div>
+            <div>
+              <div class="setting-name">DNSホスト名の有効化</div>
+              <span class="setting-code">enableDnsHostnames</span>
+            </div>
+          </div>
+          <p class="setting-desc">パブリックIPを持つインスタンスに自動的にパブリックDNSホスト名を割り当てるかどうかを決定します。マンションでいうと「ドアに表札を自動で出すかどうか」です。</p>
+          <div class="setting-details">
+            <div class="detail-item">
+              <div class="detail-dot dot-blue" aria-hidden="true"></div>
+              <span>デフォルト値：デフォルトVPC → <strong>true</strong>、カスタムVPC → <strong>false</strong></span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-green" aria-hidden="true"></div>
+              <span>true：パブリックIPインスタンスにDNS名（例: ec2-203-0-113-25.compute-1.amazonaws.com）を付与</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-orange" aria-hidden="true"></div>
+              <span>false：パブリックDNSホスト名なし。プライベートホストゾーンも使用不可。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SVG Diagram: DNS Resolution Flow
+         ============================================================ -->
+    <section class="section" aria-label="DNS解決フロー図">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128065;</span> VPC内のDNS解決フロー</h2>
+      <p style="margin-bottom: var(--spacing-lg); font-size: 0.92em; color: var(--color-text-secondary);">enableDnsSupport = true の場合、EC2インスタンスからのDNS問い合わせがどのように処理されるかを示します。</p>
+      <div class="svg-container">
+        <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VPC DNS解決フロー図：EC2インスタンスからAmazonProvidedDNSを経由して名前解決される流れ">
+          <defs>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+            </marker>
+            <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+            </marker>
+            <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+            </filter>
+            <style>
+              .svg-title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+              .svg-subtitle { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: 500; fill: #475569; }
+              .svg-node-title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #1E293B; }
+              .svg-node-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+              .svg-step-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: 700; fill: white; }
+              .svg-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #3B82F6; }
+              .svg-return-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #10B981; }
+            </style>
+          </defs>
+
+          <!-- Background -->
+          <rect x="0" y="0" width="1200" height="520" rx="0" fill="#F3F4F6"/>
+          <!-- Outer card -->
+          <rect x="24" y="24" width="1152" height="472" rx="22" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <!-- Title -->
+          <text x="600" y="66" text-anchor="middle" class="svg-title">VPC DNS解決フロー（enableDnsSupport = true）</text>
+          <!-- Inner panel -->
+          <rect x="40" y="84" width="1120" height="396" rx="18" fill="#F8FAFC"/>
+
+          <!-- VPC boundary -->
+          <rect x="60" y="100" width="720" height="364" rx="14" fill="none" stroke="#818CF8" stroke-width="2" stroke-dasharray="8,4"/>
+          <text x="80" y="126" class="svg-node-sub" style="fill:#818CF8; font-weight:700;">VPC（10.0.0.0/16）</text>
+
+          <!-- Node: EC2 Instance -->
+          <g>
+            <rect x="100" y="180" width="220" height="96" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="210" y="218" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">EC2 インスタンス</text>
+            <text x="210" y="248" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">10.0.1.50</text>
+          </g>
+
+          <!-- Node: AmazonProvidedDNS -->
+          <g>
+            <rect x="430" y="180" width="220" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="540" y="212" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">AmazonProvidedDNS</text>
+            <text x="540" y="240" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">169.254.169.253</text>
+            <text x="540" y="260" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">（管理人室の電話帳）</text>
+          </g>
+
+          <!-- Node: Route 53 Private Hosted Zone -->
+          <g>
+            <rect x="430" y="340" width="220" height="96" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="540" y="372" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+              <tspan x="540" dy="0">Route 53 プライベート</tspan>
+            </text>
+            <text x="540" y="398" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+              <tspan x="540" dy="0">ホストゾーン（内線帳）</tspan>
+            </text>
+          </g>
+
+          <!-- Node: Public DNS -->
+          <g>
+            <rect x="840" y="120" width="260" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="970" y="158" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">パブリックDNS解決</text>
+            <text x="970" y="184" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">外部ドメイン → IPアドレス</text>
+          </g>
+
+          <!-- Node: Private DNS -->
+          <g>
+            <rect x="840" y="280" width="260" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="970" y="312" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+              <tspan x="970" dy="0">プライベートDNS解決</tspan>
+            </text>
+            <text x="970" y="344" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+              <tspan x="970" dy="0">app.internal → 10.0.2.10</tspan>
+            </text>
+          </g>
+
+          <!-- Arrow: EC2 → AmazonProvidedDNS -->
+          <line x1="320" y1="228" x2="420" y2="228" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+          <!-- Step circle 1 -->
+          <circle cx="370" cy="210" r="14" fill="#3B82F6"/>
+          <text x="370" y="210" text-anchor="middle" dominant-baseline="middle" class="svg-step-text">1</text>
+          <text x="370" y="195" text-anchor="middle" class="svg-label">DNS問い合わせ</text>
+
+          <!-- Arrow: AmazonProvidedDNS → Public DNS -->
+          <line x1="650" y1="210" x2="830" y2="170" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          <!-- Step circle 2 -->
+          <circle cx="740" cy="186" r="14" fill="#3B82F6"/>
+          <text x="740" y="186" text-anchor="middle" dominant-baseline="middle" class="svg-step-text">2a</text>
+
+          <!-- Arrow: AmazonProvidedDNS → Private Hosted Zone -->
+          <line x1="540" y1="276" x2="540" y2="330" stroke="#818CF8" stroke-width="2" marker-end="url(#arrow-gray)"/>
+
+          <!-- Arrow: Private HZ → Private DNS -->
+          <line x1="650" y1="388" x2="830" y2="340" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          <!-- Step circle 2b -->
+          <circle cx="740" cy="360" r="14" fill="#818CF8"/>
+          <text x="740" y="360" text-anchor="middle" dominant-baseline="middle" class="svg-step-text">2b</text>
+
+          <!-- Return arrows (green) -->
+          <line x1="830" y1="190" x2="660" y2="236" stroke="#10B981" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrow-green)"/>
+          <line x1="420" y1="244" x2="325" y2="244" stroke="#10B981" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrow-green)"/>
+          <!-- Step circle 3 -->
+          <circle cx="370" cy="260" r="14" fill="#10B981"/>
+          <text x="370" y="260" text-anchor="middle" dominant-baseline="middle" class="svg-step-text">3</text>
+          <text x="370" y="282" text-anchor="middle" class="svg-return-label">IP返却</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Combination Matrix
+         ============================================================ -->
+    <section class="section" id="combination" aria-label="設定の組合せマトリクス">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128200;</span> 設定の組合せと動作</h2>
+      <p style="margin-bottom: var(--spacing-lg); font-size: 0.92em; color: var(--color-text-secondary);">2つの設定の組合せは4パターン。マンションのたとえで直感的に理解できます。</p>
+
+      <div class="matrix-grid">
+        <!-- Pattern 1: Both true (Recommended) -->
+        <div class="matrix-cell" style="border-color: #34D399; background: #F0FDF9;">
+          <div class="matrix-cell-header">
+            <span class="matrix-label label-recommended"><span aria-hidden="true">&#9733;</span> 推奨パターン</span>
+          </div>
+          <div class="matrix-settings">
+            <span class="setting-on">DnsSupport: true</span>
+            <span class="setting-on">DnsHostnames: true</span>
+          </div>
+          <div class="matrix-analogy">
+            <span aria-hidden="true">&#127970;</span> 管理人室の電話帳あり ＋ 全部屋の表札あり
+          </div>
+          <div class="matrix-behavior">
+            AWSのDNSリゾルバ利用可能。パブリックIPインスタンスにDNSホスト名が付与される。Route 53プライベートホストゾーンも利用可能。<strong>最も多くのユースケースに対応。</strong>
+          </div>
+        </div>
+
+        <!-- Pattern 2: Support true, Hostnames false -->
+        <div class="matrix-cell" style="border-color: #818CF8; background: #F5F3FF;">
+          <div class="matrix-cell-header">
+            <span class="matrix-label label-minimum"><span aria-hidden="true">&#9672;</span> 最低限パターン</span>
+          </div>
+          <div class="matrix-settings">
+            <span class="setting-on">DnsSupport: true</span>
+            <span class="setting-off">DnsHostnames: false</span>
+          </div>
+          <div class="matrix-analogy">
+            <span aria-hidden="true">&#127970;</span> 管理人室の電話帳あり ＋ 表札なし（部屋番号だけ）
+          </div>
+          <div class="matrix-behavior">
+            DNS解決は動作するが、インスタンスにパブリックDNS名が付かない。プライベートホストゾーンは使用不可。カスタムVPCのデフォルト。
+          </div>
+        </div>
+
+        <!-- Pattern 3: Support false, Hostnames true -->
+        <div class="matrix-cell" style="border-color: #FDBA74; background: #FFFBEB;">
+          <div class="matrix-cell-header">
+            <span class="matrix-label label-limited"><span aria-hidden="true">&#9888;</span> 非実用パターン</span>
+          </div>
+          <div class="matrix-settings">
+            <span class="setting-off">DnsSupport: false</span>
+            <span class="setting-on">DnsHostnames: true</span>
+          </div>
+          <div class="matrix-analogy">
+            <span aria-hidden="true">&#127970;</span> 管理人室閉鎖 ＋ 表札だけある（読めない）
+          </div>
+          <div class="matrix-behavior">
+            DNSホスト名の設定だけ有効だが、DNS解決が無効なので名前解決できない。設定に意味がなく、実質的に使われることはない。
+          </div>
+        </div>
+
+        <!-- Pattern 4: Both false -->
+        <div class="matrix-cell" style="border-color: #FCA5A5; background: #FEF2F2;">
+          <div class="matrix-cell-header">
+            <span class="matrix-label label-danger"><span aria-hidden="true">&#10007;</span> 完全無効パターン</span>
+          </div>
+          <div class="matrix-settings">
+            <span class="setting-off">DnsSupport: false</span>
+            <span class="setting-off">DnsHostnames: false</span>
+          </div>
+          <div class="matrix-analogy">
+            <span aria-hidden="true">&#127970;</span> 管理人室閉鎖 ＋ 表札なし（完全匿名マンション）
+          </div>
+          <div class="matrix-behavior">
+            AWSのDNSサーバーは使えず、ホスト名も付与されない。カスタムDNSサーバーを自前で運用する特殊なケースのみ。上級者向け。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Route 53 Private Hosted Zone Requirements
+         ============================================================ -->
+    <section class="section" aria-label="プライベートホストゾーンの使用条件">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128274;</span> Route 53 プライベートホストゾーンの必須条件</h2>
+
+      <div class="requirement-box">
+        <div class="requirement-title">
+          <span aria-hidden="true">&#128161;</span> 両方trueでなければ動かない！
+        </div>
+        <p style="font-size: 0.92em; color: var(--color-text-secondary); margin-bottom: var(--spacing-base);">
+          プライベートホストゾーンをVPCで使用するには、以下の2つの設定が<strong>両方とも true</strong> である必要があります。どちらか一方でも false だと、VPC内のインスタンスはプライベートホストゾーンのDNSレコードを解決できません。
+        </p>
+
+        <div class="req-conditions">
+          <div class="req-pill">
+            enableDnsSupport
+            <code>= true</code>
+          </div>
+          <div class="req-operator">+</div>
+          <div class="req-pill">
+            enableDnsHostnames
+            <code>= true</code>
+          </div>
+          <div class="req-operator">=</div>
+          <div class="req-result">
+            <span aria-hidden="true">&#9989;</span> プライベートホストゾーン<br>利用可能
+          </div>
+        </div>
+
+        <p style="font-size: 0.88em; color: var(--color-text-secondary); background: rgba(255,255,255,0.7); padding: var(--spacing-md); border-radius: var(--radius-md); line-height: 1.6;">
+          <strong>マンションに例えると：</strong>管理人室の電話帳サービスが稼働していて（DnsSupport=true）、かつ全部屋に表札が出ている（DnsHostnames=true）状態で初めて、「マンション専用の内線電話帳」（プライベートホストゾーン）に名前を登録して、他の住人がその名前で電話をかけられるようになります。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SVG: Settings Combination Decision Diagram
+         ============================================================ -->
+    <section class="section" aria-label="設定判断フロー図">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128736;</span> どの設定を選ぶべき？ 判断フロー</h2>
+      <div class="svg-container">
+        <svg width="1200" height="560" viewBox="0 0 1200 560" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VPC DNS設定の判断フロー図：ユースケースに応じてどの設定を選ぶかの意思決定ツリー">
+          <defs>
+            <marker id="arrow-blue2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#EF4444"/>
+            </marker>
+            <filter id="shadow2" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+            </filter>
+            <style>
+              .dt-title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+              .dt-q { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #1E293B; }
+              .dt-a { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: 700; }
+              .dt-result { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: 600; fill: #1E293B; }
+              .dt-sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+            </style>
+          </defs>
+
+          <!-- BG -->
+          <rect width="1200" height="560" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="512" rx="22" fill="#FFFFFF" filter="url(#shadow2)"/>
+          <text x="600" y="66" text-anchor="middle" class="dt-title">VPC DNS設定 判断フローチャート</text>
+          <rect x="40" y="84" width="1120" height="436" rx="18" fill="#F8FAFC"/>
+
+          <!-- Question 1: Diamond -->
+          <polygon points="300,160 480,240 300,320 120,240" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+          <text x="300" y="232" text-anchor="middle" class="dt-q">
+            <tspan x="300" dy="0">AWSのDNSリゾルバを</tspan>
+          </text>
+          <text x="300" y="256" text-anchor="middle" class="dt-q">
+            <tspan x="300" dy="0">使用しますか？</tspan>
+          </text>
+
+          <!-- Yes branch from Q1 -->
+          <line x1="480" y1="240" x2="560" y2="240" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue2)"/>
+          <text x="520" y="230" text-anchor="middle" class="dt-a" style="fill:#3B82F6;">はい</text>
+
+          <!-- No branch from Q1 -->
+          <line x1="300" y1="320" x2="300" y2="430" stroke="#EF4444" stroke-width="2" marker-end="url(#arrow-red)"/>
+          <text x="318" y="370" class="dt-a" style="fill:#EF4444;">いいえ</text>
+
+          <!-- Result: Custom DNS -->
+          <rect x="180" y="440" width="240" height="60" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+          <text x="300" y="466" text-anchor="middle" class="dt-result" style="fill:#DC2626;">DnsSupport = false</text>
+          <text x="300" y="486" text-anchor="middle" class="dt-sub">カスタムDNS自前運用</text>
+
+          <!-- Question 2: Diamond -->
+          <polygon points="720,160 900,240 720,320 540,240" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+          <text x="720" y="226" text-anchor="middle" class="dt-q">
+            <tspan x="720" dy="0">パブリックDNS名や</tspan>
+          </text>
+          <text x="720" y="250" text-anchor="middle" class="dt-q">
+            <tspan x="720" dy="0">プライベートHZは？</tspan>
+          </text>
+
+          <!-- Yes branch from Q2 -->
+          <line x1="900" y1="240" x2="970" y2="240" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue2)"/>
+          <text x="935" y="230" text-anchor="middle" class="dt-a" style="fill:#3B82F6;">必要</text>
+
+          <!-- No branch from Q2 -->
+          <line x1="720" y1="320" x2="720" y2="430" stroke="#818CF8" stroke-width="2" marker-end="url(#arrow-gray)"/>
+          <text x="738" y="370" class="dt-a" style="fill:#818CF8;">不要</text>
+
+          <!-- Result: Both true -->
+          <rect x="980" y="200" width="160" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+          <text x="1060" y="230" text-anchor="middle" class="dt-result" style="fill:#059669;">両方 true</text>
+          <text x="1060" y="250" text-anchor="middle" class="dt-sub" style="fill:#059669; font-weight:700;">推奨 &#9733;</text>
+          <text x="1060" y="270" text-anchor="middle" class="dt-sub">全機能が利用可能</text>
+
+          <!-- Result: DnsSupport only -->
+          <rect x="600" y="440" width="240" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+          <text x="720" y="466" text-anchor="middle" class="dt-result" style="fill:#4338CA;">DnsSupport = true のみ</text>
+          <text x="720" y="486" text-anchor="middle" class="dt-sub">DNS解決は可能、名前なし</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Use Cases
+         ============================================================ -->
+    <section class="section" aria-label="ユースケース">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128187;</span> ユースケース別の推奨設定</h2>
+
+      <div class="usecase-grid">
+        <div class="usecase-card">
+          <div class="usecase-icon" aria-hidden="true">&#127760;</div>
+          <div class="usecase-title">Webアプリケーション公開</div>
+          <div class="usecase-desc">インターネット向けWebサーバーを運用。ALB/ELBでDNS名が必要。Route 53でカスタムドメインも使用。</div>
+          <div class="usecase-settings">
+            <span class="setting-on">DnsSupport: true</span>
+            <span class="setting-on">DnsHostnames: true</span>
+          </div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-icon" aria-hidden="true">&#128272;</div>
+          <div class="usecase-title">マイクロサービス間通信</div>
+          <div class="usecase-desc">プライベートホストゾーンで「api.internal」「db.internal」などの名前解決。サービスディスカバリに活用。</div>
+          <div class="usecase-settings">
+            <span class="setting-on">DnsSupport: true</span>
+            <span class="setting-on">DnsHostnames: true</span>
+          </div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-icon" aria-hidden="true">&#128230;</div>
+          <div class="usecase-title">閉域ネットワーク（内部のみ）</div>
+          <div class="usecase-desc">外部公開なし。プライベートサブネットのみ。DNS解決はAWSのリゾルバを使うが、パブリックDNS名は不要。</div>
+          <div class="usecase-settings">
+            <span class="setting-on">DnsSupport: true</span>
+            <span class="setting-off">DnsHostnames: false</span>
+          </div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-icon" aria-hidden="true">&#128295;</div>
+          <div class="usecase-title">オンプレDNS統合（ハイブリッド）</div>
+          <div class="usecase-desc">Route 53 Resolverエンドポイントを使い、オンプレとAWS間でDNSクエリを双方向転送。</div>
+          <div class="usecase-settings">
+            <span class="setting-on">DnsSupport: true</span>
+            <span class="setting-on">DnsHostnames: true</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Implementation (Tabbed Code)
+         ============================================================ -->
+    <section class="section" id="implementation" aria-label="実装例">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128187;</span> 実装例</h2>
+
+      <div class="code-section">
+        <div class="code-tabs" role="tablist">
+          <button class="code-tab active" role="tab" aria-selected="true" data-target="tab-cli" id="tab-btn-cli">AWS CLI</button>
+          <button class="code-tab" role="tab" aria-selected="false" data-target="tab-cfn" id="tab-btn-cfn">CloudFormation</button>
+          <button class="code-tab" role="tab" aria-selected="false" data-target="tab-tf" id="tab-btn-tf">Terraform</button>
+        </div>
+
+        <div class="code-content active" id="tab-cli" role="tabpanel" aria-labelledby="tab-btn-cli">
+<pre><span class="code-comment"># VPC作成時にDNS設定を有効化</span>
+<span class="code-key">aws ec2 create-vpc</span> \\
+  <span class="code-key">--cidr-block</span> <span class="code-string">"10.0.0.0/16"</span> \\
+  <span class="code-key">--tag-specifications</span> <span class="code-string">'ResourceType=vpc,Tags=[{Key=Name,Value=MyVPC}]'</span>
+
+<span class="code-comment"># enableDnsSupportを有効化（デフォルトtrue）</span>
+<span class="code-key">aws ec2 modify-vpc-attribute</span> \\
+  <span class="code-key">--vpc-id</span> <span class="code-value">vpc-0123456789abcdef0</span> \\
+  <span class="code-key">--enable-dns-support</span> <span class="code-string">'{"Value": true}'</span>
+
+<span class="code-comment"># enableDnsHostnamesを有効化</span>
+<span class="code-key">aws ec2 modify-vpc-attribute</span> \\
+  <span class="code-key">--vpc-id</span> <span class="code-value">vpc-0123456789abcdef0</span> \\
+  <span class="code-key">--enable-dns-hostnames</span> <span class="code-string">'{"Value": true}'</span>
+
+<span class="code-comment"># 現在の設定を確認</span>
+<span class="code-key">aws ec2 describe-vpc-attribute</span> \\
+  <span class="code-key">--vpc-id</span> <span class="code-value">vpc-0123456789abcdef0</span> \\
+  <span class="code-key">--attribute</span> <span class="code-string">enableDnsSupport</span>
+
+<span class="code-key">aws ec2 describe-vpc-attribute</span> \\
+  <span class="code-key">--vpc-id</span> <span class="code-value">vpc-0123456789abcdef0</span> \\
+  <span class="code-key">--attribute</span> <span class="code-string">enableDnsHostnames</span></pre>
+        </div>
+
+        <div class="code-content" id="tab-cfn" role="tabpanel" aria-labelledby="tab-btn-cfn">
+<pre><span class="code-key">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-key">Description:</span> <span class="code-string">'VPC with DNS settings enabled'</span>
+
+<span class="code-key">Resources:</span>
+  <span class="code-key">MyVPC:</span>
+    <span class="code-key">Type:</span> <span class="code-string">AWS::EC2::VPC</span>
+    <span class="code-key">Properties:</span>
+      <span class="code-key">CidrBlock:</span> <span class="code-string">'10.0.0.0/16'</span>
+      <span class="code-comment"># DNS解決を有効化（管理人室の電話帳ON）</span>
+      <span class="code-key">EnableDnsSupport:</span> <span class="code-value">true</span>
+      <span class="code-comment"># DNSホスト名を有効化（表札ON）</span>
+      <span class="code-key">EnableDnsHostnames:</span> <span class="code-value">true</span>
+      <span class="code-key">Tags:</span>
+        - <span class="code-key">Key:</span> <span class="code-string">Name</span>
+          <span class="code-key">Value:</span> <span class="code-string">MyVPC</span>
+
+  <span class="code-comment"># プライベートホストゾーンの関連付け</span>
+  <span class="code-key">PrivateHostedZone:</span>
+    <span class="code-key">Type:</span> <span class="code-string">AWS::Route53::HostedZone</span>
+    <span class="code-key">Properties:</span>
+      <span class="code-key">Name:</span> <span class="code-string">'internal.example.com'</span>
+      <span class="code-key">VPCs:</span>
+        - <span class="code-key">VPCId:</span> <span class="code-value">!Ref MyVPC</span>
+          <span class="code-key">VPCRegion:</span> <span class="code-value">!Ref 'AWS::Region'</span></pre>
+        </div>
+
+        <div class="code-content" id="tab-tf" role="tabpanel" aria-labelledby="tab-btn-tf">
+<pre><span class="code-key">resource</span> <span class="code-string">"aws_vpc"</span> <span class="code-string">"main"</span> {
+  <span class="code-key">cidr_block</span> = <span class="code-string">"10.0.0.0/16"</span>
+
+  <span class="code-comment"># DNS解決を有効化（管理人室の電話帳ON）</span>
+  <span class="code-key">enable_dns_support</span>   = <span class="code-value">true</span>
+
+  <span class="code-comment"># DNSホスト名を有効化（表札ON）</span>
+  <span class="code-key">enable_dns_hostnames</span> = <span class="code-value">true</span>
+
+  <span class="code-key">tags</span> = {
+    <span class="code-key">Name</span> = <span class="code-string">"MyVPC"</span>
+  }
+}
+
+<span class="code-comment"># プライベートホストゾーン</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_route53_zone"</span> <span class="code-string">"internal"</span> {
+  <span class="code-key">name</span> = <span class="code-string">"internal.example.com"</span>
+
+  <span class="code-key">vpc</span> {
+    <span class="code-key">vpc_id</span> = <span class="code-value">aws_vpc.main.id</span>
+  }
+}
+
+<span class="code-comment"># DNSレコード例</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_route53_record"</span> <span class="code-string">"api"</span> {
+  <span class="code-key">zone_id</span> = <span class="code-value">aws_route53_zone.internal.zone_id</span>
+  <span class="code-key">name</span>    = <span class="code-string">"api.internal.example.com"</span>
+  <span class="code-key">type</span>    = <span class="code-string">"A"</span>
+  <span class="code-key">ttl</span>     = <span class="code-value">300</span>
+  <span class="code-key">records</span> = [<span class="code-string">"10.0.2.10"</span>]
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Best Practices / Anti-Patterns
+         ============================================================ -->
+    <section class="section" aria-label="ベストプラクティスとアンチパターン">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#9889;</span> ベストプラクティス &amp; アンチパターン</h2>
+
+      <div class="practices-grid">
+        <div class="practice-card practice-do">
+          <div class="practice-header"><span aria-hidden="true">&#9989;</span> ベストプラクティス</div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>新規VPC作成時は、最初から両方trueに設定する。後から変更すると既存リソースに影響する可能性がある。</span>
+          </div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>プライベートホストゾーンを使う場合は、設定変更「前」にVPCアトリビュートを確認する習慣をつける。</span>
+          </div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>DHCPオプションセットのDNSサーバー設定（AmazonProvidedDNS）と組み合わせて運用する。</span>
+          </div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>VPC間ピアリング時は、双方のVPCでDNS設定が揃っているか確認する。</span>
+          </div>
+        </div>
+
+        <div class="practice-card practice-dont">
+          <div class="practice-header"><span aria-hidden="true">&#10060;</span> アンチパターン</div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>enableDnsSupportをfalseにしてからプライベートホストゾーンが動かないと悩む → 電話帳を閉じたら内線帳も使えない。</span>
+          </div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>カスタムVPC作成後にDnsHostnamesを有効化し忘れる → パブリックDNS名がないため外部からアクセスしにくい。</span>
+          </div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>DnsSupportだけtrueにしてPrivate Hosted Zoneを使おうとする → DnsHostnamesもtrueが必須。</span>
+          </div>
+          <div class="practice-item">
+            <span aria-hidden="true">&#9679;</span>
+            <span>本番環境でDNS設定を変更して、既存の名前解決が突然壊れる → 変更前に影響範囲を検証。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Troubleshooting
+         ============================================================ -->
+    <section class="section" aria-label="トラブルシューティング">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#128269;</span> よくあるトラブルと対処法</h2>
+
+      <div class="settings-grid">
+        <div class="setting-card" style="border-left: 4px solid var(--color-error);">
+          <div class="setting-name" style="color: var(--color-error); margin-bottom: var(--spacing-sm);">症状：DNS名前解決ができない</div>
+          <div class="setting-desc">VPC内のEC2インスタンスからドメイン名の解決ができない。nslookupやdigコマンドが応答しない。</div>
+          <div class="setting-details">
+            <div class="detail-item">
+              <div class="detail-dot dot-blue" aria-hidden="true"></div>
+              <span><strong>確認1:</strong> enableDnsSupport が true か？</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-blue" aria-hidden="true"></div>
+              <span><strong>確認2:</strong> DHCPオプションセットのDNSサーバーが AmazonProvidedDNS になっているか？</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-blue" aria-hidden="true"></div>
+              <span><strong>確認3:</strong> セキュリティグループでDNS（UDP/TCP 53）のアウトバウンドが許可されているか？</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-card" style="border-left: 4px solid var(--color-warning);">
+          <div class="setting-name" style="color: var(--color-warning); margin-bottom: var(--spacing-sm);">症状：プライベートホストゾーンが解決されない</div>
+          <div class="setting-desc">Route 53プライベートホストゾーンにレコードを追加したが、VPC内から名前解決できない。</div>
+          <div class="setting-details">
+            <div class="detail-item">
+              <div class="detail-dot dot-orange" aria-hidden="true"></div>
+              <span><strong>確認1:</strong> enableDnsSupport と enableDnsHostnames が<strong>両方</strong> true か？</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-orange" aria-hidden="true"></div>
+              <span><strong>確認2:</strong> ホストゾーンがそのVPCに関連付けられているか？</span>
+            </div>
+            <div class="detail-item">
+              <div class="detail-dot dot-orange" aria-hidden="true"></div>
+              <span><strong>確認3:</strong> DNSキャッシュが残っていないか？（TTL経過を待つ or キャッシュクリア）</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FAQ Accordion
+         ============================================================ -->
+    <section class="section" id="faq" aria-label="よくある質問">
+      <h2 class="section-title"><span class="icon" aria-hidden="true">&#10067;</span> FAQ（よくある質問）</h2>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>enableDnsSupportをfalseにすると何が起きますか？</span>
+          <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p class="faq-answer-text">VPC内のインスタンスがAWSの内蔵DNSリゾルバ（169.254.169.253）を使えなくなります。マンションでいうと管理人室の電話帳を閉鎖するようなもので、住人は自分で電話番号を調べる手段を持たない限り連絡が取れなくなります。カスタムDNSサーバーを自前で運用するケース以外では、falseにする理由はほぼありません。</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>デフォルトVPCとカスタムVPCで設定が違うのはなぜ？</span>
+          <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p class="faq-answer-text">デフォルトVPCは「すぐに使える」ことを重視して、enableDnsSupportとenableDnsHostnamesの両方がtrueで作成されます。一方、カスタムVPCはenableDnsHostnamesがfalseで作成されます。これは、セキュリティやコスト最適化のために不要な機能を明示的に有効化してほしいというAWSの設計思想によるものです。</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>VPCピアリングの場合、DNS設定はどうなりますか？</span>
+          <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p class="faq-answer-text">VPCピアリング接続では、ピアリング設定の「DNS解決」オプションを有効にすることで、相手VPCのプライベートDNSホスト名をプライベートIPに解決できるようになります。ただし、両方のVPCでenableDnsSupportとenableDnsHostnamesがtrueになっていることが前提条件です。</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>169.254.169.253 とは何ですか？</span>
+          <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p class="faq-answer-text">AWSがVPC内のインスタンスに提供するDNSリゾルバのIPアドレスです。リンクローカルアドレス（169.254.x.x）を使用しているため、VPC外からはアクセスできません。VPCのCIDRレンジ+2のアドレス（例：10.0.0.2）も同じDNSリゾルバを指します。enableDnsSupport = true の場合のみ機能します。</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>ANS-C01試験でこのテーマはどう出題されますか？</span>
+          <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p class="faq-answer-text">ANS-C01（Advanced Networking Specialty）では、VPC DNS設定はRoute 53やハイブリッドDNSの文脈で頻出です。特に「プライベートホストゾーンが動かないシナリオ」で、原因として enableDnsSupport / enableDnsHostnames の設定不備が正解選択肢になるパターンが典型的です。また、VPCピアリングやTransit Gatewayと組み合わせたDNS解決の問題にも出題されます。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Cheat Sheet
+         ============================================================ -->
+    <section class="cheatsheet" aria-label="まとめチートシート">
+      <h2><span aria-hidden="true">&#128220;</span> まとめチートシート</h2>
+      <div class="cheat-grid">
+        <div class="cheat-item">
+          <div class="cheat-q">enableDnsSupportとは？</div>
+          <div class="cheat-a">AWSのDNSリゾルバ（169.254.169.253）を使えるかどうか。デフォルトtrue。OFFにするケースはほぼない。</div>
+        </div>
+        <div class="cheat-item">
+          <div class="cheat-q">enableDnsHostnamesとは？</div>
+          <div class="cheat-a">パブリックIPインスタンスにDNSホスト名を自動付与するか。カスタムVPCではデフォルトfalse → 手動でtrueにする。</div>
+        </div>
+        <div class="cheat-item">
+          <div class="cheat-q">プライベートHZの条件は？</div>
+          <div class="cheat-a">enableDnsSupport = true かつ enableDnsHostnames = true が必須。どちらかfalseだと動かない。</div>
+        </div>
+        <div class="cheat-item">
+          <div class="cheat-q">迷ったらどうする？</div>
+          <div class="cheat-a">両方trueにしておけばOK。後から「動かない」原因の多くはこの設定漏れ。</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer style="text-align:center; padding: var(--spacing-lg); color: rgba(255,255,255,0.7); font-size: 0.8em;">
+    <p>&copy; 2026 AWS学習リソース — VPC DNS設定ガイド</p>
+  </footer>
+
+  <!-- Scroll to Top -->
+  <button class="scroll-to-top" id="scrollToTop" aria-label="ページトップに戻る">&#9650;</button>
+
+  <!-- JavaScript -->
+  
+`;
+---
+
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 73,
+    count: 74,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
         count: 15,
-        lastUpdated: '2026-03-08',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう', href: 'networking/aws-direct-connect-guide.html', priority: 'high', service: 'Direct Connect' },
           { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', href: 'networking/aws-vpn-with-direct-connect-guide.html', priority: 'high', service: 'Direct Connect' },
@@ -35,8 +35,8 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 44,
-        lastUpdated: '2026-03-08',
+        count: 45,
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD', href: 'networking/aws-directory-service-guide.html', service: 'Directory Service' },
           { title: 'AWS ENI（Elastic Network Interface）初心者向け図解', href: 'networking/aws-eni-infographic.html', priority: 'low', service: 'ENI' },
@@ -68,6 +68,7 @@ const categoriesData = [
           { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', href: 'networking/site-to-site-vpn-route53-resolver-guide.html', service: 'VPN' },
           { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN | AWS SAP学習リソース', href: 'networking/split-vs-full-tunnel-vpn.html', priority: 'high', service: 'VPN' },
           { title: 'Amazon VPC CNI 完全ガイド', href: 'networking/vpc-cni-guide.html', priority: 'medium', service: 'VPC' },
+          { title: 'VPC DNS設定 完全ガイド — enableDnsSupport & enableDnsHostnames', href: 'networking/vpc-dns-settings-guide.html', service: 'VPC' },
           { title: 'VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース', href: 'networking/vpc-dual-stack-networking-guide.html', priority: 'medium', service: 'VPC' },
           { title: 'VPCフローログ フィールド完全ガイド', href: 'networking/vpc-flow-log-fields-guide.html', priority: 'medium', service: 'VPC' },
           { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', href: 'networking/vpc-network-access-analyzer-guide.html', priority: 'low', service: 'VPC' },
@@ -88,7 +89,7 @@ const categoriesData = [
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
         count: 12,
-        lastUpdated: '2026-03-08',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWSネットワークゲートウェイの比較', href: 'networking/aws-gateways.html', priority: 'high' },
           { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN' },
@@ -108,7 +109,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-08',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html', service: 'EC2' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' }
@@ -120,13 +121,13 @@ const categoriesData = [
     id: 'security-governance',
     title: 'セキュリティ・ガバナンス',
     icon: '🛡️',
-    count: 79,
+    count: 80,
     sections: [
       {
         title: 'セキュリティ監視・脅威検知',
         icon: '🛡️',
         count: 16,
-        lastUpdated: '2026-02-26',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS Elastic Disaster Recovery を災害対策で理解しよう', href: 'continuous-improvement/aws_edr_infographic.html', service: 'Disaster Recovery' },
           { title: 'AWS Systems Manager Run Command を会社経営で理解しよう', href: 'continuous-improvement/aws_ssm_runcommand_infographic.html', service: 'Systems Manager' },
@@ -150,7 +151,7 @@ const categoriesData = [
         title: 'IAM & 認証・認可',
         icon: '👤',
         count: 19,
-        lastUpdated: '2026-02-26',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS IAM フェデレーション入門', href: 'continuous-improvement/iam_federation_infographic.html', priority: 'high', service: 'IAM' },
           { title: 'AWS ABAC完全ガイド - PrincipalTag vs ResourceTag', href: 'security-governance/abac-principaltag-resourcetag-guide.html', service: 'IAM' },
@@ -177,7 +178,7 @@ const categoriesData = [
         title: 'Organizations & ガバナンス',
         icon: '🏢',
         count: 38,
-        lastUpdated: '2026-02-26',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS Organizations SCPの継承：超シンプル解説', href: 'organizational-complexity/aws-scp-simplified.html', priority: 'high', service: 'Organizations' },
           { title: 'AWS Organizations &amp; Control Tower - 視覚的プロセス図解', href: 'organizational-complexity/aws_org_infographic.html', service: 'Organizations' },
@@ -222,12 +223,13 @@ const categoriesData = [
       {
         title: '暗号化 & 証明書管理',
         icon: '🔐',
-        count: 6,
-        lastUpdated: '2026-02-26',
+        count: 7,
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS KMS BYOK 完全ガイド', href: 'organizational-complexity/kms_byok_infographic.html', service: 'KMS' },
           { title: 'AWS ACMでSANを利用した複数ドメインSSL証明書取得ガイド', href: 'security-governance/acm-san-infographic.html', priority: 'low', service: 'ACM' },
           { title: 'AWS CMK（暗号化キー）を銀行の貸金庫で理解しよう', href: 'security-governance/aws_cmk_infographic.html', service: 'KMS' },
+          { title: 'エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2', href: 'security-governance/e2e-encryption-guide.html', service: 'CloudFront' },
           { title: 'AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み', href: 'security-governance/kms-grants-guide.html', priority: 'high', service: 'KMS' },
           { title: 'AWS KMS キーの種類 完全ガイド', href: 'security-governance/kms-key-types.html', priority: 'high', service: 'KMS' },
           { title: 'AWS KMS スロットリング対策 &amp; Encryption SDK キャッシュ完全ガイド', href: 'security-governance/kms-throttling-encryption-sdk-guide.html', service: 'KMS' }
@@ -344,18 +346,19 @@ const categoriesData = [
     id: 'content-delivery-dns',
     title: 'コンテンツ配信・DNS',
     icon: '🌍',
-    count: 24,
+    count: 25,
     sections: [
       {
         title: 'CloudFront & コンテンツ配信',
         icon: '⚡',
-        count: 13,
-        lastUpdated: '2026-03-08',
+        count: 14,
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'ACM + ALB + EC2 TLS証明書設定 完全ガイド', href: 'content-delivery-dns/acm-alb-ec2-tls-guide.html', service: 'ACM' },
           { title: 'ACM DNS検証 - 超かんたん図解ガイド', href: 'content-delivery-dns/acm-dns-simple-guide.html', service: 'ACM' },
           { title: 'ALB × PFS 暗号スイート完全ガイド', href: 'content-delivery-dns/alb-pfs-cipher-suites-guide.html', priority: 'low', service: 'ACM' },
           { title: 'ALB セキュリティポリシー完全ガイド', href: 'content-delivery-dns/alb-security-policy-guide.html', priority: 'low', service: 'ALB' },
+          { title: 'AWS Global Accelerator × IoT デバイス接続 完全ガイド', href: 'content-delivery-dns/aws-global-accelerator-iot-guide.html', service: 'Global Accelerator' },
           { title: 'CloudFrontのカスタムHTTPヘッダーとCache-Control入門ガイド', href: 'content-delivery-dns/cloudfront-cache-infographic.html', priority: 'high', service: 'CloudFront' },
           { title: 'CloudFront HTTPSハンドシェイク完全ガイド', href: 'content-delivery-dns/cloudfront-https-guide.html', service: 'CloudFront' },
           { title: 'CloudFront オリジンフェイルオーバー完全ガイド | AWS学習リソース', href: 'content-delivery-dns/cloudfront-origin-failover-guide.html', priority: 'high', service: 'CloudFront' },
@@ -371,7 +374,7 @@ const categoriesData = [
         title: 'Route53 & DNS管理',
         icon: '🌍',
         count: 9,
-        lastUpdated: '2026-03-08',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'AWS条件付きフォワーダールール解説', href: 'content-delivery-dns/aws-dns-infographic.html' },
           { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド', href: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html', priority: 'medium', service: 'Route 53' },
@@ -388,7 +391,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-08',
+        lastUpdated: '2026-03-10',
         resources: [
           { title: 'DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド', href: 'content-delivery-dns/dns-migration-guide.html', service: 'Route 53' },
           { title: 'サブドメイン委任（Subdomain Delegation）完全ガイド - Route 53', href: 'content-delivery-dns/subdomain-delegation-guide.html', service: 'Route 53' }
@@ -601,13 +604,13 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 73
+    count: 74
   },
   {
     id: 'security-governance',
     icon: '🔒',
     text: 'セキュリティ・ガバナンス',
-    count: 79
+    count: 80
   },
   {
     id: 'compute-applications',
@@ -619,7 +622,7 @@ const categoryQuickNav = [
     id: 'content-delivery-dns',
     icon: '🚀',
     text: 'コンテンツ配信・DNS',
-    count: 24
+    count: 25
   },
   {
     id: 'development-deployment',
@@ -651,9 +654,9 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '295+',
+  totalResources: '298+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/09'
+  lastUpdated: '2026/03/10'
 };
 
 // サービスインデックス（自動生成）
@@ -750,9 +753,10 @@ const serviceIndex = [
   },
   {
     name: 'CloudFront',
-    count: 7,
+    count: 8,
     categories: [
       'networking',
+      'security-governance',
       'content-delivery-dns'
     ]
   },
@@ -956,7 +960,7 @@ const serviceIndex = [
   },
   {
     name: 'Global Accelerator',
-    count: 1,
+    count: 2,
     categories: [
       'content-delivery-dns'
     ]
@@ -1174,7 +1178,7 @@ const serviceIndex = [
   },
   {
     name: 'VPC',
-    count: 14,
+    count: 15,
     categories: [
       'networking',
       'security-governance',
@@ -1222,6 +1226,26 @@ const serviceIndex = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-10',
+    type: 'content',
+    title: '3リソース追加 — Global Accelerator IoT, E2E暗号化, VPC DNS設定',
+    description: 'Global Accelerator×IoTデバイス接続ガイド、エンドツーエンド暗号化（CloudFront→ALB→EC2）ガイド、VPC DNS設定（enableDnsSupport/enableDnsHostnames）ガイドの3件を追加。',
+    categories: [
+      'content-delivery-dns',
+      'security-governance',
+      'networking'
+    ],
+    tags: [
+      'Global Accelerator',
+      'IoT',
+      '暗号化',
+      'CloudFront',
+      'ALB',
+      'VPC',
+      'DNS'
+    ]
+  },
   {
     date: '2026-03-08',
     type: 'content',

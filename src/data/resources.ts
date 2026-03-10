@@ -50,13 +50,13 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 73,
+    "count": 74,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
         "count": 15,
-        "lastUpdated": "2026-03-08",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
@@ -146,8 +146,8 @@ export const categoriesData: Category[] = [
       {
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
-        "count": 44,
-        "lastUpdated": "2026-03-08",
+        "count": 45,
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
@@ -318,6 +318,11 @@ export const categoriesData: Category[] = [
             "service": "VPC"
           },
           {
+            "title": "VPC DNS設定 完全ガイド — enableDnsSupport & enableDnsHostnames",
+            "href": "networking/vpc-dns-settings-guide.html",
+            "service": "VPC"
+          },
+          {
             "title": "VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース",
             "href": "networking/vpc-dual-stack-networking-guide.html",
             "priority": "medium",
@@ -402,7 +407,7 @@ export const categoriesData: Category[] = [
         "title": "Transit Gateway & ゲートウェイ",
         "icon": "🚪",
         "count": 12,
-        "lastUpdated": "2026-03-08",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWSネットワークゲートウェイの比較",
@@ -475,7 +480,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-08",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
@@ -495,13 +500,13 @@ export const categoriesData: Category[] = [
     "id": "security-governance",
     "title": "セキュリティ・ガバナンス",
     "icon": "🛡️",
-    "count": 79,
+    "count": 80,
     "sections": [
       {
         "title": "セキュリティ監視・脅威検知",
         "icon": "🛡️",
         "count": 16,
-        "lastUpdated": "2026-02-26",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS Elastic Disaster Recovery を災害対策で理解しよう",
@@ -596,7 +601,7 @@ export const categoriesData: Category[] = [
         "title": "IAM & 認証・認可",
         "icon": "👤",
         "count": 19,
-        "lastUpdated": "2026-02-26",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS IAM フェデレーション入門",
@@ -708,7 +713,7 @@ export const categoriesData: Category[] = [
         "title": "Organizations & ガバナンス",
         "icon": "🏢",
         "count": 38,
-        "lastUpdated": "2026-02-26",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS Organizations SCPの継承：超シンプル解説",
@@ -926,8 +931,8 @@ export const categoriesData: Category[] = [
       {
         "title": "暗号化 & 証明書管理",
         "icon": "🔐",
-        "count": 6,
-        "lastUpdated": "2026-02-26",
+        "count": 7,
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS KMS BYOK 完全ガイド",
@@ -944,6 +949,11 @@ export const categoriesData: Category[] = [
             "title": "AWS CMK（暗号化キー）を銀行の貸金庫で理解しよう",
             "href": "security-governance/aws_cmk_infographic.html",
             "service": "KMS"
+          },
+          {
+            "title": "エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2",
+            "href": "security-governance/e2e-encryption-guide.html",
+            "service": "CloudFront"
           },
           {
             "title": "AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み",
@@ -1333,13 +1343,13 @@ export const categoriesData: Category[] = [
     "id": "content-delivery-dns",
     "title": "コンテンツ配信・DNS",
     "icon": "🌍",
-    "count": 24,
+    "count": 25,
     "sections": [
       {
         "title": "CloudFront & コンテンツ配信",
         "icon": "⚡",
-        "count": 13,
-        "lastUpdated": "2026-03-08",
+        "count": 14,
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "ACM + ALB + EC2 TLS証明書設定 完全ガイド",
@@ -1362,6 +1372,11 @@ export const categoriesData: Category[] = [
             "href": "content-delivery-dns/alb-security-policy-guide.html",
             "priority": "low",
             "service": "ALB"
+          },
+          {
+            "title": "AWS Global Accelerator × IoT デバイス接続 完全ガイド",
+            "href": "content-delivery-dns/aws-global-accelerator-iot-guide.html",
+            "service": "Global Accelerator"
           },
           {
             "title": "CloudFrontのカスタムHTTPヘッダーとCache-Control入門ガイド",
@@ -1419,7 +1434,7 @@ export const categoriesData: Category[] = [
         "title": "Route53 & DNS管理",
         "icon": "🌍",
         "count": 9,
-        "lastUpdated": "2026-03-08",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "AWS条件付きフォワーダールール解説",
@@ -1477,7 +1492,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-08",
+        "lastUpdated": "2026-03-10",
         "resources": [
           {
             "title": "DNSサービスのダウンタイムなし移行プロセス - Route 53完全ガイド",
@@ -1964,13 +1979,13 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 73
+    "count": 74
   },
   {
     "id": "security-governance",
     "icon": "🔒",
     "text": "セキュリティ・ガバナンス",
-    "count": 79
+    "count": 80
   },
   {
     "id": "compute-applications",
@@ -1982,7 +1997,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "content-delivery-dns",
     "icon": "🚀",
     "text": "コンテンツ配信・DNS",
-    "count": 24
+    "count": 25
   },
   {
     "id": "development-deployment",
@@ -2103,9 +2118,10 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "CloudFront",
-    "count": 7,
+    "count": 8,
     "categories": [
       "networking",
+      "security-governance",
       "content-delivery-dns"
     ]
   },
@@ -2309,7 +2325,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "Global Accelerator",
-    "count": 1,
+    "count": 2,
     "categories": [
       "content-delivery-dns"
     ]
@@ -2527,7 +2543,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "VPC",
-    "count": 14,
+    "count": 15,
     "categories": [
       "networking",
       "security-governance",
@@ -2575,7 +2591,7 @@ export const serviceIndex: ServiceIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "295+",
+  "totalResources": "298+",
   "offlineSupport": "100%",
   "lastUpdated": "2026/03/10"
 };

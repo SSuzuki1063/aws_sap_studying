@@ -16,7 +16,8 @@ Six-step pipeline with **error gates** between each step. Any failure halts the 
 
 - Git status: !`git status --short`
 - Current branch: !`git branch --show-current`
-- Staging dirs: !`ls new_html/ 2>/dev/null | head -20; echo "---"; ls replace_html/ 2>/dev/null | head -20`
+- Staging (new_html): !`ls new_html/ 2>/dev/null | head -20`
+- Staging (replace_html): !`ls replace_html/ 2>/dev/null | head -20`
 - Recent commits: !`git log --oneline -5`
 
 ---
