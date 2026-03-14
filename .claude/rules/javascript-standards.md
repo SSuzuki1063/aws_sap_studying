@@ -1,6 +1,7 @@
 ---
 paths:
-  - "**/*.js"
+  - "js/**/*.js"
+  - "public/**/*.js"
 ---
 
 # JavaScript Standards
@@ -13,7 +14,8 @@ paths:
 - No external dependencies in client-side code
 
 > **Exception**: Astro SSG is used as the build tool (`astro.config.mjs`, `src/integrations/`).
-> Astro-specific JS/MJS files in `src/` and project root config files may use Node.js APIs and imports.
+> Node.js scripts (`scripts/`), config files, and `.mjs` files may use Node.js APIs and imports.
+> This rule applies to **client-side JS** in `js/` and `public/` only.
 
 ## Conventions
 

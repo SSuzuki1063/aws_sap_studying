@@ -34,9 +34,22 @@ uv pip install beautifulsoup4 lxml html5lib requests
 
 # Node.js (Astro build + Playwright E2E tests + QA system)
 npm ci
-npx astro dev     # → http://localhost:4321/aws_sap_studying (dev server)
-npx astro preview # → http://localhost:4321/aws_sap_studying (production preview)
+npm run dev       # → http://localhost:4321/aws_sap_studying (dev server, syncs assets first)
+npm run preview   # → http://localhost:4321/aws_sap_studying (production preview, requires build)
 ```
+
+### Key npm Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server (syncs concepts + static assets → astro dev) |
+| `npm run build` | Full production build (sync → generate-data → astro build → `dist/`) |
+| `npm run preview` | Preview production build locally |
+| `npm run preview:test` | Build + preview (used by Playwright webServer) |
+| `node scripts/generate-data.mjs` | Regenerate `public/data.js`, `public/index.js`, `src/data/resources.ts` from registry |
+| `npm run test:e2e:chromium` | Run all E2E tests (chromium) |
+| `npm run qa:css-validate:pr` | CSS W3C validation (changed files only) |
+| `npm run qa:all` | Full QA pipeline (CSS validate + runtime + report) |
 
 ## Environment
 
@@ -55,6 +68,16 @@ The build (`npm run build`) runs these steps in order:
 4. `astro build` — SSG render to `dist/`
 
 **`src/data/resources.ts` is auto-generated** — never edit it manually.
+
+### When to Update What
+
+| What you're doing | Files to update | Then run |
+|---|---|---|
+| Adding/removing a resource page | `src/data/resource-registry.json` + `src/data/update-history.json` | `node scripts/generate-data.mjs` |
+| Changing resource metadata (title, category, tags) | `src/data/resource-registry.json` | `node scripts/generate-data.mjs` |
+| Adding/editing concept map data | `concepts/services/<service>.json` | `python3 scripts/concept_management/generate_concept_index.py` |
+
+Use `/skill resource` or `/ship` for the full workflow — they handle these updates automatically.
 
 ### Astro Configuration
 
@@ -189,6 +212,17 @@ npx playwright test --project=chromium tests/e2e/visual/ --update-snapshots  # r
 | `playwright-e2e.yml` | Push/PR to master | Run concept-map, navigation, links, interaction E2E tests |
 | `qa-unified.yml` | Manual / scheduled | 4-job pipeline: static-validation → runtime-validation → visual-regression → publish-report |
 | `pr-quality-check.yml` | PR to master | Pre-merge quality checks |
+
+## Pre-Commit Hooks
+
+Git hooks run automatically on every `git commit`:
+
+1. `scripts/git_hooks/update_last_modified.py` — updates `data.js` lastUpdated date
+2. `scripts/accessibility/check_contrast_ratio.py` — WCAG AA contrast check
+3. `scripts/check_fixed_headers.py` — fixed header presence check
+
+> **`data.js` の `lastUpdated` 行末の `// GIT_LAST_COMMIT_DATE` コメントは削除禁止。**
+> Pre-commit hook がこのマーカーで日付を自動更新する。
 
 ## Deployment
 

@@ -1,7 +1,7 @@
 ---
 paths:
-  - "**/*.css"
-  - "css/**/*"
+  - "css/**/*.css"
+  - "src/**/*.css"
 ---
 
 # CSS Standards
