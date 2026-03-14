@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-AWS SAP (Solutions Architect Professional) exam study resource repository with HTML-based learning materials.
+AWS SAP (Solutions Architect Professional) exam study resource repository built with Astro SSG.
 
 | Item | Value |
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
-| **Architecture** | Astro SSG (build: `npm run build` → `dist/`) |
-| **Content** | 290+ resources (.astro), 219 quiz questions, 8 categories |
+| **Architecture** | Astro 5.x SSG (build: `npm run build` → `dist/`) |
+| **Content** | 286 resource pages (.astro), 8 display categories, 12 page directories |
 | **Branches** | `master` (source), `gh-pages` (build output, CI-managed) |
 
 ## ⚠️ CRITICAL RULES
@@ -18,12 +18,12 @@ AWS SAP (Solutions Architect Professional) exam study resource repository with H
 > **These rules prevent the most common mistakes. Violating them breaks the site.**
 > File-type-specific details are in `.claude/rules/` (loaded automatically when editing matching files).
 
-1. **Always Use Skills for Resource Integration** — `/skill resource` (unified entry point). Never manually run integration scripts.
-2. **Three-Place Update Rule** — When adding resources, update `data.js` resources array + `data.js` updateHistory + `index.js` searchData. Details: `.claude/rules/data-navigation.md`
+1. **Always Use Skills for Resource Integration** — `/skill resource` (unified entry point) or `/ship` (full pipeline). Never manually copy HTML files into `src/pages/`.
+2. **Registry-Driven Data** — When adding resources, update `src/data/resource-registry.json` + `src/data/update-history.json`, then run `node scripts/generate-data.mjs` to regenerate `public/data.js`, `public/index.js`, and `src/data/resources.ts`. Details: `.claude/rules/data-navigation.md`
 3. **GitHub Pages Path Prefix** — All paths MUST include `/aws_sap_studying/`. Details: `.claude/rules/html-standards.md`
-4. **W3C Validation Required** — All HTML must pass validation before commit. `python3 scripts/ci/validate_html_w3c.py --pr-mode`. CSS files also require W3C validation: `npm run qa:css-validate:pr`.
+4. **W3C Validation Required** — All HTML must pass validation before commit. `python3 scripts/ci/validate_html_w3c.py --pr-mode`. CSS: `npm run qa:css-validate:pr`.
 5. **Deploy via `/deploy` Skill** — Commits, merges to master, pushes. GitHub Actions builds and deploys to gh-pages automatically.
-6. **Use `<h2>` for Section Headings** — `add_sidebar_toc.py` only recognizes `<h2>`/`<h3>`. Details: `.claude/rules/html-standards.md`
+6. **Use `<h2>` for Section Headings** — `ResourceLayout.astro` TOC only recognizes `<h2>`/`<h3>`. Details: `.claude/rules/html-standards.md`
 
 ## Quick Start
 
@@ -48,17 +48,36 @@ npx astro preview # → http://localhost:4321/aws_sap_studying (production previ
 The build (`npm run build`) runs these steps in order:
 1. `sync:concepts` — copies `concepts/` → `public/concepts/` (concept map JSON data)
 2. `sync:static` — copies `css/`, `js/`, `output_images/` → `public/` (source CSS/JS lives at repo root, NOT in `src/`)
-3. `generate-data.mjs` — produces **two outputs**:
+3. `generate-data.mjs` — reads `src/data/resource-registry.json` and produces **three outputs**:
    - `public/data.js` — runtime data for index, knowledge-base, bookmark pages (loaded via `<script>`)
+   - `public/index.js` — search data (searchData array) for client-side search
    - `src/data/resources.ts` — build-time TypeScript data imported by `learning-resources.astro`
-4. `astro build` — SSG build → `dist/`
+4. `astro build` — SSG render to `dist/`
+
+**`src/data/resources.ts` is auto-generated** — never edit it manually.
 
 ### Astro Configuration
 
 - `build.format: 'file'` — produces `networking/foo.html` (NOT `networking/foo/index.html`)
 - Asset filenames are NOT hashed — `assetFileNames: '[name][extname]'` preserves original paths
 - Base path: `/aws_sap_studying` (critical — already enforced by Critical Rule #3)
-- Resource pages live in `src/pages/<category>/` subdirectories (8 categories matching data.js)
+
+### Category Architecture
+
+Resource pages live in `src/pages/<directory>/`. There are **12 page directories** but only **8 display categories** used in data.js navigation:
+
+| Display Category (data.js) | Page Directory | Resources |
+|---|---|---|
+| `networking` | `networking/` | 68 |
+| `security-governance` | `security-governance/` | 80 |
+| `compute-applications` | `compute-applications/` | 57 |
+| `content-delivery-dns` | `content-delivery-dns/` | 23 |
+| `development-deployment` | `development-deployment/` | 22 |
+| `storage-database` | `storage-database/` | 14 |
+| `migration` | `migration/` | 11 |
+| `analytics-operations` | `analytics-bigdata/` | 15 |
+
+Additional directories (`continuous-improvement/`, `cost-control/`, `new-solutions/`, `organizational-complexity/`) contain pages whose `displayCategory` in `resource-registry.json` maps them into one of the 8 display categories above.
 
 ### Key Layouts
 
@@ -68,15 +87,44 @@ The build (`npm run build`) runs these steps in order:
 | `ResourceLayout.astro` | Individual resource pages (`src/pages/<category>/*.astro`) |
 | `LearningResourcesLayout.astro` | `learning-resources.astro` (build-time rendered catalog) |
 
+### Astro Resource Authoring Pattern
+
+Resource `.astro` files use the **rawContent + `set:html`** pattern to safely render HTML containing literal `{}` (SVG inline styles, CLI examples like `Tags=[{Key=Name}]`):
+
+```astro
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+const frontmatter = {
+  title: 'Page Title',
+  category: '<directory-name>',
+  tocItems: [{ id: 'section-id', text: 'Section Title', level: 2 }],
+  pageCss: '/aws_sap_studying/css/pages/<filename>.css',
+};
+const rawContent = `
+  <!-- body HTML here — backticks escaped as \\\`, $ as \\$ -->
+`;
+---
+<ResourceLayout frontmatter={frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
+```
+
+**Do NOT** place body HTML directly in the Astro template — any `{}` will be parsed as JSX expressions and cause build errors.
+
 ## Testing & QA
 
 ### Playwright E2E tests
 ```bash
-npm run test:e2e:chromium                              # all concept-map specs (chromium only)
-npx playwright test --project=chromium tests/e2e/concept-map/filters.spec.ts  # single spec file
-npx playwright test --project=qa                       # QA spec suite only
+npm run test:e2e:chromium                              # all specs (chromium)
+npx playwright test --project=chromium tests/e2e/concept-map/filters.spec.ts  # single spec
+npx playwright test --project=qa                       # QA specs only
+npx playwright test --project=mobile-chrome            # mobile viewport
 npx playwright test --headed                           # visible browser (debugging)
+npm run test:e2e:ui                                    # interactive UI mode
 ```
+
+Playwright projects: `chromium`, `firefox`, `webkit`, `mobile-chrome` (Pixel 5), `qa` (reads JSON reports).
+Config: `baseURL: http://localhost:4321`, webServer: `npm run preview:test`, retries: 2 in CI / 0 locally.
 
 ### CSS & HTML validation (before committing)
 ```bash
@@ -133,7 +181,14 @@ npx playwright test --project=chromium tests/e2e/visual/        # visual regress
 npx playwright test --project=chromium tests/e2e/visual/ --update-snapshots  # regenerate baselines
 ```
 
-CI: `.github/workflows/qa-unified.yml` — 4-job pipeline: static-validation (no browser) → runtime-validation (Playwright) → visual-regression (`if: false`, pending baselines) → publish-report.
+## CI/CD Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `deploy.yml` | Push to master | `npm run build` → verify critical assets → deploy `dist/` to gh-pages |
+| `playwright-e2e.yml` | Push/PR to master | Run concept-map, navigation, links, interaction E2E tests |
+| `qa-unified.yml` | Manual / scheduled | 4-job pipeline: static-validation → runtime-validation → visual-regression → publish-report |
+| `pr-quality-check.yml` | PR to master | Pre-merge quality checks |
 
 ## Deployment
 

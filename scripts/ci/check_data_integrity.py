@@ -160,8 +160,8 @@ def main():
     repo_root = script_dir.parent.parent
     os.chdir(repo_root)
 
-    data_js_path = repo_root / 'data.js'
-    index_js_path = repo_root / 'index.js'
+    data_js_path = repo_root / 'public' / 'data.js'
+    index_js_path = repo_root / 'public' / 'index.js'
 
     # ファイル存在チェック
     if not data_js_path.exists():
