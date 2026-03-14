@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 74,
+    count: 78,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
-        count: 15,
-        lastUpdated: '2026-03-10',
+        count: 16,
+        lastUpdated: '2026-03-14',
         resources: [
           { title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう', href: 'networking/aws-direct-connect-guide.html', priority: 'high', service: 'Direct Connect' },
           { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', href: 'networking/aws-vpn-with-direct-connect-guide.html', priority: 'high', service: 'Direct Connect' },
@@ -22,6 +22,7 @@ const categoriesData = [
           { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', href: 'networking/direct-connect-cloudwatch-metrics-guide.html', priority: 'low', service: 'Direct Connect' },
           { title: 'AWS Direct Connect 接続タイプ完全ガイド', href: 'networking/direct-connect-connection-types-guide.html', priority: 'high', service: 'Direct Connect' },
           { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', href: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect' },
+          { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', href: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect' },
           { title: 'Direct Connect暗号化ガイド - VPNで実現するセキュアな専用線', href: 'networking/direct_connect_encryption_vpn.html', service: 'Direct Connect' },
           { title: 'Direct Connect Gateway・VGW・VIF 完全ガイド | AWS SAP学習リソース', href: 'networking/dx-gateway-vgw-vif-guide.html', priority: 'high', service: 'Direct Connect' },
           { title: 'Direct Connect ルーティングポリシーと BGP コミュニティ - AWS図解ガイド', href: 'networking/dx-routing-bgp-community-guide.html', priority: 'high', service: 'Direct Connect' },
@@ -35,14 +36,15 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 45,
-        lastUpdated: '2026-03-10',
+        count: 46,
+        lastUpdated: '2026-03-14',
         resources: [
           { title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD', href: 'networking/aws-directory-service-guide.html', service: 'Directory Service' },
           { title: 'AWS ENI（Elastic Network Interface）初心者向け図解', href: 'networking/aws-eni-infographic.html', priority: 'low', service: 'ENI' },
           { title: 'AWSグローバルインフラストラクチャ完全ガイド | AWS初心者向けインフォグラフィック', href: 'networking/aws-global-infrastructure-guide.html', priority: 'high' },
           { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', href: 'networking/aws-hyperplane-guide.html', priority: 'low', service: 'Hyperplane' },
           { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', href: 'networking/aws-ipv6-support-guide-v2.html', priority: 'medium' },
+          { title: 'AWS Local Zones 完全ガイド - 都市のユーザーに最も近い場所でAWSを動かす', href: 'networking/aws-local-zones-guide.html' },
           { title: 'AWS プレフィックスリスト完全ガイド', href: 'networking/aws-prefix-list-guide.html', service: 'Prefix List' },
           { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', href: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', priority: 'high', service: 'VPC PrivateLink' },
           { title: 'AWS Site-to-Site VPN 完全ガイド', href: 'networking/aws-site-to-site-vpn-guide.html', priority: 'high', service: 'VPN' },
@@ -88,16 +90,18 @@ const categoriesData = [
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 12,
-        lastUpdated: '2026-03-10',
+        count: 14,
+        lastUpdated: '2026-03-14',
         resources: [
           { title: 'AWSネットワークゲートウェイの比較', href: 'networking/aws-gateways.html', priority: 'high' },
           { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', href: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN' },
           { title: 'Cloud WAN / TGW ルート分離設計の極意', href: 'networking/cloud-wan-tgw-route-isolation-guide.html', priority: 'high', service: 'Transit Gateway' },
+          { title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド', href: 'networking/cloudwan-static-routing-segment-sharing-v2.html' },
           { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', href: 'networking/route-analyzer-guide.html', priority: 'high', service: 'Transit Gateway Route Analyzer' },
           { title: 'Transit Gateway アプライアンスモード 完全ガイド', href: 'networking/tgw-appliance-mode-guide.html', service: 'Transit Gateway' },
           { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', href: 'networking/tgw-isolated-shared-services.html', service: 'Transit Gateway' },
           { title: 'AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信', href: 'networking/tgw-multicast-guide.html', service: 'Transit Gateway' },
+          { title: 'Transit Gateway ルーティング完全ガイド - クロスリージョン・クロスアカウントVPC接続', href: 'networking/tgw-routing-guide.html', service: 'Transit Gateway' },
           { title: 'Transit Gateway Connect 完全ガイド', href: 'networking/transit-gateway-connect-guide.html', service: 'Transit Gateway' },
           { title: 'AWS Transit Gateway Deep Dive 完全ガイド', href: 'networking/transit-gateway-deep-dive.html', priority: 'high', service: 'Transit Gateway' },
           { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', href: 'networking/transit-gateway-peering-guide.html', priority: 'high', service: 'Transit Gateway' },
@@ -109,7 +113,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-10',
+        lastUpdated: '2026-03-14',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html', service: 'EC2' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' }
@@ -604,7 +608,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 74
+    count: 78
   },
   {
     id: 'security-governance',
@@ -654,7 +658,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '298+',
+  totalResources: '302+',
   offlineSupport: '100%',
   lastUpdated: '2026/03/14'
 };
@@ -829,7 +833,7 @@ const serviceIndex = [
   },
   {
     name: 'Direct Connect',
-    count: 12,
+    count: 13,
     categories: [
       'networking'
     ]
@@ -1164,7 +1168,7 @@ const serviceIndex = [
   },
   {
     name: 'Transit Gateway',
-    count: 9,
+    count: 10,
     categories: [
       'networking'
     ]
@@ -1226,6 +1230,23 @@ const serviceIndex = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-14',
+    type: 'content',
+    title: 'ネットワーキング4リソース追加 — Local Zones, Cloud WAN静的ルーティング, DX SiteLink, TGWルーティング',
+    description: 'AWS Local Zones完全ガイド、Cloud WANスタティックルーティング&セグメント共有ガイド、Direct Connect SiteLink完全ガイド、Transit Gatewayルーティング完全ガイドの4件を追加。',
+    categories: [
+      'networking'
+    ],
+    tags: [
+      'Local Zones',
+      'Cloud WAN',
+      'Direct Connect',
+      'SiteLink',
+      'Transit Gateway',
+      'ルーティング'
+    ]
+  },
   {
     date: '2026-03-10',
     type: 'content',

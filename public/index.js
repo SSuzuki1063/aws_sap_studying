@@ -196,6 +196,8 @@ const searchData = [
   { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', category: 'ネットワーキング', file: 'networking/vpc-network-access-analyzer-guide.html', service: 'VPC' },
   { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', category: 'ネットワーキング', file: 'networking/byoip-guide.html', service: 'VPC' },
   { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN' },
+  { title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/cloudwan-static-routing-segment-sharing-v2.html', service: '' },
+  { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', category: 'ネットワーキング', file: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect' },
   { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect' },
   { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect' },
   { title: 'AWS Direct Connect 接続タイプ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-connection-types-guide.html', service: 'Direct Connect' },
@@ -207,6 +209,7 @@ const searchData = [
   { title: 'AWS Global Accelerator × VPN パフォーマンス向上ガイド', category: 'ネットワーキング', file: 'networking/global-accelerator-vpn-performance-guide.html', service: 'VPN' },
   { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', category: 'ネットワーキング', file: 'networking/aws-hyperplane-guide.html', service: 'Hyperplane' },
   { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', category: 'ネットワーキング', file: 'networking/aws-ipv6-support-guide-v2.html', service: '' },
+  { title: 'AWS Local Zones 完全ガイド - 都市のユーザーに最も近い場所でAWSを動かす', category: 'ネットワーキング', file: 'networking/aws-local-zones-guide.html', service: '' },
   { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', service: 'VPC PrivateLink' },
   { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', category: 'ネットワーキング', file: 'networking/site-to-site-vpn-route53-resolver-guide.html', service: 'VPN' },
   { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', category: 'ネットワーキング', file: 'networking/vpn-ike-dpd-recovery-guide.html', service: 'VPN' },
@@ -242,6 +245,7 @@ const searchData = [
   { title: 'S3バケットポリシー Principal要素 完全ガイド', category: 'ネットワーキング', file: 'networking/s3-bucket-policy-principal-guide.html', service: 'S3' },
   { title: 'Transit Gateway Connect 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-connect-guide.html', service: 'Transit Gateway' },
   { title: 'Transit Gateway アプライアンスモード 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-appliance-mode-guide.html', service: 'Transit Gateway' },
+  { title: 'Transit Gateway ルーティング完全ガイド - クロスリージョン・クロスアカウントVPC接続', category: 'ネットワーキング', file: 'networking/tgw-routing-guide.html', service: 'Transit Gateway' },
   { title: 'VPC DNS設定 完全ガイド — enableDnsSupport & enableDnsHostnames', category: 'ネットワーキング', file: 'networking/vpc-dns-settings-guide.html', service: 'VPC' },
   { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', category: 'ネットワーキング', file: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' },
   { title: 'VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース', category: 'ネットワーキング', file: 'networking/vpc-dual-stack-networking-guide.html', service: 'VPC' },
@@ -292,6 +296,9 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline' },
 ];
+
+
+
 
 
 

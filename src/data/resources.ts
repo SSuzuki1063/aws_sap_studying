@@ -50,13 +50,13 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 74,
+    "count": 78,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
-        "count": 15,
-        "lastUpdated": "2026-03-10",
+        "count": 16,
+        "lastUpdated": "2026-03-14",
         "resources": [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
@@ -96,6 +96,11 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド",
             "href": "networking/direct-connect-route-summarization-guide.html",
+            "service": "Direct Connect"
+          },
+          {
+            "title": "AWS Direct Connect SiteLink 完全ガイド | データセンター間接続",
+            "href": "networking/direct-connect-sitelink-guide.html",
             "service": "Direct Connect"
           },
           {
@@ -146,8 +151,8 @@ export const categoriesData: Category[] = [
       {
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
-        "count": 45,
-        "lastUpdated": "2026-03-10",
+        "count": 46,
+        "lastUpdated": "2026-03-14",
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
@@ -175,6 +180,10 @@ export const categoriesData: Category[] = [
             "title": "AWS IPv6サポート完全ガイド - 住所体系の大革命",
             "href": "networking/aws-ipv6-support-guide-v2.html",
             "priority": "medium"
+          },
+          {
+            "title": "AWS Local Zones 完全ガイド - 都市のユーザーに最も近い場所でAWSを動かす",
+            "href": "networking/aws-local-zones-guide.html"
           },
           {
             "title": "AWS プレフィックスリスト完全ガイド",
@@ -406,8 +415,8 @@ export const categoriesData: Category[] = [
       {
         "title": "Transit Gateway & ゲートウェイ",
         "icon": "🚪",
-        "count": 12,
-        "lastUpdated": "2026-03-10",
+        "count": 14,
+        "lastUpdated": "2026-03-14",
         "resources": [
           {
             "title": "AWSネットワークゲートウェイの比較",
@@ -424,6 +433,10 @@ export const categoriesData: Category[] = [
             "href": "networking/cloud-wan-tgw-route-isolation-guide.html",
             "priority": "high",
             "service": "Transit Gateway"
+          },
+          {
+            "title": "AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド",
+            "href": "networking/cloudwan-static-routing-segment-sharing-v2.html"
           },
           {
             "title": "AWS Transit Gateway Network Manager Route Analyzer 完全ガイド",
@@ -444,6 +457,11 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信",
             "href": "networking/tgw-multicast-guide.html",
+            "service": "Transit Gateway"
+          },
+          {
+            "title": "Transit Gateway ルーティング完全ガイド - クロスリージョン・クロスアカウントVPC接続",
+            "href": "networking/tgw-routing-guide.html",
             "service": "Transit Gateway"
           },
           {
@@ -480,7 +498,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-10",
+        "lastUpdated": "2026-03-14",
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
@@ -1979,7 +1997,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 74
+    "count": 78
   },
   {
     "id": "security-governance",
@@ -2194,7 +2212,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "Direct Connect",
-    "count": 12,
+    "count": 13,
     "categories": [
       "networking"
     ]
@@ -2529,7 +2547,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "Transit Gateway",
-    "count": 9,
+    "count": 10,
     "categories": [
       "networking"
     ]
@@ -2591,7 +2609,7 @@ export const serviceIndex: ServiceIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "298+",
+  "totalResources": "302+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/03/10"
+  "lastUpdated": "2026/03/14"
 };

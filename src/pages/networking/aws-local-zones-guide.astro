@@ -1,0 +1,726 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Aws Local Zones Guide',
+  pageTitle: 'AWS Local Zones 完全ガイド - 都市のユーザーに最も近い場所でAWSを動かす',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'VPC & ネットワーク基礎',
+  slug: 'aws-local-zones-guide',
+  tocItems: [
+    { id: 'conclusion', text: '先に結論：押さえるべき4つのポイント', level: 'h2' },
+    { id: 'analogy', text: '出前キッチンで理解する AWS Local Zones', level: 'h2' },
+    { id: 'architecture', text: 'AWS Local Zones アーキテクチャ概要図', level: 'h2' },
+    { id: 'how-to-enable', text: 'Local Zones を有効化する3ステップ', level: 'h2' },
+    { id: 'available-services', text: 'Local Zone で使える主なサービス', level: 'h2' },
+    { id: 'code-examples', text: '実装例：Local Zone にサブネットとEC2を作成', level: 'h2' },
+    { id: 'use-cases', text: 'Local Zones の代表的ユースケース', level: 'h2' },
+    { id: 'comparison', text: 'どこに置く？ Region / Local Zone / Outposts / Wavelength 比較', level: 'h2' },
+    { id: 'best-practices', text: 'ベストプラクティス vs アンチパターン', level: 'h2' },
+    { id: 'best-practices-good', text: 'ベストプラクティス', level: 'h3' },
+    { id: 'anti-patterns', text: 'アンチパターン', level: 'h3' },
+    { id: 'faq', text: 'よくある質問（FAQ）', level: 'h2' },
+    { id: 'cheatsheet', text: 'AWS Local Zones チートシート', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/aws-local-zones-guide.css',
+};
+
+const rawContent = `
+
+<!-- Skip Link -->
+<a href="#main-content" class="skip-link">本文へスキップ</a>
+
+<!-- Fixed Navigation Header -->
+<header class="fixed-nav-header">
+    <div class="fixed-nav-container">
+        <a href="#" class="fixed-nav-logo" aria-label="トップへ戻る">
+            <span aria-hidden="true">&#9729;</span> AWS Local Zones ガイド
+        </a>
+        <nav class="fixed-nav-links" aria-label="ページ内ナビゲーション">
+            <a href="#conclusion">結論</a>
+            <a href="#analogy">たとえ話</a>
+            <a href="#architecture">構成図</a>
+            <a href="#comparison">比較</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+    </div>
+</header>
+
+<!-- Reading Progress -->
+<div class="reading-progress" id="reading-progress" role="progressbar" aria-label="読書進捗">
+    <div class="reading-progress-bar" id="reading-progress-bar"></div>
+</div>
+
+<!-- Main Content -->
+<main id="main-content">
+<div class="container">
+
+    <!-- ========================================
+         Hero Section
+         ======================================== -->
+    <section class="hero" aria-label="ページタイトル">
+        <span class="hero-badge" aria-hidden="true">AWS Infrastructure</span>
+        <h1>AWS Local Zones 完全ガイド</h1>
+        <p class="hero-subtitle">大都市のユーザーに超低レイテンシーでAWSサービスを届ける「出前キッチン」</p>
+    </section>
+
+    <!-- ========================================
+         Conclusion First
+         ======================================== -->
+    <section class="conclusion-box" id="conclusion" aria-label="先に結論">
+        <h2><span aria-hidden="true">&#127919;</span> 先に結論：押さえるべき4つのポイント</h2>
+
+        <div class="conclusion-item">
+            <span class="conclusion-number">1</span>
+            <p class="conclusion-text"><strong>Local Zones = 大都市の近くに置かれたAWSの「出前キッチン」。</strong>親リージョンのサブセットを、ユーザーに地理的に近い場所で提供し、レイテンシーを1桁ミリ秒に短縮する。</p>
+        </div>
+        <div class="conclusion-item">
+            <span class="conclusion-number">2</span>
+            <p class="conclusion-text"><strong>使えるサービスはリージョンの一部。</strong>EC2、EBS、ELB、VPCサブネットなどが利用可能。RDSやS3などは親リージョンを利用する。</p>
+        </div>
+        <div class="conclusion-item">
+            <span class="conclusion-number">3</span>
+            <p class="conclusion-text"><strong>VPCは親リージョンで作り、サブネットをLocal Zoneに配置する。</strong>既存VPCを拡張するだけなので、ネットワーク設計がシンプル。</p>
+        </div>
+        <div class="conclusion-item">
+            <span class="conclusion-number">4</span>
+            <p class="conclusion-text"><strong>リアルタイムゲーム、メディア制作、ML推論など「低レイテンシーが命」のワークロードに最適。</strong>一般的なWebアプリはリージョンで十分。</p>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Analogy Section
+         ======================================== -->
+    <section class="section" id="analogy" aria-label="たとえ話で理解">
+        <h2><span aria-hidden="true">&#127859;</span> 出前キッチンで理解する AWS Local Zones</h2>
+        <p style="margin-bottom: 20px;">大きなレストラン（AWSリージョン）は郊外にあって品揃えは抜群ですが、都心のお客さんへの配達には時間がかかります。そこで、<strong>都心に出前専用の小さなキッチン（Local Zone）を開設</strong>し、人気メニューだけを素早く届ける ── これがAWS Local Zonesの考え方です。</p>
+
+        <div class="analogy-table-wrapper">
+            <table class="analogy-table" aria-label="たとえ話の対応表">
+                <thead>
+                    <tr>
+                        <th scope="col"><span class="analogy-emoji" aria-hidden="true">&#127859;</span> 出前キッチンの世界</th>
+                        <th scope="col"><span class="analogy-emoji" aria-hidden="true">&#9729;</span> AWSの世界</th>
+                        <th scope="col">ポイント</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>郊外の大型レストラン（本店）</td>
+                        <td>AWS リージョン（例: 東京）</td>
+                        <td>フルメニュー（全サービス）が揃う拠点</td>
+                    </tr>
+                    <tr>
+                        <td>都心の出前キッチン</td>
+                        <td>Local Zone（例: 大阪）</td>
+                        <td>人気メニュー（EC2等）だけ出す小規模拠点</td>
+                    </tr>
+                    <tr>
+                        <td>出前キッチンのメニュー</td>
+                        <td>EC2, EBS, ELB, VPCサブネット等</td>
+                        <td>限定メニュー＝利用可能サービスのサブセット</td>
+                    </tr>
+                    <tr>
+                        <td>本店にしかないメニュー</td>
+                        <td>RDS, S3, Lambda, etc.</td>
+                        <td>出前キッチンでは扱わない＝リージョン限定サービス</td>
+                    </tr>
+                    <tr>
+                        <td>出前キッチンの住所</td>
+                        <td>Local Zoneの AZ 名（例: ap-northeast-1-tky-1a）</td>
+                        <td>サブネット作成時に指定するゾーン名</td>
+                    </tr>
+                    <tr>
+                        <td>本店と出前キッチンの連絡網</td>
+                        <td>親リージョンとの高帯域プライベート接続</td>
+                        <td>AWSが管理するネットワークで自動接続</td>
+                    </tr>
+                    <tr>
+                        <td>近所のお客さん</td>
+                        <td>エンドユーザー（大都市圏）</td>
+                        <td>距離が近い＝レイテンシーが小さい</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Architecture SVG Diagram
+         ======================================== -->
+    <section class="section" id="architecture" aria-label="アーキテクチャ図">
+        <h2><span aria-hidden="true">&#128466;</span> AWS Local Zones アーキテクチャ概要図</h2>
+        <p style="margin-bottom: 20px;">親リージョンのVPCにLocal Zoneサブネットを追加し、低レイテンシーが必要なリソースだけをLocal Zoneに配置します。</p>
+
+        <!--
+            ノード配置表:
+            ============================================================
+            ノード名                  | x     | y     | 種類
+            ============================================================
+            エンドユーザー            | 80    | 200   | on-prem
+            Local Zone EC2           | 360   | 200   | aws service
+            Local Zone ELB           | 360   | 360   | endpoint/network
+            親リージョン VPC         | 640   | 200   | private resource
+            RDS / S3                 | 920   | 200   | aws service
+            CloudFront               | 920   | 360   | endpoint/network
+            ============================================================
+            ※ 上段4ノード: メインフロー（ユーザー→LZ→リージョン→DB/Storage）
+            ※ 下段2ノード: 補助サービス（LB, CDN）
+        -->
+        <div class="svg-container">
+            <svg viewBox="0 0 1200 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AWS Local Zonesのアーキテクチャ概要図。エンドユーザーからLocal Zone内のEC2・ELBを経由して親リージョンのRDS・S3やCloudFrontへ接続するフロー">
+                <defs>
+                    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+                    </marker>
+                    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+                    </marker>
+                    <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.10"/>
+                    </filter>
+                    <style>
+                        .svg-title { font-family: Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                        .svg-caption { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 500; fill: #475569; }
+                        .svg-node-title { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #1E293B; }
+                        .svg-node-sub { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+                        .svg-zone-label { font-family: Inter, Arial, sans-serif; font-size: 15px; font-weight: 700; fill: #475569; }
+                        .svg-arrow-label { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 600; }
+                    </style>
+                </defs>
+
+                <!-- Page background -->
+                <rect x="0" y="0" width="1200" height="640" fill="#F3F4F6"/>
+
+                <!-- Outer card -->
+                <rect x="24" y="24" width="1152" height="592" rx="22" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+
+                <!-- Title -->
+                <text x="600" y="68" text-anchor="middle" class="svg-title">AWS Local Zones アーキテクチャ概要</text>
+
+                <!-- Inner panel -->
+                <rect x="40" y="92" width="1120" height="508" rx="18" fill="#F8FAFC"/>
+
+                <!-- ===== Zone Labels ===== -->
+                <!-- Local Zone zone box -->
+                <rect x="280" y="110" width="300" height="400" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2" stroke-dasharray="8 4"/>
+                <text x="430" y="140" text-anchor="middle" class="svg-zone-label" fill="#B45309">Local Zone</text>
+
+                <!-- Parent Region zone box -->
+                <rect x="610" y="110" width="520" height="400" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" stroke-dasharray="8 4"/>
+                <text x="870" y="140" text-anchor="middle" class="svg-zone-label" fill="#4338CA">親リージョン（東京）</text>
+
+                <!-- ===== Nodes ===== -->
+                <!-- Node 1: End User (on-prem) -->
+                <g>
+                    <rect x="60" y="220" width="190" height="96" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+                    <text x="155" y="256" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+                        <tspan x="155" dy="0">エンドユーザー</tspan>
+                    </text>
+                    <text x="155" y="284" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+                        <tspan x="155" dy="0">大都市圏</tspan>
+                    </text>
+                </g>
+
+                <!-- Node 2: Local Zone EC2 (aws service) -->
+                <g>
+                    <rect x="310" y="200" width="240" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="430" y="236" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+                        <tspan x="430" dy="0">EC2 インスタンス</tspan>
+                    </text>
+                    <text x="430" y="264" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+                        <tspan x="430" dy="0">低レイテンシー処理</tspan>
+                    </text>
+                </g>
+
+                <!-- Node 3: Local Zone ELB (endpoint) -->
+                <g>
+                    <rect x="310" y="360" width="240" height="96" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+                    <text x="430" y="396" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+                        <tspan x="430" dy="0">ALB / NLB</tspan>
+                    </text>
+                    <text x="430" y="424" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+                        <tspan x="430" dy="0">ロードバランサー</tspan>
+                    </text>
+                </g>
+
+                <!-- Node 4: Parent Region VPC (private resource) -->
+                <g>
+                    <rect x="640" y="200" width="220" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="750" y="236" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+                        <tspan x="750" dy="0">VPC</tspan>
+                    </text>
+                    <text x="750" y="264" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+                        <tspan x="750" dy="0">リージョン全体を管理</tspan>
+                    </text>
+                </g>
+
+                <!-- Node 5: RDS / S3 (aws service) -->
+                <g>
+                    <rect x="900" y="200" width="220" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="1010" y="236" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+                        <tspan x="1010" dy="0">RDS / S3</tspan>
+                    </text>
+                    <text x="1010" y="264" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+                        <tspan x="1010" dy="0">データ永続化</tspan>
+                    </text>
+                </g>
+
+                <!-- Node 6: CloudFront (endpoint) -->
+                <g>
+                    <rect x="900" y="360" width="220" height="96" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+                    <text x="1010" y="396" text-anchor="middle" dominant-baseline="middle" class="svg-node-title">
+                        <tspan x="1010" dy="0">CloudFront</tspan>
+                    </text>
+                    <text x="1010" y="424" text-anchor="middle" dominant-baseline="middle" class="svg-node-sub">
+                        <tspan x="1010" dy="0">静的コンテンツ配信</tspan>
+                    </text>
+                </g>
+
+                <!-- ===== Arrows ===== -->
+                <!-- User → LZ EC2 -->
+                <line x1="250" y1="268" x2="308" y2="248" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+                <text x="272" y="242" class="svg-arrow-label" fill="#3B82F6" text-anchor="middle">低レイテンシー</text>
+
+                <!-- User → LZ ELB -->
+                <line x1="250" y1="290" x2="308" y2="400" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+                <!-- LZ EC2 → VPC -->
+                <line x1="550" y1="248" x2="638" y2="248" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+                <text x="594" y="236" class="svg-arrow-label" fill="#3B82F6" text-anchor="middle">プライベート接続</text>
+
+                <!-- LZ ELB → LZ EC2 -->
+                <line x1="430" y1="360" x2="430" y2="298" stroke="#10B981" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+                <!-- VPC → RDS/S3 -->
+                <line x1="860" y1="248" x2="898" y2="248" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+                <!-- VPC → CloudFront -->
+                <line x1="810" y1="296" x2="898" y2="390" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrow-gray)"/>
+
+                <!-- ===== Legend ===== -->
+                <rect x="60" y="540" width="14" height="14" rx="3" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                <text x="82" y="553" class="svg-node-sub" font-size="12">AWSサービス</text>
+                <rect x="200" y="540" width="14" height="14" rx="3" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5"/>
+                <text x="222" y="553" class="svg-node-sub" font-size="12">ネットワーク</text>
+                <rect x="330" y="540" width="14" height="14" rx="3" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+                <text x="352" y="553" class="svg-node-sub" font-size="12">VPC</text>
+                <rect x="420" y="540" width="14" height="14" rx="3" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                <text x="442" y="553" class="svg-node-sub" font-size="12">オンプレミス/ユーザー</text>
+                <line x1="620" y1="547" x2="660" y2="547" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                <text x="670" y="553" class="svg-node-sub" font-size="12">主要フロー</text>
+                <line x1="770" y1="547" x2="810" y2="547" stroke="#10B981" stroke-width="2" marker-end="url(#arrow-green)"/>
+                <text x="820" y="553" class="svg-node-sub" font-size="12">内部転送</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- ========================================
+         How Local Zones Work
+         ======================================== -->
+    <section class="section" id="how-to-enable" aria-label="仕組みの解説">
+        <h2><span aria-hidden="true">&#128736;</span> Local Zones を有効化する3ステップ</h2>
+        <p style="margin-bottom: 20px;">Local Zoneはデフォルトでは無効です。以下の手順で有効にし、リソースを配置します。</p>
+
+        <div class="step-flow">
+            <span class="step-number">1</span>
+            <div class="step-content">
+                <h4>Local Zone を有効化（オプトイン）</h4>
+                <p>EC2コンソールの「設定」>「ゾーン」から、使いたいLocal Zoneを有効化します。たとえ話なら「出前キッチンの開業届を出す」段階です。</p>
+            </div>
+        </div>
+        <div class="step-flow">
+            <span class="step-number">2</span>
+            <div class="step-content">
+                <h4>VPC にサブネットを追加</h4>
+                <p>親リージョンのVPCに、Local Zoneを指定したサブネットを作成します。「出前キッチンの住所を本店の台帳に登録する」イメージです。</p>
+            </div>
+        </div>
+        <div class="step-flow">
+            <span class="step-number">3</span>
+            <div class="step-content">
+                <h4>リソースを配置</h4>
+                <p>EC2インスタンスやELBをLocal Zoneサブネットに起動します。「出前キッチンにシェフ（EC2）と受付（ELB）を配置する」段階です。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Component Deep Dive
+         ======================================== -->
+    <section class="section" id="available-services" aria-label="主な構成要素">
+        <h2><span aria-hidden="true">&#128220;</span> Local Zone で使える主なサービス</h2>
+        <p style="margin-bottom: 20px;">Local Zoneはリージョンの全サービスが使えるわけではありません。以下がよく使われるサービスです。</p>
+
+        <div class="grid-4">
+            <div class="card card-feature">
+                <div class="card-icon" aria-hidden="true">&#128187;</div>
+                <h4>EC2</h4>
+                <p>低レイテンシーが必要なコンピューティングを、エンドユーザーの近くで実行。</p>
+            </div>
+            <div class="card card-feature">
+                <div class="card-icon" aria-hidden="true">&#128190;</div>
+                <h4>EBS</h4>
+                <p>EC2に接続するブロックストレージ。gp3, io1等のボリュームタイプに対応。</p>
+            </div>
+            <div class="card card-feature">
+                <div class="card-icon" aria-hidden="true">&#9878;</div>
+                <h4>ELB（ALB/NLB）</h4>
+                <p>Local Zone内のEC2にトラフィックを分散。ユーザーに近い場所でLBを実行。</p>
+            </div>
+            <div class="card card-feature">
+                <div class="card-icon" aria-hidden="true">&#128279;</div>
+                <h4>VPC サブネット</h4>
+                <p>親リージョンVPCの一部としてLocal Zoneにサブネットを作成。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Code Examples (Tabbed)
+         ======================================== -->
+    <section class="section" id="code-examples" aria-label="コード例">
+        <h2><span aria-hidden="true">&#128187;</span> 実装例：Local Zone にサブネットとEC2を作成</h2>
+
+        <div class="code-tabs">
+            <div class="code-tab-buttons" role="tablist">
+                <button class="code-tab-btn active" role="tab" aria-selected="true" aria-controls="tab-cli" id="btn-cli" onclick="switchTab('cli')">AWS CLI</button>
+                <button class="code-tab-btn" role="tab" aria-selected="false" aria-controls="tab-cfn" id="btn-cfn" onclick="switchTab('cfn')">CloudFormation</button>
+                <button class="code-tab-btn" role="tab" aria-selected="false" aria-controls="tab-tf" id="btn-tf" onclick="switchTab('tf')">Terraform</button>
+            </div>
+
+            <div class="code-tab-content active" id="tab-cli" role="tabpanel" aria-labelledby="btn-cli">
+                <pre class="code-block"><code><span class="code-comment"># Step 1: Local Zone を有効化（オプトイン）</span>
+aws ec2 modify-availability-zone-group \\
+  --group-name <span class="code-string">"ap-northeast-1-tky-1"</span> \\
+  --opt-in-status <span class="code-string">"opted-in"</span>
+
+<span class="code-comment"># Step 2: Local Zone にサブネットを作成</span>
+aws ec2 create-subnet \\
+  --vpc-id <span class="code-string">"vpc-0abc123def456"</span> \\
+  --cidr-block <span class="code-string">"10.0.10.0/24"</span> \\
+  --availability-zone <span class="code-string">"ap-northeast-1-tky-1a"</span>
+
+<span class="code-comment"># Step 3: EC2 インスタンスを起動</span>
+aws ec2 run-instances \\
+  --image-id <span class="code-string">"ami-0abcdef1234567890"</span> \\
+  --instance-type <span class="code-string">"t3.medium"</span> \\
+  --subnet-id <span class="code-string">"subnet-0localzone123"</span> \\
+  --key-name <span class="code-string">"my-key-pair"</span></code></pre>
+            </div>
+
+            <div class="code-tab-content" id="tab-cfn" role="tabpanel" aria-labelledby="btn-cfn">
+                <pre class="code-block"><code><span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Description:</span> <span class="code-string">'Local Zone Subnet + EC2'</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-value">LocalZoneSubnet:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::Subnet
+    <span class="code-keyword">Properties:</span>
+      VpcId: !Ref MyVPC
+      CidrBlock: <span class="code-string">"10.0.10.0/24"</span>
+      AvailabilityZone: <span class="code-string">"ap-northeast-1-tky-1a"</span>
+      Tags:
+        - Key: Name
+          Value: <span class="code-string">"LocalZone-Subnet"</span>
+
+  <span class="code-value">LocalZoneInstance:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::Instance
+    <span class="code-keyword">Properties:</span>
+      InstanceType: <span class="code-string">"t3.medium"</span>
+      SubnetId: !Ref LocalZoneSubnet
+      ImageId: <span class="code-string">"ami-0abcdef1234567890"</span></code></pre>
+            </div>
+
+            <div class="code-tab-content" id="tab-tf" role="tabpanel" aria-labelledby="btn-tf">
+                <pre class="code-block"><code><span class="code-comment"># Local Zone サブネット</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_subnet"</span> <span class="code-string">"local_zone"</span> {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = <span class="code-string">"10.0.10.0/24"</span>
+  availability_zone = <span class="code-string">"ap-northeast-1-tky-1a"</span>
+
+  tags = {
+    Name = <span class="code-string">"LocalZone-Subnet"</span>
+  }
+}
+
+<span class="code-comment"># EC2 インスタンス</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_instance"</span> <span class="code-string">"lz_app"</span> {
+  ami           = <span class="code-string">"ami-0abcdef1234567890"</span>
+  instance_type = <span class="code-string">"t3.medium"</span>
+  subnet_id     = aws_subnet.local_zone.id
+
+  tags = {
+    Name = <span class="code-string">"LZ-AppServer"</span>
+  }
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Use Cases
+         ======================================== -->
+    <section class="section" id="use-cases" aria-label="ユースケース">
+        <h2><span aria-hidden="true">&#128161;</span> Local Zones の代表的ユースケース</h2>
+        <p style="margin-bottom: 20px;">「1桁ミリ秒のレイテンシーが必要」なワークロードが最適なターゲットです。</p>
+
+        <div class="grid-4">
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">&#127918;</div>
+                <h4>リアルタイムゲーム</h4>
+                <p>ゲームサーバーをプレイヤーの近くに配置し、操作のラグを最小化。</p>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">&#127909;</div>
+                <h4>メディア制作・配信</h4>
+                <p>映像編集やライブストリーミングのレンダリングを低遅延で処理。</p>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">&#129302;</div>
+                <h4>ML/AI リアルタイム推論</h4>
+                <p>推論リクエストを近くのGPUインスタンスで素早く処理し、応答速度を向上。</p>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon" aria-hidden="true">&#128200;</div>
+                <h4>金融トレーディング</h4>
+                <p>取引所の近くでミリ秒単位のレイテンシー削減が求められるワークロード。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Comparison: Region vs Local Zone vs Outposts vs Wavelength
+         ======================================== -->
+    <section class="section" id="comparison" aria-label="比較表">
+        <h2><span aria-hidden="true">&#128270;</span> どこに置く？ Region / Local Zone / Outposts / Wavelength 比較</h2>
+        <p style="margin-bottom: 20px;">AWSには「エッジ側にコンピューティングを配置する」選択肢が複数あります。ワークロードに応じて使い分けましょう。</p>
+
+        <div class="analogy-table-wrapper">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th scope="col">観点</th>
+                        <th scope="col">Region</th>
+                        <th scope="col" class="highlight-col">Local Zone</th>
+                        <th scope="col">Outposts</th>
+                        <th scope="col">Wavelength</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>設置場所</td>
+                        <td>AWSデータセンター群</td>
+                        <td class="highlight-col">大都市近郊の小規模DC</td>
+                        <td>自社データセンター</td>
+                        <td>5Gキャリア基地局内</td>
+                    </tr>
+                    <tr>
+                        <td>たとえ話</td>
+                        <td>郊外の大型レストラン</td>
+                        <td class="highlight-col">都心の出前キッチン</td>
+                        <td>自宅に配送された食材キット</td>
+                        <td>移動販売車（フードトラック）</td>
+                    </tr>
+                    <tr>
+                        <td>運用管理者</td>
+                        <td>AWS</td>
+                        <td class="highlight-col">AWS</td>
+                        <td>AWS（物理設置は顧客施設）</td>
+                        <td>AWS + 通信キャリア</td>
+                    </tr>
+                    <tr>
+                        <td>レイテンシー</td>
+                        <td>数十ms（距離依存）</td>
+                        <td class="highlight-col">1桁ms</td>
+                        <td>サブms（オンプレ内）</td>
+                        <td>超低遅延（5Gエッジ）</td>
+                    </tr>
+                    <tr>
+                        <td>サービス範囲</td>
+                        <td>フルサービス</td>
+                        <td class="highlight-col">EC2, EBS, ELB等のサブセット</td>
+                        <td>EC2, EBS, ECS, RDS等</td>
+                        <td>EC2, EBS等のサブセット</td>
+                    </tr>
+                    <tr>
+                        <td>主なユースケース</td>
+                        <td>一般的なワークロード全般</td>
+                        <td class="highlight-col">都市向け低遅延アプリ</td>
+                        <td>データ主権・ハイブリッド</td>
+                        <td>5Gモバイルアプリ</td>
+                    </tr>
+                    <tr>
+                        <td>追加ハードウェア</td>
+                        <td>不要</td>
+                        <td class="highlight-col">不要</td>
+                        <td>必要（ラック単位で購入）</td>
+                        <td>不要</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Best Practices / Anti-Patterns
+         ======================================== -->
+    <section class="section" id="best-practices" aria-label="ベストプラクティスとアンチパターン">
+        <h2><span aria-hidden="true">&#128736;</span> ベストプラクティス vs アンチパターン</h2>
+
+        <div class="practice-grid">
+            <div class="practice-good">
+                <h3 id="best-practices-good"><span aria-hidden="true">&#9989;</span> ベストプラクティス</h3>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10003;</span>
+                    <p>レイテンシー要件を測定してからLocal Zoneの採用を判断する。「本当に1桁msが必要か？」を確認。</p>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10003;</span>
+                    <p>データ永続化（DB、オブジェクトストレージ）は親リージョンに配置し、コンピューティングだけをLocal Zoneに置く。</p>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10003;</span>
+                    <p>CloudFrontなどCDNと組み合わせて、静的コンテンツはエッジキャッシュ、動的処理だけLocal Zoneに任せる。</p>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10003;</span>
+                    <p>Local Zoneの障害に備え、親リージョンにフォールバック構成を用意しておく。</p>
+                </div>
+            </div>
+            <div class="practice-bad">
+                <h3 id="anti-patterns"><span aria-hidden="true">&#10060;</span> アンチパターン</h3>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10007;</span>
+                    <p>レイテンシー要件がないのに「なんとなく」Local Zoneを使う → コストが上がるだけ。</p>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10007;</span>
+                    <p>RDSやS3をLocal Zoneに配置しようとする → これらのサービスは非対応。親リージョンで使う。</p>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10007;</span>
+                    <p>Local Zoneだけで完結する設計にする → 障害時のフォールバック先がない。</p>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon" aria-hidden="true">&#10007;</span>
+                    <p>AZ（アベイラビリティーゾーン）とLocal Zoneを混同する → Local ZoneはAZの一種だが、サービス範囲が異なる。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         FAQ Accordion
+         ======================================== -->
+    <section class="section" id="faq" aria-label="よくある質問">
+        <h2><span aria-hidden="true">&#10067;</span> よくある質問（FAQ）</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+                <span>Local ZoneとAZ（アベイラビリティーゾーン）の違いは？</span>
+                <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    AZ（アベイラビリティーゾーン）はリージョン内の独立したデータセンター群で、フルサービスが利用可能です。Local Zoneは大都市の近くに設置された小規模拠点で、利用可能なサービスが限定されています。VPC上はAZと同じ仕組み（サブネットをゾーンに紐づける）ですが、使えるサービス範囲が異なります。
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+                <span>Local Zoneの料金はリージョンと同じ？</span>
+                <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    一般的にLocal Zoneのリソース料金はリージョンよりやや高くなります。また、Local Zoneと親リージョン間のデータ転送にも別途料金が発生します。料金は各Local Zoneのロケーションやインスタンスタイプによって異なるため、AWS料金ページで事前に確認しましょう。
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+                <span>日本にLocal Zoneはある？</span>
+                <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    AWSはグローバルにLocal Zoneを展開しており、日本では東京リージョンに関連付けられたLocal Zoneが提供されています。利用可能なLocal Zoneの一覧は、EC2コンソールの「ゾーン」設定またはAWS公式ドキュメントで確認できます。
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+                <span>既存のVPCにLocal Zoneサブネットを追加できる？</span>
+                <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    はい、できます。Local Zoneを有効化した後、既存VPCにLocal Zoneを指定したサブネットを追加するだけです。新しいVPCを作成する必要はありません。ルートテーブルやセキュリティグループも通常のサブネットと同様に設定できます。
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+                <span>Local Zoneが障害になったらどうなる？</span>
+                <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Local Zoneは親リージョンのAZとは独立しているため、Local Zone固有の障害が発生する可能性があります。ベストプラクティスとして、親リージョンのAZにフォールバック用のリソースを用意し、Route 53のヘルスチェックやALBのクロスゾーンロードバランシングで自動切り替えを構成しましょう。
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Cheat Sheet
+         ======================================== -->
+    <section class="cheatsheet" id="cheatsheet" aria-label="チートシート">
+        <h2><span aria-hidden="true">&#128221;</span> AWS Local Zones チートシート</h2>
+
+        <div class="cheatsheet-grid">
+            <div class="cheatsheet-card">
+                <h4><span aria-hidden="true">&#127919;</span> 一言で言うと</h4>
+                <p>「親リージョンのサービスを、大都市の近くに持ってくる仕組み」。低レイテンシーが必要なEC2ワークロードに最適。</p>
+            </div>
+            <div class="cheatsheet-card">
+                <h4><span aria-hidden="true">&#128273;</span> キーワード</h4>
+                <p>オプトイン必要 / VPCサブネット拡張 / 親リージョンのサブセット / 1桁msレイテンシー / EC2・EBS・ELB対応</p>
+            </div>
+            <div class="cheatsheet-card">
+                <h4><span aria-hidden="true">&#128204;</span> 試験で聞かれたら</h4>
+                <p>「特定の大都市のユーザーに低レイテンシーを提供したい」→ Local Zone。「自社DCにAWSを置きたい」→ Outposts。「5Gエッジ」→ Wavelength。</p>
+            </div>
+            <div class="cheatsheet-card">
+                <h4><span aria-hidden="true">&#9888;</span> 注意点</h4>
+                <p>利用可能サービスが限定的 / リージョンより料金が高い / データ転送料が別途発生 / フォールバック設計が必須</p>
+            </div>
+        </div>
+    </section>
+
+</div>
+</main>
+
+<!-- Scroll to Top -->
+<button class="scroll-to-top" id="scroll-to-top" aria-label="ページトップへ戻る" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <span aria-hidden="true">&#8593;</span>
+</button>
+
+<!-- Footer -->
+<footer style="text-align:center; padding:20px; color:#6B7280; font-size:0.85em;">
+    <p>&copy; 2026 AWS Local Zones 学習ガイド</p>
+</footer>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

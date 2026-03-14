@@ -1,0 +1,1026 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Cloudwan Static Routing Segment Sharing V2',
+  pageTitle: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Transit Gateway & ゲートウェイ',
+  slug: 'cloudwan-static-routing-segment-sharing-v2',
+  tocItems: [
+    { id: '1-まず結論-押さえるべき4つのポイント', text: '1. まず結論：押さえるべき4つのポイント', level: 'h2' },
+    { id: 'セグメント共有は双方向がデフォルト', text: 'セグメント共有は双方向がデフォルト', level: 'h3' },
+    { id: 'スタティックルートは共有されない', text: 'スタティックルートは共有されない', level: 'h3' },
+    { id: 'ブラックホールルートは伝搬されない', text: 'ブラックホールルートは伝搬されない', level: 'h3' },
+    { id: 'セグメントはグローバルオブジェクト', text: 'セグメントはグローバルオブジェクト', level: 'h3' },
+    { id: '2-たとえ話-ショッピングモールで理解するcloud-wan', text: '2. たとえ話：ショッピングモールで理解するCloud WAN', level: 'h2' },
+    { id: '3-セグメント共有-segment-sharing-の仕組み', text: '3. セグメント共有（Segment Sharing）の仕組み', level: 'h2' },
+    { id: 'セグメント共有の処理フロー', text: 'セグメント共有の処理フロー', level: 'h3' },
+    { id: '4-deny-filter-allow-filter-で一方向制御', text: '4. deny-filter / allow-filter で一方向制御', level: 'h2' },
+    { id: '5-スタティックルーティング-create-route', text: '5. スタティックルーティング（create-route）', level: 'h2' },
+    { id: '6-isolate-attachments-閉鎖されたゾーン', text: '6. isolate-attachments 「閉鎖されたゾーン」', level: 'h2' },
+    { id: '7-コアネットワークポリシー-json-cli-例', text: '7. コアネットワークポリシー JSON / CLI 例', level: 'h2' },
+    { id: 'セグメント共有の設定', text: 'セグメント共有の設定', level: 'h3' },
+    { id: 'スタティックルート-ブラックホール', text: 'スタティックルート / ブラックホール', level: 'h3' },
+    { id: '統合ポリシー-json-例-end-to-end', text: '統合ポリシー JSON 例（end-to-end）', level: 'h3' },
+    { id: '8-ベストプラクティス-アンチパターン', text: '8. ベストプラクティス ＆ アンチパターン', level: 'h2' },
+    { id: '9-トラブルシューティング', text: '9. トラブルシューティング', level: 'h2' },
+    { id: '10-ans-c01-試験対策-tips', text: '10. ANS-C01 試験対策 Tips', level: 'h2' },
+    { id: '出題されやすいポイント', text: '出題されやすいポイント', level: 'h3' },
+    { id: '引っかけパターン', text: '引っかけパターン', level: 'h3' },
+    { id: '11-よくある質問-faq', text: '11. よくある質問（FAQ）', level: 'h2' },
+    { id: '12-用語集', text: '12. 用語集', level: 'h2' },
+    { id: 'チートシート', text: 'チートシート', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/cloudwan-static-routing-segment-sharing-v2.css',
+};
+
+const rawContent = `
+<!-- スキップリンク -->
+  <a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+
+  <!-- 固定ナビ -->
+  <header class="fixed-nav-header">
+    <div class="fixed-nav-container">
+      <a href="#" class="fixed-nav-logo" aria-label="AWS学習ガイド トップ"><span aria-hidden="true">&#9729;</span> AWS学習ガイド</a>
+      <nav class="fixed-nav-links" aria-label="メインナビゲーション">
+        <a href="#conclusion">結論</a>
+        <a href="#analogy">たとえ話</a>
+        <a href="#sharing">共有</a>
+        <a href="#static-routes">ルート</a>
+        <a href="#code">コード</a>
+        <a href="#exam-tips">試験対策</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 読書進捗 -->
+  <div class="reading-progress" id="readingProgress" role="progressbar" aria-label="読書進捗">
+    <div class="reading-progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- メイン -->
+  <main id="main-content">
+    <div class="container">
+
+      <!-- ブレッドクラム -->
+      <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+        <a href="#" class="breadcrumb-home">AWS学習ガイド</a>
+        <span class="breadcrumb-separator" aria-hidden="true">›</span>
+        <span>ネットワーキング</span>
+        <span class="breadcrumb-separator" aria-hidden="true">›</span>
+        <span>Cloud WAN</span>
+        <span class="breadcrumb-separator" aria-hidden="true">›</span>
+        <span class="breadcrumb-current">スタティックルーティングとセグメント共有</span>
+      </nav>
+
+      <!-- ========================================
+           ヒーロー
+           ======================================== -->
+      <section class="hero" id="hero">
+        <div class="hero-meta">
+          <span class="hero-badge">ANS-C01 対応</span>
+          <span class="hero-badge outline"><span aria-hidden="true">&#128337;</span> 読了時間 約15分</span>
+        </div>
+        <h1>Cloud WAN<br>スタティックルーティングと<br>セグメント共有</h1>
+        <p class="hero-subtitle">コアネットワークポリシーでルーティングを思い通りにコントロールする方法を<br>「ショッピングモール」のたとえ話で完全理解</p>
+      </section>
+
+      <!-- ========================================
+           目次
+           ======================================== -->
+      <nav class="toc" aria-label="目次">
+        <h2 id="目次"><span aria-hidden="true">&#128214;</span> 目次</h2>
+        <div class="toc-grid">
+          <a href="#conclusion" class="toc-item"><span class="toc-num">1</span><span class="toc-label">まず結論：4つのポイント</span></a>
+          <a href="#analogy" class="toc-item"><span class="toc-num">2</span><span class="toc-label">たとえ話：ショッピングモール</span></a>
+          <a href="#sharing" class="toc-item"><span class="toc-num">3</span><span class="toc-label">セグメント共有の仕組み</span></a>
+          <a href="#deny-allow" class="toc-item"><span class="toc-num">4</span><span class="toc-label">deny-filter / allow-filter</span></a>
+          <a href="#static-routes" class="toc-item"><span class="toc-num">5</span><span class="toc-label">スタティックルーティング</span></a>
+          <a href="#isolate" class="toc-item"><span class="toc-num">6</span><span class="toc-label">isolate-attachments</span></a>
+          <a href="#code" class="toc-item"><span class="toc-num">7</span><span class="toc-label">コード例（JSON / CLI）</span></a>
+          <a href="#practices" class="toc-item"><span class="toc-num">8</span><span class="toc-label">ベストプラクティス</span></a>
+          <a href="#troubleshooting" class="toc-item"><span class="toc-num">9</span><span class="toc-label">トラブルシューティング</span></a>
+          <a href="#exam-tips" class="toc-item"><span class="toc-num">10</span><span class="toc-label">ANS-C01 試験対策</span></a>
+          <a href="#faq" class="toc-item"><span class="toc-num">11</span><span class="toc-label">FAQ</span></a>
+          <a href="#glossary" class="toc-item"><span class="toc-num">12</span><span class="toc-label">用語集</span></a>
+        </div>
+      </nav>
+
+      <!-- ========================================
+           1. 結論ファースト
+           ======================================== -->
+      <section class="section" id="conclusion">
+        <h2 id="1-まず結論-押さえるべき4つのポイント"><span aria-hidden="true">&#127919;</span> 1. まず結論：押さえるべき4つのポイント</h2>
+        <div class="conclusion-grid">
+          <div class="conclusion-card">
+            <div class="conclusion-card-icon" aria-hidden="true">&#128256;</div>
+            <h3 id="セグメント共有は双方向がデフォルト">セグメント共有は双方向がデフォルト</h3>
+            <p>2つのセグメントを共有すると、相互にルートが自動広告される。一方向にしたい場合は deny-filter で制御する。</p>
+          </div>
+          <div class="conclusion-card">
+            <div class="conclusion-card-icon" aria-hidden="true">&#128679;</div>
+            <h3 id="スタティックルートは共有されない">スタティックルートは共有されない</h3>
+            <p>attachment-route モードでは、直接接続されたアタッチメントのルートのみが共有対象。スタティックルートは各セグメントで個別に定義が必要。</p>
+          </div>
+          <div class="conclusion-card">
+            <div class="conclusion-card-icon" aria-hidden="true">&#128301;</div>
+            <h3 id="ブラックホールルートは伝搬されない">ブラックホールルートは伝搬されない</h3>
+            <p>create-route で blackhole を指定すれば特定 CIDR 宛トラフィックをドロップできるが、リージョン間では伝搬されない。</p>
+          </div>
+          <div class="conclusion-card">
+            <div class="conclusion-card-icon" aria-hidden="true">&#127760;</div>
+            <h3 id="セグメントはグローバルオブジェクト">セグメントはグローバルオブジェクト</h3>
+            <p>1つのリージョンにルートがあれば他リージョンにもクロスリージョンピアリング経由で伝搬。全リージョンで一貫したルーティングが基本思想。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           2. たとえ話
+           ======================================== -->
+      <section class="section" id="analogy">
+        <h2 id="2-たとえ話-ショッピングモールで理解するcloud-wan"><span aria-hidden="true">&#127981;</span> 2. たとえ話：ショッピングモールで理解するCloud WAN</h2>
+        <p>Cloud WAN のセグメントとルーティングの仕組みを、大型ショッピングモールに例えてみましょう。モール内の各ゾーン（フード、ファッション、エンタメ等）がセグメントに対応し、ゾーン間の通路やフロアマップの看板がルーティングに対応します。</p>
+
+        <div class="svg-container">
+          <!--
+            たとえ話概念図 ノード配置表:
+            上段（セグメント = ゾーン）: 3つ均等 x=165,420,675 y=115
+            下段（ルーティング = 制御）: 3つ均等 x=165,420,675 y=310
+            行ラベル: x=48
+          -->
+          <svg width="960" height="490" viewBox="0 0 960 490" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ショッピングモールに例えたCloud WANの概念図。フードゾーン、ファッションゾーン、エンタメゾーンがセグメントに対応し、固定看板がスタティックルート、共有通路がセグメント共有、立入禁止がブラックホールルートに対応する">
+            <defs>
+              <marker id="m-arr-b" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/></marker>
+              <marker id="m-arr-g" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/></marker>
+              <filter id="m-sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+              <style>
+                .mt{font-family:'Segoe UI',Arial,sans-serif;font-size:22px;font-weight:700;fill:#0F172A;}
+                .ms{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:500;fill:#475569;}
+                .mn{font-family:'Segoe UI',Arial,sans-serif;font-size:17px;font-weight:700;fill:#1E293B;}
+                .mns{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:500;fill:#475569;}
+                .mr{font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;fill:#475569;}
+              </style>
+            </defs>
+            <rect x="0" y="0" width="960" height="490" rx="18" fill="#F3F4F6"/>
+            <rect x="16" y="16" width="928" height="458" rx="14" fill="#FFFFFF" filter="url(#m-sh)"/>
+            <text x="480" y="55" text-anchor="middle" class="mt">ショッピングモールで理解するCloud WAN</text>
+            <text x="480" y="78" text-anchor="middle" class="ms">ゾーン = セグメント ／ 通路 = 共有 ／ 看板 = ルーティング</text>
+            <!-- 行ラベル -->
+            <text x="48" y="150" class="mr"><tspan x="48" dy="0">セグメント</tspan><tspan x="48" dy="20">(ゾーン)</tspan></text>
+            <text x="48" y="342" class="mr"><tspan x="48" dy="0">ルーティング</tspan><tspan x="48" dy="20">(案内・制御)</tspan></text>
+            <!-- パネル -->
+            <rect x="130" y="100" width="800" height="155" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+            <rect x="130" y="295" width="800" height="155" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+            <!-- 上段3つ均等 -->
+            <g><rect x="165" y="115" width="220" height="96" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="275" y="152" text-anchor="middle" dominant-baseline="middle" class="mn"><tspan x="275">&#127836; フードゾーン</tspan></text>
+              <text x="275" y="182" text-anchor="middle" dominant-baseline="middle" class="mns"><tspan x="275">= Production セグメント</tspan></text></g>
+            <g><rect x="420" y="115" width="220" height="96" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+              <text x="530" y="152" text-anchor="middle" dominant-baseline="middle" class="mn"><tspan x="530">&#128087; ファッションゾーン</tspan></text>
+              <text x="530" y="182" text-anchor="middle" dominant-baseline="middle" class="mns"><tspan x="530">= Dev セグメント</tspan></text></g>
+            <g><rect x="675" y="115" width="220" height="96" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="785" y="152" text-anchor="middle" dominant-baseline="middle" class="mn"><tspan x="785">&#127918; エンタメゾーン</tspan></text>
+              <text x="785" y="182" text-anchor="middle" dominant-baseline="middle" class="mns"><tspan x="785">= Shared セグメント</tspan></text></g>
+            <!-- 下段3つ均等 -->
+            <g><rect x="165" y="310" width="220" height="96" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+              <text x="275" y="347" text-anchor="middle" dominant-baseline="middle" class="mn"><tspan x="275">&#128204; 固定の案内看板</tspan></text>
+              <text x="275" y="377" text-anchor="middle" dominant-baseline="middle" class="mns"><tspan x="275">= スタティックルート</tspan></text></g>
+            <g><rect x="420" y="310" width="220" height="96" rx="14" fill="#F0F9FF" stroke="#3B82F6" stroke-width="2"/>
+              <text x="530" y="347" text-anchor="middle" dominant-baseline="middle" class="mn"><tspan x="530">&#128694; ゾーン間の共有通路</tspan></text>
+              <text x="530" y="377" text-anchor="middle" dominant-baseline="middle" class="mns"><tspan x="530">= セグメント共有</tspan></text></g>
+            <g><rect x="675" y="310" width="220" height="96" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+              <text x="785" y="347" text-anchor="middle" dominant-baseline="middle" class="mn"><tspan x="785">&#128683; 立入禁止</tspan></text>
+              <text x="785" y="377" text-anchor="middle" dominant-baseline="middle" class="mns"><tspan x="785">= ブラックホールルート</tspan></text></g>
+            <!-- 矢印 -->
+            <line x1="275" y1="211" x2="480" y2="310" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#m-arr-b)"/>
+            <line x1="530" y1="211" x2="530" y2="305" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#m-arr-b)"/>
+            <line x1="785" y1="211" x2="580" y2="310" stroke="#10B981" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#m-arr-g)"/>
+          </svg>
+        </div>
+
+        <table class="analogy-table">
+          <thead><tr><th>ショッピングモール</th><th>Cloud WAN</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><span aria-hidden="true">&#127981;</span> モール全体</td><td>コアネットワーク</td><td>すべてのゾーン（セグメント）を包括するネットワーク基盤</td></tr>
+            <tr><td><span aria-hidden="true">&#127836;</span> フロアのゾーン</td><td>セグメント</td><td>用途別に分離されたルーティングドメイン。デフォルトでは同ゾーン内テナントだけが相互通信可能</td></tr>
+            <tr><td><span aria-hidden="true">&#128694;</span> ゾーン間の共有通路</td><td>セグメント共有（share）</td><td>通路を開けると双方向に往来可能。一方通行にしたい場合は deny-filter で制限</td></tr>
+            <tr><td><span aria-hidden="true">&#128204;</span> 固定の案内看板</td><td>スタティックルート</td><td>特定のCIDR宛トラフィックを明示的に指定アタッチメントに誘導</td></tr>
+            <tr><td><span aria-hidden="true">&#128683;</span> 「立入禁止」看板</td><td>ブラックホールルート</td><td>特定CIDR宛トラフィックを破棄。行き先なしでドロップ</td></tr>
+            <tr><td><span aria-hidden="true">&#128717;</span> テナント（各店舗）</td><td>アタッチメント</td><td>セグメントに接続されたVPC、VPN、Direct Connect Gateway等</td></tr>
+            <tr><td><span aria-hidden="true">&#127759;</span> 各地の支店</td><td>エッジロケーション</td><td>セグメントはグローバルだが物理的にはリージョンごとにエッジが存在</td></tr>
+            <tr><td><span aria-hidden="true">&#128274;</span> 閉鎖されたゾーン</td><td>isolate-attachments</td><td>同ゾーン内テナント同士も往来禁止。外部との共有通路のみ利用可</td></tr>
+            <tr><td><span aria-hidden="true">&#128221;</span> 入館許可リスト</td><td>allow-filter / deny-filter</td><td>どのゾーンからの客を受け入れるか・拒否するかの明示ルール</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ========================================
+           3. セグメント共有
+           ======================================== -->
+      <section class="section" id="sharing">
+        <h2 id="3-セグメント共有-segment-sharing-の仕組み"><span aria-hidden="true">&#128256;</span> 3. セグメント共有（Segment Sharing）の仕組み</h2>
+        <p>セグメント共有は、異なるセグメントのアタッチメント同士が通信できるようにする機能です。モールのゾーン間に通路を開けるイメージで、デフォルトでは双方向の往来が可能になります。</p>
+
+        <div class="svg-container">
+          <!--
+            セグメント共有 ノード配置表:
+            | ノード                | x中心 | y中心 | サイズ    | カテゴリ   |
+            |--------------------- |-------|-------|---------|-----------|
+            | Shared Servicesセグ   | 490   | 235   | 280x90  | aws-svc   |
+            | Prodセグ              | 200   | 400   | 240x90  | endpoint  |
+            | Devセグ               | 490   | 400   | 240x90  | private   |
+            | Testセグ              | 780   | 400   | 240x90  | routing   |
+            | VPC-S                | 490   | 140   | 200x55  | on-prem   |
+            | VPC-A                | 200   | 530   | 180x50  | on-prem   |
+            | VPC-B                | 490   | 530   | 180x50  | on-prem   |
+            | VPC-C                | 780   | 530   | 180x50  | on-prem   |
+          -->
+          <svg width="1060" height="620" viewBox="0 0 1060 620" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="セグメント共有のアーキテクチャ図。Shared Servicesが中央に位置し、Prod・Dev・Testと双方向ルートを共有するが、Prod・Dev・Test間は直接通信できない構成">
+            <defs>
+              <marker id="s-ab" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/></marker>
+              <marker id="s-ag" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/></marker>
+              <marker id="s-ay" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/></marker>
+              <filter id="s-sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+              <style>
+                .st{font-family:'Segoe UI',sans-serif;font-size:20px;font-weight:700;fill:#0F172A;}
+                .sn{font-family:'Segoe UI',sans-serif;font-size:16px;font-weight:700;fill:#1E293B;}
+                .ss{font-family:'Segoe UI',sans-serif;font-size:13px;font-weight:500;fill:#475569;}
+                .sl{font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:600;}
+                .sv{font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:700;fill:#1E293B;}
+              </style>
+            </defs>
+            <rect width="1060" height="620" rx="18" fill="#F3F4F6"/>
+            <rect x="16" y="16" width="1028" height="588" rx="14" fill="#FFFFFF" filter="url(#s-sh)"/>
+            <text x="530" y="55" text-anchor="middle" class="st">セグメント共有アーキテクチャ &#127981;「ゾーン間の共有通路」</text>
+            <!-- Core Network -->
+            <rect x="50" y="72" width="960" height="520" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="8 4"/>
+            <text x="80" y="97" class="ss" style="font-size:14px;font-weight:700;">Cloud WAN Core Network</text>
+            <!-- VPC-S -->
+            <rect x="390" y="110" width="200" height="55" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="490" y="142" text-anchor="middle" dominant-baseline="middle" class="sv">VPC-S (Shared)</text>
+            <!-- Shared Services -->
+            <rect x="350" y="190" width="280" height="90" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="490" y="225" text-anchor="middle" dominant-baseline="middle" class="sn">Shared Services</text>
+            <text x="490" y="255" text-anchor="middle" dominant-baseline="middle" class="ss">セグメント（共有元）</text>
+            <line x1="490" y1="165" x2="490" y2="186" stroke="#94A3B8" stroke-width="2" marker-end="url(#s-ay)"/>
+            <!-- Prod -->
+            <rect x="80" y="355" width="240" height="90" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <text x="200" y="390" text-anchor="middle" dominant-baseline="middle" class="sn">Prod</text>
+            <text x="200" y="418" text-anchor="middle" dominant-baseline="middle" class="ss">本番環境</text>
+            <!-- Dev -->
+            <rect x="370" y="355" width="240" height="90" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+            <text x="490" y="390" text-anchor="middle" dominant-baseline="middle" class="sn">Dev</text>
+            <text x="490" y="418" text-anchor="middle" dominant-baseline="middle" class="ss">開発環境</text>
+            <!-- Test -->
+            <rect x="660" y="355" width="240" height="90" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+            <text x="780" y="390" text-anchor="middle" dominant-baseline="middle" class="sn">Test</text>
+            <text x="780" y="418" text-anchor="middle" dominant-baseline="middle" class="ss">テスト環境</text>
+            <!-- VPCs下段 -->
+            <rect x="110" y="500" width="180" height="50" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="200" y="530" text-anchor="middle" dominant-baseline="middle" class="sv" style="font-size:13px;">VPC-A (Prod)</text>
+            <rect x="400" y="500" width="180" height="50" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="490" y="530" text-anchor="middle" dominant-baseline="middle" class="sv" style="font-size:13px;">VPC-B (Dev)</text>
+            <rect x="690" y="500" width="180" height="50" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="780" y="530" text-anchor="middle" dominant-baseline="middle" class="sv" style="font-size:13px;">VPC-C (Test)</text>
+            <!-- アタッチメント矢印 -->
+            <line x1="200" y1="500" x2="200" y2="449" stroke="#94A3B8" stroke-width="2" marker-end="url(#s-ay)"/>
+            <line x1="490" y1="500" x2="490" y2="449" stroke="#94A3B8" stroke-width="2" marker-end="url(#s-ay)"/>
+            <line x1="780" y1="500" x2="780" y2="449" stroke="#94A3B8" stroke-width="2" marker-end="url(#s-ay)"/>
+            <!-- 共有矢印 Shared↔Prod -->
+            <line x1="370" y1="270" x2="260" y2="352" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#s-ab)"/>
+            <line x1="240" y1="355" x2="385" y2="278" stroke="#10B981" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#s-ag)"/>
+            <text x="270" y="302" text-anchor="middle" class="sl" fill="#3B82F6">share</text>
+            <!-- 共有矢印 Shared↔Dev -->
+            <line x1="490" y1="280" x2="490" y2="350" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#s-ab)"/>
+            <line x1="505" y1="355" x2="505" y2="285" stroke="#10B981" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#s-ag)"/>
+            <text x="520" y="325" text-anchor="start" class="sl" fill="#3B82F6">share</text>
+            <!-- 共有矢印 Shared↔Test -->
+            <line x1="615" y1="270" x2="720" y2="352" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#s-ab)"/>
+            <line x1="740" y1="355" x2="630" y2="278" stroke="#10B981" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#s-ag)"/>
+            <text x="710" y="302" text-anchor="middle" class="sl" fill="#3B82F6">share</text>
+            <!-- ✗ Prod↔Dev -->
+            <line x1="320" y1="395" x2="370" y2="395" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
+            <text x="345" y="388" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:16px;font-weight:900;fill:#EF4444;">&#10005;</text>
+            <!-- ✗ Dev↔Test -->
+            <line x1="610" y1="395" x2="660" y2="395" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
+            <text x="635" y="388" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:16px;font-weight:900;fill:#EF4444;">&#10005;</text>
+            <!-- 凡例 -->
+            <rect x="50" y="567" width="960" height="28" rx="6" fill="#F1F5F9"/>
+            <line x1="80" y1="581" x2="110" y2="581" stroke="#3B82F6" stroke-width="2.5"/>
+            <text x="118" y="586" style="font-family:'Segoe UI',sans-serif;font-size:12px;fill:#475569;">ルート広告</text>
+            <line x1="215" y1="581" x2="245" y2="581" stroke="#10B981" stroke-width="2.5" stroke-dasharray="6 3"/>
+            <text x="253" y="586" style="font-family:'Segoe UI',sans-serif;font-size:12px;fill:#475569;">戻りルート</text>
+            <line x1="340" y1="581" x2="370" y2="581" stroke="#94A3B8" stroke-width="2"/>
+            <text x="378" y="586" style="font-family:'Segoe UI',sans-serif;font-size:12px;fill:#475569;">接続</text>
+            <text x="430" y="586" style="font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:900;fill:#EF4444;">&#10005;</text>
+            <text x="448" y="586" style="font-family:'Segoe UI',sans-serif;font-size:12px;fill:#475569;">直接共有なし（配列内セグメント間）</text>
+          </svg>
+        </div>
+
+        <div class="note-box warning">
+          <p class="note-box-title"><span aria-hidden="true">&#9888;&#65039;</span> share-with 配列の重要制約</p>
+          <p>share-with に ["Prod","Dev","Test"] と指定した場合、各セグメントは Shared Services と通信可能ですが、Prod ↔ Dev、Dev ↔ Test の直接通信はできません。モールで例えると「各ゾーンから中央ラウンジは行けるが、ゾーン間に直通路はない」状態です。Prod ↔ Dev 間も必要なら、別途 share アクションを追加します。</p>
+        </div>
+
+        <h3 id="セグメント共有の処理フロー">セグメント共有の処理フロー</h3>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-number">1</div>
+            <h4>share アクション定義</h4>
+            <p>ポリシーJSONで共有元と share-with を指定</p>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">&#8594;</div>
+          <div class="flow-step">
+            <div class="flow-step-number">2</div>
+            <h4>双方向ルート広告</h4>
+            <p>アタッチメントルートが相互セグメントへ自動伝搬</p>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">&#8594;</div>
+          <div class="flow-step">
+            <div class="flow-step-number">3</div>
+            <h4>attachment-route</h4>
+            <p>直接接続のルートのみ共有。スタティックは対象外</p>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">&#8594;</div>
+          <div class="flow-step">
+            <div class="flow-step-number">4</div>
+            <h4>フィルタで微調整</h4>
+            <p>deny/allow-filter で一方向制御やアクセス制限を追加</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           4. deny-filter / allow-filter
+           ======================================== -->
+      <section class="section" id="deny-allow">
+        <h2 id="4-deny-filter-allow-filter-で一方向制御"><span aria-hidden="true">&#128274;</span> 4. deny-filter / allow-filter で一方向制御</h2>
+        <p>セグメント共有はデフォルトで双方向ですが、deny-filter を使えば一方向化できます。モールで例えると「ファッションゾーンからフードゾーンに行けるが、フードゾーンからは戻れない（入館許可リストに載っていない）」という状態です。</p>
+
+        <div class="svg-container">
+          <!--
+            deny-filter図 ノード配置表:
+            | ノード                    | x中心 | y中心 | サイズ   |
+            |--------------------------|-------|-------|---------|
+            | shared-services セグメント | 240   | 200   | 260x90  |
+            | test セグメント           | 720   | 200   | 260x90  |
+            | deny-filter: [test]       | 240   | 340   | ラベル  |
+          -->
+          <svg width="960" height="400" viewBox="0 0 960 400" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="deny-filterによる一方向セグメント共有の図。shared-servicesがtestからのルート広告をdeny-filterで拒否し、shared-servicesからtestへの一方向共有を実現する構成">
+            <defs>
+              <marker id="d-ab" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/></marker>
+              <marker id="d-ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#EF4444"/></marker>
+              <filter id="d-sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+              <style>
+                .dt{font-family:'Segoe UI',sans-serif;font-size:20px;font-weight:700;fill:#0F172A;}
+                .dn{font-family:'Segoe UI',sans-serif;font-size:16px;font-weight:700;fill:#1E293B;}
+                .ds{font-family:'Segoe UI',sans-serif;font-size:13px;font-weight:500;fill:#475569;}
+                .dl{font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:700;}
+              </style>
+            </defs>
+            <rect width="960" height="400" rx="18" fill="#F3F4F6"/>
+            <rect x="16" y="16" width="928" height="368" rx="14" fill="#FFFFFF" filter="url(#d-sh)"/>
+            <text x="480" y="55" text-anchor="middle" class="dt">deny-filter による一方向共有 &#128274;「入館拒否リスト」</text>
+            <!-- shared-services -->
+            <rect x="110" y="100" width="260" height="100" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="240" y="138" text-anchor="middle" dominant-baseline="middle" class="dn">shared-services</text>
+            <text x="240" y="168" text-anchor="middle" dominant-baseline="middle" class="ds">deny-filter: ["test"]</text>
+            <!-- deny-filterラベル -->
+            <rect x="130" y="220" width="220" height="42" rx="8" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="240" y="246" text-anchor="middle" dominant-baseline="middle" style="font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:700;fill:#DC2626;">&#128683; test からのルートを拒否</text>
+            <!-- test -->
+            <rect x="590" y="100" width="260" height="100" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+            <text x="720" y="138" text-anchor="middle" dominant-baseline="middle" class="dn">test</text>
+            <text x="720" y="168" text-anchor="middle" dominant-baseline="middle" class="ds">テスト環境セグメント</text>
+            <!-- 矢印: shared → test (OK) -->
+            <line x1="370" y1="135" x2="585" y2="135" stroke="#3B82F6" stroke-width="3" marker-end="url(#d-ab)"/>
+            <text x="480" y="125" text-anchor="middle" class="dl" fill="#3B82F6">&#9989; ルート広告OK</text>
+            <!-- 矢印: test → shared (DENIED) -->
+            <line x1="590" y1="165" x2="375" y2="165" stroke="#EF4444" stroke-width="3" stroke-dasharray="8 5" marker-end="url(#d-ar)"/>
+            <text x="480" y="192" text-anchor="middle" class="dl" fill="#EF4444">&#10060; deny-filter で拒否</text>
+            <!-- 解説 -->
+            <rect x="60" y="290" width="840" height="70" rx="10" fill="#F0F9FF" stroke="#BFDBFE" stroke-width="1"/>
+            <text x="480" y="318" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:600;fill:#1E40AF;">
+              <tspan x="480" dy="0">&#128161; deny-filter はセグメント定義内で指定。share アクション後に適用される。</tspan>
+            </text>
+            <text x="480" y="342" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:13px;fill:#3B82F6;">
+              <tspan x="480" dy="0">allow-filter と deny-filter は同時使用不可。用途に応じて選択すること。</tspan>
+            </text>
+          </svg>
+        </div>
+
+        <div class="component-grid">
+          <div class="component-card red-border">
+            <div class="component-card-icon" aria-hidden="true">&#128683;</div>
+            <h4>deny-filter</h4>
+            <p>指定セグメントからのルートを拒否。「この客は入れない」リスト。share 後に適用されるため、share 定義自体は必要。</p>
+          </div>
+          <div class="component-card green-border">
+            <div class="component-card-icon" aria-hidden="true">&#9989;</div>
+            <h4>allow-filter</h4>
+            <p>指定セグメントからのルートのみ許可。「この客だけOK」リスト。deny-filter との同時利用は不可。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           5. スタティックルーティング
+           ======================================== -->
+      <section class="section" id="static-routes">
+        <h2 id="5-スタティックルーティング-create-route"><span aria-hidden="true">&#128204;</span> 5. スタティックルーティング（create-route）</h2>
+        <p>スタティックルートは、セグメント内に手動で固定のルートエントリを作成する機能です。モールで例えると「特定の行き先を指す固定の案内看板」。動的に変わるのではなく、管理者が明示的に設置します。</p>
+
+        <div class="svg-container">
+          <!--
+            スタティックルート図 ノード配置表:
+            | ノード             | x中心 | y中心 | サイズ    |
+            |-------------------|-------|-------|---------|
+            | us-east-1 Edge    | 220   | 215   | 240x195 |
+            | us-west-2 Edge    | 530   | 215   | 240x195 |
+            | ap-northeast-1    | 840   | 215   | 240x195 |
+            | VPC-1             | 220   | 415   | 220x65  |
+            | VPC-3             | 530   | 415   | 220x65  |
+            | Blackhole         | 840   | 415   | 220x65  |
+          -->
+          <svg width="1060" height="530" viewBox="0 0 1060 530" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="スタティックルーティングの仕組み図。Prodセグメント内の3リージョンエッジにルートテーブルがあり、us-east-1にはVPC-1へのスタティックルートとブラックホールが定義され、us-west-2では伝搬ルートで到達、ap-northeast-1にはブラックホールが個別定義されている">
+            <defs>
+              <marker id="r-ab" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/></marker>
+              <marker id="r-ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#F87171"/></marker>
+              <marker id="r-ay" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/></marker>
+              <filter id="r-sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+              <style>
+                .rt{font-family:'Segoe UI',sans-serif;font-size:20px;font-weight:700;fill:#0F172A;}
+                .rn{font-family:'Segoe UI',sans-serif;font-size:15px;font-weight:700;fill:#1E293B;}
+                .rs{font-family:'Segoe UI',sans-serif;font-size:13px;font-weight:500;fill:#475569;}
+                .rc{font-family:'Consolas','SF Mono',monospace;font-size:12px;fill:#1E293B;}
+                .rcg{font-family:'Consolas','SF Mono',monospace;font-size:12px;fill:#94A3B8;}
+                .rcw{font-family:'Consolas','SF Mono',monospace;font-size:12px;fill:#B45309;font-weight:700;}
+                .rl{font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:600;fill:#94A3B8;}
+              </style>
+            </defs>
+            <rect width="1060" height="530" rx="18" fill="#F3F4F6"/>
+            <rect x="16" y="16" width="1028" height="498" rx="14" fill="#FFFFFF" filter="url(#r-sh)"/>
+            <text x="530" y="52" text-anchor="middle" class="rt">スタティックルーティング &#128204;「固定の案内看板」</text>
+            <!-- Prodセグメント枠 -->
+            <rect x="50" y="68" width="960" height="370" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5" stroke-dasharray="8 4"/>
+            <text x="80" y="92" class="rs" style="font-size:14px;font-weight:700;fill:#6366F1;">Prod セグメント（グローバル）</text>
+            <!-- us-east-1 -->
+            <rect x="80" y="108" width="250" height="195" rx="12" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+            <text x="205" y="134" text-anchor="middle" class="rn">us-east-1 エッジ</text>
+            <rect x="96" y="150" width="218" height="138" rx="8" fill="#FFF" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="205" y="170" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:700;fill:#475569;">ルートテーブル</text>
+            <line x1="100" y1="180" x2="310" y2="180" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="106" y="200" class="rc">10.1.0.0/16 → VPC-1</text>
+            <text x="106" y="222" class="rc">10.2.0.0/16 → VPC-2</text>
+            <rect x="96" y="235" width="218" height="38" fill="#FEFCE8"/>
+            <text x="106" y="258" class="rcw">10.99.0.0/16 → BH</text>
+            <text x="260" y="258" style="font-family:'Segoe UI',sans-serif;font-size:10px;fill:#DC2626;font-weight:600;">blackhole</text>
+            <!-- us-west-2 -->
+            <rect x="400" y="108" width="250" height="195" rx="12" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+            <text x="525" y="134" text-anchor="middle" class="rn">us-west-2 エッジ</text>
+            <rect x="416" y="150" width="218" height="138" rx="8" fill="#FFF" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="525" y="170" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:700;fill:#475569;">ルートテーブル</text>
+            <line x1="420" y1="180" x2="630" y2="180" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="426" y="200" class="rcg">10.1.0.0/16 → (伝搬)</text>
+            <text x="426" y="222" class="rc">10.3.0.0/16 → VPC-3</text>
+            <rect x="416" y="235" width="218" height="38" fill="#F1F5F9"/>
+            <text x="426" y="258" style="font-family:'Segoe UI',sans-serif;font-size:12px;fill:#64748B;">伝搬ルートで到達可能</text>
+            <!-- ap-northeast-1 -->
+            <rect x="720" y="108" width="250" height="195" rx="12" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+            <text x="845" y="134" text-anchor="middle" class="rn">ap-northeast-1</text>
+            <rect x="736" y="150" width="218" height="138" rx="8" fill="#FFF" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="845" y="170" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:700;fill:#475569;">ルートテーブル</text>
+            <line x1="740" y1="180" x2="950" y2="180" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="746" y="200" class="rcg">10.1.0.0/16 → (伝搬)</text>
+            <text x="746" y="222" class="rc">10.4.0.0/16 → VPC-4</text>
+            <rect x="736" y="235" width="218" height="38" fill="#FEFCE8"/>
+            <text x="746" y="258" class="rcw">10.99.0.0/16 → BH</text>
+            <text x="900" y="258" style="font-family:'Segoe UI',sans-serif;font-size:10px;fill:#DC2626;font-weight:600;">blackhole</text>
+            <!-- クロスリージョン伝搬矢印 -->
+            <line x1="330" y1="215" x2="396" y2="215" stroke="#94A3B8" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#r-ay)"/>
+            <text x="363" y="207" text-anchor="middle" class="rl">伝搬</text>
+            <line x1="650" y1="215" x2="716" y2="215" stroke="#94A3B8" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#r-ay)"/>
+            <text x="683" y="207" text-anchor="middle" class="rl">伝搬</text>
+            <!-- 下段 VPC/Blackhole -->
+            <rect x="95" y="360" width="220" height="60" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="205" y="387" text-anchor="middle" class="rn" style="font-size:14px;">VPC-1</text>
+            <text x="205" y="407" text-anchor="middle" class="rs">10.1.0.0/16</text>
+            <rect x="415" y="360" width="220" height="60" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="525" y="387" text-anchor="middle" class="rn" style="font-size:14px;">VPC-3</text>
+            <text x="525" y="407" text-anchor="middle" class="rs">10.3.0.0/16</text>
+            <rect x="735" y="360" width="220" height="60" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="845" y="387" text-anchor="middle" class="rn" style="font-size:14px;fill:#DC2626;">Blackhole</text>
+            <text x="845" y="407" text-anchor="middle" class="rs">10.99.0.0/16 → DROP</text>
+            <!-- 接続矢印 -->
+            <line x1="205" y1="303" x2="205" y2="356" stroke="#3B82F6" stroke-width="2" marker-end="url(#r-ab)"/>
+            <line x1="525" y1="303" x2="525" y2="356" stroke="#3B82F6" stroke-width="2" marker-end="url(#r-ab)"/>
+            <line x1="845" y1="303" x2="845" y2="356" stroke="#F87171" stroke-width="2" marker-end="url(#r-ar)"/>
+            <!-- 注釈 -->
+            <rect x="50" y="450" width="960" height="60" rx="10" fill="#F0F9FF" stroke="#BFDBFE" stroke-width="1"/>
+            <text x="530" y="475" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:600;fill:#1E40AF;">&#128161; スタティックルートは create-route で各セグメントに個別定義。ブラックホールはリージョン間で伝搬されない。</text>
+            <text x="530" y="498" text-anchor="middle" style="font-family:'Segoe UI',sans-serif;font-size:13px;fill:#3B82F6;">ローカルにアタッチメントがないリージョンは、クロスリージョンピアリング経由で別リージョンの経路を利用</text>
+          </svg>
+        </div>
+
+        <div class="note-box danger">
+          <p class="note-box-title"><span aria-hidden="true">&#9888;&#65039;</span> 最重要ポイント：スタティックルートとセグメント共有の関係</p>
+          <p>セグメント共有（share）の attachment-route モードでは、<strong>直接接続されたアタッチメントのルートだけ</strong>が共有されます。スタティックルートは共有対象外。複数セグメントで同じスタティックルートが必要な場合は、それぞれのセグメントで個別に create-route 文を記述してください。</p>
+        </div>
+      </section>
+
+      <!-- ========================================
+           6. isolate-attachments
+           ======================================== -->
+      <section class="section" id="isolate">
+        <h2 id="6-isolate-attachments-閉鎖されたゾーン"><span aria-hidden="true">&#128274;</span> 6. isolate-attachments &#127981;「閉鎖されたゾーン」</h2>
+        <p>isolate-attachments を true にすると、同じセグメント内のアタッチメント同士が通信できなくなります。モールで例えると「同じゾーン内のテナント同士にも壁がある」状態です。外部セグメントとの share ルートやスタティックルート経由でのみ通信可能になります。</p>
+
+        <div class="svg-container">
+          <!--
+            isolate-attachments図 ノード配置表:
+            | ノード            | x中心 | y中心 |
+            |------------------|-------|-------|
+            | Dev セグメント     | 480   | 140   |（枠）
+            | VPC-A            | 200   | 180   |
+            | VPC-B            | 480   | 180   |
+            | VPC-C            | 760   | 180   |
+            | Shared Services  | 480   | 320   |
+          -->
+          <svg width="960" height="380" viewBox="0 0 960 380" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="isolate-attachmentsの動作図。Devセグメント内の3つのVPC間に壁があり直接通信不可。Shared Servicesセグメント経由でのみ通信できる構成">
+            <defs>
+              <marker id="i-ab" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/></marker>
+              <filter id="i-sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+              <style>
+                .it{font-family:'Segoe UI',sans-serif;font-size:20px;font-weight:700;fill:#0F172A;}
+                .in{font-family:'Segoe UI',sans-serif;font-size:15px;font-weight:700;fill:#1E293B;}
+                .is{font-family:'Segoe UI',sans-serif;font-size:13px;font-weight:500;fill:#475569;}
+              </style>
+            </defs>
+            <rect width="960" height="380" rx="18" fill="#F3F4F6"/>
+            <rect x="16" y="16" width="928" height="348" rx="14" fill="#FFFFFF" filter="url(#i-sh)"/>
+            <text x="480" y="52" text-anchor="middle" class="it">isolate-attachments: true &#128274;「壁のあるゾーン」</text>
+            <!-- Dev セグメント枠 -->
+            <rect x="60" y="75" width="840" height="145" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2" stroke-dasharray="8 4"/>
+            <text x="90" y="100" class="is" style="font-weight:700;fill:#059669;">Dev セグメント (isolate-attachments: true)</text>
+            <!-- VPCs -->
+            <rect x="90" y="115" width="200" height="80" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="190" y="155" text-anchor="middle" dominant-baseline="middle" class="in">VPC-A</text>
+            <rect x="380" y="115" width="200" height="80" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="480" y="155" text-anchor="middle" dominant-baseline="middle" class="in">VPC-B</text>
+            <rect x="670" y="115" width="200" height="80" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="770" y="155" text-anchor="middle" dominant-baseline="middle" class="in">VPC-C</text>
+            <!-- ✗ 間 -->
+            <text x="335" y="155" text-anchor="middle" dominant-baseline="middle" style="font-family:'Segoe UI',sans-serif;font-size:24px;font-weight:900;fill:#EF4444;">&#10005;</text>
+            <text x="625" y="155" text-anchor="middle" dominant-baseline="middle" style="font-family:'Segoe UI',sans-serif;font-size:24px;font-weight:900;fill:#EF4444;">&#10005;</text>
+            <!-- Shared Services -->
+            <rect x="310" y="268" width="340" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="480" y="300" text-anchor="middle" dominant-baseline="middle" class="in">Shared Services</text>
+            <text x="480" y="325" text-anchor="middle" dominant-baseline="middle" class="is">share 経由でのみ到達可能</text>
+            <!-- 矢印 -->
+            <line x1="190" y1="195" x2="370" y2="270" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#i-ab)"/>
+            <line x1="480" y1="220" x2="480" y2="264" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#i-ab)"/>
+            <line x1="770" y1="195" x2="590" y2="270" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#i-ab)"/>
+          </svg>
+        </div>
+      </section>
+
+      <!-- ========================================
+           7. コード例
+           ======================================== -->
+      <section class="section" id="code">
+        <h2 id="7-コアネットワークポリシー-json-cli-例"><span aria-hidden="true">&#128187;</span> 7. コアネットワークポリシー JSON / CLI 例</h2>
+
+        <h3 id="セグメント共有の設定">セグメント共有の設定</h3>
+        <div class="code-tabs">
+          <div class="tab-buttons" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="s1">JSON: 基本共有</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="s2">JSON: except 除外</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="s3">JSON: deny-filter</button>
+          </div>
+          <div class="tab-content active" role="tabpanel" id="panel-s1">
+            <pre><code><span class="json-comment">// Shared Services を Prod, Dev と共有</span>
+{
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"share"</span>,
+      <span class="json-key">"mode"</span>: <span class="json-string">"attachment-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"shared-services"</span>,
+      <span class="json-key">"share-with"</span>: [<span class="json-string">"prod"</span>, <span class="json-string">"dev"</span>]
+    }
+  ]
+}
+<span class="json-comment">// ※ prod と dev の間では直接共有されない</span>
+<span class="json-comment">// ※ スタティックルートは共有対象外</span></code></pre>
+          </div>
+          <div class="tab-content" role="tabpanel" id="panel-s2">
+            <pre><code><span class="json-comment">// 全セグメントと共有（dev, prod を除外）</span>
+{
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"share"</span>,
+      <span class="json-key">"mode"</span>: <span class="json-string">"attachment-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"shared-services"</span>,
+      <span class="json-key">"share-with"</span>: {
+        <span class="json-key">"except"</span>: [<span class="json-string">"dev"</span>, <span class="json-string">"prod"</span>]
+      }
+    }
+  ]
+}
+<span class="json-comment">// "*" 全セグメントから except で指定分を除外</span></code></pre>
+          </div>
+          <div class="tab-content" role="tabpanel" id="panel-s3">
+            <pre><code><span class="json-comment">// deny-filter で test→shared の一方向を遮断</span>
+{
+  <span class="json-key">"segments"</span>: [
+    {
+      <span class="json-key">"name"</span>: <span class="json-string">"shared-services"</span>,
+      <span class="json-key">"deny-filter"</span>: [<span class="json-string">"test"</span>]
+    },
+    { <span class="json-key">"name"</span>: <span class="json-string">"test"</span> }
+  ],
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"share"</span>,
+      <span class="json-key">"mode"</span>: <span class="json-string">"attachment-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"shared-services"</span>,
+      <span class="json-key">"share-with"</span>: [<span class="json-string">"test"</span>]
+    }
+  ]
+}
+<span class="json-comment">// shared→test: OK / test→shared: 拒否</span></code></pre>
+          </div>
+        </div>
+
+        <h3 id="スタティックルート-ブラックホール">スタティックルート / ブラックホール</h3>
+        <div class="code-tabs">
+          <div class="tab-buttons" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="r1">JSON: ルート</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="r2">JSON: ブラックホール</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="r3">JSON: 複数セグメント</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="r4">AWS CLI</button>
+          </div>
+          <div class="tab-content active" role="tabpanel" id="panel-r1">
+            <pre><code>{
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"create-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"prod"</span>,
+      <span class="json-key">"destination-cidr-blocks"</span>: [<span class="json-string">"10.1.0.0/16"</span>],
+      <span class="json-key">"destinations"</span>: [<span class="json-string">"attachment-0abc123def456"</span>],
+      <span class="json-key">"description"</span>: <span class="json-string">"Route to on-prem via VPN"</span>
+    }
+  ]
+}
+<span class="json-comment">// 各リージョンに1アタッチメント推奨</span></code></pre>
+          </div>
+          <div class="tab-content" role="tabpanel" id="panel-r2">
+            <pre><code>{
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"create-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"prod"</span>,
+      <span class="json-key">"destination-cidr-blocks"</span>: [<span class="json-string">"10.99.0.0/16"</span>],
+      <span class="json-key">"destinations"</span>: [<span class="json-string">"blackhole"</span>],
+      <span class="json-key">"description"</span>: <span class="json-string">"Block legacy CIDR"</span>
+    }
+  ]
+}
+<span class="json-comment">// ⚠ ブラックホールはリージョン間で伝搬されない</span>
+<span class="json-comment">// 必要な全リージョンで個別定義すること</span></code></pre>
+          </div>
+          <div class="tab-content" role="tabpanel" id="panel-r3">
+            <pre><code><span class="json-comment">// 複数セグメントに同じルートが必要→個別定義</span>
+{
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"create-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"prod"</span>,
+      <span class="json-key">"destination-cidr-blocks"</span>: [<span class="json-string">"10.1.0.0/16"</span>],
+      <span class="json-key">"destinations"</span>: [<span class="json-string">"attachment-aaa111"</span>]
+    },
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"create-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"dev"</span>,
+      <span class="json-key">"destination-cidr-blocks"</span>: [<span class="json-string">"10.1.0.0/16"</span>],
+      <span class="json-key">"destinations"</span>: [<span class="json-string">"attachment-bbb222"</span>]
+    }
+  ]
+}
+<span class="json-comment">// share ではスタティックルート非伝搬のため必須</span></code></pre>
+          </div>
+          <div class="tab-content" role="tabpanel" id="panel-r4">
+            <pre><code><span class="json-comment"># ポリシーバージョンの作成と適用</span>
+
+<span class="json-comment"># 1. 現在のポリシーを取得</span>
+<span class="cli-cmd">aws</span> networkmanager get-core-network-policy \\
+  <span class="cli-flag">--core-network-id</span> <span class="cli-val">core-network-0abc123</span> \\
+  <span class="cli-flag">--output</span> json &gt; current-policy.json
+
+<span class="json-comment"># 2. ポリシーを更新（JSONファイルを編集後）</span>
+<span class="cli-cmd">aws</span> networkmanager put-core-network-policy \\
+  <span class="cli-flag">--core-network-id</span> <span class="cli-val">core-network-0abc123</span> \\
+  <span class="cli-flag">--policy-document</span> file://updated-policy.json
+
+<span class="json-comment"># 3. ポリシーバージョンの変更セットを確認</span>
+<span class="cli-cmd">aws</span> networkmanager get-core-network-change-set \\
+  <span class="cli-flag">--core-network-id</span> <span class="cli-val">core-network-0abc123</span> \\
+  <span class="cli-flag">--policy-version-id</span> <span class="cli-val">2</span>
+
+<span class="json-comment"># 4. ポリシーを実行（LIVE適用）</span>
+<span class="cli-cmd">aws</span> networkmanager execute-core-network-change-set \\
+  <span class="cli-flag">--core-network-id</span> <span class="cli-val">core-network-0abc123</span> \\
+  <span class="cli-flag">--policy-version-id</span> <span class="cli-val">2</span></code></pre>
+          </div>
+        </div>
+
+        <h3 id="統合ポリシー-json-例-end-to-end">統合ポリシー JSON 例（end-to-end）</h3>
+        <div class="code-tabs">
+          <div class="tab-buttons" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="full">完全なポリシー例</button>
+          </div>
+          <div class="tab-content active" role="tabpanel" id="panel-full">
+            <pre><code>{
+  <span class="json-key">"version"</span>: <span class="json-string">"2021.12"</span>,
+  <span class="json-key">"core-network-configuration"</span>: {
+    <span class="json-key">"vpn-ecmp-support"</span>: <span class="json-bool">true</span>,
+    <span class="json-key">"dns-support"</span>: <span class="json-bool">true</span>,
+    <span class="json-key">"asn-ranges"</span>: [<span class="json-string">"65000-65100"</span>],
+    <span class="json-key">"edge-locations"</span>: [
+      { <span class="json-key">"location"</span>: <span class="json-string">"us-east-1"</span> },
+      { <span class="json-key">"location"</span>: <span class="json-string">"us-west-2"</span> },
+      { <span class="json-key">"location"</span>: <span class="json-string">"ap-northeast-1"</span> }
+    ]
+  },
+  <span class="json-key">"segments"</span>: [
+    {
+      <span class="json-key">"name"</span>: <span class="json-string">"prod"</span>,
+      <span class="json-key">"require-attachment-acceptance"</span>: <span class="json-bool">true</span>
+    },
+    {
+      <span class="json-key">"name"</span>: <span class="json-string">"dev"</span>,
+      <span class="json-key">"isolate-attachments"</span>: <span class="json-bool">true</span>,
+      <span class="json-key">"require-attachment-acceptance"</span>: <span class="json-bool">false</span>
+    },
+    {
+      <span class="json-key">"name"</span>: <span class="json-string">"shared-services"</span>,
+      <span class="json-key">"deny-filter"</span>: [<span class="json-string">"dev"</span>]
+    }
+  ],
+  <span class="json-key">"segment-actions"</span>: [
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"share"</span>,
+      <span class="json-key">"mode"</span>: <span class="json-string">"attachment-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"shared-services"</span>,
+      <span class="json-key">"share-with"</span>: [<span class="json-string">"prod"</span>, <span class="json-string">"dev"</span>]
+    },
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"create-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"prod"</span>,
+      <span class="json-key">"destination-cidr-blocks"</span>: [<span class="json-string">"10.0.0.0/8"</span>],
+      <span class="json-key">"destinations"</span>: [<span class="json-string">"attachment-vpn001"</span>]
+    },
+    {
+      <span class="json-key">"action"</span>: <span class="json-string">"create-route"</span>,
+      <span class="json-key">"segment"</span>: <span class="json-string">"prod"</span>,
+      <span class="json-key">"destination-cidr-blocks"</span>: [<span class="json-string">"10.99.0.0/16"</span>],
+      <span class="json-key">"destinations"</span>: [<span class="json-string">"blackhole"</span>]
+    }
+  ],
+  <span class="json-key">"attachment-policies"</span>: [
+    {
+      <span class="json-key">"rule-number"</span>: <span class="json-value">100</span>,
+      <span class="json-key">"conditions"</span>: [
+        { <span class="json-key">"type"</span>: <span class="json-string">"tag-value"</span>,
+          <span class="json-key">"operator"</span>: <span class="json-string">"equals"</span>,
+          <span class="json-key">"key"</span>: <span class="json-string">"env"</span>,
+          <span class="json-key">"value"</span>: <span class="json-string">"prod"</span> }
+      ],
+      <span class="json-key">"action"</span>: {
+        <span class="json-key">"association-method"</span>: <span class="json-string">"constant"</span>,
+        <span class="json-key">"segment"</span>: <span class="json-string">"prod"</span>
+      }
+    },
+    {
+      <span class="json-key">"rule-number"</span>: <span class="json-value">200</span>,
+      <span class="json-key">"conditions"</span>: [
+        { <span class="json-key">"type"</span>: <span class="json-string">"tag-value"</span>,
+          <span class="json-key">"operator"</span>: <span class="json-string">"equals"</span>,
+          <span class="json-key">"key"</span>: <span class="json-string">"env"</span>,
+          <span class="json-key">"value"</span>: <span class="json-string">"dev"</span> }
+      ],
+      <span class="json-key">"action"</span>: {
+        <span class="json-key">"association-method"</span>: <span class="json-string">"constant"</span>,
+        <span class="json-key">"segment"</span>: <span class="json-string">"dev"</span>
+      }
+    }
+  ]
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           8. ベストプラクティス
+           ======================================== -->
+      <section class="section" id="practices">
+        <h2 id="8-ベストプラクティス-アンチパターン"><span aria-hidden="true">&#9989;</span> 8. ベストプラクティス ＆ <span aria-hidden="true">&#10060;</span> アンチパターン</h2>
+        <div class="practice-grid">
+          <div class="practice-card good">
+            <h4><span aria-hidden="true">&#9989;</span> 全リージョンにアタッチメントを配置</h4>
+            <p>スタティックルートの destinations に各リージョンのアタッチメントを含め、クロスリージョン伝搬に頼らず最適パスを確保。</p>
+          </div>
+          <div class="practice-card bad">
+            <h4><span aria-hidden="true">&#10060;</span> スタティックルートの共有を期待</h4>
+            <p>attachment-route モードではスタティックルートは共有対象外。各セグメントで明示的に create-route を記述。</p>
+          </div>
+          <div class="practice-card good">
+            <h4><span aria-hidden="true">&#9989;</span> deny-filter で一方向共有を実現</h4>
+            <p>セグメント定義の deny-filter で片方向のルート広告を遮断。セキュリティ境界の設計に活用。</p>
+          </div>
+          <div class="practice-card bad">
+            <h4><span aria-hidden="true">&#10060;</span> share-with配列内の直通を期待</h4>
+            <p>share-with ["A","B"] でも A↔B 間は共有されない。必要なら別途 share アクションを追加。</p>
+          </div>
+          <div class="practice-card good">
+            <h4><span aria-hidden="true">&#9989;</span> ブラックホールを全必要リージョンに定義</h4>
+            <p>ブラックホールルートは伝搬されない。セキュリティ上必要なら全エッジロケーションで個別定義。</p>
+          </div>
+          <div class="practice-card bad">
+            <h4><span aria-hidden="true">&#10060;</span> 1セグメント＝1アタッチメントの乱立</h4>
+            <p>セグメントはグローバルオブジェクト。同じルーティング要件のアタッチメントは同一セグメントにまとめる。</p>
+          </div>
+          <div class="practice-card good">
+            <h4><span aria-hidden="true">&#9989;</span> ポリシー適用前に変更セットを確認</h4>
+            <p>get-core-network-change-set で差分確認してから execute。本番環境への影響を事前に把握。</p>
+          </div>
+          <div class="practice-card bad">
+            <h4><span aria-hidden="true">&#10060;</span> allow-filter と deny-filter の同時使用</h4>
+            <p>1つのセグメントで両方は指定不可。要件に応じてどちらか一方を選択。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           9. トラブルシューティング
+           ======================================== -->
+      <section class="section" id="troubleshooting">
+        <h2 id="9-トラブルシューティング"><span aria-hidden="true">&#128295;</span> 9. トラブルシューティング</h2>
+        <div class="trouble-grid">
+          <div class="trouble-card">
+            <h4><span aria-hidden="true">&#128680;</span> 共有先にルートが表示されない</h4>
+            <p class="symptom">症状: share を設定したのに、共有先セグメントのルートテーブルにルートが出ない</p>
+            <div class="solution">
+              <p><strong>確認1:</strong> そのルートはスタティックルートではないか？ attachment-route モードではスタティックルートは共有対象外。</p>
+              <p><strong>確認2:</strong> deny-filter / allow-filter がルートをブロックしていないか確認。</p>
+              <p><strong>確認3:</strong> アタッチメントが正しいセグメントに関連付けられているか確認。</p>
+            </div>
+          </div>
+          <div class="trouble-card">
+            <h4><span aria-hidden="true">&#128680;</span> ブラックホールが効かないリージョンがある</h4>
+            <p class="symptom">症状: 一部リージョンでブラックホール対象 CIDR 宛のトラフィックが通過する</p>
+            <div class="solution">
+              <p><strong>原因:</strong> ブラックホールルートはリージョン間で伝搬されない。</p>
+              <p><strong>対処:</strong> 必要な全リージョンに個別に create-route (blackhole) を定義する。</p>
+            </div>
+          </div>
+          <div class="trouble-card">
+            <h4><span aria-hidden="true">&#128680;</span> ポリシー適用でエラーが発生</h4>
+            <p class="symptom">症状: put-core-network-policy で ValidationException が返る</p>
+            <div class="solution">
+              <p><strong>確認1:</strong> allow-filter と deny-filter を同時に指定していないか。</p>
+              <p><strong>確認2:</strong> セグメント名が segments 定義と一致しているか（大文字小文字に注意）。</p>
+              <p><strong>確認3:</strong> edge-locations が core-network-configuration のサブセットであるか。</p>
+            </div>
+          </div>
+          <div class="trouble-card">
+            <h4><span aria-hidden="true">&#128680;</span> isolate-attachments でも通信できる</h4>
+            <p class="symptom">症状: isolate-attachments: true にしたのに同セグメント内で通信可能</p>
+            <div class="solution">
+              <p><strong>確認:</strong> ルートテーブルアタッチメントからのルートは isolate-attachments の影響を受けない。ルートテーブルの管理は利用者の責任。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================
+           10. 試験対策
+           ======================================== -->
+      <section class="exam-tips" id="exam-tips">
+        <h2 id="10-ans-c01-試験対策-tips"><span aria-hidden="true">&#128218;</span> 10. ANS-C01 試験対策 Tips</h2>
+        <h3 id="出題されやすいポイント">出題されやすいポイント</h3>
+        <div class="exam-tip-item">
+          <p><strong>Q: セグメント共有でスタティックルートが伝搬されないのはなぜ？</strong> → attachment-route モードでは直接接続のアタッチメントルートのみ共有。スタティック・他セグメント経由のルートは対象外。各セグメントで create-route を個別定義する。</p>
+        </div>
+        <div class="exam-tip-item">
+          <p><strong>Q: share-with の配列内セグメント同士は通信できるか？</strong> → できない。共有元セグメントと各配列セグメント間のみ。配列内のセグメント同士の通信には別途 share が必要。</p>
+        </div>
+        <div class="exam-tip-item">
+          <p><strong>Q: ブラックホールルートはクロスリージョン伝搬されるか？</strong> → されない。AWS公式ドキュメントに明記。全リージョンで個別定義が必要。</p>
+        </div>
+        <div class="exam-tip-item">
+          <p><strong>Q: 一方向のセグメント共有を実現するには？</strong> → segments 定義で deny-filter を使う。share アクション後に適用されるフィルタ。allow-filter との同時使用は不可。</p>
+        </div>
+        <div class="exam-tip-item">
+          <p><strong>Q: isolate-attachments の影響範囲は？</strong> → 同セグメント内のアタッチメント間通信を遮断。ただしルートテーブルアタッチメントからのルートには影響しない。</p>
+        </div>
+
+        <h3 id="引っかけパターン">引っかけパターン</h3>
+        <div class="exam-tip-item">
+          <p><strong>「share を設定すればスタティックルートも共有される」</strong> → <strong>誤り</strong>。attachment-route モードはアタッチメントルートのみ。</p>
+        </div>
+        <div class="exam-tip-item">
+          <p><strong>「ブラックホールは1リージョンで定義すれば全リージョンに効く」</strong> → <strong>誤り</strong>。伝搬されないため個別定義が必要。</p>
+        </div>
+        <div class="exam-tip-item">
+          <p><strong>「allow-filter と deny-filter を組み合わせてきめ細かく制御」</strong> → <strong>誤り</strong>。同時使用は不可。</p>
+        </div>
+      </section>
+
+      <!-- ========================================
+           11. FAQ
+           ======================================== -->
+      <section class="section" id="faq">
+        <h2 id="11-よくある質問-faq"><span aria-hidden="true">&#10067;</span> 11. よくある質問（FAQ）</h2>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">セグメント共有を設定したのにスタティックルートが表示されません</button><div class="faq-answer"><p>仕様どおりの動作です。attachment-route モードでは直接接続されたアタッチメントのルートのみ共有されます。スタティックルートは各セグメントで create-route により個別定義してください。</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">セグメント共有を一方通行にするには？</button><div class="faq-answer"><p>セグメント定義で deny-filter を使います。例: prod セグメントに "deny-filter": ["dev"] を追加すると、dev → prod のルート広告が遮断され、prod → dev のみ維持されます。</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">ブラックホールルートは他リージョンにも伝搬されますか？</button><div class="faq-answer"><p>いいえ。ブラックホールルートはクロスリージョンで伝搬されません。必要な全リージョンで個別に定義してください。</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">share-with ["A","B","C"] で A・B・C 間も共有されますか？</button><div class="faq-answer"><p>いいえ。共有元セグメントとの間でのみ共有されます。配列内のセグメント同士の通信が必要な場合は別途 share アクションを追加してください。</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">isolate-attachments を true にするとどうなりますか？</button><div class="faq-answer"><p>同一セグメント内のアタッチメント同士が通信不可に。share 経由の他セグメントルートやスタティックルートでのみ外部と通信できます。ルートテーブルアタッチメントからのルートは影響を受けません。</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">ルーティングポリシー（routing-policies）を使うには？</button><div class="faq-answer"><p>ポリシーバージョン "2025.11" が必要です。BGPコミュニティサポートも有効になります。新規構築では 2025.11 を推奨します。</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false">except と deny-filter の違いは何ですか？</button><div class="faq-answer"><p>except は share-with 内で「全セグメントから特定セグメントを除外」する指定。deny-filter はセグメント定義内で「特定セグメントからのルート受信を拒否」する指定。except は共有の対象制御、deny-filter は受信後のフィルタリングという違いがあります。</p></div></div>
+      </section>
+
+      <!-- ========================================
+           12. 用語集
+           ======================================== -->
+      <section class="section" id="glossary">
+        <h2 id="12-用語集"><span aria-hidden="true">&#128214;</span> 12. 用語集</h2>
+        <dl class="glossary-grid">
+          <div class="glossary-item"><dt>コアネットワーク（Core Network）</dt><dd>Cloud WAN が管理するグローバルネットワーク。セグメントやエッジを含む最上位の概念。</dd></div>
+          <div class="glossary-item"><dt>セグメント（Segment）</dt><dd>用途別に分離されたルーティングドメイン。デフォルトでは同セグメント内のアタッチメントのみ相互通信可能。</dd></div>
+          <div class="glossary-item"><dt>エッジロケーション（Edge Location）</dt><dd>各AWSリージョンに作成されるCore Network Edge。アタッチメントの接続点。</dd></div>
+          <div class="glossary-item"><dt>アタッチメント（Attachment）</dt><dd>コアネットワークに接続するリソース。VPC、VPN、Direct Connect Gateway、Connect、ルートテーブルの5種類。</dd></div>
+          <div class="glossary-item"><dt>attachment-route モード</dt><dd>セグメント共有の唯一のモード。直接接続されたアタッチメントのルートのみが共有対象。</dd></div>
+          <div class="glossary-item"><dt>ブラックホールルート</dt><dd>create-route で destinations に "blackhole" を指定し、対象CIDRのトラフィックを破棄するルート。</dd></div>
+          <div class="glossary-item"><dt>deny-filter</dt><dd>セグメント定義内で指定。特定セグメントからのルート受信を拒否し、一方向共有を実現。</dd></div>
+          <div class="glossary-item"><dt>allow-filter</dt><dd>セグメント定義内で指定。特定セグメントからのルートのみ受信許可。deny-filterとの同時使用は不可。</dd></div>
+          <div class="glossary-item"><dt>isolate-attachments</dt><dd>セグメント定義内で true に設定すると、同セグメント内アタッチメント間の通信を遮断。</dd></div>
+          <div class="glossary-item"><dt>ルーティングポリシー</dt><dd>バージョン 2025.11 で利用可能。ルートのフィルタ・修正・制御をきめ細かく定義する機能。</dd></div>
+        </dl>
+      </section>
+
+      <!-- ========================================
+           チートシート
+           ======================================== -->
+      <section class="cheatsheet" id="cheatsheet">
+        <h2 id="チートシート"><span aria-hidden="true">&#128221;</span> チートシート</h2>
+        <div class="cheatsheet-grid">
+          <div class="cheatsheet-item">
+            <h4>share アクション</h4>
+            <p>セグメント間のアタッチメントルートを双方向共有。mode は attachment-route のみ。share-with に配列 or except 指定。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>create-route</h4>
+            <p>スタティックルート追加。destinations にアタッチメントID or "blackhole"。リージョンごとに1アタッチメント推奨。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>deny / allow-filter</h4>
+            <p>segments定義内で指定。deny は拒否リスト、allow は許可リスト。同時使用不可。share後に適用。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>ブラックホールルート</h4>
+            <p>destinations を "blackhole" に。トラフィック破棄。伝搬されないので各リージョンで個別定義。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>isolate-attachments</h4>
+            <p>true で同セグメント内通信遮断。share経由 or スタティックルートのみ。ルートテーブルアタッチメントは影響外。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>ポリシーバージョン</h4>
+            <p>2021.12: 基本機能。2025.11: ルーティングポリシー + BGPコミュニティ。新規は2025.11推奨。</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- フッター -->
+  <footer class="page-footer">
+    <p>AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド</p>
+    <p>参考: <a href="https://docs.aws.amazon.com/ja_jp/network-manager/latest/cloudwan/cloudwan-policy-network-actions-routes.html" target="_blank" rel="noopener noreferrer">AWS公式 - Segment actions</a> ｜ <a href="https://docs.aws.amazon.com/ja_jp/network-manager/latest/cloudwan/cloudwan-policies-json.html" target="_blank" rel="noopener noreferrer">AWS公式 - Policy parameters</a></p>
+  </footer>
+
+  <!-- スクロールトップ -->
+  <button class="scroll-to-top" id="scrollTopBtn" aria-label="ページの先頭に戻る"><span aria-hidden="true">&#8593;</span></button>
+
+  <!-- JavaScript -->
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

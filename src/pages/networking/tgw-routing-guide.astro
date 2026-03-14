@@ -1,0 +1,1608 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Tgw Routing Guide',
+  pageTitle: 'Transit Gateway ルーティング完全ガイド - クロスリージョン・クロスアカウントVPC接続',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Transit Gateway & ゲートウェイ',
+  slug: 'tgw-routing-guide',
+  tocItems: [
+    { id: '国際空港ハブで理解するtransit-gateway', text: '国際空港ハブで理解するTransit Gateway', level: 'h2' },
+    { id: '全体アーキテクチャ図', text: '全体アーキテクチャ図', level: 'h2' },
+    { id: 'tgwルーティングの4大要素', text: 'TGWルーティングの4大要素', level: 'h2' },
+    { id: 'ルートテーブルの関係性', text: 'ルートテーブルの関係性', level: 'h2' },
+    { id: '完全なルーティングパス-6ステップ', text: '完全なルーティングパス（6ステップ）', level: 'h2' },
+    { id: '設定が必要なルートエントリ一覧', text: '設定が必要なルートエントリ一覧', level: 'h2' },
+    { id: 'transit-gateway-ピアリングの詳細', text: 'Transit Gateway ピアリングの詳細', level: 'h2' },
+    { id: '実装コード例', text: '実装コード例', level: 'h2' },
+    { id: 'tgwピアリング構築とルート設定', text: 'TGWピアリング構築とルート設定', level: 'h3' },
+    { id: 'ベストプラクティス-vs-アンチパターン', text: 'ベストプラクティス vs アンチパターン', level: 'h2' },
+    { id: 'トラブルシューティング', text: 'トラブルシューティング', level: 'h2' },
+    { id: '試験対策ポイント', text: '試験対策ポイント', level: 'h2' },
+    { id: 'よくある質問-faq', text: 'よくある質問（FAQ）', level: 'h2' },
+    { id: 'チートシート-まとめ', text: 'チートシート まとめ', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/tgw-routing-guide.css',
+};
+
+const rawContent = `
+<!-- ========================================
+     Navigation Header
+     ======================================== -->
+<header class="nav-header">
+    <div class="nav-container">
+        <a href="#" class="nav-logo" aria-label="トップへ戻る">&#9729;&#65039; AWS Networking</a>
+        <nav class="nav-links" aria-label="メインナビゲーション">
+            <a href="#analogy">たとえ話</a>
+            <a href="#routing-core">ルーティング</a>
+            <a href="#full-path">完全パス</a>
+            <a href="#code-examples">コード例</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+    </div>
+</header>
+
+<!-- Reading Progress -->
+<div class="reading-progress" aria-hidden="true">
+    <div class="reading-progress-bar" id="progressBar"></div>
+</div>
+
+<!-- ========================================
+     Main Content
+     ======================================== -->
+<main class="container">
+
+    <!-- Hero Section -->
+    <section class="hero" aria-label="ガイド概要">
+        <span class="hero-badge" aria-hidden="true">&#128640; ANS-C01 / SAP-C02 対応</span>
+        <h1>Transit Gateway ルーティング完全ガイド</h1>
+        <p class="hero-sub">クロスリージョン・クロスアカウントVPC接続の完全なルーティングパスを<br>「国際空港ハブ」のたとえ話で徹底理解</p>
+
+        <div class="takeaways">
+            <div class="takeaway-item">
+                <span class="takeaway-icon" aria-hidden="true">&#128270;</span>
+                <span class="takeaway-text"><strong>TGWルートテーブル</strong>はアタッチメント間のトラフィック転送先を決定する「空港の発着案内板」</span>
+            </div>
+            <div class="takeaway-item">
+                <span class="takeaway-icon" aria-hidden="true">&#9888;&#65039;</span>
+                <span class="takeaway-text"><strong>VPCルートテーブル</strong>はTGWからルートを自動伝播しない。必ず手動更新が必要</span>
+            </div>
+            <div class="takeaway-item">
+                <span class="takeaway-icon" aria-hidden="true">&#127760;</span>
+                <span class="takeaway-text"><strong>TGWピアリング</strong>はクロスリージョン接続に使い、静的ルートのみサポート（自動伝播なし）</span>
+            </div>
+            <div class="takeaway-item">
+                <span class="takeaway-icon" aria-hidden="true">&#128279;</span>
+                <span class="takeaway-text">完全なパスは <strong>VPC RT → TGW RT → ピアリング → TGW RT → VPC RT</strong> の5段構成</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Analogy Section
+         ======================================== -->
+    <section class="section-block" id="analogy">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#9992;&#65039;</span>
+            <h2 id="国際空港ハブで理解するtransit-gateway">国際空港ハブで理解するTransit Gateway</h2>
+        </div>
+
+        <div class="analogy-box">
+            <div class="analogy-title">
+                <span aria-hidden="true">&#128161;</span>
+                たとえ話：国際空港ハブ ネットワーク
+            </div>
+            <p class="analogy-content">
+                あなたが東京から大阪、ニューヨーク、ロンドンへ旅行したいとします。各都市に直行便を飛ばすのは非効率ですよね？
+                そこで<strong>「ハブ空港」</strong>を使います。東京はまずハブ空港へ行き、そこから各都市へ乗り継ぎます。
+                <br><br>
+                <strong>Transit Gateway</strong>はまさにこの「ハブ空港」です。各VPC（都市）を直接つなぐ代わりに、
+                中央のハブを経由することで、管理がシンプルになります。
+                そして<strong>異なるリージョン</strong>のTGWをつなぐ「ピアリング」は、東京の成田空港とロンドンのヒースロー空港の間に
+                <strong>国際線</strong>を開設するようなものです。
+            </p>
+        </div>
+
+        <!-- Analogy Mapping SVG Diagram -->
+        <div class="diagram-container">
+            <!--
+            ノード配置表（空港↔AWS対応図）:
+            左列（空港の世界）x=50, 右列（AWSの世界）x=680
+            中央に矢印（=）と役割テキスト
+            各行: y=130, 210, 290, 370, 450, 530, 610, 690
+            ノードサイズ: 左=240x56, 右=240x56
+            -->
+            <svg width="1200" height="780" viewBox="0 0 1200 780" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="空港ハブのたとえ話とAWSサービスの対応関係を示す図。左側に空港の概念、右側に対応するAWSサービスを配置し、中央に役割の説明を表示">
+                <defs>
+                    <filter id="am-shadow" x="-10%" y="-10%" width="120%" height="120%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0F172A" flood-opacity="0.07"/>
+                    </filter>
+                    <filter id="am-card-shadow" x="-4%" y="-4%" width="108%" height="108%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0F172A" flood-opacity="0.05"/>
+                    </filter>
+                    <linearGradient id="am-connect" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#818CF8" stop-opacity="0.6"/>
+                        <stop offset="50%" stop-color="#A78BFA" stop-opacity="0.9"/>
+                        <stop offset="100%" stop-color="#F59E0B" stop-opacity="0.6"/>
+                    </linearGradient>
+                    <style>
+                        .am-title { font-family: Inter, Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0F172A; }
+                        .am-col-title { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 700; }
+                        .am-node-text { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #1E293B; }
+                        .am-node-emoji { font-family: Inter, Arial, sans-serif; font-size: 16px; }
+                        .am-role { font-family: Inter, Arial, sans-serif; font-size: 11.5px; font-weight: 500; fill: #475569; }
+                        .am-equals { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 800; fill: #A78BFA; }
+                        .am-sub { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 500; fill: #6B7280; }
+                    </style>
+                </defs>
+
+                <!-- Background -->
+                <rect x="0" y="0" width="1200" height="780" fill="#F3F4F6"/>
+                <rect x="16" y="16" width="1168" height="748" rx="20" fill="#FFFFFF" filter="url(#am-shadow)"/>
+
+                <!-- Title -->
+                <text x="600" y="55" text-anchor="middle" class="am-title">&#9992;&#65039; 空港ハブ ↔ AWSサービス 対応マップ</text>
+
+                <!-- ===== Column Headers ===== -->
+                <!-- Airport column header -->
+                <rect x="50" y="72" width="260" height="38" rx="10" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5"/>
+                <text x="180" y="97" text-anchor="middle" class="am-col-title" fill="#4338CA">&#9992;&#65039; 空港の世界</text>
+
+                <!-- AWS column header -->
+                <rect x="890" y="72" width="260" height="38" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                <text x="1020" y="97" text-anchor="middle" class="am-col-title" fill="#92400E">&#9729;&#65039; AWSの世界</text>
+
+                <!-- Center: "役割" label -->
+                <text x="600" y="97" text-anchor="middle" class="am-col-title" fill="#6B7280">役割</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 1: ハブ空港 = Transit Gateway                                      -->
+                <!-- ===================================================================== -->
+                <!-- Airport node -->
+                <rect x="50" y="124" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="160" class="am-node-emoji">&#127963;&#65039;</text>
+                <text x="105" y="152" class="am-node-text">ハブ空港</text>
+                <text x="105" y="172" class="am-sub">すべてが集まる中継拠点</text>
+
+                <!-- AWS node -->
+                <rect x="890" y="124" width="260" height="60" rx="12" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="160" class="am-node-emoji">&#128992;</text>
+                <text x="945" y="152" class="am-node-text">Transit Gateway</text>
+                <text x="945" y="172" class="am-sub">(TGW)</text>
+
+                <!-- Connection + Role -->
+                <line x1="310" y1="154" x2="890" y2="154" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="138" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="159" text-anchor="middle" class="am-role">すべてのネットワーク接続が集まる中継地点</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 2: 各都市 = VPC                                                    -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="204" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="240" class="am-node-emoji">&#127961;&#65039;</text>
+                <text x="105" y="232" class="am-node-text">各都市</text>
+                <text x="105" y="252" class="am-sub">東京・大阪・NY・ロンドン</text>
+
+                <rect x="890" y="204" width="260" height="60" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="240" class="am-node-emoji">&#128423;</text>
+                <text x="945" y="232" class="am-node-text">VPC</text>
+                <text x="945" y="252" class="am-sub">仮想プライベートクラウド</text>
+
+                <line x1="310" y1="234" x2="890" y2="234" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="218" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="239" text-anchor="middle" class="am-role">独立したネットワーク環境（ワークロードが稼働）</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 3: 発着案内板 = TGWルートテーブル                                    -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="284" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="320" class="am-node-emoji">&#128203;</text>
+                <text x="105" y="312" class="am-node-text">空港の発着案内板</text>
+                <text x="105" y="332" class="am-sub">どの便がどのゲートから出発？</text>
+
+                <rect x="890" y="284" width="260" height="60" rx="12" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="320" class="am-node-emoji">&#128208;</text>
+                <text x="945" y="312" class="am-node-text">TGWルートテーブル</text>
+                <text x="945" y="332" class="am-sub">アタッチメント間の転送先定義</text>
+
+                <line x1="310" y1="314" x2="890" y2="314" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="298" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="319" text-anchor="middle" class="am-role">どのアタッチメントへトラフィックを転送するか定義</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 4: 都市内の道路案内 = VPCルートテーブル                               -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="364" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="400" class="am-node-emoji">&#128739;&#65039;</text>
+                <text x="105" y="392" class="am-node-text">都市内の道路案内</text>
+                <text x="105" y="412" class="am-sub">市内のどの道を通る？</text>
+
+                <rect x="890" y="364" width="260" height="60" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="400" class="am-node-emoji">&#128678;</text>
+                <text x="945" y="392" class="am-node-text">VPCルートテーブル</text>
+                <text x="945" y="412" class="am-sub">&#9888;&#65039; 手動更新が必要!</text>
+
+                <line x1="310" y1="394" x2="890" y2="394" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="378" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="399" text-anchor="middle" class="am-role">VPC内サブネットからのトラフィックの送り先を制御</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 5: 空港ゲート = TGWアタッチメント                                    -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="444" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="480" class="am-node-emoji">&#128682;</text>
+                <text x="105" y="472" class="am-node-text">空港ゲート（搭乗口）</text>
+                <text x="105" y="492" class="am-sub">各便の乗降口</text>
+
+                <rect x="890" y="444" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="480" class="am-node-emoji">&#128268;</text>
+                <text x="945" y="472" class="am-node-text">TGWアタッチメント</text>
+                <text x="945" y="492" class="am-sub">VPC / VPN / DX接続点</text>
+
+                <line x1="310" y1="474" x2="890" y2="474" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="458" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="479" text-anchor="middle" class="am-role">VPC、VPN、Direct Connectなどの接続ポイント</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 6: 国際線ルート = TGWピアリング                                     -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="524" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="560" class="am-node-emoji">&#127760;</text>
+                <text x="105" y="552" class="am-node-text">国際線ルート</text>
+                <text x="105" y="572" class="am-sub">成田⇔ヒースロー直行便</text>
+
+                <rect x="890" y="524" width="260" height="60" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="560" class="am-node-emoji">&#128256;</text>
+                <text x="945" y="552" class="am-node-text">TGWピアリング</text>
+                <text x="945" y="572" class="am-sub">&#9888;&#65039; 静的ルートのみ!</text>
+
+                <line x1="310" y1="554" x2="890" y2="554" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="538" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="559" text-anchor="middle" class="am-role">異なるリージョンのTGW同士を接続</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 7: 自動路線登録 = ルート伝播                                        -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="604" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="640" class="am-node-emoji">&#128260;</text>
+                <text x="105" y="632" class="am-node-text">航空会社の自動路線登録</text>
+                <text x="105" y="652" class="am-sub">新路線を自動で案内板に反映</text>
+
+                <rect x="890" y="604" width="260" height="60" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="640" class="am-node-emoji">&#9989;</text>
+                <text x="945" y="632" class="am-node-text">ルート伝播</text>
+                <text x="945" y="652" class="am-sub">VPC/VPNからTGW RTへ自動反映</text>
+
+                <line x1="310" y1="634" x2="890" y2="634" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="618" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="639" text-anchor="middle" class="am-role">アタッチメントからルートを自動取得</text>
+
+                <!-- ===================================================================== -->
+                <!-- Row 8: チャーター便 = 静的ルート                                        -->
+                <!-- ===================================================================== -->
+                <rect x="50" y="684" width="260" height="60" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="80" y="720" class="am-node-emoji">&#128295;</text>
+                <text x="105" y="712" class="am-node-text">チャーター便の手配</text>
+                <text x="105" y="732" class="am-sub">手動で路線を個別に手配</text>
+
+                <rect x="890" y="684" width="260" height="60" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="2" filter="url(#am-card-shadow)"/>
+                <text x="920" y="720" class="am-node-emoji">&#128295;</text>
+                <text x="945" y="712" class="am-node-text">静的ルート</text>
+                <text x="945" y="732" class="am-sub">ピアリング時は必須!</text>
+
+                <line x1="310" y1="714" x2="890" y2="714" stroke="url(#am-connect)" stroke-width="2" stroke-dasharray="6 4"/>
+                <rect x="400" y="698" width="400" height="32" rx="6" fill="#FAFAFE" stroke="#E5E7EB" stroke-width="1"/>
+                <text x="600" y="719" text-anchor="middle" class="am-role">手動で定義する特定の経路</text>
+
+                <!-- ===== Decorative "=" symbols on connector lines ===== -->
+                <text x="350" y="160" class="am-equals">=</text>
+                <text x="350" y="240" class="am-equals">=</text>
+                <text x="350" y="320" class="am-equals">=</text>
+                <text x="350" y="400" class="am-equals">=</text>
+                <text x="350" y="480" class="am-equals">=</text>
+                <text x="350" y="560" class="am-equals">=</text>
+                <text x="350" y="640" class="am-equals">=</text>
+                <text x="350" y="720" class="am-equals">=</text>
+
+                <text x="850" y="160" class="am-equals">=</text>
+                <text x="850" y="240" class="am-equals">=</text>
+                <text x="850" y="320" class="am-equals">=</text>
+                <text x="850" y="400" class="am-equals">=</text>
+                <text x="850" y="480" class="am-equals">=</text>
+                <text x="850" y="560" class="am-equals">=</text>
+                <text x="850" y="640" class="am-equals">=</text>
+                <text x="850" y="720" class="am-equals">=</text>
+            </svg>
+            <p class="diagram-caption">図: 空港ハブのたとえ話と AWS サービスの対応マップ — 左の空港概念が右のAWSサービスに対応</p>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Architecture SVG Diagram 1: Overall
+         ======================================== -->
+    <section class="section-block" id="architecture">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128506;</span>
+            <h2 id="全体アーキテクチャ図">全体アーキテクチャ図</h2>
+        </div>
+
+        <div class="diagram-container">
+            <!-- SVG: Cross-Region TGW Architecture -->
+            <!--
+            ノード配置表:
+            | ノード名              | x    | y    | 色タイプ           |
+            |----------------------|------|------|--------------------|
+            | VPC-A (10.1.0.0/16)  | 60   | 200  | private resource   |
+            | VPC-B (10.2.0.0/16)  | 60   | 350  | private resource   |
+            | TGW (東京リージョン)   | 340  | 270  | aws service        |
+            | TGW Peering          | 560  | 270  | routing/control    |
+            | TGW (大阪リージョン)   | 780  | 270  | aws service        |
+            | VPC-C (10.3.0.0/16)  | 1000 | 200  | private resource   |
+            | VPC-D (10.4.0.0/16)  | 1000 | 350  | private resource   |
+            -->
+            <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="クロスリージョンTransit Gatewayアーキテクチャ全体図。東京リージョンと大阪リージョンの2つのTGWがピアリングで接続され、各リージョンに2つのVPCが接続されている構成">
+                <defs>
+                    <marker id="arr-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arr-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+                    </marker>
+                    <marker id="arr-orange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#F59E0B"/>
+                    </marker>
+                    <filter id="shadow1" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+                    </filter>
+                    <style>
+                        .svg-title { font-family: Inter, Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0F172A; }
+                        .svg-subtitle { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+                        .svg-node-title { font-family: Inter, Arial, sans-serif; font-size: 15px; font-weight: 700; fill: #1E293B; }
+                        .svg-node-sub { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+                        .svg-label { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 600; fill: #475569; }
+                        .svg-region { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #1E40AF; }
+                    </style>
+                </defs>
+
+                <!-- Background -->
+                <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+                <rect x="20" y="20" width="1160" height="480" rx="20" fill="#FFFFFF" filter="url(#shadow1)"/>
+
+                <!-- Title -->
+                <text x="600" y="58" text-anchor="middle" class="svg-title">クロスリージョン Transit Gateway アーキテクチャ</text>
+
+                <!-- Region boxes -->
+                <!-- Tokyo Region -->
+                <rect x="40" y="80" width="520" height="400" rx="16" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="300" y="108" text-anchor="middle" class="svg-region">&#127471;&#127477; 東京リージョン (ap-northeast-1)</text>
+
+                <!-- Osaka Region -->
+                <rect x="640" y="80" width="520" height="400" rx="16" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="900" y="108" text-anchor="middle" class="svg-region">&#127471;&#127477; 大阪リージョン (ap-northeast-3)</text>
+
+                <!-- Account A label -->
+                <rect x="55" y="130" width="210" height="30" rx="6" fill="#DBEAFE"/>
+                <text x="160" y="150" text-anchor="middle" class="svg-label">Account A</text>
+
+                <!-- Account B label -->
+                <rect x="55" y="300" width="210" height="30" rx="6" fill="#DBEAFE"/>
+                <text x="160" y="320" text-anchor="middle" class="svg-label">Account B</text>
+
+                <!-- VPC-A -->
+                <g>
+                    <rect x="60" y="170" width="200" height="90" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="160" y="205" text-anchor="middle" class="svg-node-title">
+                        <tspan x="160" dy="0">VPC-A</tspan>
+                    </text>
+                    <text x="160" y="235" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="160" dy="0">10.1.0.0/16</tspan>
+                    </text>
+                </g>
+
+                <!-- VPC-B -->
+                <g>
+                    <rect x="60" y="340" width="200" height="90" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="160" y="375" text-anchor="middle" class="svg-node-title">
+                        <tspan x="160" dy="0">VPC-B</tspan>
+                    </text>
+                    <text x="160" y="405" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="160" dy="0">10.2.0.0/16</tspan>
+                    </text>
+                </g>
+
+                <!-- TGW Tokyo -->
+                <g>
+                    <rect x="330" y="240" width="210" height="100" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+                    <text x="435" y="278" text-anchor="middle" class="svg-node-title">
+                        <tspan x="435" dy="0">Transit Gateway</tspan>
+                    </text>
+                    <text x="435" y="315" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="435" dy="0">tgw-tokyo-001</tspan>
+                    </text>
+                </g>
+
+                <!-- TGW Peering -->
+                <g>
+                    <rect x="560" y="260" width="180" height="60" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+                    <text x="650" y="296" text-anchor="middle" class="svg-node-title">
+                        <tspan x="650" dy="0">TGW Peering</tspan>
+                    </text>
+                </g>
+
+                <!-- TGW Osaka -->
+                <g>
+                    <rect x="760" y="240" width="210" height="100" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+                    <text x="865" y="278" text-anchor="middle" class="svg-node-title">
+                        <tspan x="865" dy="0">Transit Gateway</tspan>
+                    </text>
+                    <text x="865" y="315" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="865" dy="0">tgw-osaka-001</tspan>
+                    </text>
+                </g>
+
+                <!-- Account C label -->
+                <rect x="935" y="130" width="210" height="30" rx="6" fill="#FEF3C7"/>
+                <text x="1040" y="150" text-anchor="middle" class="svg-label">Account C</text>
+
+                <!-- Account D label -->
+                <rect x="935" y="300" width="210" height="30" rx="6" fill="#FEF3C7"/>
+                <text x="1040" y="320" text-anchor="middle" class="svg-label">Account D</text>
+
+                <!-- VPC-C -->
+                <g>
+                    <rect x="940" y="170" width="200" height="90" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="1040" y="205" text-anchor="middle" class="svg-node-title">
+                        <tspan x="1040" dy="0">VPC-C</tspan>
+                    </text>
+                    <text x="1040" y="235" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="1040" dy="0">10.3.0.0/16</tspan>
+                    </text>
+                </g>
+
+                <!-- VPC-D -->
+                <g>
+                    <rect x="940" y="340" width="200" height="90" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="1040" y="375" text-anchor="middle" class="svg-node-title">
+                        <tspan x="1040" dy="0">VPC-D</tspan>
+                    </text>
+                    <text x="1040" y="405" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="1040" dy="0">10.4.0.0/16</tspan>
+                    </text>
+                </g>
+
+                <!-- Arrows: VPC-A → TGW Tokyo -->
+                <line x1="260" y1="215" x2="325" y2="270" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr-blue)"/>
+                <!-- VPC-B → TGW Tokyo -->
+                <line x1="260" y1="385" x2="325" y2="310" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr-blue)"/>
+
+                <!-- TGW Tokyo → Peering -->
+                <line x1="540" y1="290" x2="555" y2="290" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arr-orange)"/>
+                <!-- Peering → TGW Osaka -->
+                <line x1="740" y1="290" x2="755" y2="290" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arr-orange)"/>
+
+                <!-- TGW Osaka → VPC-C -->
+                <line x1="970" y1="270" x2="940" y2="230" stroke="#10B981" stroke-width="2" marker-end="url(#arr-green)"/>
+                <!-- TGW Osaka → VPC-D -->
+                <line x1="970" y1="310" x2="940" y2="370" stroke="#10B981" stroke-width="2" marker-end="url(#arr-green)"/>
+
+                <!-- Legend -->
+                <rect x="40" y="488" width="12" height="3" fill="#3B82F6"/>
+                <text x="58" y="493" class="svg-label">VPC→TGW</text>
+                <rect x="140" y="488" width="12" height="3" fill="#F59E0B"/>
+                <text x="158" y="493" class="svg-label">ピアリング</text>
+                <rect x="240" y="488" width="12" height="3" fill="#10B981"/>
+                <text x="258" y="493" class="svg-label">TGW→VPC</text>
+            </svg>
+            <p class="diagram-caption">図1: クロスリージョン・クロスアカウントでの Transit Gateway 接続アーキテクチャ</p>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Core Routing Concepts
+         ======================================== -->
+    <section class="section-block" id="routing-core">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128204;</span>
+            <h2 id="tgwルーティングの4大要素">TGWルーティングの4大要素</h2>
+        </div>
+
+        <div class="concept-grid">
+            <div class="concept-card">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128203;</span> TGWルートテーブル
+                </div>
+                <p class="concept-card-desc">
+                    空港の<strong>発着案内板</strong>に相当。アタッチメント間でトラフィックの転送先を定義します。
+                    デフォルトルートテーブルのほか、カスタムルートテーブルを作成して
+                    セグメンテーション（分離）が可能です。
+                </p>
+            </div>
+            <div class="concept-card orange">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128295;</span> 静的ルート
+                </div>
+                <p class="concept-card-desc">
+                    <strong>チャーター便の手配</strong>に相当。管理者が手動で「宛先CIDRブロック → 特定アタッチメント」を定義。
+                    TGWピアリング接続では<strong>必須</strong>（伝播が使えないため）。
+                </p>
+            </div>
+            <div class="concept-card green">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128260;</span> ルート伝播
+                </div>
+                <p class="concept-card-desc">
+                    航空会社が<strong>自動で路線を登録</strong>するイメージ。VPCやVPNアタッチメントのCIDRブロックが
+                    TGWルートテーブルへ自動追加されます。
+                    ただしピアリング接続では伝播が<strong>サポートされません</strong>。
+                </p>
+            </div>
+            <div class="concept-card purple">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128279;</span> アタッチメント関連付け
+                </div>
+                <p class="concept-card-desc">
+                    各搭乗ゲートが<strong>特定のターミナル</strong>に所属するようなもの。各アタッチメントは1つのルートテーブルに
+                    関連付けられ、そのテーブルに基づいてルーティングが行われます。
+                </p>
+            </div>
+        </div>
+
+        <div class="callout callout-warning">
+            <span class="callout-icon" aria-hidden="true">&#9888;&#65039;</span>
+            <div class="callout-content">
+                <strong>最重要ポイント：</strong>
+                VPCルートテーブルはTGWルートテーブルとは完全に独立しています。
+                TGWがルートを自動で伝播しても、VPC側のルートテーブルは<strong>手動で更新</strong>しなければ通信できません。
+                これは「空港が路線を追加しても、市内の道路案内標識は自分で書き換える必要がある」のと同じです。
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         SVG Diagram 2: TGW Route Table Flow
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128200;</span>
+            <h2 id="ルートテーブルの関係性">ルートテーブルの関係性</h2>
+        </div>
+
+        <div class="diagram-container">
+            <!--
+            ノード配置表:
+            | ノード名               | x    | y    | 色タイプ        |
+            |------------------------|------|------|-----------------|
+            | VPC Subnet             | 80   | 180  | private resource|
+            | VPC Route Table        | 80   | 330  | routing/control |
+            | TGW Attachment         | 400  | 180  | endpoint        |
+            | TGW Route Table        | 400  | 330  | aws service     |
+            | Peering Attachment     | 720  | 180  | routing/control |
+            | Remote TGW RT          | 720  | 330  | aws service     |
+            | Remote VPC             | 1000 | 250  | private resource|
+            -->
+            <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VPCルートテーブルとTGWルートテーブルの関係性を示すフロー図。VPCサブネットからリモートVPCまでの経路検索の流れを表している">
+                <defs>
+                    <marker id="arr2-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arr2-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+                    </marker>
+                    <filter id="shadow2" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+                    </filter>
+                </defs>
+
+                <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+                <rect x="20" y="20" width="1160" height="480" rx="20" fill="#FFFFFF" filter="url(#shadow2)"/>
+
+                <text x="600" y="58" text-anchor="middle" class="svg-title">ルートテーブル検索フロー（パケットの経路選択）</text>
+
+                <!-- Row labels -->
+                <text x="50" y="190" class="svg-label" text-anchor="end" transform="rotate(-90, 50, 190)">データプレーン</text>
+                <text x="50" y="350" class="svg-label" text-anchor="end" transform="rotate(-90, 50, 350)">ルーティング制御</text>
+
+                <!-- Horizontal separator -->
+                <line x1="60" y1="260" x2="1140" y2="260" stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4 4"/>
+
+                <!-- VPC Subnet -->
+                <g>
+                    <rect x="80" y="140" width="200" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="180" y="173" text-anchor="middle" class="svg-node-title">
+                        <tspan x="180" dy="0">VPC サブネット</tspan>
+                    </text>
+                    <text x="180" y="200" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="180" dy="0">EC2 / Lambda</tspan>
+                    </text>
+                </g>
+
+                <!-- VPC Route Table -->
+                <g>
+                    <rect x="80" y="300" width="200" height="80" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+                    <text x="180" y="333" text-anchor="middle" class="svg-node-title">
+                        <tspan x="180" dy="0">VPC ルートテーブル</tspan>
+                    </text>
+                    <text x="180" y="360" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="180" dy="0">手動設定が必要</tspan>
+                    </text>
+                </g>
+
+                <!-- TGW Attachment -->
+                <g>
+                    <rect x="380" y="140" width="200" height="80" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+                    <text x="480" y="173" text-anchor="middle" class="svg-node-title">
+                        <tspan x="480" dy="0">TGW</tspan>
+                    </text>
+                    <text x="480" y="200" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="480" dy="0">アタッチメント</tspan>
+                    </text>
+                </g>
+
+                <!-- TGW Route Table -->
+                <g>
+                    <rect x="380" y="300" width="200" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="480" y="333" text-anchor="middle" class="svg-node-title">
+                        <tspan x="480" dy="0">TGW ルートテーブル</tspan>
+                    </text>
+                    <text x="480" y="360" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="480" dy="0">伝播 + 静的ルート</tspan>
+                    </text>
+                </g>
+
+                <!-- Peering Attachment -->
+                <g>
+                    <rect x="680" y="140" width="200" height="80" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+                    <text x="780" y="168" text-anchor="middle" class="svg-node-title">
+                        <tspan x="780" dy="0">ピアリング</tspan>
+                    </text>
+                    <text x="780" y="200" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="780" dy="0">アタッチメント</tspan>
+                    </text>
+                </g>
+
+                <!-- Remote TGW Route Table -->
+                <g>
+                    <rect x="680" y="300" width="200" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="780" y="328" text-anchor="middle" class="svg-node-title">
+                        <tspan x="780" dy="0">リモートTGW</tspan>
+                    </text>
+                    <text x="780" y="360" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="780" dy="0">ルートテーブル</tspan>
+                    </text>
+                </g>
+
+                <!-- Remote VPC -->
+                <g>
+                    <rect x="980" y="200" width="160" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="1060" y="233" text-anchor="middle" class="svg-node-title">
+                        <tspan x="1060" dy="0">リモートVPC</tspan>
+                    </text>
+                    <text x="1060" y="260" text-anchor="middle" class="svg-node-sub">
+                        <tspan x="1060" dy="0">宛先サブネット</tspan>
+                    </text>
+                </g>
+
+                <!-- Arrows -->
+                <!-- Subnet ↓ VPC RT (lookup) -->
+                <line x1="180" y1="220" x2="180" y2="295" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr2-gray)" stroke-dasharray="4 3"/>
+                <text x="195" y="262" class="svg-label">1.経路検索</text>
+
+                <!-- Subnet → TGW -->
+                <line x1="280" y1="180" x2="375" y2="180" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr2-blue)"/>
+                <text x="328" y="170" class="svg-label">2.転送</text>
+
+                <!-- TGW ↓ TGW RT -->
+                <line x1="480" y1="220" x2="480" y2="295" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr2-gray)" stroke-dasharray="4 3"/>
+                <text x="495" y="262" class="svg-label">3.経路検索</text>
+
+                <!-- TGW → Peering -->
+                <line x1="580" y1="180" x2="675" y2="180" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr2-blue)"/>
+                <text x="628" y="170" class="svg-label">4.転送</text>
+
+                <!-- Peering ↓ Remote RT -->
+                <line x1="780" y1="220" x2="780" y2="295" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr2-gray)" stroke-dasharray="4 3"/>
+                <text x="795" y="262" class="svg-label">5.経路検索</text>
+
+                <!-- Remote TGW → Remote VPC -->
+                <line x1="880" y1="340" x2="975" y2="260" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr2-blue)"/>
+                <text x="940" y="290" class="svg-label">6.配送</text>
+
+                <!-- Footer labels -->
+                <text x="180" y="440" text-anchor="middle" class="svg-label">送信元VPC</text>
+                <text x="480" y="440" text-anchor="middle" class="svg-label">ローカルTGW</text>
+                <text x="780" y="440" text-anchor="middle" class="svg-label">ピアリング経由</text>
+                <text x="1060" y="440" text-anchor="middle" class="svg-label">宛先VPC</text>
+
+                <!-- Step numbers -->
+                <text x="600" y="490" text-anchor="middle" class="svg-subtitle">パケットは VPC RT → TGW → TGW RT → ピアリング → リモートTGW RT → リモートVPC の順に処理される</text>
+            </svg>
+            <p class="diagram-caption">図2: パケットの経路選択フロー — 各ルートテーブルの検索と転送の順序</p>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Complete Routing Path
+         ======================================== -->
+    <section class="section-block" id="full-path">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128099;</span>
+            <h2 id="完全なルーティングパス-6ステップ">完全なルーティングパス（6ステップ）</h2>
+        </div>
+
+        <p style="margin-bottom: var(--spacing-lg); font-size: 0.92em; color: var(--color-text-secondary);">
+            VPC-A（東京リージョン、10.1.0.0/16）のEC2インスタンスから、VPC-C（大阪リージョン、10.3.0.0/16）のEC2インスタンスへ通信する場合の完全なルーティングパスです。
+        </p>
+
+        <div class="routing-path">
+            <div class="path-step" data-step="1">
+                <div class="path-step-title">&#9312; VPCルートテーブル検索（送信元VPC-A）</div>
+                <div class="path-step-desc">
+                    EC2（10.1.1.10）が 10.3.1.20 へパケットを送信。VPC-Aのルートテーブルで
+                    <code>10.3.0.0/16 → tgw-tokyo-001</code> のエントリを検索し、TGWへ転送。
+                    <br><strong>&#128161; ここは手動設定が必要！</strong>
+                </div>
+            </div>
+            <div class="path-step" data-step="2">
+                <div class="path-step-title">&#9313; TGWルートテーブル検索（東京TGW）</div>
+                <div class="path-step-desc">
+                    東京TGWがパケットを受信。VPC-Aアタッチメントに関連付けられたTGWルートテーブルで
+                    <code>10.3.0.0/16 → peering-attachment</code> の静的ルートを検索。
+                </div>
+            </div>
+            <div class="path-step" data-step="3">
+                <div class="path-step-title">&#9314; TGWピアリングを通過</div>
+                <div class="path-step-desc">
+                    パケットがピアリング接続を通じて東京リージョンから大阪リージョンへ転送。
+                    AWSバックボーンネットワーク上を暗号化されて転送されます。
+                </div>
+            </div>
+            <div class="path-step" data-step="4">
+                <div class="path-step-title">&#9315; TGWルートテーブル検索（大阪TGW）</div>
+                <div class="path-step-desc">
+                    大阪TGWがパケットを受信。ピアリングアタッチメントに関連付けられたルートテーブルで
+                    <code>10.3.0.0/16 → vpc-c-attachment</code> のルート（伝播 or 静的）を検索。
+                </div>
+            </div>
+            <div class="path-step" data-step="5">
+                <div class="path-step-title">&#9316; VPCルートテーブル検索（宛先VPC-C）</div>
+                <div class="path-step-desc">
+                    VPC-Cのサブネットルートテーブルでローカルルート（<code>10.3.0.0/16 → local</code>）が一致。
+                    VPC内のローカルルーティングでEC2（10.3.1.20）へ配送。
+                </div>
+            </div>
+            <div class="path-step" data-step="6">
+                <div class="path-step-title">&#9317; 戻りの通信（逆方向も同じ6ステップ）</div>
+                <div class="path-step-desc">
+                    レスポンスパケットは逆方向で同じ経路を辿ります。VPC-C RT → 大阪TGW RT → ピアリング → 東京TGW RT → VPC-A。
+                    <strong>双方向のルート設定が必須です。</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="callout callout-danger">
+            <span class="callout-icon" aria-hidden="true">&#128680;</span>
+            <div class="callout-content">
+                <strong>よくある落とし穴：</strong>片方向のルートしか設定していないケース。
+                行きの通信は成功しても、帰りのパケットがルーティングできず通信が失敗します。
+                必ず<strong>両方のVPCルートテーブル</strong>と<strong>両方のTGWルートテーブル</strong>にルートを設定してください。
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Required Route Entries
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128221;</span>
+            <h2 id="設定が必要なルートエントリ一覧">設定が必要なルートエントリ一覧</h2>
+        </div>
+
+        <div class="diagram-container">
+            <!--
+            ノード配置表（ルートエントリ図解）:
+            | ノード名            | x    | y    | w    | h    | 色タイプ         |
+            |--------------------|------|------|------|------|-----------------|
+            | VPC-A RT           | 50   | 135  | 210  | 210  | private resource|
+            | VPC-B RT           | 50   | 370  | 210  | 210  | private resource|
+            | Tokyo TGW RT       | 295  | 135  | 250  | 445  | aws service     |
+            | Peering            | 555  | 300  | 90   | 60   | routing/control |
+            | Osaka TGW RT       | 655  | 135  | 250  | 445  | aws service     |
+            | VPC-C RT           | 940  | 135  | 210  | 210  | private resource|
+            | VPC-D RT           | 940  | 370  | 210  | 210  | private resource|
+            -->
+            <svg width="1200" height="770" viewBox="0 0 1200 770" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="設定が必要なルートエントリ一覧の図解。東京リージョンと大阪リージョンの各ルートテーブルに必要なエントリを色分けで表示。緑は伝播（自動）、オレンジは静的ルート（手動）、青はVPCルート（手動）を示す">
+                <defs>
+                    <marker id="re-arr-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 Z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="re-arr-orange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 Z" fill="#F59E0B"/>
+                    </marker>
+                    <marker id="re-arr-green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 Z" fill="#10B981"/>
+                    </marker>
+                    <filter id="re-shadow" x="-10%" y="-10%" width="120%" height="120%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/>
+                    </filter>
+                    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="110%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0F172A" flood-opacity="0.06"/>
+                    </filter>
+                    <style>
+                        .re-title { font-family: Inter, Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0F172A; }
+                        .re-region { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #1E40AF; }
+                        .re-region-osaka { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #92400E; }
+                        .re-card-title { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #1E293B; }
+                        .re-entry-dest { font-family: 'Consolas', Monaco, monospace; font-size: 11.5px; font-weight: 600; fill: #1E293B; }
+                        .re-entry-arrow { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 500; fill: #94A3B8; }
+                        .re-entry-target { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 600; fill: #475569; }
+                        .re-section-label { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 700; }
+                        .re-badge { font-family: Inter, Arial, sans-serif; font-size: 10.5px; font-weight: 700; fill: #FFFFFF; }
+                        .re-peering-label { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 700; fill: #92400E; }
+                        .re-legend { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 600; fill: #475569; }
+                        .re-note { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #6B7280; }
+                        .re-flow-label { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 600; }
+                    </style>
+                </defs>
+
+                <!-- Background -->
+                <rect x="0" y="0" width="1200" height="770" fill="#F3F4F6"/>
+                <rect x="16" y="16" width="1168" height="738" rx="20" fill="#FFFFFF" filter="url(#re-shadow)"/>
+
+                <!-- Title -->
+                <text x="600" y="55" text-anchor="middle" class="re-title">設定が必要なルートエントリ一覧（図解）</text>
+
+                <!-- ===== Tokyo Region Box ===== -->
+                <rect x="35" y="80" width="515" height="520" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="292" y="105" text-anchor="middle" class="re-region">&#127471;&#127477; 東京リージョン (ap-northeast-1)</text>
+
+                <!-- ===== Osaka Region Box ===== -->
+                <rect x="650" y="80" width="515" height="520" rx="14" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="907" y="105" text-anchor="middle" class="re-region-osaka">&#127471;&#127477; 大阪リージョン (ap-northeast-3)</text>
+
+                <!-- =============================================== -->
+                <!-- VPC-A Route Table Card                          -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="50" y="125" width="210" height="200" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5" filter="url(#card-shadow)"/>
+                    <!-- Header bar -->
+                    <rect x="50" y="125" width="210" height="36" rx="10" fill="#DBEAFE"/>
+                    <rect x="50" y="145" width="210" height="16" fill="#DBEAFE"/>
+                    <text x="155" y="149" text-anchor="middle" class="re-card-title">VPC-A ルートテーブル</text>
+                    <!-- Badge: 手動 -->
+                    <rect x="140" y="168" width="55" height="20" rx="4" fill="#3B82F6"/>
+                    <text x="167" y="182" text-anchor="middle" class="re-badge">&#128295; 手動</text>
+                    <!-- Entry 1 -->
+                    <rect x="60" y="198" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="70" y="215" class="re-entry-dest">10.3.0.0/16</text>
+                    <text x="152" y="215" class="re-entry-arrow">→</text>
+                    <text x="163" y="215" class="re-entry-target">tgw-tokyo</text>
+                    <!-- Entry 2 -->
+                    <rect x="60" y="228" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="70" y="245" class="re-entry-dest">10.4.0.0/16</text>
+                    <text x="152" y="245" class="re-entry-arrow">→</text>
+                    <text x="163" y="245" class="re-entry-target">tgw-tokyo</text>
+                    <!-- Summary note -->
+                    <text x="155" y="280" text-anchor="middle" class="re-note">大阪VPC宛 → TGWへ</text>
+                    <text x="155" y="313" text-anchor="middle" class="re-entry-arrow">Account A</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- VPC-B Route Table Card                          -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="50" y="345" width="210" height="200" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5" filter="url(#card-shadow)"/>
+                    <rect x="50" y="345" width="210" height="36" rx="10" fill="#DBEAFE"/>
+                    <rect x="50" y="365" width="210" height="16" fill="#DBEAFE"/>
+                    <text x="155" y="369" text-anchor="middle" class="re-card-title">VPC-B ルートテーブル</text>
+                    <!-- Badge -->
+                    <rect x="140" y="388" width="55" height="20" rx="4" fill="#3B82F6"/>
+                    <text x="167" y="402" text-anchor="middle" class="re-badge">&#128295; 手動</text>
+                    <!-- Entry 1 -->
+                    <rect x="60" y="418" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="70" y="435" class="re-entry-dest">10.3.0.0/16</text>
+                    <text x="152" y="435" class="re-entry-arrow">→</text>
+                    <text x="163" y="435" class="re-entry-target">tgw-tokyo</text>
+                    <!-- Entry 2 -->
+                    <rect x="60" y="448" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="70" y="465" class="re-entry-dest">10.4.0.0/16</text>
+                    <text x="152" y="465" class="re-entry-arrow">→</text>
+                    <text x="163" y="465" class="re-entry-target">tgw-tokyo</text>
+                    <text x="155" y="500" text-anchor="middle" class="re-note">大阪VPC宛 → TGWへ</text>
+                    <text x="155" y="533" text-anchor="middle" class="re-entry-arrow">Account B</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- Tokyo TGW Route Table Card (large)              -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="290" y="125" width="252" height="445" rx="12" fill="#FFFFFF" stroke="#FDBA74" stroke-width="2" filter="url(#card-shadow)"/>
+                    <!-- Header -->
+                    <rect x="290" y="125" width="252" height="40" rx="12" fill="#FFF7ED"/>
+                    <rect x="290" y="149" width="252" height="16" fill="#FFF7ED"/>
+                    <text x="416" y="151" text-anchor="middle" class="re-card-title">東京 TGW ルートテーブル</text>
+
+                    <!-- Section 1: 伝播（自動） -->
+                    <rect x="300" y="178" width="232" height="22" rx="4" fill="#ECFDF5"/>
+                    <text x="316" y="194" class="re-section-label" fill="#166534">&#9989; 伝播（自動）</text>
+                    <!-- Entry -->
+                    <rect x="300" y="206" width="232" height="24" rx="4" fill="#F0FDF4"/>
+                    <text x="310" y="223" class="re-entry-dest">10.1.0.0/16</text>
+                    <text x="398" y="223" class="re-entry-arrow">→</text>
+                    <text x="411" y="223" class="re-entry-target">VPC-A att</text>
+                    <rect x="300" y="234" width="232" height="24" rx="4" fill="#F0FDF4"/>
+                    <text x="310" y="251" class="re-entry-dest">10.2.0.0/16</text>
+                    <text x="398" y="251" class="re-entry-arrow">→</text>
+                    <text x="411" y="251" class="re-entry-target">VPC-B att</text>
+
+                    <!-- Divider -->
+                    <line x1="310" y1="272" x2="522" y2="272" stroke="#E5E7EB" stroke-width="1"/>
+
+                    <!-- Section 2: 静的ルート（手動） -->
+                    <rect x="300" y="284" width="232" height="22" rx="4" fill="#FEF3C7"/>
+                    <text x="316" y="300" class="re-section-label" fill="#92400E">&#128295; 静的ルート（手動）</text>
+                    <!-- Entry -->
+                    <rect x="300" y="312" width="232" height="24" rx="4" fill="#FFFBEB"/>
+                    <text x="310" y="329" class="re-entry-dest">10.3.0.0/16</text>
+                    <text x="398" y="329" class="re-entry-arrow">→</text>
+                    <text x="411" y="329" class="re-entry-target">Peering att</text>
+                    <rect x="300" y="340" width="232" height="24" rx="4" fill="#FFFBEB"/>
+                    <text x="310" y="357" class="re-entry-dest">10.4.0.0/16</text>
+                    <text x="398" y="357" class="re-entry-arrow">→</text>
+                    <text x="411" y="357" class="re-entry-target">Peering att</text>
+
+                    <!-- Divider -->
+                    <line x1="310" y1="378" x2="522" y2="378" stroke="#E5E7EB" stroke-width="1"/>
+
+                    <!-- Arrows explanation -->
+                    <text x="416" y="405" text-anchor="middle" class="re-note">東京リージョン内VPCの</text>
+                    <text x="416" y="422" text-anchor="middle" class="re-note">CIDRは自動伝播。</text>
+                    <text x="416" y="448" text-anchor="middle" class="re-note">大阪リージョン向けは</text>
+                    <text x="416" y="465" text-anchor="middle" class="re-note">ピアリングへ静的ルート</text>
+
+                    <!-- Visual accent -->
+                    <rect x="300" y="484" width="232" height="30" rx="6" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1"/>
+                    <text x="416" y="504" text-anchor="middle" class="re-section-label" fill="#92400E">tgw-tokyo-001</text>
+
+                    <!-- Badge labels -->
+                    <rect x="300" y="530" width="90" height="18" rx="4" fill="#10B981"/>
+                    <text x="345" y="543" text-anchor="middle" class="re-badge">自動伝播</text>
+                    <rect x="400" y="530" width="90" height="18" rx="4" fill="#F59E0B"/>
+                    <text x="445" y="543" text-anchor="middle" class="re-badge">静的ルート</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- Peering Connection (center)                     -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="555" y="290" width="82" height="80" rx="10" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+                    <text x="596" y="323" text-anchor="middle" class="re-peering-label">TGW</text>
+                    <text x="596" y="340" text-anchor="middle" class="re-peering-label">Peering</text>
+                    <text x="596" y="360" text-anchor="middle" class="re-entry-arrow">静的のみ</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- Osaka TGW Route Table Card (large)              -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="658" y="125" width="252" height="445" rx="12" fill="#FFFFFF" stroke="#FDBA74" stroke-width="2" filter="url(#card-shadow)"/>
+                    <!-- Header -->
+                    <rect x="658" y="125" width="252" height="40" rx="12" fill="#FFF7ED"/>
+                    <rect x="658" y="149" width="252" height="16" fill="#FFF7ED"/>
+                    <text x="784" y="151" text-anchor="middle" class="re-card-title">大阪 TGW ルートテーブル</text>
+
+                    <!-- Section 1: 伝播（自動） -->
+                    <rect x="668" y="178" width="232" height="22" rx="4" fill="#ECFDF5"/>
+                    <text x="684" y="194" class="re-section-label" fill="#166534">&#9989; 伝播（自動）</text>
+                    <rect x="668" y="206" width="232" height="24" rx="4" fill="#F0FDF4"/>
+                    <text x="678" y="223" class="re-entry-dest">10.3.0.0/16</text>
+                    <text x="766" y="223" class="re-entry-arrow">→</text>
+                    <text x="779" y="223" class="re-entry-target">VPC-C att</text>
+                    <rect x="668" y="234" width="232" height="24" rx="4" fill="#F0FDF4"/>
+                    <text x="678" y="251" class="re-entry-dest">10.4.0.0/16</text>
+                    <text x="766" y="251" class="re-entry-arrow">→</text>
+                    <text x="779" y="251" class="re-entry-target">VPC-D att</text>
+
+                    <!-- Divider -->
+                    <line x1="678" y1="272" x2="890" y2="272" stroke="#E5E7EB" stroke-width="1"/>
+
+                    <!-- Section 2: 静的ルート（手動） -->
+                    <rect x="668" y="284" width="232" height="22" rx="4" fill="#FEF3C7"/>
+                    <text x="684" y="300" class="re-section-label" fill="#92400E">&#128295; 静的ルート（手動）</text>
+                    <rect x="668" y="312" width="232" height="24" rx="4" fill="#FFFBEB"/>
+                    <text x="678" y="329" class="re-entry-dest">10.1.0.0/16</text>
+                    <text x="766" y="329" class="re-entry-arrow">→</text>
+                    <text x="779" y="329" class="re-entry-target">Peering att</text>
+                    <rect x="668" y="340" width="232" height="24" rx="4" fill="#FFFBEB"/>
+                    <text x="678" y="357" class="re-entry-dest">10.2.0.0/16</text>
+                    <text x="766" y="357" class="re-entry-arrow">→</text>
+                    <text x="779" y="357" class="re-entry-target">Peering att</text>
+
+                    <!-- Divider -->
+                    <line x1="678" y1="378" x2="890" y2="378" stroke="#E5E7EB" stroke-width="1"/>
+
+                    <text x="784" y="405" text-anchor="middle" class="re-note">大阪リージョン内VPCの</text>
+                    <text x="784" y="422" text-anchor="middle" class="re-note">CIDRは自動伝播。</text>
+                    <text x="784" y="448" text-anchor="middle" class="re-note">東京リージョン向けは</text>
+                    <text x="784" y="465" text-anchor="middle" class="re-note">ピアリングへ静的ルート</text>
+
+                    <rect x="668" y="484" width="232" height="30" rx="6" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1"/>
+                    <text x="784" y="504" text-anchor="middle" class="re-section-label" fill="#92400E">tgw-osaka-001</text>
+
+                    <rect x="668" y="530" width="90" height="18" rx="4" fill="#10B981"/>
+                    <text x="713" y="543" text-anchor="middle" class="re-badge">自動伝播</text>
+                    <rect x="768" y="530" width="90" height="18" rx="4" fill="#F59E0B"/>
+                    <text x="813" y="543" text-anchor="middle" class="re-badge">静的ルート</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- VPC-C Route Table Card                          -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="940" y="125" width="210" height="200" rx="10" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.5" filter="url(#card-shadow)"/>
+                    <rect x="940" y="125" width="210" height="36" rx="10" fill="#FEF3C7"/>
+                    <rect x="940" y="145" width="210" height="16" fill="#FEF3C7"/>
+                    <text x="1045" y="149" text-anchor="middle" class="re-card-title">VPC-C ルートテーブル</text>
+                    <rect x="1030" y="168" width="55" height="20" rx="4" fill="#3B82F6"/>
+                    <text x="1057" y="182" text-anchor="middle" class="re-badge">&#128295; 手動</text>
+                    <rect x="950" y="198" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="960" y="215" class="re-entry-dest">10.1.0.0/16</text>
+                    <text x="1042" y="215" class="re-entry-arrow">→</text>
+                    <text x="1053" y="215" class="re-entry-target">tgw-osaka</text>
+                    <rect x="950" y="228" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="960" y="245" class="re-entry-dest">10.2.0.0/16</text>
+                    <text x="1042" y="245" class="re-entry-arrow">→</text>
+                    <text x="1053" y="245" class="re-entry-target">tgw-osaka</text>
+                    <text x="1045" y="280" text-anchor="middle" class="re-note">東京VPC宛 → TGWへ</text>
+                    <text x="1045" y="313" text-anchor="middle" class="re-entry-arrow">Account C</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- VPC-D Route Table Card                          -->
+                <!-- =============================================== -->
+                <g>
+                    <rect x="940" y="345" width="210" height="200" rx="10" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.5" filter="url(#card-shadow)"/>
+                    <rect x="940" y="345" width="210" height="36" rx="10" fill="#FEF3C7"/>
+                    <rect x="940" y="365" width="210" height="16" fill="#FEF3C7"/>
+                    <text x="1045" y="369" text-anchor="middle" class="re-card-title">VPC-D ルートテーブル</text>
+                    <rect x="1030" y="388" width="55" height="20" rx="4" fill="#3B82F6"/>
+                    <text x="1057" y="402" text-anchor="middle" class="re-badge">&#128295; 手動</text>
+                    <rect x="950" y="418" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="960" y="435" class="re-entry-dest">10.1.0.0/16</text>
+                    <text x="1042" y="435" class="re-entry-arrow">→</text>
+                    <text x="1053" y="435" class="re-entry-target">tgw-osaka</text>
+                    <rect x="950" y="448" width="190" height="24" rx="4" fill="#F0F9FF"/>
+                    <text x="960" y="465" class="re-entry-dest">10.2.0.0/16</text>
+                    <text x="1042" y="465" class="re-entry-arrow">→</text>
+                    <text x="1053" y="465" class="re-entry-target">tgw-osaka</text>
+                    <text x="1045" y="500" text-anchor="middle" class="re-note">東京VPC宛 → TGWへ</text>
+                    <text x="1045" y="533" text-anchor="middle" class="re-entry-arrow">Account D</text>
+                </g>
+
+                <!-- =============================================== -->
+                <!-- Connection Arrows                               -->
+                <!-- =============================================== -->
+
+                <!-- VPC-A RT → Tokyo TGW RT -->
+                <line x1="260" y1="210" x2="286" y2="210" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#re-arr-blue)"/>
+                <text x="273" y="200" text-anchor="middle" class="re-flow-label" fill="#3B82F6">&#9312;</text>
+
+                <!-- VPC-B RT → Tokyo TGW RT -->
+                <line x1="260" y1="440" x2="286" y2="440" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#re-arr-blue)"/>
+                <text x="273" y="430" text-anchor="middle" class="re-flow-label" fill="#3B82F6">&#9312;</text>
+
+                <!-- Tokyo TGW RT → Peering -->
+                <line x1="542" y1="330" x2="551" y2="330" stroke="#F59E0B" stroke-width="3" marker-end="url(#re-arr-orange)"/>
+                <text x="548" y="288" text-anchor="middle" class="re-flow-label" fill="#F59E0B">&#9313;</text>
+
+                <!-- Peering → Osaka TGW RT -->
+                <line x1="637" y1="330" x2="654" y2="330" stroke="#F59E0B" stroke-width="3" marker-end="url(#re-arr-orange)"/>
+                <text x="648" y="288" text-anchor="middle" class="re-flow-label" fill="#F59E0B">&#9313;</text>
+
+                <!-- Osaka TGW RT → VPC-C RT -->
+                <line x1="910" y1="210" x2="936" y2="210" stroke="#10B981" stroke-width="2.5" marker-end="url(#re-arr-green)"/>
+                <text x="923" y="200" text-anchor="middle" class="re-flow-label" fill="#10B981">&#9314;</text>
+
+                <!-- Osaka TGW RT → VPC-D RT -->
+                <line x1="910" y1="440" x2="936" y2="440" stroke="#10B981" stroke-width="2.5" marker-end="url(#re-arr-green)"/>
+                <text x="923" y="430" text-anchor="middle" class="re-flow-label" fill="#10B981">&#9314;</text>
+
+                <!-- =============================================== -->
+                <!-- Legend                                           -->
+                <!-- =============================================== -->
+                <rect x="35" y="625" width="1130" height="110" rx="12" fill="#F8FAFC" stroke="#E5E7EB" stroke-width="1"/>
+
+                <!-- Legend title -->
+                <text x="60" y="652" class="re-card-title">&#128204; 凡例</text>
+
+                <!-- Arrow legends -->
+                <rect x="60" y="666" width="14" height="4" rx="2" fill="#3B82F6"/>
+                <text x="82" y="672" class="re-legend">&#9312; VPC RT → TGW（手動設定）</text>
+
+                <rect x="310" y="666" width="14" height="4" rx="2" fill="#F59E0B"/>
+                <text x="332" y="672" class="re-legend">&#9313; TGW RT → ピアリング（静的ルート）</text>
+
+                <rect x="610" y="666" width="14" height="4" rx="2" fill="#10B981"/>
+                <text x="632" y="672" class="re-legend">&#9314; TGW RT → VPC（伝播 or 静的）</text>
+
+                <!-- Badge legends -->
+                <rect x="60" y="690" width="60" height="16" rx="4" fill="#10B981"/>
+                <text x="90" y="702" text-anchor="middle" class="re-badge">自動伝播</text>
+                <text x="135" y="702" class="re-legend">= VPC/VPNアタッチメントから自動取得</text>
+
+                <rect x="460" y="690" width="60" height="16" rx="4" fill="#F59E0B"/>
+                <text x="490" y="702" text-anchor="middle" class="re-badge">静的ルート</text>
+                <text x="535" y="702" class="re-legend">= ピアリング向けに手動追加が必要</text>
+
+                <rect x="830" y="690" width="60" height="16" rx="4" fill="#3B82F6"/>
+                <text x="860" y="702" text-anchor="middle" class="re-badge">&#128295; 手動</text>
+                <text x="905" y="702" class="re-legend">= VPC RTは常に手動設定</text>
+
+                <!-- Tip note -->
+                <text x="600" y="726" text-anchor="middle" class="re-note">&#128161; Tip: VPCルートテーブルでは 10.0.0.0/8 → tgw のようなサマリールートで簡素化可能（意図しない転送に注意）</text>
+            </svg>
+            <p class="diagram-caption">図3: 全ルートテーブルのエントリと転送フロー — 色分けで手動/自動を一目で判別</p>
+        </div>
+    </section>
+
+    <!-- ========================================
+         TGW Peering Detail
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#127760;</span>
+            <h2 id="transit-gateway-ピアリングの詳細">Transit Gateway ピアリングの詳細</h2>
+        </div>
+
+        <div class="analogy-box">
+            <div class="analogy-title">
+                <span aria-hidden="true">&#9992;&#65039;</span>
+                たとえ：国際線の開設
+            </div>
+            <p class="analogy-content">
+                TGWピアリングは、成田空港（東京TGW）とヒースロー空港（大阪TGW）の間に<strong>国際線を開設</strong>するようなものです。
+                国内線の路線（VPCアタッチメントの伝播）は自動で案内板に反映されますが、
+                国際線は<strong>両空港それぞれで手動で案内板に登録</strong>する必要があります。
+                また、片方だけ登録しても意味がなく、<strong>往復の両路線</strong>を登録しなければ旅行者が帰れなくなります。
+            </p>
+        </div>
+
+        <div class="concept-grid">
+            <div class="concept-card">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#127760;</span> クロスリージョン対応
+                </div>
+                <p class="concept-card-desc">
+                    異なるAWSリージョン間のTGWを接続可能。同一アカウントでも異なるアカウントでも利用できます。
+                    転送はAWSグローバルネットワーク上で暗号化されます。
+                </p>
+            </div>
+            <div class="concept-card orange">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128295;</span> 静的ルーティングのみ
+                </div>
+                <p class="concept-card-desc">
+                    ピアリングアタッチメントではルート伝播は<strong>サポートされていません</strong>。
+                    相手リージョンのCIDRを手動で静的ルートとして追加する必要があります。
+                </p>
+            </div>
+            <div class="concept-card green">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128256;</span> 双方向構成が必須
+                </div>
+                <p class="concept-card-desc">
+                    両方のTGWルートテーブルに適切なルートを設定する必要があります。
+                    片方向だけではレスポンスパケットが戻れず、通信が失敗します。
+                </p>
+            </div>
+            <div class="concept-card red">
+                <div class="concept-card-title">
+                    <span aria-hidden="true">&#128683;</span> 推移的ルーティング不可
+                </div>
+                <p class="concept-card-desc">
+                    TGW-A ↔ TGW-B ↔ TGW-C の構成で、TGW-Aから直接TGW-Cには通信できません。
+                    TGW-A ↔ TGW-C の直接ピアリングが必要です（フルメッシュ）。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Code Examples
+         ======================================== -->
+    <section class="section-block" id="code-examples">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128187;</span>
+            <h2 id="実装コード例">実装コード例</h2>
+        </div>
+
+        <!-- Code Block 1: TGW and Peering Setup -->
+        <h3 id="tgwピアリング構築とルート設定" style="margin-bottom: var(--spacing-md); font-size: 1.1em;">TGWピアリング構築とルート設定</h3>
+        <div class="code-section">
+            <div class="code-tabs">
+                <button class="code-tab active" onclick="switchTab(event, 'cli1')" type="button">AWS CLI</button>
+                <button class="code-tab" onclick="switchTab(event, 'cfn1')" type="button">CloudFormation</button>
+                <button class="code-tab" onclick="switchTab(event, 'tf1')" type="button">Terraform</button>
+            </div>
+            <div class="code-panel active" id="cli1">
+<pre><span class="code-comment"># ===== 1. Transit Gateway の作成（東京リージョン） =====</span>
+<span class="code-keyword">aws</span> ec2 create-transit-gateway \\
+    <span class="code-param">--description</span> <span class="code-string">"Tokyo TGW"</span> \\
+    <span class="code-param">--options</span> AutoAcceptSharedAttachments=enable,\\
+DefaultRouteTableAssociation=enable,\\
+DefaultRouteTablePropagation=enable \\
+    <span class="code-param">--region</span> ap-northeast-1
+
+<span class="code-comment"># ===== 2. VPCアタッチメントの作成 =====</span>
+<span class="code-keyword">aws</span> ec2 create-transit-gateway-vpc-attachment \\
+    <span class="code-param">--transit-gateway-id</span> tgw-0abc1234def567890 \\
+    <span class="code-param">--vpc-id</span> vpc-0aaa1111 \\
+    <span class="code-param">--subnet-ids</span> subnet-0aaa1111 \\
+    <span class="code-param">--region</span> ap-northeast-1
+
+<span class="code-comment"># ===== 3. TGWピアリングの作成 =====</span>
+<span class="code-keyword">aws</span> ec2 create-transit-gateway-peering-attachment \\
+    <span class="code-param">--transit-gateway-id</span> tgw-0abc1234def567890 \\
+    <span class="code-param">--peer-transit-gateway-id</span> tgw-0xyz9876abc543210 \\
+    <span class="code-param">--peer-region</span> ap-northeast-3 \\
+    <span class="code-param">--region</span> ap-northeast-1
+
+<span class="code-comment"># ===== 4. ピアリングの承認（大阪リージョン側） =====</span>
+<span class="code-keyword">aws</span> ec2 accept-transit-gateway-peering-attachment \\
+    <span class="code-param">--transit-gateway-attachment-id</span> tgw-attach-0peer1234 \\
+    <span class="code-param">--region</span> ap-northeast-3
+
+<span class="code-comment"># ===== 5. 静的ルートの追加（東京TGW → 大阪CIDR） =====</span>
+<span class="code-keyword">aws</span> ec2 create-transit-gateway-route \\
+    <span class="code-param">--transit-gateway-route-table-id</span> tgw-rtb-tokyo001 \\
+    <span class="code-param">--destination-cidr-block</span> 10.3.0.0/16 \\
+    <span class="code-param">--transit-gateway-attachment-id</span> tgw-attach-0peer1234 \\
+    <span class="code-param">--region</span> ap-northeast-1
+
+<span class="code-comment"># ===== 6. VPCルートテーブルの更新 =====</span>
+<span class="code-keyword">aws</span> ec2 create-route \\
+    <span class="code-param">--route-table-id</span> rtb-vpc-a \\
+    <span class="code-param">--destination-cidr-block</span> 10.3.0.0/16 \\
+    <span class="code-param">--transit-gateway-id</span> tgw-0abc1234def567890 \\
+    <span class="code-param">--region</span> ap-northeast-1</pre>
+            </div>
+            <div class="code-panel" id="cfn1">
+<pre><span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Description:</span> <span class="code-string">'Transit Gateway with Cross-Region Peering'</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-comment"># Transit Gateway（東京リージョン）</span>
+  <span class="code-param">TokyoTransitGateway:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::TransitGateway
+    <span class="code-keyword">Properties:</span>
+      Description: Tokyo Region TGW
+      AutoAcceptSharedAttachments: enable
+      DefaultRouteTableAssociation: enable
+      DefaultRouteTablePropagation: enable
+
+  <span class="code-comment"># VPCアタッチメント</span>
+  <span class="code-param">VpcAAttachment:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::TransitGatewayAttachment
+    <span class="code-keyword">Properties:</span>
+      TransitGatewayId: !Ref TokyoTransitGateway
+      VpcId: !Ref VpcA
+      SubnetIds:
+        - !Ref SubnetA
+
+  <span class="code-comment"># TGW静的ルート（大阪リージョン向け）</span>
+  <span class="code-param">RouteToOsaka:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::TransitGatewayRoute
+    <span class="code-keyword">Properties:</span>
+      TransitGatewayRouteTableId: !Ref TokyoTgwRouteTable
+      DestinationCidrBlock: 10.3.0.0/16
+      TransitGatewayAttachmentId: !Ref PeeringAttachment
+
+  <span class="code-comment"># VPCルートテーブルエントリ</span>
+  <span class="code-param">VpcARouteToOsaka:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::Route
+    <span class="code-keyword">Properties:</span>
+      RouteTableId: !Ref VpcARouteTable
+      DestinationCidrBlock: 10.3.0.0/16
+      TransitGatewayId: !Ref TokyoTransitGateway</pre>
+            </div>
+            <div class="code-panel" id="tf1">
+<pre><span class="code-comment"># ===== Transit Gateway（東京リージョン） =====</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_ec2_transit_gateway"</span> <span class="code-param">"tokyo"</span> {
+  description                     = <span class="code-string">"Tokyo Region TGW"</span>
+  auto_accept_shared_attachments  = <span class="code-string">"enable"</span>
+  default_route_table_association = <span class="code-string">"enable"</span>
+  default_route_table_propagation = <span class="code-string">"enable"</span>
+
+  <span class="code-keyword">provider</span> = aws.tokyo
+}
+
+<span class="code-comment"># ===== VPCアタッチメント =====</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_ec2_transit_gateway_vpc_attachment"</span> <span class="code-param">"vpc_a"</span> {
+  transit_gateway_id = aws_ec2_transit_gateway.tokyo.id
+  vpc_id             = aws_vpc.vpc_a.id
+  subnet_ids         = [aws_subnet.vpc_a_private.id]
+
+  <span class="code-keyword">provider</span> = aws.tokyo
+}
+
+<span class="code-comment"># ===== TGWピアリング =====</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_ec2_transit_gateway_peering_attachment"</span> <span class="code-param">"tokyo_osaka"</span> {
+  transit_gateway_id      = aws_ec2_transit_gateway.tokyo.id
+  peer_transit_gateway_id = aws_ec2_transit_gateway.osaka.id
+  peer_region             = <span class="code-string">"ap-northeast-3"</span>
+
+  <span class="code-keyword">provider</span> = aws.tokyo
+}
+
+<span class="code-comment"># ===== 静的ルート（東京→大阪） =====</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_ec2_transit_gateway_route"</span> <span class="code-param">"to_osaka"</span> {
+  destination_cidr_block         = <span class="code-string">"10.3.0.0/16"</span>
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_peering_attachment.tokyo_osaka.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway.tokyo.association_default_route_table_id
+
+  <span class="code-keyword">provider</span> = aws.tokyo
+}
+
+<span class="code-comment"># ===== VPCルートテーブル更新 =====</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_route"</span> <span class="code-param">"vpc_a_to_osaka"</span> {
+  route_table_id         = aws_route_table.vpc_a.id
+  destination_cidr_block = <span class="code-string">"10.3.0.0/16"</span>
+  transit_gateway_id     = aws_ec2_transit_gateway.tokyo.id
+
+  <span class="code-keyword">provider</span> = aws.tokyo
+}</pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Best Practices & Anti-Patterns
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#9989;</span>
+            <h2 id="ベストプラクティス-vs-アンチパターン">ベストプラクティス vs アンチパターン</h2>
+        </div>
+
+        <div class="practices-grid">
+            <div class="practice-card good">
+                <div class="practice-label">&#9989; ベストプラクティス</div>
+                <div class="practice-item">&#128313; VPCのCIDRは重複しないよう設計（IPAM活用推奨）</div>
+                <div class="practice-item">&#128313; TGWルートテーブルを分離してセグメンテーション実施</div>
+                <div class="practice-item">&#128313; VPCルートテーブルにはサマリールート（例: 10.0.0.0/8）を使用</div>
+                <div class="practice-item">&#128313; 双方向のルートを忘れず設定（チェックリスト活用）</div>
+                <div class="practice-item">&#128313; RAM（Resource Access Manager）でクロスアカウント共有</div>
+                <div class="practice-item">&#128313; VPC Flow Logsでトラフィックを監視</div>
+            </div>
+            <div class="practice-card bad">
+                <div class="practice-label">&#10060; アンチパターン</div>
+                <div class="practice-item">&#128308; VPCのCIDRを重複させる（ルーティングが予測不能に）</div>
+                <div class="practice-item">&#128308; デフォルトルートテーブルだけに依存（分離不可）</div>
+                <div class="practice-item">&#128308; VPCルートテーブルの更新を忘れる（最頻出ミス）</div>
+                <div class="practice-item">&#128308; ピアリングでルート伝播を期待する（サポート外）</div>
+                <div class="practice-item">&#128308; 推移的ルーティングが動作すると想定する（動作しない）</div>
+                <div class="practice-item">&#128308; セキュリティグループだけで制御しNACLを無視</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Troubleshooting
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128269;</span>
+            <h2 id="トラブルシューティング">トラブルシューティング</h2>
+        </div>
+
+        <div class="trouble-card">
+            <div class="trouble-symptom">&#128308; 症状: クロスリージョン通信ができない</div>
+            <div class="trouble-cause">
+                <strong>原因1:</strong> ピアリングの静的ルートが未設定 /
+                <strong>原因2:</strong> VPCルートテーブルにTGW向けルートが未設定
+            </div>
+            <div class="trouble-fix">
+                <strong>&#128295; 修正:</strong> 両方のTGWルートテーブルに静的ルートを追加し、
+                両方のVPCルートテーブルにTGW向けルートを手動で追加する
+            </div>
+        </div>
+
+        <div class="trouble-card">
+            <div class="trouble-symptom">&#128308; 症状: 行きは通るが帰りが通らない（タイムアウト）</div>
+            <div class="trouble-cause">
+                <strong>原因:</strong> 逆方向のルートが設定されていない（非対称ルーティング）
+            </div>
+            <div class="trouble-fix">
+                <strong>&#128295; 修正:</strong> 戻り経路のルートがすべてのルートテーブル（VPC RT + TGW RT）に
+                存在することを確認
+            </div>
+        </div>
+
+        <div class="trouble-card">
+            <div class="trouble-symptom">&#128308; 症状: 同一リージョン内のVPC間は通信できるがクロスリージョンだけ失敗</div>
+            <div class="trouble-cause">
+                <strong>原因:</strong> ピアリングアタッチメントがルートテーブルに関連付けされていない
+            </div>
+            <div class="trouble-fix">
+                <strong>&#128295; 修正:</strong> <code>aws ec2 associate-transit-gateway-route-table</code> で
+                ピアリングアタッチメントを適切なルートテーブルに関連付ける
+            </div>
+        </div>
+
+        <div class="trouble-card">
+            <div class="trouble-symptom">&#128308; 症状: ピアリングの状態が "pendingAcceptance" のまま</div>
+            <div class="trouble-cause">
+                <strong>原因:</strong> リモートリージョン側でピアリングリクエストが承認されていない
+            </div>
+            <div class="trouble-fix">
+                <strong>&#128295; 修正:</strong> リモートリージョンのアカウントで
+                <code>accept-transit-gateway-peering-attachment</code> を実行する
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Exam Tips
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#127891;</span>
+            <h2 id="試験対策ポイント">試験対策ポイント</h2>
+        </div>
+
+        <div class="exam-tip">
+            <div class="exam-tip-title">
+                <span aria-hidden="true">&#128218;</span> ANS-C01 / SAP-C02 頻出ポイント
+            </div>
+            <div class="exam-tip-content">
+                <strong>&#9312; ルート伝播 vs 静的ルート</strong> — VPCアタッチメントは伝播可能、ピアリングアタッチメントは静的ルートのみ。この違いは必ず問われます。
+                <br><br>
+                <strong>&#9313; VPCルートテーブルの手動更新</strong> — TGWルートテーブルの伝播とVPCルートテーブルの手動更新を混同させる選択肢が頻出。「VPCルートテーブルには手動設定が必要」が正解。
+                <br><br>
+                <strong>&#9314; 推移的ルーティングの制限</strong> — TGWピアリングは推移的ルーティングをサポートしません。3リージョン構成の場合、フルメッシュピアリングが必要です。
+                <br><br>
+                <strong>&#9315; セキュリティグループとNACL</strong> — TGWを通過するトラフィックでも、宛先VPCのセキュリティグループとNACLは適用されます。
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         FAQ
+         ======================================== -->
+    <section class="section-block" id="faq">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#10067;</span>
+            <h2 id="よくある質問-faq">よくある質問（FAQ）</h2>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button" aria-expanded="false">
+                TGWピアリングとVPCピアリングの違いは何ですか？
+                <span class="faq-toggle" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">
+                <strong>VPCピアリング</strong>は2つのVPCを直接1対1で接続します（ハブ不要）。一方、<strong>TGWピアリング</strong>は
+                2つのTGWを接続し、それぞれに接続された複数のVPCが相互に通信可能になります。
+                大規模環境（VPC数が多い場合）はTGWピアリングが圧倒的に管理しやすくなります。
+                VPCピアリングはN×(N-1)/2の接続が必要ですが、TGWなら各VPCは1つのアタッチメントだけで済みます。
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button" aria-expanded="false">
+                TGWのルートテーブルを複数作成するメリットは？
+                <span class="faq-toggle" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">
+                <strong>ネットワークセグメンテーション</strong>が可能になります。例えば「本番環境」と「開発環境」のルートテーブルを分離し、
+                本番VPC同士は通信できるが開発VPCからは本番にアクセスできない、といった構成が実現できます。
+                たとえ話でいうと「国内線ターミナル」と「国際線ターミナル」を分けて、乗り継ぎ可能なルートを制御するようなものです。
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button" aria-expanded="false">
+                ルート伝播を有効にしているのに通信できないのはなぜ？
+                <span class="faq-toggle" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">
+                最も多い原因は<strong>VPCルートテーブルの更新忘れ</strong>です。TGWのルート伝播はTGWルートテーブルにのみ
+                ルートを追加します。VPCのサブネットルートテーブルには自動反映されないため、
+                <code>宛先CIDR → TGW ID</code> のルートを手動で追加する必要があります。
+                また、セキュリティグループやNACLによるブロックも確認してください。
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button" aria-expanded="false">
+                クロスアカウントでTGWを共有するにはどうすれば？
+                <span class="faq-toggle" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">
+                <strong>AWS Resource Access Manager（RAM）</strong>を使用します。TGWのオーナーアカウントがRAMで
+                TGWリソースを別アカウントと共有し、共有先アカウントがVPCアタッチメントを作成します。
+                AWS Organizationsと連携すると、組織単位（OU）での一括共有も可能です。
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button" aria-expanded="false">
+                TGWピアリングのデータ転送料金はどうなりますか？
+                <span class="faq-toggle" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">
+                TGWピアリング経由のデータ転送には<strong>リージョン間データ転送料金</strong>が適用されます。
+                送信側リージョンから課金され、受信は無料です。
+                同一リージョン内のTGWアタッチメント間データ転送にも処理料金がかかるため、
+                コスト設計では「TGW処理料金 + リージョン間転送料金」の両方を考慮してください。
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================
+         Cheat Sheet
+         ======================================== -->
+    <section class="section-block">
+        <div class="section-header">
+            <span class="section-emoji" aria-hidden="true">&#128221;</span>
+            <h2 id="チートシート-まとめ">チートシート &amp; まとめ</h2>
+        </div>
+
+        <div class="cheat-sheet">
+            <div class="cheat-title">&#128640; Transit Gateway ルーティング早見表</div>
+            <div class="cheat-grid">
+                <div class="cheat-item">
+                    <div class="cheat-item-title">TGWルートテーブル</div>
+                    <div class="cheat-item-content">
+                        アタッチメント間の転送先を定義。VPCアタッチメントは伝播可能。ピアリングは静的ルートのみ。
+                    </div>
+                </div>
+                <div class="cheat-item">
+                    <div class="cheat-item-title">VPCルートテーブル</div>
+                    <div class="cheat-item-content">
+                        TGWからの自動伝播なし。宛先CIDR → TGW のルートを手動で設定する必要あり。
+                    </div>
+                </div>
+                <div class="cheat-item">
+                    <div class="cheat-item-title">ピアリング設定</div>
+                    <div class="cheat-item-content">
+                        リクエスト → 承認 → 静的ルート追加 → 双方向設定。推移的ルーティング不可。
+                    </div>
+                </div>
+                <div class="cheat-item">
+                    <div class="cheat-item-title">完全パス</div>
+                    <div class="cheat-item-content">
+                        VPC RT → TGW → TGW RT → ピアリング → リモートTGW RT → リモートVPC（双方向で計10テーブル確認）
+                    </div>
+                </div>
+                <div class="cheat-item">
+                    <div class="cheat-item-title">セグメンテーション</div>
+                    <div class="cheat-item-content">
+                        カスタムTGWルートテーブルで環境分離。本番/開発/共有サービスの分離が可能。
+                    </div>
+                </div>
+                <div class="cheat-item">
+                    <div class="cheat-item-title">クロスアカウント共有</div>
+                    <div class="cheat-item-content">
+                        AWS RAM でTGWを共有。Organizations連携で OU 単位の一括共有も可能。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Scroll to Top -->
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="ページトップへ戻る">&#8593;</button>
+
+<!-- ========================================
+     JavaScript
+     ======================================== -->
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
