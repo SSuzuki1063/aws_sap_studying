@@ -33,6 +33,23 @@ const updateHistory = JSON.parse(readFileSync(join(ROOT, 'src/data/update-histor
 const serviceRegistryData = JSON.parse(readFileSync(join(ROOT, 'src/data/service-registry.json'), 'utf-8'));
 const SERVICE_RULES = serviceRegistryData.services;
 
+// ─── Load optional enrichment data ──────────────────────────────────────────
+
+const examDomainsPath = join(ROOT, 'src/data/exam-domains.json');
+const examDomainsData = existsSync(examDomainsPath)
+  ? JSON.parse(readFileSync(examDomainsPath, 'utf-8'))
+  : { domains: [] };
+
+const learningModesPath = join(ROOT, 'src/data/learning-modes.json');
+const learningModesData = existsSync(learningModesPath)
+  ? JSON.parse(readFileSync(learningModesPath, 'utf-8'))
+  : { modes: [] };
+
+const resourceSummariesPath = join(ROOT, 'src/data/resource-summaries.json');
+const resourceSummaries = existsSync(resourceSummariesPath)
+  ? JSON.parse(readFileSync(resourceSummariesPath, 'utf-8'))
+  : {};
+
 // ─── Configuration ─────────────────────────────────────────────────────────
 
 // Categories that appear in data.js (display categories)
@@ -189,6 +206,14 @@ function buildCategoriesData(pages) {
     const service = determineService(page.slug, page.pageTitle);
     if (service) resource.service = service;
 
+    // Pass through enrichment metadata from registry
+    if (reg?.exam_domains) resource.exam_domains = reg.exam_domains;
+    if (reg?.difficulty) resource.difficulty = reg.difficulty;
+    if (reg?.estimated_minutes) resource.estimated_minutes = reg.estimated_minutes;
+    if (reg?.tags) resource.tags = reg.tags;
+    const summary = resourceSummaries[page.href];
+    if (summary) resource.summary = summary;
+
     sectionMap.get(section).push(resource);
   }
 
@@ -209,6 +234,15 @@ function buildCategoriesData(pages) {
         if (reg.priority) resource.priority = reg.priority;
         const service = determineService(basename(href, '.pdf'), title);
         if (service) resource.service = service;
+
+        // Pass through enrichment metadata
+        if (reg.exam_domains) resource.exam_domains = reg.exam_domains;
+        if (reg.difficulty) resource.difficulty = reg.difficulty;
+        if (reg.estimated_minutes) resource.estimated_minutes = reg.estimated_minutes;
+        if (reg.tags) resource.tags = reg.tags;
+        const summary = resourceSummaries[href];
+        if (summary) resource.summary = summary;
+
         existing.push(resource);
       }
     }
@@ -278,6 +312,7 @@ function buildSearchData(pages) {
   const data = [];
 
   for (const page of pages) {
+    const reg = resourceRegistry[page.href];
     const entry = {
       title: page.pageTitle,
       category: page.categoryLabel || getCategoryLabel(page.fileDir),
@@ -285,6 +320,9 @@ function buildSearchData(pages) {
     };
     const service = determineService(page.slug, page.pageTitle);
     if (service) entry.service = service;
+    if (reg?.tags) entry.tags = reg.tags.join(' ');
+    if (reg?.exam_domains) entry.domains = reg.exam_domains;
+    if (reg?.difficulty) entry.difficulty = reg.difficulty;
     data.push(entry);
   }
 
@@ -299,6 +337,9 @@ function buildSearchData(pages) {
       };
       const service = determineService(basename(href, '.pdf'), title);
       if (service) entry.service = service;
+      if (reg.tags) entry.tags = reg.tags.join(' ');
+      if (reg.exam_domains) entry.domains = reg.exam_domains;
+      if (reg.difficulty) entry.difficulty = reg.difficulty;
       data.push(entry);
     }
   }
@@ -334,6 +375,32 @@ function buildServiceIndex(categoriesData) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// ─── Build domainIndex ──────────────────────────────────────────────────
+
+function buildDomainIndex(categoriesData) {
+  const domainMap = new Map();
+
+  for (const cat of categoriesData) {
+    for (const section of cat.sections) {
+      for (const resource of section.resources) {
+        if (!resource.exam_domains) continue;
+        for (const domainId of resource.exam_domains) {
+          if (!domainMap.has(domainId)) {
+            domainMap.set(domainId, { domainId, count: 0, categories: new Set() });
+          }
+          const entry = domainMap.get(domainId);
+          entry.count++;
+          entry.categories.add(cat.id);
+        }
+      }
+    }
+  }
+
+  return Array.from(domainMap.values())
+    .map(d => ({ domainId: d.domainId, count: d.count, categories: Array.from(d.categories) }))
+    .sort((a, b) => a.domainId - b.domainId);
+}
+
 function getCategoryLabel(catId) {
   const meta = DISPLAY_CATEGORY_META[catId];
   if (meta) return meta.title;
@@ -344,7 +411,7 @@ function getCategoryLabel(catId) {
 
 // ─── Generate data.js ──────────────────────────────────────────────────────
 
-function generateDataJs(categoriesData, pages, serviceIndex) {
+function generateDataJs(categoriesData, pages, serviceIndex, domainIndex) {
   const categoryQuickNav = categoriesData.map(cat => ({
     id: cat.id,
     icon: DISPLAY_CATEGORY_META[cat.id].navIcon,
@@ -385,6 +452,18 @@ function generateDataJs(categoriesData, pages, serviceIndex) {
   output += '// サービスインデックス（自動生成）\n';
   output += `const serviceIndex = ${formatJsValue(serviceIndex, 0)};\n\n`;
 
+  // domainIndex
+  output += '// ドメインインデックス（自動生成）\n';
+  output += `const domainIndex = ${formatJsValue(domainIndex, 0)};\n\n`;
+
+  // examDomains
+  output += '// SAP-C02試験ドメイン\n';
+  output += `const examDomains = ${formatJsValue(examDomainsData.domains, 0)};\n\n`;
+
+  // learningModes
+  output += '// 学習モード\n';
+  output += `const learningModes = ${formatJsValue(learningModesData.modes, 0)};\n\n`;
+
   // updateHistory
   output += '// 更新履歴データ\n';
   output += '// type: \'content\'(コンテンツ追加) | \'feature\'(機能追加) | \'exam\'(試験変更対応) | \'fix\'(修正)\n';
@@ -409,17 +488,26 @@ function formatJsValue(value, indent) {
     if (value.length === 0) return '[]';
 
     // Check if it's an array of simple objects (like resources)
+    // Allow simple arrays (number[] or string[]) as values too
+    const isSimpleValue = (vv) =>
+      typeof vv === 'string' || typeof vv === 'number' ||
+      (Array.isArray(vv) && vv.every(x => typeof x === 'string' || typeof x === 'number'));
     const isSimpleObjArray = value.every(v =>
       typeof v === 'object' && !Array.isArray(v) &&
-      Object.keys(v).length <= 5 &&
-      Object.values(v).every(vv => typeof vv === 'string' || typeof vv === 'number')
+      Object.keys(v).length <= 8 &&
+      Object.values(v).every(isSimpleValue)
     );
 
     if (isSimpleObjArray && indent >= 3) {
       // Compact single-line format for resource arrays
+      const formatFieldValue = (v) => {
+        if (typeof v === 'string') return `'${v.replace(/'/g, "\\'")}'`;
+        if (Array.isArray(v)) return `[${v.map(x => typeof x === 'string' ? `'${x.replace(/'/g, "\\'")}'` : x).join(', ')}]`;
+        return v;
+      };
       const items = value.map(item => {
         const fields = Object.entries(item)
-          .map(([k, v]) => `${k}: ${typeof v === 'string' ? `'${v.replace(/'/g, "\\'")}'` : v}`)
+          .map(([k, v]) => `${k}: ${formatFieldValue(v)}`)
           .join(', ');
         return `${pad1}{ ${fields} }`;
       });
@@ -453,7 +541,10 @@ function generateSearchDataBlock(searchData) {
     const cat = item.category.replace(/'/g, "\\'");
     const file = item.file.replace(/'/g, "\\'");
     const svc = (item.service || '').replace(/'/g, "\\'");
-    output += `  { title: '${title}', category: '${cat}', file: '${file}', service: '${svc}' },\n`;
+    const tags = (item.tags || '').replace(/'/g, "\\'");
+    const domains = item.domains ? `[${item.domains.join(',')}]` : '[]';
+    const diff = (item.difficulty || '').replace(/'/g, "\\'");
+    output += `  { title: '${title}', category: '${cat}', file: '${file}', service: '${svc}', tags: '${tags}', domains: ${domains}, difficulty: '${diff}' },\n`;
   }
   output += '];\n';
   return output;
@@ -496,7 +587,7 @@ function updateIndexJs(searchData) {
 
 // ─── Generate resources.ts (ESM module for Astro build-time imports) ────────
 
-function generateResourcesTs(categoriesData, pages, serviceIndex) {
+function generateResourcesTs(categoriesData, pages, serviceIndex, domainIndex) {
   const categoryQuickNav = categoriesData.map(cat => ({
     id: cat.id,
     icon: DISPLAY_CATEGORY_META[cat.id].navIcon,
@@ -522,7 +613,7 @@ function generateResourcesTs(categoriesData, pages, serviceIndex) {
   output += '// This file provides build-time data for Astro components.\n\n';
 
   // TypeScript interfaces
-  output += `export interface Resource {\n  title: string;\n  href: string;\n  priority?: 'high' | 'medium' | 'low';\n  service?: string;\n}\n\n`;
+  output += `export interface Resource {\n  title: string;\n  href: string;\n  priority?: 'high' | 'medium' | 'low';\n  service?: string;\n  exam_domains?: number[];\n  difficulty?: 'beginner' | 'intermediate' | 'advanced';\n  estimated_minutes?: number;\n  tags?: string[];\n  summary?: string;\n}\n\n`;
   output += `export interface Section {\n  title: string;\n  icon: string;\n  count: number;\n  lastUpdated: string;\n  resources: Resource[];\n}\n\n`;
   output += `export interface Category {\n  id: string;\n  title: string;\n  icon: string;\n  count: number;\n  sections: Section[];\n}\n\n`;
   output += `export interface QuickNavItem {\n  id: string;\n  icon: string;\n  text: string;\n  count: number;\n}\n\n`;
@@ -530,9 +621,16 @@ function generateResourcesTs(categoriesData, pages, serviceIndex) {
 
   output += `export interface ServiceIndexItem {\n  name: string;\n  count: number;\n  categories: string[];\n}\n\n`;
 
+  output += `export interface ExamDomain {\n  id: number;\n  title_ja: string;\n  title_en: string;\n  weight: string;\n  icon: string;\n}\n\n`;
+  output += `export interface LearningMode {\n  id: string;\n  title: string;\n  icon: string;\n  description: string;\n  filters: Record<string, string | string[]>;\n}\n\n`;
+  output += `export interface DomainIndexItem {\n  domainId: number;\n  count: number;\n  categories: string[];\n}\n\n`;
+
   output += `export const categoriesData: Category[] = ${JSON.stringify(categoriesData, null, 2)};\n\n`;
   output += `export const categoryQuickNav: QuickNavItem[] = ${JSON.stringify(categoryQuickNav, null, 2)};\n\n`;
   output += `export const serviceIndex: ServiceIndexItem[] = ${JSON.stringify(serviceIndex, null, 2)};\n\n`;
+  output += `export const examDomains: ExamDomain[] = ${JSON.stringify(examDomainsData.domains, null, 2)};\n\n`;
+  output += `export const learningModes: LearningMode[] = ${JSON.stringify(learningModesData.modes, null, 2)};\n\n`;
+  output += `export const domainIndex: DomainIndexItem[] = ${JSON.stringify(domainIndex, null, 2)};\n\n`;
   output += `export const siteStats: SiteStats = ${JSON.stringify(siteStats, null, 2)};\n`;
 
   return output;
@@ -556,6 +654,10 @@ console.log('Building serviceIndex...');
 const serviceIndex = buildServiceIndex(categoriesData);
 console.log(`  ${serviceIndex.length} unique services`);
 
+console.log('Building domainIndex...');
+const domainIndex = buildDomainIndex(categoriesData);
+console.log(`  ${domainIndex.length} domains with resources`);
+
 console.log('Building searchData...');
 const searchData = buildSearchData(pages);
 console.log(`  ${searchData.length} searchable entries`);
@@ -569,7 +671,7 @@ if (dryRun) {
   console.log(`\nTotal resources: ${totalResources}`);
 } else {
   console.log('\nWriting public/data.js...');
-  const dataJs = generateDataJs(categoriesData, pages, serviceIndex);
+  const dataJs = generateDataJs(categoriesData, pages, serviceIndex, domainIndex);
   writeFileSync(join(ROOT, 'public/data.js'), dataJs, 'utf-8');
 
   console.log('Updating searchData in public/index.js...');
@@ -577,7 +679,7 @@ if (dryRun) {
   if (!ok) process.exit(1);
 
   console.log('Writing src/data/resources.ts...');
-  const resourcesTs = generateResourcesTs(categoriesData, pages, serviceIndex);
+  const resourcesTs = generateResourcesTs(categoriesData, pages, serviceIndex, domainIndex);
   writeFileSync(join(ROOT, 'src/data/resources.ts'), resourcesTs, 'utf-8');
 
   console.log('Done!');
