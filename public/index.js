@@ -22,7 +22,7 @@ const searchData = [
   { title: 'Route 53 DNSSEC 完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dnssec-100.html', service: 'Route 53', tags: 'dns', domains: [2,3], difficulty: 'intermediate' },
   { title: 'Route 53 Resolver DNS Firewall 完全ガイド - フェイルオープン＆フェイルクローズ', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53-dns-firewall-guide.html', service: 'Route 53', tags: 'dns', domains: [2,3], difficulty: 'intermediate' },
   { title: 'Route 53 Resolver DNS Firewall｜ボットネットC&amp;C対策完全ガイド', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/aws-route53-dns-firewall-botnet-guide.html', service: 'Route 53', tags: 'dns', domains: [2,3], difficulty: 'intermediate' },
-  { title: 'Route 53 プライベートホストゾーン クロスアカウント関連付け', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53_cross_account_guide.html', service: 'Route 53', tags: 'dns', domains: [2,3], difficulty: 'intermediate' },
+  { title: 'Route 53 プライベートホストゾーン クロスアカウント関連付け', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/route53_cross_account_guide.html', service: 'Route 53', tags: 'dns multi-account', domains: [1,2], difficulty: 'intermediate' },
   { title: 'サブドメイン委任（Subdomain Delegation）完全ガイド - Route 53', category: 'コンテンツ配信・DNS', file: 'content-delivery-dns/subdomain-delegation-guide.html', service: 'Route 53', tags: '', domains: [], difficulty: '' },
   { title: 'ALB ターゲットグループ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb-target-group-guide.html', service: 'ALB', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'ALBスティッキーセッション完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/alb_sticky_session_infographic.html', service: 'ALB', tags: '', domains: [2,3], difficulty: 'beginner' },
@@ -46,7 +46,7 @@ const searchData = [
   { title: 'AWS SQS DLQ &amp; Redrive Policy インフォグラフィック', category: 'コンピュート・アプリケーション', file: 'compute-applications/sqs_dlq_infographic.html', service: 'SQS', tags: '', domains: [2,3], difficulty: 'beginner' },
   { title: 'AWS Systems Manager OpsCenter 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/opscenter-guide.html', service: 'OpsCenter', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'AWS クラスタプレイスメントグループ + EFA 解説', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws_cluster_pg_efa_infographic.html', service: 'EC2', tags: '', domains: [2,3], difficulty: 'beginner' },
-  { title: 'AWSグローバルアーキテクチャ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws-global-architecture-guide.html', service: '', tags: '', domains: [2,3], difficulty: 'advanced' },
+  { title: 'AWSグローバルアーキテクチャ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/aws-global-architecture-guide.html', service: '', tags: 'ha', domains: [2], difficulty: 'intermediate' },
   { title: 'CloudWatch Agent Procstat 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/cloudwatch-procstat-guide.html', service: 'CloudWatch', tags: 'monitoring', domains: [3], difficulty: 'advanced' },
   { title: 'CloudWatch カスタムメトリクス &amp; PutMetricData 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/cloudwatch-putmetricdata-guide.html', service: 'CloudWatch', tags: 'monitoring', domains: [3], difficulty: 'intermediate' },
   { title: 'CodePipeline Deploy Stage と DeploymentGroup の関係', category: 'コンピュート・アプリケーション', file: 'compute-applications/codepipeline-deploymentgroup-guide.html', service: 'CodePipeline', tags: 'deployment', domains: [2,3], difficulty: 'advanced' },
@@ -56,7 +56,7 @@ const searchData = [
   { title: 'EC2ステータスチェック図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-status-check-guide.html', service: 'EC2', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'EC2終了前ログ退避設計ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-log-backup-before-termination-guide.html', service: 'EC2', tags: 'monitoring', domains: [2,3], difficulty: 'advanced' },
   { title: 'Fargate awslogsログドライバ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/fargate-awslogs-complete-guide.html', service: 'ECS', tags: 'monitoring serverless', domains: [2,3], difficulty: 'advanced' },
-  { title: 'Gateway Load Balancer (GWLB) 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/gwlb-guide.html', service: 'Gateway Load Balancer', tags: '', domains: [2,3], difficulty: 'intermediate' },
+  { title: 'Gateway Load Balancer (GWLB) 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/gwlb-guide.html', service: 'Gateway Load Balancer', tags: 'security networking', domains: [2,3], difficulty: 'intermediate' },
   { title: 'IAM PassRole vs AssumeRole 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/iam-passrole-vs-assumerole-guide.html', service: 'IAM', tags: 'comparison security', domains: [2,3], difficulty: 'intermediate' },
   { title: 'Lambda関数のエイリアス＆カナリアリリース解説', category: 'コンピュート・アプリケーション', file: 'new-solutions/lambda-alias-canary.html', service: 'Lambda', tags: 'serverless', domains: [2,3], difficulty: 'intermediate' },
   { title: 'NLB + TCPリスナー + mTLS + EKS 完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/nlb-mtls-eks-guide.html', service: 'NLB', tags: 'security containers', domains: [2,3], difficulty: 'advanced' },
@@ -109,12 +109,12 @@ const searchData = [
   { title: 'AWS Config S3配信エラー解決ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-s3-delivery-error-guide.html', service: 'AWS Config', tags: 'storage', domains: [3], difficulty: 'advanced' },
   { title: 'AWS Config コンフォーマンスパック &amp; StackSets 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-conformance-stacksets-guide.html', service: 'AWS Config', tags: '', domains: [3], difficulty: 'intermediate' },
   { title: 'AWS Config 管理ルール＆CloudTrail修復アクション完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-config-cloudtrail-remediation-guide.html', service: 'CloudTrail', tags: '', domains: [3], difficulty: 'intermediate' },
-  { title: 'AWS Control Tower ガードレール解説', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-control-tower-guardrails.html', service: 'Control Tower', tags: 'ha', domains: [1], difficulty: 'intermediate' },
+  { title: 'AWS Control Tower ガードレール解説', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-control-tower-guardrails.html', service: 'Control Tower', tags: 'multi-account', domains: [1], difficulty: 'intermediate' },
   { title: 'AWS Control Tower 自動展開完全ガイド', category: 'セキュリティ・ガバナンス', file: 'organizational-complexity/control-tower-cfct-guide.html', service: 'Control Tower', tags: '', domains: [1], difficulty: 'intermediate' },
   { title: 'AWS ECR イメージスキャン完全ガイド', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/ecr-image-scanning-guide.html', service: 'ECR', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'AWS Elastic Disaster Recovery を災害対策で理解しよう', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/aws_edr_infographic.html', service: 'Disaster Recovery', tags: 'ha', domains: [1,2], difficulty: 'beginner' },
   { title: 'AWS Fault Injection Simulator 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/aws_fis_infographic.html', service: 'FIS', tags: '', domains: [2,3], difficulty: 'beginner' },
-  { title: 'AWS Firewall Manager セキュリティグループポリシー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/firewall-manager-sg-policy-guide.html', service: 'Firewall Manager', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Firewall Manager セキュリティグループポリシー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/firewall-manager-sg-policy-guide.html', service: 'Firewall Manager', tags: 'security multi-account', domains: [1], difficulty: 'intermediate' },
   { title: 'AWS IAM フェデレーション入門', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/iam_federation_infographic.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'beginner' },
   { title: 'AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-resource-policy-deny-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS KMS BYOK 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'organizational-complexity/kms_byok_infographic.html', service: 'KMS', tags: '', domains: [1,2], difficulty: 'beginner' },
@@ -136,7 +136,7 @@ const searchData = [
   { title: 'AWS Systems Manager完全ガイド', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/systems-manager-hybrid-guide.html', service: 'Systems Manager', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway共有の超簡単ガイド', category: 'セキュリティ・ガバナンス', file: 'organizational-complexity/aws-ram-tgw-sharing.html', service: 'Transit Gateway', tags: 'ha', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS WAF Web ACLルールモード - 警備システムで理解する', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/aws_waf_infographic.html', service: 'WAF', tags: '', domains: [1,2], difficulty: 'beginner' },
-  { title: 'AWS Well-Architected フレームワーク 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-well-architected-complete-guide.html', service: 'Well-Architected', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Well-Architected フレームワーク 完全図解ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-well-architected-complete-guide.html', service: 'Well-Architected', tags: '', domains: [1,2,3], difficulty: 'intermediate' },
   { title: 'AWS マネージドポリシー vs カスタマーマネージドポリシー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-managed-vs-customer-managed-policies.html', service: '', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS ログインユーザーの種類 - 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/aws-login-users-guide.html', service: '', tags: 'monitoring', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS障害はなぜグローバルに拡大したか？ US-EAST-1の「単一障害点」構造を徹底分析', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/aws-us-east-1-outage-analysis.html', service: '', tags: '', domains: [2,3], difficulty: 'advanced' },
@@ -144,7 +144,7 @@ const searchData = [
   { title: 'CanaryとLinearデプロイメントの違い', category: 'セキュリティ・ガバナンス', file: 'continuous-improvement/canary_linear_infographic.html', service: 'CodeDeploy', tags: '', domains: [2,3], difficulty: 'beginner' },
   { title: 'CIS AWS Foundations ベンチマーク継続評価ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cis-benchmark-security-hub-config-guide.html', service: 'Security Hub', tags: 'security', domains: [3], difficulty: 'advanced' },
   { title: 'CloudFormationからAWS Service Catalog製品を作成する方法', category: 'セキュリティ・ガバナンス', file: 'organizational-complexity/cf-service-catalog-infographic.html', service: 'CloudFormation', tags: 'monitoring', domains: [2,3], difficulty: 'beginner' },
-  { title: 'CloudFormationドリフト検出と自動修復完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudformation-drift-detection-auto-remediation-guide.html', service: 'CloudFormation', tags: 'ha', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'CloudFormationドリフト検出と自動修復完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudformation-drift-detection-auto-remediation-guide.html', service: 'CloudFormation', tags: 'ha monitoring', domains: [3], difficulty: 'intermediate' },
   { title: 'CloudTrail ログプレフィックス完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-log-prefix-guide.html', service: 'CloudTrail', tags: 'monitoring', domains: [3], difficulty: 'advanced' },
   { title: 'CloudTrail 管理イベント vs データイベント 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-events-guide.html', service: 'CloudTrail', tags: '', domains: [3], difficulty: 'intermediate' },
   { title: 'CloudTrail 整合性検証 &amp; ダイジェストファイル 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cloudtrail-integrity-validation-guide.html', service: 'CloudTrail', tags: '', domains: [3], difficulty: 'intermediate' },
@@ -167,9 +167,9 @@ const searchData = [
   { title: 'IAM Identity Center 完全ガイド - Organizations一括管理', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-identity-center-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
   { title: 'IAM MFA緊急時の救済ガイド - コンソールの限界とAPI直接操作', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-mfa-emergency-rescue-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'advanced' },
   { title: 'IAM Roles Anywhere 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-roles-anywhere-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'IAM パーミッションバウンダリー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-permission-boundary-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'IAM パーミッションバウンダリー 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-permission-boundary-guide.html', service: 'IAM', tags: 'security', domains: [1], difficulty: 'intermediate' },
   { title: 'IAM ロール：権限ポリシー vs 信頼ポリシー完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-role-policies-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'IAM 権限評価モデル &amp; 操作経路 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-permission-evaluation-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'IAM 権限評価モデル &amp; 操作経路 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-permission-evaluation-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'advanced' },
   { title: 'IAM 認証情報レポート完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-credential-report-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
   { title: 'IAM認証情報レポート - セキュリティインシデント初動調査ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/iam-credential-report-incident-guide.html', service: 'IAM', tags: 'security', domains: [1,2], difficulty: 'advanced' },
   { title: 'OpenSearch Dashboards によるログデータの可視化 - 完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/opensearch-dashboards-guide.html', service: 'RDS', tags: 'database', domains: [1,2], difficulty: 'advanced' },
@@ -178,7 +178,7 @@ const searchData = [
   { title: 'SAML証明書ローテーション完全ガイド - IAM IDプロバイダー設定更新', category: 'セキュリティ・ガバナンス', file: 'security-governance/saml-certificate-rotation-guide.html', service: 'SAML Federation', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'SAML障害時のブレークグラスユーザー完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/breakglass-user-guide.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'Storage Gateway RefreshCache 自動化完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/storage-gateway-refreshcache-automation-guide.html', service: 'Storage Gateway', tags: 'storage', domains: [1,2], difficulty: 'advanced' },
-  { title: 'sts:ExternalId 完全マスターガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/sts-externalid-complete-guide.html', service: 'STS', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'sts:ExternalId 完全マスターガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/sts-externalid-complete-guide.html', service: 'STS', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'VPC トラフィックミラーリング完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/vpc-traffic-mirroring-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2', category: 'セキュリティ・ガバナンス', file: 'security-governance/e2e-encryption-guide.html', service: 'CloudFront', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
   { title: 'Amazon EC2 Elastic Fabric Adapter (EFA) 完全ガイド', category: 'その他', file: 'new-solutions/efa_infographic.html', service: 'EFA', tags: '', domains: [2,3], difficulty: 'beginner' },
@@ -195,13 +195,13 @@ const searchData = [
   { title: 'Amazon VPC CNI 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-cni-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', category: 'ネットワーキング', file: 'networking/vpc-network-access-analyzer-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', category: 'ネットワーキング', file: 'networking/byoip-guide.html', service: 'VPC', tags: '', domains: [1,2], difficulty: 'advanced' },
-  { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/cloudwan-static-routing-segment-sharing-v2.html', service: '', tags: 'ha networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', category: 'ネットワーキング', file: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'AWS Direct Connect 接続タイプ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-connection-types-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう', category: 'ネットワーキング', file: 'networking/aws-direct-connect-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
+  { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
+  { title: 'AWS Direct Connect 接続タイプ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-connection-types-guide.html', service: 'Direct Connect', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう', category: 'ネットワーキング', file: 'networking/aws-direct-connect-guide.html', service: 'Direct Connect', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Direct Connect仮想ゲートウェイ解説', category: 'ネットワーキング', file: 'new-solutions/aws-direct-connect-vgw.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD', category: 'ネットワーキング', file: 'networking/aws-directory-service-guide.html', service: 'Directory Service', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS EIP &amp; NATゲートウェイ 超初心者ガイド', category: 'ネットワーキング', file: 'new-solutions/aws_eip_nat_infographic.html', service: 'NAT Gateway', tags: '', domains: [1,2], difficulty: 'beginner' },
@@ -217,27 +217,27 @@ const searchData = [
   { title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法', category: 'ネットワーキング', file: 'networking/aws-vpn-asymmetric-routing-guide.html', service: 'VPN', tags: 'networking monitoring', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html', service: 'Transit Gateway Route Analyzer', tags: '', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信', category: 'ネットワーキング', file: 'networking/tgw-multicast-guide.html', service: 'Transit Gateway', tags: '', domains: [], difficulty: '' },
   { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html', service: 'Transit Gateway', tags: '', domains: [], difficulty: '' },
   { title: 'AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション', category: 'ネットワーキング', file: 'networking/vpn-throughput-scaling-guide.html', service: 'VPN', tags: 'scaling', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', category: 'ネットワーキング', file: 'networking/aws-vpn-with-direct-connect-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', category: 'ネットワーキング', file: 'networking/aws-vpn-with-direct-connect-guide.html', service: 'Direct Connect', tags: 'ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/aws-prefix-list-guide.html', service: 'Prefix List', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWSグローバルインフラストラクチャ完全ガイド | AWS初心者向けインフォグラフィック', category: 'ネットワーキング', file: 'networking/aws-global-infrastructure-guide.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWSネットワークゲートウェイの比較', category: 'ネットワーキング', file: 'networking/aws-gateways.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮', category: 'ネットワーキング', file: 'networking/bfd-failover-optimization-guide.html', service: 'Direct Connect', tags: 'ha', domains: [1,2], difficulty: 'advanced' },
-  { title: 'BGPルート選択アルゴリズム完全ガイド', category: 'ネットワーキング', file: 'networking/bgp-route-selection-guide.html', service: '', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮', category: 'ネットワーキング', file: 'networking/bfd-failover-optimization-guide.html', service: 'Direct Connect', tags: 'ha', domains: [1,2,3], difficulty: 'advanced' },
+  { title: 'BGPルート選択アルゴリズム完全ガイド', category: 'ネットワーキング', file: 'networking/bgp-route-selection-guide.html', service: '', tags: 'networking', domains: [1,2], difficulty: 'advanced' },
   { title: 'CIDRブロックの重複とVPC接続 完全ガイド', category: 'ネットワーキング', file: 'networking/cidr-vpc-connectivity-guide.html', service: 'VPC', tags: 'ha networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'CIDRブロック集約と許可プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/cidr-aggregation-prefix-list-guide.html', service: 'VPC', tags: 'ha', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'Cloud WAN / TGW ルート分離設計の極意', category: 'ネットワーキング', file: 'networking/cloud-wan-tgw-route-isolation-guide.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'Cloud WAN / TGW ルート分離設計の極意', category: 'ネットワーキング', file: 'networking/cloud-wan-tgw-route-isolation-guide.html', service: 'Transit Gateway', tags: 'comparison', domains: [1,2], difficulty: 'advanced' },
   { title: 'CloudFront HTTPセキュリティヘッダー完全ガイド', category: 'ネットワーキング', file: 'networking/cloudfront-security-headers-guide.html', service: 'CloudFront', tags: 'security', domains: [1,2], difficulty: 'advanced' },
   { title: 'Direct Connect CloudWatchメトリクス 完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-cloudwatch-metrics-guide.html', service: 'Direct Connect', tags: 'monitoring', domains: [3], difficulty: 'advanced' },
-  { title: 'Direct Connect Gateway・VGW・VIF 完全ガイド | AWS SAP学習リソース', category: 'ネットワーキング', file: 'networking/dx-gateway-vgw-vif-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'Direct Connect Gateway・VGW・VIF 完全ガイド | AWS SAP学習リソース', category: 'ネットワーキング', file: 'networking/dx-gateway-vgw-vif-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'Direct Connect LAG環境でのMACsec実装ガイド', category: 'ネットワーキング', file: 'networking/macsec-lag-implementation-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
-  { title: 'Direct Connect ルーティングポリシーと BGP コミュニティ - AWS図解ガイド', category: 'ネットワーキング', file: 'networking/dx-routing-bgp-community-guide.html', service: 'Direct Connect', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'Direct Connect ルーティングポリシーと BGP コミュニティ - AWS図解ガイド', category: 'ネットワーキング', file: 'networking/dx-routing-bgp-community-guide.html', service: 'Direct Connect', tags: 'networking', domains: [1,2], difficulty: 'advanced' },
   { title: 'Direct Connect暗号化ガイド - VPNで実現するセキュアな専用線', category: 'ネットワーキング', file: 'networking/direct_connect_encryption_vpn.html', service: 'Direct Connect', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
   { title: 'DNS64 & NAT64 完全図解ガイド', category: 'ネットワーキング', file: 'networking/dns64-nat64-guide.html', service: 'NAT Gateway', tags: 'dns', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'Gateway Load Balancer によるディープパケットインスペクション', category: 'ネットワーキング', file: 'networking/gwlb-deep-packet-inspection-guide.html', service: 'Gateway Load Balancer', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'Gateway Load Balancer によるディープパケットインスペクション', category: 'ネットワーキング', file: 'networking/gwlb-deep-packet-inspection-guide.html', service: 'Gateway Load Balancer', tags: 'security', domains: [1,2], difficulty: 'advanced' },
   { title: 'GuardDuty InstanceCredentialExfiltration 完全対処ガイド', category: 'ネットワーキング', file: 'networking/guardduty-credential-exfiltration-guide-v2.html', service: 'GuardDuty', tags: '', domains: [3], difficulty: 'intermediate' },
   { title: 'LAG × ハイブリッドBGP - 階層的冗長性システム完全ガイド', category: 'ネットワーキング', file: 'networking/lag_hybrid_bgp_relationship.html', service: '', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'NAT ゲートウェイのタイムアウト動作 完全ガイド', category: 'ネットワーキング', file: 'networking/nat-gateway-timeout-guide.html', service: 'NAT Gateway', tags: '', domains: [], difficulty: '' },
@@ -251,13 +251,13 @@ const searchData = [
   { title: 'VPCとデュアルスタックネットワーキング完全ガイド | AWS学習リソース', category: 'ネットワーキング', file: 'networking/vpc-dual-stack-networking-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'VPCトラフィックミラーリング vs VPC Flow Logs - 使い分けガイド', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-vs-flow-logs.html', service: 'VPC', tags: 'comparison networking monitoring', domains: [1,2], difficulty: 'intermediate' },
   { title: 'VPCトラフィックミラーリング完全ガイド - 4つの構成要素を徹底図解', category: 'ネットワーキング', file: 'networking/vpc-traffic-mirroring-deep-guide.html', service: 'VPC', tags: '', domains: [], difficulty: '' },
-  { title: 'VPCフローログ フィールド完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-flow-log-fields-guide.html', service: 'VPC', tags: 'networking monitoring', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'VPCフローログ フィールド完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-flow-log-fields-guide.html', service: 'VPC', tags: 'networking monitoring', domains: [1,2,3], difficulty: 'intermediate' },
   { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', category: 'ネットワーキング', file: 'networking/vpn-acceleration-vs-global-accelerator.html', service: 'VPN', tags: 'comparison', domains: [1,2], difficulty: 'advanced' },
   { title: 'VPNピアリングとPrivatelinkの比較', category: 'ネットワーキング', file: 'new-solutions/vpn-vs-privatelink.html', service: 'VPC PrivateLink', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
   { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', category: 'ネットワーキング', file: 'networking/cross-region-ec2-communication.html', service: 'EC2', tags: '', domains: [], difficulty: '' },
   { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', category: 'ネットワーキング', file: 'networking/jumbo-frame-mtu-guide.html', service: 'EC2', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN | AWS SAP学習リソース', category: 'ネットワーキング', file: 'networking/split-vs-full-tunnel-vpn.html', service: 'VPN', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
-  { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', category: 'ネットワーキング', file: 'networking/nacl-sg-comparison-guide.html', service: 'VPC', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'ネットワークACL vs セキュリティグループ 完全ガイド', category: 'ネットワーキング', file: 'networking/nacl-sg-comparison-guide.html', service: 'VPC', tags: 'comparison security', domains: [1,2], difficulty: 'intermediate' },
   { title: 'ネットワーク層とアプリケーション層の違い', category: 'ネットワーキング', file: 'new-solutions/vpc_privatelink_cidr_overlap.html', service: 'VPC PrivateLink', tags: 'ha networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'ハイブリッド DNS アーキテクチャ 完全ガイド', category: 'ネットワーキング', file: 'networking/hybrid-dns-architecture-guide.html', service: 'Route 53', tags: 'dns', domains: [1,2], difficulty: 'advanced' },
   { title: 'パケットの気持ちになって辿る Amazon VPC のルーティング | AWS学習リソース', category: 'ネットワーキング', file: 'networking/vpc-routing-packet-journey.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
@@ -296,6 +296,13 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
+
+
 
 
 
@@ -451,13 +458,64 @@ function applyFilters() {
         }
     });
 
+    // Deactivate learning mode card if filters no longer match the mode preset
+    var activeModeBtn = document.querySelector('.learning-mode-card[aria-pressed="true"]');
+    if (activeModeBtn) {
+        var modeFilters = {};
+        try { modeFilters = JSON.parse(activeModeBtn.getAttribute('data-mode-filters') || '{}'); } catch(e) { /* ignore */ }
+        var currentMatchesMode = true;
+        if (modeFilters.category && selectedCategory !== modeFilters.category) currentMatchesMode = false;
+        if (!modeFilters.category && selectedCategory) currentMatchesMode = false;
+        if (modeFilters.difficulty && modeFilters.difficulty.length === 1 && selectedDifficulty !== modeFilters.difficulty[0]) currentMatchesMode = false;
+        if (!modeFilters.difficulty && selectedDifficulty) currentMatchesMode = false;
+        if (!currentMatchesMode) {
+            activeModeBtn.setAttribute('aria-pressed', 'false');
+        }
+    }
+
+    // Build condition summary
+    var conditions = [];
+    if (selectedCategory) conditions.push('カテゴリ: ' + getCategoryFilterLabel(selectedCategory));
+    if (selectedService) conditions.push('サービス: ' + selectedService);
+    if (selectedDomain) conditions.push('ドメイン: D' + selectedDomain);
+    if (selectedDifficulty) conditions.push('難易度: ' + getDifficultyFilterLabel(selectedDifficulty));
+    if (selectedTime) conditions.push('時間: ' + getTimeFilterLabel(selectedTime));
+
     // Update status
     if (isFiltering) {
         filterStatus.style.display = '';
-        filterStatus.textContent = '表示中: ' + visibleResources + ' / ' + totalResources + ' リソース';
+        var statusText = conditions.length > 0 ? conditions.join(' | ') + ' — ' : '';
+        filterStatus.textContent = statusText + visibleResources + ' / ' + totalResources + ' リソース';
     } else {
         filterStatus.style.display = 'none';
     }
+
+    // Show/hide no-results message
+    var noResultsEl = document.getElementById('filterNoResults');
+    if (noResultsEl) {
+        noResultsEl.style.display = (isFiltering && visibleResources === 0) ? '' : 'none';
+    }
+}
+
+// ─── フィルターラベルヘルパー ──────────────────────────────────────────
+
+function getCategoryFilterLabel(catId) {
+    var el = document.getElementById('categoryFilter');
+    if (el) {
+        var opt = el.querySelector('option[value="' + catId + '"]');
+        if (opt) return opt.textContent.replace(/[（(]\d+[）)]/, '').trim();
+    }
+    return catId;
+}
+
+function getDifficultyFilterLabel(diff) {
+    var labels = { beginner: '初級', intermediate: '中級', advanced: '上級' };
+    return labels[diff] || diff;
+}
+
+function getTimeFilterLabel(time) {
+    var labels = { '0-15': '〜15分', '15-30': '15〜30分', '30-60': '30〜60分', '60+': '60分〜' };
+    return labels[time] || time;
 }
 
 // ─── 学習モード機能 ─────────────────────────────────────────────────────

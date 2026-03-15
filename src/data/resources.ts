@@ -95,7 +95,11 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 20,
+            "tags": [
+              "comparison"
+            ],
+            "summary": "DX専用/ホスト型接続の違いを高速道路の例で図解"
           },
           {
             "title": "AWS VPN接続を郵便システムで理解しよう + Direct Connect比較",
@@ -106,8 +110,12 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "difficulty": "advanced",
+            "estimated_minutes": 30,
+            "tags": [
+              "ha"
+            ],
+            "summary": "VPN接続とDirect Connectの仕組み・使い分けを比較解説"
           },
           {
             "title": "BFD完全ガイド - AWS Direct Connectのフェイルオーバー時間を劇的に短縮",
@@ -116,7 +124,8 @@ export const categoriesData: Category[] = [
             "service": "Direct Connect",
             "exam_domains": [
               1,
-              2
+              2,
+              3
             ],
             "difficulty": "advanced",
             "estimated_minutes": 25,
@@ -132,10 +141,11 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "difficulty": "advanced",
+            "estimated_minutes": 35,
             "tags": [
-              "networking"
+              "networking",
+              "ha"
             ]
           },
           {
@@ -162,7 +172,11 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 30,
+            "tags": [
+              "comparison"
+            ],
+            "summary": "DX専用接続/ホスト接続/ホストVIFの選定基準を比較表で整理"
           },
           {
             "title": "AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド",
@@ -172,8 +186,8 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "difficulty": "advanced",
+            "estimated_minutes": 30
           },
           {
             "title": "AWS Direct Connect SiteLink 完全ガイド | データセンター間接続",
@@ -209,8 +223,9 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "difficulty": "advanced",
+            "estimated_minutes": 30,
+            "summary": "DXGW・VGW・VIFの3層構造と接続パターンをステップ解説"
           },
           {
             "title": "Direct Connect ルーティングポリシーと BGP コミュニティ - AWS図解ガイド",
@@ -221,11 +236,12 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "difficulty": "advanced",
+            "estimated_minutes": 45,
             "tags": [
               "networking"
-            ]
+            ],
+            "summary": "DXルーティングポリシーとBGPコミュニティ値を体系的に整理"
           },
           {
             "title": "LAG × ハイブリッドBGP - 階層的冗長性システム完全ガイド",
@@ -262,7 +278,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "DX仮想ゲートウェイ(VGW)の役割と構成パターンを図解"
           },
           {
             "title": "VPNピアリングとPrivatelinkの比較",
@@ -287,7 +304,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 30
+            "estimated_minutes": 30,
+            "summary": "Site-to-Site VPNの設計・冗長化パターンを公式資料で学ぶ"
           }
         ]
       },
@@ -329,7 +347,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "リージョン/AZ/エッジロケーション/Local Zonesの設計思想を図解"
           },
           {
             "title": "AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム",
@@ -388,7 +407,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "networking"
-            ]
+            ],
+            "summary": "PrivateLinkの接続フローと3種類のVPCエンドポイントを図解"
           },
           {
             "title": "AWS Site-to-Site VPN 完全ガイド",
@@ -400,7 +420,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "Site-to-Site VPNの4大コンポーネントと冗長トンネル構成を図解"
           },
           {
             "title": "AWS Site-to-Site VPN 非対称ルーティング問題の解決方法",
@@ -425,11 +446,12 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "difficulty": "advanced",
+            "estimated_minutes": 20,
             "tags": [
               "networking"
-            ]
+            ],
+            "summary": "BGPルート選択の優先順位(LP/AS_PATH/MED等)をステップ解説"
           },
           {
             "title": "AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む",
@@ -471,7 +493,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "ha",
               "networking"
-            ]
+            ],
+            "summary": "CIDR重複判定とPrivateLinkによる解決策を判断フロー付きで解説"
           },
           {
             "title": "CloudFront HTTPセキュリティヘッダー完全ガイド",
@@ -561,8 +584,12 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "difficulty": "advanced",
+            "estimated_minutes": 25,
+            "tags": [
+              "security"
+            ],
+            "summary": "GWLBによるディープパケットインスペクションの仕組みを空港検査で図解"
           },
           {
             "title": "ハイブリッド DNS アーキテクチャ 完全ガイド",
@@ -574,10 +601,11 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "advanced",
-            "estimated_minutes": 25,
+            "estimated_minutes": 30,
             "tags": [
               "dns"
-            ]
+            ],
+            "summary": "Route 53 ResolverエンドポイントによるハイブリッドDNS設計を図解"
           },
           {
             "title": "ジャンボフレーム＆MTU問題 完全図解ガイド",
@@ -603,8 +631,10 @@ export const categoriesData: Category[] = [
             "difficulty": "intermediate",
             "estimated_minutes": 20,
             "tags": [
-              "comparison"
-            ]
+              "comparison",
+              "security"
+            ],
+            "summary": "NACLとSGの違いをマンションセキュリティで比較整理"
           },
           {
             "title": "NAT ゲートウェイのタイムアウト動作 完全ガイド",
@@ -651,7 +681,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "networking",
               "storage"
-            ]
+            ],
+            "summary": "S3用VPCエンドポイントと条件キー付きバケットポリシーを解説"
           },
           {
             "title": "AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド",
@@ -680,7 +711,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "comparison"
-            ]
+            ],
+            "summary": "スプリット/フルトンネルVPNの通信経路と判断フローを比較"
           },
           {
             "title": "Amazon VPC CNI 完全ガイド",
@@ -734,10 +766,11 @@ export const categoriesData: Category[] = [
             "service": "VPC",
             "exam_domains": [
               1,
-              2
+              2,
+              3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "estimated_minutes": 30,
             "tags": [
               "networking",
               "monitoring"
@@ -771,7 +804,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "networking"
-            ]
+            ],
+            "summary": "VPCルーティングとパケットの経路をシナリオ別にステップ図解"
           },
           {
             "title": "VPCトラフィックミラーリング完全ガイド - 4つの構成要素を徹底図解",
@@ -793,7 +827,8 @@ export const categoriesData: Category[] = [
               "comparison",
               "networking",
               "monitoring"
-            ]
+            ],
+            "summary": "トラフィックミラーリングとフローログの使い分けを比較図解"
           },
           {
             "title": "VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説",
@@ -865,7 +900,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "ha",
               "networking"
-            ]
+            ],
+            "summary": "CIDR重複時のPrivateLinkによるL7接続解決策を図解"
           },
           {
             "title": "AWS RAM VPCプレフィックスリスト共有ガイド",
@@ -893,7 +929,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 30,
             "tags": [
               "networking"
-            ]
+            ],
+            "summary": "VPCの基本設計とネットワーク構成を公式Black Belt資料で学ぶ"
           },
           {
             "title": "【Black Belt】AWS Networking Fundamentals",
@@ -904,7 +941,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 30
+            "estimated_minutes": 30,
+            "summary": "AWSネットワーキング基礎を公式資料で体系的に学ぶ"
           }
         ]
       },
@@ -923,7 +961,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "IGW/NAT GW/TGW等の各ゲートウェイの役割とトラフィックフローを図解"
           },
           {
             "title": "AWS Cloud WAN アタッチメント承認ポリシー完全ガイド",
@@ -933,7 +972,7 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
+            "difficulty": "advanced",
             "estimated_minutes": 25
           },
           {
@@ -945,8 +984,12 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "difficulty": "advanced",
+            "estimated_minutes": 35,
+            "tags": [
+              "comparison"
+            ],
+            "summary": "Cloud WANセグメントとTGWルートテーブルの分離設計を比較"
           },
           {
             "title": "AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド",
@@ -972,7 +1015,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "TGW Route Analyzerの仕組みとルート診断の活用方法を解説"
           },
           {
             "title": "Transit Gateway アプライアンスモード 完全ガイド",
@@ -1030,7 +1074,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "advanced",
-            "estimated_minutes": 35
+            "estimated_minutes": 40,
+            "summary": "TGWの4つのコアコンセプトとアタッチメント種別を詳細図解"
           },
           {
             "title": "AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する",
@@ -1041,8 +1086,9 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "difficulty": "advanced",
+            "estimated_minutes": 25,
+            "summary": "TGWピアリングによるリージョン間接続を試験シナリオ付きで図解"
           },
           {
             "title": "AWS Transit Gateway共有の超簡単ガイド",
@@ -1057,7 +1103,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "ha"
-            ]
+            ],
+            "summary": "RAMによるTGWクロスアカウント共有の手順をステップ解説"
           },
           {
             "title": "【Black Belt】AWS Transit Gateway Deep Dive (2025年1月)",
@@ -1138,7 +1185,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "AWS WAFのルール/モード/マネージドルールの基本を図解整理"
           },
           {
             "title": "AWS CloudTrail Lake 初心者ガイド",
@@ -1256,7 +1304,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "monitoring"
-            ]
+            ],
+            "summary": "GuardDutyのログソース(VPCフローログ/DNS/CloudTrail等)を図解"
           },
           {
             "title": "GuardDutyによるトラフィックパターン分析 完全ガイド",
@@ -1306,7 +1355,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 30
+            "estimated_minutes": 30,
+            "summary": "AWS Network Firewallの基本構成を公式Black Belt資料で学ぶ"
           }
         ]
       },
@@ -1329,7 +1379,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "security"
-            ]
+            ],
+            "summary": "SAML連携によるIAMフェデレーションの信頼関係を図解"
           },
           {
             "title": "AWS ABAC完全ガイド - PrincipalTag vs ResourceTag",
@@ -1481,7 +1532,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "security"
-            ]
+            ],
+            "summary": "IAM Identity Centerによるマルチアカウント一元認証の構成を解説"
           },
           {
             "title": "IAM MFA緊急時の救済ガイド - コンソールの限界とAPI直接操作",
@@ -1504,14 +1556,14 @@ export const categoriesData: Category[] = [
             "priority": "high",
             "service": "IAM",
             "exam_domains": [
-              1,
-              2
+              1
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "estimated_minutes": 20,
             "tags": [
               "security"
-            ]
+            ],
+            "summary": "パーミッションバウンダリーの制限範囲と設計パターンを図解"
           },
           {
             "title": "IAM 権限評価モデル &amp; 操作経路 完全ガイド",
@@ -1522,11 +1574,12 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
+            "difficulty": "advanced",
             "estimated_minutes": 25,
             "tags": [
               "security"
-            ]
+            ],
+            "summary": "IAM権限評価ロジックの優先順位をオフィスビルの例で図解"
           },
           {
             "title": "IAM ロール：権限ポリシー vs 信頼ポリシー完全ガイド",
@@ -1541,7 +1594,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "security"
-            ]
+            ],
+            "summary": "信頼/アイデンティティ/リソースポリシーの違いを比較表で整理"
           },
           {
             "title": "SAML証明書ローテーション完全ガイド - IAM IDプロバイダー設定更新",
@@ -1564,8 +1618,9 @@ export const categoriesData: Category[] = [
               1,
               2
             ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 35
+            "difficulty": "advanced",
+            "estimated_minutes": 40,
+            "summary": "STS ExternalIdによる混乱した代理問題の防止メカニズムを解説"
           }
         ]
       },
@@ -1584,7 +1639,8 @@ export const categoriesData: Category[] = [
               1
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "SCPの継承・評価ルールを組織階層の具体例でステップ解説"
           },
           {
             "title": "AWS Organizations &amp; Control Tower - 視覚的プロセス図解",
@@ -1700,7 +1756,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "multi-account"
-            ]
+            ],
+            "summary": "AWS Config×Organizationsによるマルチアカウント準拠管理を解説"
           },
           {
             "title": "AWS Config S3配信エラー解決ガイド",
@@ -1738,10 +1795,11 @@ export const categoriesData: Category[] = [
               1
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20,
+            "estimated_minutes": 15,
             "tags": [
-              "ha"
-            ]
+              "multi-account"
+            ],
+            "summary": "Control Tower予防的/検出的/プロアクティブガードレールを分類整理"
           },
           {
             "title": "AWS マネージドポリシー vs カスタマーマネージドポリシー 完全ガイド",
@@ -1778,7 +1836,8 @@ export const categoriesData: Category[] = [
               1
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "OrganizationsとControl Towerの違いをマンション管理で比較"
           },
           {
             "title": "AWS Well-Architected フレームワーク 完全図解ガイド",
@@ -1787,10 +1846,12 @@ export const categoriesData: Category[] = [
             "service": "Well-Architected",
             "exam_domains": [
               1,
-              2
+              2,
+              3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 35
+            "estimated_minutes": 30,
+            "summary": "Well-Architected 6本柱の設計思想と実践ポイントを体系整理"
           },
           {
             "title": "CIS AWS Foundations ベンチマーク継続評価ガイド",
@@ -1811,13 +1872,13 @@ export const categoriesData: Category[] = [
             "href": "security-governance/cloudformation-drift-detection-auto-remediation-guide.html",
             "service": "CloudFormation",
             "exam_domains": [
-              1,
-              2
+              3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "estimated_minutes": 30,
             "tags": [
-              "ha"
+              "ha",
+              "monitoring"
             ]
           },
           {
@@ -1829,7 +1890,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "CloudTrail管理イベントとデータイベントの違いと設定方法を整理"
           },
           {
             "title": "CloudTrail 整合性検証 &amp; ダイジェストファイル 完全ガイド",
@@ -1923,11 +1985,15 @@ export const categoriesData: Category[] = [
             "priority": "high",
             "service": "Firewall Manager",
             "exam_domains": [
-              1,
-              2
+              1
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 30,
+            "tags": [
+              "security",
+              "multi-account"
+            ],
+            "summary": "Firewall Managerの3種SGポリシー(共通/監査/使用状況)を比較整理"
           },
           {
             "title": "AWS認証サービス完全比較ガイド - IAM Identity Center vs IAM vs Cognito",
@@ -1943,7 +2009,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "comparison",
               "security"
-            ]
+            ],
+            "summary": "IAM Identity Center/IAM/Cognitoの使い分けを比較表で整理"
           },
           {
             "title": "AWS IAMポリシー vs リソースポリシー - 明示的Denyの重要性 完全図解ガイド",
@@ -1958,7 +2025,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "security"
-            ]
+            ],
+            "summary": "リソースポリシーの明示的Denyが他ポリシーに優先する仕組みを解説"
           },
           {
             "title": "IAM Roles Anywhere 完全ガイド",
@@ -2024,7 +2092,8 @@ export const categoriesData: Category[] = [
               1
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "SCPポリシーの7構成要素(Effect/Action/Resource等)を図解"
           },
           {
             "title": "AWS Security Hub 設定ポリシー完全図解ガイド",
@@ -2120,7 +2189,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 20,
+            "summary": "KMSグラントによる一時的な暗号化キー権限委任の仕組みを解説"
           },
           {
             "title": "AWS KMS キーの種類 完全ガイド",
@@ -2132,7 +2202,8 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "AWS管理/カスタマー管理/持ち込みキーの3種比較と選定フロー"
           },
           {
             "title": "AWS KMS スロットリング対策 &amp; Encryption SDK キャッシュ完全ガイド",
@@ -2174,7 +2245,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "PrivateLink接続にNLBが必須な技術的理由を4つの観点で解説"
           },
           {
             "title": "ALB ターゲットグループ完全ガイド",
@@ -2211,7 +2283,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "scaling"
-            ]
+            ],
+            "summary": "Auto Scalingの基本動作をブラックフライデーシナリオで図解"
           },
           {
             "title": "Auto Scaling インスタンスリフレッシュ完全ガイド",
@@ -2240,7 +2313,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "scaling"
-            ]
+            ],
+            "summary": "ライフサイクルフック3必須コマンドの実行フローをステップ解説"
           },
           {
             "title": "Auto Scaling安全なOSアップデート戦略完全ガイド",
@@ -2275,11 +2349,14 @@ export const categoriesData: Category[] = [
             "href": "compute-applications/aws-global-architecture-guide.html",
             "priority": "high",
             "exam_domains": [
-              2,
-              3
+              2
             ],
-            "difficulty": "advanced",
-            "estimated_minutes": 25
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "ha"
+            ],
+            "summary": "AWSグローバル4層アーキテクチャをテーマパーク運営で図解"
           },
           {
             "title": "CloudWatch Agent Procstat 完全ガイド",
@@ -2379,7 +2456,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "ALB(L7)とNLB(L4)の動作レイヤーと機能差を比較表で整理"
           },
           {
             "title": "Amazon EventBridge イベントパターン完全図解ガイド",
@@ -2418,7 +2496,12 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 30,
+            "tags": [
+              "security",
+              "networking"
+            ],
+            "summary": "GWLBのGeneveカプセル化とトラフィックフローの仕組みを図解"
           },
           {
             "title": "IAM PassRole vs AssumeRole 完全ガイド",
@@ -2434,7 +2517,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "comparison",
               "security"
-            ]
+            ],
+            "summary": "PassRoleとAssumeRoleの違いをレストラン代理店長の例で比較"
           },
           {
             "title": "NLB + TCPリスナー + mTLS + EKS 完全ガイド",
@@ -2462,7 +2546,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "NLBターゲットタイプ(インスタンス/IP/ALB)の違いを完全比較"
           },
           {
             "title": "VPC DHCP オプションとカスタム DNS 完全ガイド",
@@ -2503,7 +2588,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "scaling"
-            ]
+            ],
+            "summary": "ライフサイクルフックの動作タイミングとユースケースを図解"
           }
         ]
       },
@@ -2538,7 +2624,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "containers"
-            ]
+            ],
+            "summary": "ECSの4要素(タスク/サービス/クラスタ/定義)を料理店運営で図解"
           },
           {
             "title": "AWS SQS Dead-letter Queue &amp; Redrive Policy 完全ガイド",
@@ -2564,7 +2651,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "SQSデッドレターキューの流れとRedrive Policyを宅配便で図解"
           },
           {
             "title": "AWS Systems Manager 機能解説",
@@ -2606,7 +2694,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "EC2容量不足エラーの原因と再起動による解決メカニズムを図解"
           },
           {
             "title": "AWS クラスタプレイスメントグループ + EFA 解説",
@@ -2629,10 +2718,11 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25,
+            "estimated_minutes": 20,
             "tags": [
               "ha"
-            ]
+            ],
+            "summary": "EC2 Auto Recoveryの動作フローと手動対応との違いを比較"
           },
           {
             "title": "EC2ステータスチェック図解ガイド",
@@ -2655,7 +2745,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "Cluster/Spread/Partition配置グループの特性と選定基準を図解"
           },
           {
             "title": "AWS Fault Injection Simulator 完全ガイド",
@@ -2722,11 +2813,12 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 35,
+            "estimated_minutes": 40,
             "tags": [
               "monitoring",
               "serverless"
-            ]
+            ],
+            "summary": "Lambdaメトリクスのアラート設定とコールドスタート最適化を解説"
           },
           {
             "title": "AWS Lambda Invocationメトリクスの解説",
@@ -2818,7 +2910,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "serverless"
-            ]
+            ],
+            "summary": "Lambdaエイリアスによるカナリアリリースの手順をステップ図解"
           }
         ]
       },
@@ -2838,7 +2931,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "Patch Managerのパッチベースライン設定と適用手順を図解"
           },
           {
             "title": "AWS Systems Manager OpsCenter 完全ガイド",
@@ -2934,7 +3028,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "Systems Managerのオンプレ/ハイブリッド環境管理の構成を解説"
           }
         ]
       }
@@ -3028,7 +3123,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "CloudFrontの静的コンテンツキャッシュ最適化戦略を図解"
           },
           {
             "title": "CloudFront HTTPSハンドシェイク完全ガイド",
@@ -3054,7 +3150,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "ha"
-            ]
+            ],
+            "summary": "CloudFrontオリジンフェイルオーバーの発動条件と構造をステップ解説"
           },
           {
             "title": "DNSレコード完全ガイド - 住所録で理解するAWS Route 53",
@@ -3070,7 +3167,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "dns",
               "database"
-            ]
+            ],
+            "summary": "A/CNAME/MX/TXT等の主要DNSレコード種別を体系的に解説"
           },
           {
             "title": "AWS Global Accelerator 完全ガイド",
@@ -3082,7 +3180,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "Global Acceleratorのエニーキャストルーティングと利点を図解"
           },
           {
             "title": "Lambda@Edge Origin Response X-Frame-Options完全ガイド",
@@ -3133,7 +3232,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "CloudFrontオリジングループによるフェイルオーバー設定を3ステップで解説"
           }
         ]
       },
@@ -3198,7 +3298,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "dns"
-            ]
+            ],
+            "summary": "Route 53 DNS Firewallによる悪意あるドメインのブロック機構を解説"
           },
           {
             "title": "Route 53 DNSSEC 完全ガイド",
@@ -3228,7 +3329,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25,
             "tags": [
               "dns"
-            ]
+            ],
+            "summary": "プライベートホストゾーンとスプリットビューDNSの設計を比較解説"
           },
           {
             "title": "Route 53 プライベートホストゾーン クロスアカウント関連付け",
@@ -3236,14 +3338,16 @@ export const categoriesData: Category[] = [
             "priority": "high",
             "service": "Route 53",
             "exam_domains": [
-              2,
-              3
+              1,
+              2
             ],
             "difficulty": "intermediate",
             "estimated_minutes": 25,
             "tags": [
-              "dns"
-            ]
+              "dns",
+              "multi-account"
+            ],
+            "summary": "Route 53プライベートホストゾーンのクロスアカウント関連付け手順を解説"
           },
           {
             "title": "Route 53 Application Recovery Controller 解説",
@@ -3272,7 +3376,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "dns"
-            ]
+            ],
+            "summary": "Route 53パブリック/プライベートホストゾーンの使い分けを図解"
           }
         ]
       },
@@ -3425,7 +3530,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "CloudFormationテンプレート構造と組み込み関数の基本を図解"
           },
           {
             "title": "AWS SAM レストラン経営で理解しよう",
@@ -3470,7 +3576,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 25
+            "estimated_minutes": 25,
+            "summary": "DeletionPolicy/UpdateReplacePolicy/削除保護の3安全策を比較"
           },
           {
             "title": "CloudWatch Logs ログ保持期間 完全ガイド",
@@ -3499,7 +3606,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "deployment"
-            ]
+            ],
+            "summary": "CodePipelineのSource/Build/Deployステージ構成を図解"
           },
           {
             "title": "AWS GuardDuty 抑制ルール（Suppression Rule）完全ガイド",
@@ -3521,7 +3629,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "StackSetsの委任管理者とサービスマネージド型の仕組みを詳細図解"
           },
           {
             "title": "CloudFormationからAWS Service Catalog製品を作成する方法",
@@ -3536,7 +3645,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "monitoring"
-            ]
+            ],
+            "summary": "CloudFormationからService Catalog製品を作成する手順を図解"
           }
         ]
       },
@@ -3556,7 +3666,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "REST/HTTP/WebSocket 3種APIタイプの特徴と料金をレストランで比較"
           },
           {
             "title": "AWS EventBridge API宛先と入力トランスフォーマー機能の解説",
@@ -3568,7 +3679,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "EventBridge API宛先と入力トランスフォーマーの連携を図解"
           },
           {
             "title": "AWS AppSync - 初心者向けガイド",
@@ -3646,7 +3758,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "storage"
-            ]
+            ],
+            "summary": "S3ライフサイクル/CRR/オブジェクトロックの3機能を図解"
           },
           {
             "title": "OpenSearch Service ISM ポリシー完全ガイド",
@@ -3689,7 +3802,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "security",
               "storage"
-            ]
+            ],
+            "summary": "S3バケットポリシー/ACL/暗号化等セキュリティ機能の使い分けを比較"
           },
           {
             "title": "AWS S3 ストレージクラスを家の収納で理解しよう",
@@ -3704,7 +3818,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "storage"
-            ]
+            ],
+            "summary": "S3の6ストレージクラスとGlacier 3種の取り出し速度を比較表で整理"
           }
         ]
       },
@@ -3740,7 +3855,8 @@ export const categoriesData: Category[] = [
             "tags": [
               "security",
               "database"
-            ]
+            ],
+            "summary": "Aurora Data API×IAM認証の構成をホテルセキュリティで図解"
           },
           {
             "title": "ElastiCache 可用性・スケーラビリティ機能 詳細ガイド",
@@ -3752,7 +3868,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "ElastiCacheの可用性・スケーラビリティ機能と構成パターンを図解"
           },
           {
             "title": "Amazon OpenSearch Service 完全ガイド",
@@ -3811,7 +3928,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "storage"
-            ]
+            ],
+            "summary": "EBS高速スナップショット復元(FSR)の仕組みとユースケースを図解"
           },
           {
             "title": "AWS EFS マウントターゲットの説明",
@@ -3856,7 +3974,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 15,
             "tags": [
               "ha"
-            ]
+            ],
+            "summary": "4つのDR戦略(Backup〜Multi-Site)をRPO/RTO比較で整理"
           }
         ]
       },
@@ -3875,7 +3994,8 @@ export const categoriesData: Category[] = [
               4
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "Migration Hubの4機能による移行追跡・一元管理を図解"
           },
           {
             "title": "AWS Migration Hubを引っ越し会社で理解しよう",
@@ -3896,7 +4016,8 @@ export const categoriesData: Category[] = [
               4
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "7R移行戦略と対応AWSサービス群を引っ越しの例で体系整理"
           },
           {
             "title": "AWS移行サービス群 完全ガイド",
@@ -3931,7 +4052,8 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "comparison"
-            ]
+            ],
+            "summary": "Blue/GreenとImmutableデプロイ戦略の違いを比較図解"
           }
         ]
       },
@@ -3963,7 +4085,8 @@ export const categoriesData: Category[] = [
               4
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "DMS CDCによる無停止データ移行の仕組みを引っ越し業者で図解"
           },
           {
             "title": "AWS DMS機能詳細ガイド",
@@ -3974,7 +4097,8 @@ export const categoriesData: Category[] = [
               4
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "DMSのセキュリティ・変換・検証機能の詳細を図解"
           },
           {
             "title": "AWS SCT・DMS オンラインマイグレーション完全ガイド",
@@ -3985,7 +4109,8 @@ export const categoriesData: Category[] = [
               4
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "SCT+DMSの異種DB移行フローを図書館移転プロジェクトで図解"
           }
         ]
       }
@@ -4013,7 +4138,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "intermediate",
-            "estimated_minutes": 20
+            "estimated_minutes": 20,
+            "summary": "Cost Explorer/Budgets/CUR等コスト管理ツールの使い分けを比較"
           },
           {
             "title": "AWS EC2ディスクメトリクスの違い",
@@ -4045,7 +4171,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "MTTD/MTTR/MTBF可用性3指標の計算式と実装パターンを図解"
           },
           {
             "title": "Amazon Kinesis Data Streamsをベルトコンベアで理解しよう",
@@ -4056,7 +4183,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解"
           }
         ]
       },
@@ -4075,7 +4203,8 @@ export const categoriesData: Category[] = [
               3
             ],
             "difficulty": "beginner",
-            "estimated_minutes": 15
+            "estimated_minutes": 15,
+            "summary": "Firehoseの動的パーティショニングとParquet変換の高度機能を図解"
           },
           {
             "title": "Redshift スケーリング手段完全図解",
@@ -4834,7 +4963,7 @@ export const learningModes: LearningMode[] = [
     "id": "beginner",
     "title": "初学者向け",
     "icon": "🌱",
-    "description": "基礎から段階的に学習",
+    "description": "初級リソース × 高優先度に絞り込み",
     "filters": {
       "difficulty": [
         "beginner"
@@ -4848,7 +4977,7 @@ export const learningModes: LearningMode[] = [
     "id": "30days",
     "title": "試験まで30日",
     "icon": "📅",
-    "description": "効率重視の30日プラン",
+    "description": "高・中優先度リソースで効率学習",
     "filters": {
       "priority": [
         "high",
@@ -4860,7 +4989,7 @@ export const learningModes: LearningMode[] = [
     "id": "last-minute",
     "title": "直前復習",
     "icon": "⚡",
-    "description": "高頻出論点を集中復習",
+    "description": "高優先度リソースのみ集中表示",
     "filters": {
       "priority": [
         "high"
@@ -4871,14 +5000,14 @@ export const learningModes: LearningMode[] = [
     "id": "weakness",
     "title": "弱点補強",
     "icon": "🎯",
-    "description": "苦手分野を重点学習",
+    "description": "カテゴリ・ドメインを選んで弱点対策",
     "filters": {}
   },
   {
     "id": "networking-focus",
     "title": "ネットワーク集中",
     "icon": "🌐",
-    "description": "ネットワーク分野を徹底攻略",
+    "description": "ネットワーキングカテゴリに絞り込み",
     "filters": {
       "category": "networking"
     }
@@ -4887,7 +5016,7 @@ export const learningModes: LearningMode[] = [
     "id": "security-focus",
     "title": "セキュリティ集中",
     "icon": "🛡️",
-    "description": "セキュリティ分野を徹底攻略",
+    "description": "セキュリティ・ガバナンスに絞り込み",
     "filters": {
       "category": "security-governance"
     }
@@ -4896,7 +5025,7 @@ export const learningModes: LearningMode[] = [
     "id": "high-frequency",
     "title": "高頻出論点",
     "icon": "🔥",
-    "description": "試験で頻出のトピック",
+    "description": "高優先度リソースのみ集中表示",
     "filters": {
       "priority": [
         "high"
@@ -4907,7 +5036,7 @@ export const learningModes: LearningMode[] = [
     "id": "comparison",
     "title": "比較問題重点",
     "icon": "⚖️",
-    "description": "サービス間比較の問題対策",
+    "description": "comparisonタグ付きリソースに絞り込み",
     "filters": {
       "tags": [
         "comparison"
@@ -4923,12 +5052,13 @@ export const domainIndex: DomainIndexItem[] = [
     "categories": [
       "networking",
       "security-governance",
+      "content-delivery-dns",
       "analytics-operations"
     ]
   },
   {
     "domainId": 2,
-    "count": 232,
+    "count": 229,
     "categories": [
       "networking",
       "security-governance",
@@ -4941,7 +5071,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 3,
-    "count": 156,
+    "count": 158,
     "categories": [
       "networking",
       "security-governance",
