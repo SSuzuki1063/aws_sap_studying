@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository built 
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Astro 5.x SSG (build: `npm run build` → `dist/`) |
-| **Content** | 286 resource pages (.astro), 8 display categories, 12 page directories |
+| **Content** | 290 resource pages (.astro), 8 display categories, 12 page directories |
 | **Branches** | `master` (source), `gh-pages` (build output, CI-managed) |
 
 ## ⚠️ CRITICAL RULES
@@ -91,7 +91,7 @@ Resource pages live in `src/pages/<directory>/`. There are **12 page directories
 
 | Display Category (data.js) | Page Directory | Resources |
 |---|---|---|
-| `networking` | `networking/` | 68 |
+| `networking` | `networking/` | 72 |
 | `security-governance` | `security-governance/` | 80 |
 | `compute-applications` | `compute-applications/` | 57 |
 | `content-delivery-dns` | `content-delivery-dns/` | 23 |
@@ -133,6 +133,22 @@ const rawContent = `
 ```
 
 **Do NOT** place body HTML directly in the Astro template — any `{}` will be parsed as JSX expressions and cause build errors.
+
+### CSS Specificity Pitfall: Inline h1/p Color
+
+`css/common.css` sets `h1, h2, h3, h4, h5, h6 { color: var(--color-text-primary); }` (gray `#374151`). This **overrides** color inherited from parent elements like `.page-header { color: white; }` because direct rules beat inheritance. Pages with dark-background headers **must** set `color` explicitly on `.page-header h1` or `.header h1`:
+
+```css
+/* ✅ Explicit — works */
+.page-header h1 { color: #fff; }
+
+/* ❌ Inheritance only — h1 appears gray on dark background */
+.page-header { color: #fff; }  /* h1 ignores this */
+```
+
+### Legacy Root HTML Files
+
+Root-level `networking/*.html`, `compute-applications/*.html` etc. are **pre-Astro legacy files**. The source of truth is `src/pages/**/*.astro`. Legacy files are useful only as reference when an `.astro` file has `<!-- CONTENT EXTRACTION FAILED -->` (incomplete HTML→Astro conversion).
 
 ## Testing & QA
 
