@@ -5096,5 +5096,5 @@ export const siteStats: SiteStats = {
   "minorCategories": 29,
   "totalResources": "302+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/03/15"
+  "lastUpdated": "2026/03/20"
 };
