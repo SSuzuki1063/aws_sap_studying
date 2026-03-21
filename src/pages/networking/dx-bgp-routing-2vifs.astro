@@ -1,0 +1,912 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Dx Bgp Routing 2vifs',
+  pageTitle: 'AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Direct Connect & ハイブリッドネットワーク',
+  slug: 'dx-bgp-routing-2vifs',
+  tocItems: [
+    { id: 'key-points', text: '最初に押さえる4つのポイント', level: 'h2' },
+    { id: 'analogy', text: 'たとえ話：2本の高速道路とカーナビ', level: 'h2' },
+    { id: 'architecture', text: 'アーキテクチャ全体像：2つのVIF構成', level: 'h2' },
+    { id: 'routing', text: 'BGPルート選択：カーナビの判断基準', level: 'h2' },
+    { id: 'direction-control', text: '方向別トラフィック制御 — 出方向 vs 入方向', level: 'h2' },
+    { id: 'scenarios', text: '2つのVIF構成の運用シナリオ', level: 'h2' },
+    { id: 'active-standby-prepending', text: 'Active/Standby — AS_PATH Prependingの仕組み', level: 'h3' },
+    { id: 'active-active-prefix-split', text: 'Active/Active — プレフィックス分割による負荷分散', level: 'h3' },
+    { id: 'config-examples', text: '設定例：AWS CLI / ルーター設定', level: 'h2' },
+    { id: 'vif-creation-cli', text: 'VIF作成（AWS CLI）', level: 'h3' },
+    { id: 'as-path-prepending-config', text: 'AS_PATH Prepending設定（Cisco IOS）', level: 'h3' },
+    { id: 'best-practices', text: 'ベストプラクティス vs アンチパターン', level: 'h2' },
+    { id: 'troubleshooting', text: 'トラブルシューティング', level: 'h2' },
+    { id: 'exam-tips', text: 'ANS-C01 試験対策', level: 'h2' },
+    { id: 'faq', text: 'よくある質問（FAQ）', level: 'h2' },
+    { id: 'glossary', text: '用語集', level: 'h2' },
+    { id: 'cheatsheet', text: 'Direct Connect BGP チートシート', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/dx-bgp-routing-2vifs.css',
+};
+
+const rawContent = `
+      <!-- ==================== KEY TAKEAWAYS ==================== -->
+      <section class="key-takeaways" aria-label="重要ポイント">
+        <h2 id="key-points"><span aria-hidden="true">&#128273;</span> 最初に押さえる4つのポイント</h2>
+        <div class="takeaway-grid">
+          <div class="takeaway-card">
+            <div class="tk-icon" aria-hidden="true">&#128205;</div>
+            <div class="tk-title">最長プレフィックスマッチが最優先</div>
+            <div class="tk-desc">/24は/16より常に優先。BGP属性の比較はその後</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="tk-icon" aria-hidden="true">&#128167;</div>
+            <div class="tk-title">AS_PATH Prependingで優先度制御</div>
+            <div class="tk-desc">AS番号を水増しして特定VIFの優先度を下げる</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="tk-icon" aria-hidden="true">&#9733;</div>
+            <div class="tk-title">Local Preferenceは「自分側」の制御</div>
+            <div class="tk-desc">オンプレ→AWSの出方向トラフィックを制御</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="tk-icon" aria-hidden="true">&#128233;</div>
+            <div class="tk-title">MEDは「相手側」への提案</div>
+            <div class="tk-desc">AWS→オンプレの入方向の優先度をAWSに提案</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== ANALOGY: Highway Infographic ==================== -->
+      <section class="section" id="analogy" aria-label="たとえ話で理解する">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128663;</span>
+          <h2 id="analogy">たとえ話：2本の高速道路とカーナビ</h2>
+        </div>
+
+        <p>
+          BGPルーティングの仕組みを、<strong>「自宅から会社へ通じる2本の高速道路ルートとカーナビ」</strong>にたとえて可視化します。
+        </p>
+
+        <!-- ===== Highway Analogy SVG Infographic ===== -->
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="高速道路のたとえ話のインフォグラフィック。自宅（オンプレミス）から会社（AWS VPC）へ2本の高速道路（VIF）が接続し、カーナビ（BGP）がルートを選択する様子を図解しています。">
+            <!-- Background -->
+            <rect x="0" y="0" width="1200" height="700" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#0F172A">2本の高速道路のたとえで理解するBGPルーティング</text>
+
+            <!-- House (On-prem) -->
+            <g>
+              <rect x="40" y="160" width="200" height="140" rx="16" fill="#F0F9FF" stroke="#93C5FD" stroke-width="2.5"/>
+              <!-- Roof -->
+              <polygon points="140,110 30,170 250,170" fill="#DBEAFE" stroke="#93C5FD" stroke-width="2"/>
+              <text x="140" y="210" text-anchor="middle" font-size="40" fill="#1E293B">&#127968;</text>
+              <text x="140" y="250" text-anchor="middle" font-size="20" font-weight="700" fill="#1E3A5F">自宅</text>
+              <text x="140" y="278" text-anchor="middle" font-size="18" fill="#475569">（オンプレミス）</text>
+            </g>
+
+            <!-- Company (AWS) -->
+            <g>
+              <rect x="960" y="160" width="200" height="140" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+              <!-- Roof -->
+              <polygon points="1060,110 950,170 1170,170" fill="#FFEDD5" stroke="#FDBA74" stroke-width="2"/>
+              <text x="1060" y="210" text-anchor="middle" font-size="40" fill="#1E293B">&#127970;</text>
+              <text x="1060" y="250" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">会社</text>
+              <text x="1060" y="278" text-anchor="middle" font-size="18" fill="#475569">（AWS VPC）</text>
+            </g>
+
+            <!-- Route A (Primary) - Top -->
+            <path d="M 240 200 C 400 200, 400 140, 600 140 C 800 140, 800 200, 960 200" fill="none" stroke="#10B981" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 240 200 C 400 200, 400 140, 600 140 C 800 140, 800 200, 960 200" fill="none" stroke="#34D399" stroke-width="4" stroke-dasharray="20,15" stroke-linecap="round"/>
+
+            <!-- Route A Label -->
+            <rect x="500" y="88" width="200" height="48" rx="24" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
+            <text x="600" y="118" text-anchor="middle" font-size="20" font-weight="700" fill="#059669">高速道路A（VIF 1）</text>
+
+            <!-- Toll Gate Icon on Route A -->
+            <rect x="390" y="130" width="50" height="36" rx="6" fill="white" stroke="#10B981" stroke-width="2"/>
+            <text x="415" y="155" text-anchor="middle" font-size="16" font-weight="700" fill="#059669">料金所</text>
+            <text x="415" y="185" text-anchor="middle" font-size="16" fill="#059669">×1</text>
+
+            <!-- Car on Route A -->
+            <text x="700" y="136" font-size="28" text-anchor="middle">&#128663;</text>
+
+            <!-- Route B (Standby) - Bottom -->
+            <path d="M 240 250 C 350 250, 350 380, 450 380 C 550 380, 650 380, 750 380 C 850 380, 960 380, 960 250" fill="none" stroke="#F87171" stroke-width="6" stroke-linecap="round" stroke-dasharray="12,8"/>
+            <path d="M 240 250 C 350 250, 350 380, 450 380 C 550 380, 650 380, 750 380 C 850 380, 960 380, 960 250" fill="none" stroke="#FCA5A5" stroke-width="3" stroke-dasharray="20,15" stroke-linecap="round"/>
+
+            <!-- Route B Label -->
+            <rect x="500" y="358" width="200" height="48" rx="24" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="600" y="388" text-anchor="middle" font-size="20" font-weight="600" fill="#DC2626">高速道路B（VIF 2）</text>
+
+            <!-- Toll Gates on Route B -->
+            <rect x="380" y="365" width="40" height="30" rx="4" fill="white" stroke="#F87171" stroke-width="1.5"/>
+            <text x="400" y="386" text-anchor="middle" font-size="14" fill="#DC2626">料金</text>
+            <rect x="530" y="410" width="40" height="30" rx="4" fill="white" stroke="#F87171" stroke-width="1.5"/>
+            <text x="550" y="431" text-anchor="middle" font-size="14" fill="#DC2626">料金</text>
+            <rect x="680" y="365" width="40" height="30" rx="4" fill="white" stroke="#F87171" stroke-width="1.5"/>
+            <text x="700" y="386" text-anchor="middle" font-size="14" fill="#DC2626">料金</text>
+            <text x="600" y="465" text-anchor="middle" font-size="18" fill="#DC2626">料金所 ×3（AS_PATH Prepending）</text>
+
+            <!-- Car Nav (BGP) Center -->
+            <rect x="490" y="230" width="220" height="84" rx="16" fill="#FEFCE8" stroke="#FACC15" stroke-width="3"/>
+            <text x="600" y="262" text-anchor="middle" font-size="28">&#128752;</text>
+            <text x="600" y="296" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">カーナビ（BGP）</text>
+
+            <!-- Speech Bubble from Nav -->
+            <rect x="440" y="500" width="320" height="56" rx="12" fill="white" stroke="#FACC15" stroke-width="2" filter="url(#shadow1)"/>
+            <text x="600" y="524" text-anchor="middle" font-size="20" fill="#1E293B">「料金所が少ないルートAを</text>
+            <text x="600" y="548" text-anchor="middle" font-size="20" fill="#1E293B">推奨します」</text>
+            <polygon points="590,500 610,500 600,485" fill="white" stroke="#FACC15" stroke-width="2"/>
+            <line x1="591" y1="499" x2="609" y2="499" stroke="white" stroke-width="3"/>
+
+            <!-- Mapping Legend -->
+            <rect x="40" y="580" width="1120" height="100" rx="14" fill="#F0F9FF" stroke="#93C5FD" stroke-width="1.5"/>
+            <text x="600" y="610" text-anchor="middle" font-size="20" font-weight="700" fill="#1E3A5F">対応関係</text>
+
+            <circle cx="120" cy="645" r="8" fill="#10B981"/>
+            <text x="140" y="651" font-size="18" fill="#1E293B">ルートA = <tspan font-weight="700">VIF 1（Active）</tspan></text>
+
+            <circle cx="420" cy="645" r="8" fill="#F87171"/>
+            <text x="440" y="651" font-size="18" fill="#1E293B">ルートB = <tspan font-weight="700">VIF 2（Standby）</tspan></text>
+
+            <circle cx="740" cy="645" r="8" fill="#FACC15"/>
+            <text x="760" y="651" font-size="18" fill="#1E293B">カーナビ = <tspan font-weight="700">BGPプロトコル</tspan></text>
+
+            <circle cx="1020" cy="645" r="8" fill="#818CF8"/>
+            <text x="1040" y="651" font-size="18" fill="#1E293B">料金所 = <tspan font-weight="700">AS_PATH</tspan></text>
+
+            <defs>
+              <filter id="shadow1" x="-5%" y="-5%" width="110%" height="130%">
+                <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.08"/>
+              </filter>
+            </defs>
+          </svg>
+          <p class="svg-caption">図1: 2本の高速道路のたとえ — カーナビ（BGP）が料金所（AS_PATH）の少ないルートを自動選択</p>
+        </div>
+
+        <!-- Analogy Mapping Infographic SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="たとえ話の対応一覧図。高速道路の要素とAWS Direct Connectの概念が1対1で対応していることを示す図です。">
+            <rect x="0" y="0" width="1200" height="520" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">たとえ話マッピング：高速道路 ↔ AWS Direct Connect</text>
+
+            <!-- Headers -->
+            <rect x="60" y="65" width="480" height="44" rx="10" fill="#E0F2FE" stroke="#93C5FD" stroke-width="1.5"/>
+            <text x="300" y="94" text-anchor="middle" font-size="20" font-weight="700" fill="#1E3A5F">&#128663; 高速道路のたとえ</text>
+            <rect x="660" y="65" width="480" height="44" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+            <text x="900" y="94" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">&#9729; AWS Direct Connect</text>
+
+            <!-- Arrow column -->
+            <text x="600" y="94" text-anchor="middle" font-size="24" fill="#94A3B8">↔</text>
+
+            <!-- Row 1 -->
+            <rect x="60" y="120" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="150" font-size="26">&#127968;</text>
+            <text x="126" y="151" font-size="20" fill="#1E293B">自宅</text>
+            <text x="600" y="150" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="120" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="151" font-size="20" font-weight="600" fill="#1E293B">オンプレミスネットワーク</text>
+
+            <!-- Row 2 -->
+            <rect x="60" y="178" width="480" height="48" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="208" font-size="26">&#127970;</text>
+            <text x="126" y="209" font-size="20" fill="#1E293B">会社</text>
+            <text x="600" y="208" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="178" width="480" height="48" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="209" font-size="20" font-weight="600" fill="#1E293B">AWS VPC</text>
+
+            <!-- Row 3 -->
+            <rect x="60" y="236" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="266" font-size="26">&#128739;</text>
+            <text x="126" y="267" font-size="20" fill="#1E293B">高速道路ルートA / B</text>
+            <text x="600" y="266" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="236" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="267" font-size="20" font-weight="600" fill="#1E293B">VIF 1 / VIF 2（仮想インターフェース）</text>
+
+            <!-- Row 4 -->
+            <rect x="60" y="294" width="480" height="48" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="324" font-size="26">&#128752;</text>
+            <text x="126" y="325" font-size="20" fill="#1E293B">カーナビ</text>
+            <text x="600" y="324" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="294" width="480" height="48" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="325" font-size="20" font-weight="600" fill="#1E293B">BGPプロトコル</text>
+
+            <!-- Row 5 -->
+            <rect x="60" y="352" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="382" font-size="26">&#128167;</text>
+            <text x="126" y="383" font-size="20" fill="#1E293B">通過する料金所の数</text>
+            <text x="600" y="382" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="352" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="383" font-size="20" font-weight="600" fill="#1E293B">AS_PATH長（短いほど優先）</text>
+
+            <!-- Row 6 -->
+            <rect x="60" y="410" width="480" height="48" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="440" font-size="26">&#9733;</text>
+            <text x="126" y="441" font-size="20" fill="#1E293B">ドライバーの好み設定</text>
+            <text x="600" y="440" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="410" width="480" height="48" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="441" font-size="20" font-weight="600" fill="#1E293B">Local Preference（高いほど優先）</text>
+
+            <!-- Row 7 -->
+            <rect x="60" y="468" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="90" y="498" font-size="26">&#128205;</text>
+            <text x="126" y="499" font-size="20" fill="#1E293B">番地レベルの住所</text>
+            <text x="600" y="498" text-anchor="middle" font-size="22" fill="#94A3B8">→</text>
+            <rect x="660" y="468" width="480" height="48" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="690" y="499" font-size="20" font-weight="600" fill="#1E293B">最長プレフィックスマッチ（/24 > /16）</text>
+          </svg>
+          <p class="svg-caption">図2: たとえ話の対応一覧 — 高速道路の各要素がAWS概念にそのまま対応</p>
+        </div>
+      </section>
+
+      <!-- ==================== ARCHITECTURE ==================== -->
+      <section class="section" id="architecture" aria-label="アーキテクチャ図">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128506;</span>
+          <h2 id="architecture">アーキテクチャ全体像：2つのVIF構成</h2>
+        </div>
+
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AWS Direct Connect 2つのVIF構成のアーキテクチャ図">
+            <rect x="0" y="0" width="1200" height="560" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">2つのVIFによるDirect Connect BGP構成</text>
+
+            <!-- On-premises Zone -->
+            <rect x="30" y="65" width="280" height="440" rx="16" fill="#F0F9FF" stroke="#93C5FD" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="170" y="95" text-anchor="middle" font-size="20" font-weight="700" fill="#1E3A5F">&#127968; オンプレミス</text>
+
+            <!-- Router -->
+            <rect x="60" y="220" width="220" height="90" rx="14" fill="white" stroke="#93C5FD" stroke-width="2.5"/>
+            <text x="170" y="256" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">カスタマールーター</text>
+            <text x="170" y="284" text-anchor="middle" font-size="18" fill="#3B82F6">AS 65000</text>
+
+            <!-- DX Location Zone -->
+            <rect x="370" y="65" width="220" height="440" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="480" y="95" text-anchor="middle" font-size="18" font-weight="700" fill="#92400E">DXロケーション</text>
+
+            <!-- VIF 1 -->
+            <rect x="395" y="170" width="170" height="80" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+            <text x="480" y="203" text-anchor="middle" font-size="20" font-weight="700" fill="#059669">VIF 1</text>
+            <text x="480" y="233" text-anchor="middle" font-size="16" fill="#059669">Active</text>
+
+            <!-- VIF 2 -->
+            <rect x="395" y="300" width="170" height="80" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="2" stroke-dasharray="6,3"/>
+            <text x="480" y="333" text-anchor="middle" font-size="20" font-weight="600" fill="#DC2626">VIF 2</text>
+            <text x="480" y="363" text-anchor="middle" font-size="16" fill="#DC2626">Standby</text>
+
+            <!-- BGP Labels -->
+            <rect x="400" y="420" width="160" height="36" rx="8" fill="#FEFCE8" stroke="#FACC15" stroke-width="1.5"/>
+            <text x="480" y="444" text-anchor="middle" font-size="16" font-weight="600" fill="#92400E">BGPピアリング×2</text>
+
+            <!-- AWS Zone -->
+            <rect x="650" y="65" width="520" height="440" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="910" y="95" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">&#9729; AWS クラウド</text>
+
+            <!-- VGW -->
+            <rect x="690" y="215" width="200" height="100" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+            <text x="790" y="250" text-anchor="middle" font-size="20" font-weight="700" fill="#1E293B">VGW</text>
+            <text x="790" y="278" text-anchor="middle" font-size="18" fill="#92400E">Virtual Private GW</text>
+            <text x="790" y="340" text-anchor="middle" font-size="18" fill="#475569">AS 64512</text>
+
+            <!-- VPC -->
+            <rect x="960" y="170" width="180" height="190" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+            <text x="1050" y="210" text-anchor="middle" font-size="20" font-weight="700" fill="#065F46">VPC</text>
+            <text x="1050" y="240" text-anchor="middle" font-size="18" fill="#059669">10.0.0.0/16</text>
+            <!-- Subnets inside VPC -->
+            <rect x="978" y="260" width="145" height="36" rx="6" fill="white" stroke="#34D399" stroke-width="1"/>
+            <text x="1050" y="284" text-anchor="middle" font-size="16" fill="#065F46">Public Subnet</text>
+            <rect x="978" y="305" width="145" height="36" rx="6" fill="white" stroke="#34D399" stroke-width="1"/>
+            <text x="1050" y="329" text-anchor="middle" font-size="16" fill="#065F46">Private Subnet</text>
+
+            <!-- Arrows -->
+            <defs>
+              <marker id="a-grn" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#10B981"><polygon points="0 0,10 3.5,0 7"/></marker>
+              <marker id="a-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#F87171"><polygon points="0 0,10 3.5,0 7"/></marker>
+              <marker id="a-gry" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#94A3B8"><polygon points="0 0,10 3.5,0 7"/></marker>
+            </defs>
+
+            <!-- Router → VIF 1 -->
+            <line x1="280" y1="245" x2="391" y2="215" stroke="#10B981" stroke-width="3" marker-end="url(#a-grn)"/>
+            <!-- Router → VIF 2 -->
+            <line x1="280" y1="280" x2="391" y2="330" stroke="#F87171" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#a-red)"/>
+            <!-- VIF 1 → VGW -->
+            <line x1="565" y1="210" x2="686" y2="248" stroke="#10B981" stroke-width="3" marker-end="url(#a-grn)"/>
+            <!-- VIF 2 → VGW -->
+            <line x1="565" y1="340" x2="686" y2="285" stroke="#F87171" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#a-red)"/>
+            <!-- VGW → VPC -->
+            <line x1="890" y1="265" x2="956" y2="265" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#a-gry)"/>
+
+            <!-- Labels on arrows -->
+            <rect x="298" y="204" width="70" height="26" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1"/>
+            <text x="333" y="222" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">優先</text>
+            <rect x="298" y="316" width="70" height="26" rx="6" fill="#FEF2F2" stroke="#F87171" stroke-width="1"/>
+            <text x="333" y="334" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">待機</text>
+          </svg>
+          <p class="svg-caption">図3: 2つのVIF構成の全体像 — VIF 1がActive、VIF 2がStandby</p>
+        </div>
+      </section>
+
+      <!-- ==================== BGP ROUTE SELECTION (Visual Priority) ==================== -->
+      <section class="section" id="routing" aria-label="BGPルート選択の仕組み">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128736;</span>
+          <h2 id="routing">BGPルート選択：カーナビの判断基準</h2>
+        </div>
+
+        <div class="info-box danger">
+          <div class="info-box-title"><span aria-hidden="true">&#9888;</span> 最重要ルール</div>
+          <strong>最長プレフィックスマッチが全てに優先。</strong>BGP属性の比較は、同一プレフィックス長のルート間でのみ行われます。
+        </div>
+
+        <!-- Priority Gauge SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BGPルート選択の優先順位を視覚的に示した図。最長プレフィックスマッチが最も高い優先度を持ち、以降Local Preference、AS_PATH、MED、タイブレークの順で優先度が下がることを示しています。">
+            <rect x="0" y="0" width="1200" height="760" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#0F172A">BGPルート選択 — 優先順位マップ</text>
+            <text x="600" y="68" text-anchor="middle" font-size="18" fill="#475569">上にあるほど優先度が高い。同一の場合のみ次のステップへ進む</text>
+
+            <!-- Priority 0 (Highest) -->
+            <rect x="60" y="90" width="1080" height="110" rx="16" fill="#FEF2F2" stroke="#F87171" stroke-width="3"/>
+            <rect x="60" y="90" width="80" height="110" rx="16" fill="#EF4444"/>
+            <rect x="76" y="90" width="64" height="110" fill="#EF4444"/>
+            <text x="100" y="146" text-anchor="middle" font-size="36" fill="white">&#128205;</text>
+            <text x="100" y="182" text-anchor="middle" font-size="16" font-weight="700" fill="white">STEP 0</text>
+            <text x="200" y="128" font-size="22" font-weight="700" fill="#DC2626">最長プレフィックスマッチ</text>
+            <text x="200" y="158" font-size="20" fill="#7F1D1D">最も具体的な宛先が全てに優先（例: /24 は /16 に常に勝つ）</text>
+            <text x="200" y="186" font-size="18" fill="#94A3B8">たとえ: 「東京都千代田区丸の内1丁目」は「東京都」より詳しいので優先</text>
+            <!-- Priority Bar -->
+            <rect x="830" y="110" width="280" height="30" rx="6" fill="#FEE2E2"/>
+            <rect x="830" y="110" width="280" height="30" rx="6" fill="#EF4444"/>
+            <text x="970" y="131" text-anchor="middle" font-size="16" font-weight="700" fill="white">優先度：最高（絶対）</text>
+
+            <!-- Priority 1 -->
+            <rect x="100" y="215" width="1000" height="110" rx="16" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+            <rect x="100" y="215" width="80" height="110" rx="16" fill="#F59E0B"/>
+            <rect x="116" y="215" width="64" height="110" fill="#F59E0B"/>
+            <text x="140" y="270" text-anchor="middle" font-size="36" fill="white">&#9733;</text>
+            <text x="140" y="306" text-anchor="middle" font-size="16" font-weight="700" fill="white">STEP 1</text>
+            <text x="240" y="252" font-size="22" font-weight="700" fill="#92400E">Local Preference（最高値を優先）</text>
+            <text x="240" y="280" font-size="20" fill="#78350F">自分側のルーターで設定 → 出方向（オンプレ→AWS）を制御</text>
+            <text x="240" y="308" font-size="18" fill="#94A3B8">たとえ: ドライバーが「ルートAを使う」と設定</text>
+            <rect x="830" y="234" width="240" height="30" rx="6" fill="#FEF3C7"/>
+            <rect x="830" y="234" width="220" height="30" rx="6" fill="#F59E0B"/>
+            <text x="940" y="255" text-anchor="middle" font-size="16" font-weight="700" fill="white">優先度：高</text>
+
+            <!-- Priority 2 -->
+            <rect x="140" y="340" width="920" height="110" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <rect x="140" y="340" width="80" height="110" rx="16" fill="#6366F1"/>
+            <rect x="156" y="340" width="64" height="110" fill="#6366F1"/>
+            <text x="180" y="395" text-anchor="middle" font-size="36" fill="white">&#128167;</text>
+            <text x="180" y="431" text-anchor="middle" font-size="16" font-weight="700" fill="white">STEP 2</text>
+            <text x="280" y="377" font-size="22" font-weight="700" fill="#4338CA">AS_PATH（最短を優先）</text>
+            <text x="280" y="405" font-size="20" fill="#3730A3">通過するAS数が少ないルートを選択。Prependingで操作可能</text>
+            <text x="280" y="433" font-size="18" fill="#94A3B8">たとえ: 料金所が少ないルートを自動選択</text>
+            <rect x="830" y="359" width="200" height="30" rx="6" fill="#E0E7FF"/>
+            <rect x="830" y="359" width="170" height="30" rx="6" fill="#6366F1"/>
+            <text x="915" y="380" text-anchor="middle" font-size="16" font-weight="700" fill="white">優先度：中</text>
+
+            <!-- Priority 3 -->
+            <rect x="180" y="465" width="840" height="100" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <rect x="180" y="465" width="80" height="100" rx="16" fill="#F97316"/>
+            <rect x="196" y="465" width="64" height="100" fill="#F97316"/>
+            <text x="220" y="515" text-anchor="middle" font-size="36" fill="white">&#128233;</text>
+            <text x="220" y="549" text-anchor="middle" font-size="16" font-weight="700" fill="white">STEP 3</text>
+            <text x="320" y="502" font-size="22" font-weight="700" fill="#9A3412">MED（最低値を優先）</text>
+            <text x="320" y="530" font-size="20" fill="#7C2D12">相手ASへの「提案」値。入方向の制御に使用</text>
+            <text x="320" y="552" font-size="18" fill="#94A3B8">たとえ: 道路標識の推奨ルート表示</text>
+            <rect x="830" y="484" width="160" height="30" rx="6" fill="#FFEDD5"/>
+            <rect x="830" y="484" width="120" height="30" rx="6" fill="#F97316"/>
+            <text x="890" y="505" text-anchor="middle" font-size="16" font-weight="700" fill="white">優先度：低</text>
+
+            <!-- Priority 4 -->
+            <rect x="220" y="580" width="760" height="80" rx="16" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="2"/>
+            <rect x="220" y="580" width="80" height="80" rx="16" fill="#94A3B8"/>
+            <rect x="236" y="580" width="64" height="80" fill="#94A3B8"/>
+            <text x="260" y="625" text-anchor="middle" font-size="28" fill="white">&#9881;</text>
+            <text x="260" y="650" text-anchor="middle" font-size="14" font-weight="700" fill="white">STEP 4+</text>
+            <text x="360" y="617" font-size="20" font-weight="700" fill="#475569">Origin / eBGP優先 / Router ID 等のタイブレーク</text>
+            <text x="360" y="645" font-size="18" fill="#94A3B8">ここまで全て同一の場合の最終判定</text>
+
+            <!-- Final Result -->
+            <rect x="420" y="690" width="360" height="50" rx="25" fill="#10B981"/>
+            <text x="600" y="722" text-anchor="middle" font-size="22" font-weight="700" fill="white">&#10003; ベストパス決定！</text>
+
+            <!-- Arrows -->
+            <text x="590" y="212" text-anchor="middle" font-size="20" fill="#94A3B8">同一プレフィックスなら &#8595;</text>
+            <text x="590" y="337" text-anchor="middle" font-size="20" fill="#94A3B8">同一なら &#8595;</text>
+            <text x="590" y="462" text-anchor="middle" font-size="20" fill="#94A3B8">同一なら &#8595;</text>
+            <text x="590" y="577" text-anchor="middle" font-size="20" fill="#94A3B8">同一なら &#8595;</text>
+            <text x="590" y="687" text-anchor="middle" font-size="20" fill="#94A3B8">&#8595;</text>
+          </svg>
+          <p class="svg-caption">図4: BGPルート選択の優先順位マップ — STEP 0が絶対優先、以降は段階的に評価</p>
+        </div>
+      </section>
+
+      <!-- ==================== DIRECTION CONTROL ==================== -->
+      <section class="section" id="direction-control" aria-label="方向別のトラフィック制御">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128260;</span>
+          <h2 id="direction-control">方向別トラフィック制御 — 出方向 vs 入方向</h2>
+        </div>
+
+        <p>BGPの制御手段は、<strong>制御する方向</strong>によって使い分けが必要です。</p>
+
+        <!-- Direction SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="出方向と入方向のトラフィック制御方法の違いを示す図。出方向はLocal Preferenceで自分側で制御し、入方向はAS_PATH PrependingやMEDで相手側に働きかけることを示しています。">
+            <rect x="0" y="0" width="1200" height="400" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="36" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">トラフィック方向別の制御手段</text>
+
+            <!-- Outbound (Top) -->
+            <rect x="40" y="60" width="1120" height="140" rx="16" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+            <text x="120" y="100" font-size="22" font-weight="700" fill="#92400E">&#9733; 出方向（オンプレ → AWS）</text>
+            <!-- On-prem box -->
+            <rect x="80" y="120" width="180" height="56" rx="10" fill="white" stroke="#FACC15" stroke-width="1.5"/>
+            <text x="170" y="154" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#127968; オンプレミス</text>
+            <!-- Arrow -->
+            <line x1="260" y1="148" x2="410" y2="148" stroke="#F59E0B" stroke-width="4" marker-end="url(#a-ylw)"/>
+            <text x="335" y="138" text-anchor="middle" font-size="32">&#128663;</text>
+            <!-- AWS box -->
+            <rect x="420" y="120" width="150" height="56" rx="10" fill="white" stroke="#FACC15" stroke-width="1.5"/>
+            <text x="495" y="154" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#9729; AWS</text>
+            <!-- Control method -->
+            <rect x="680" y="100" width="440" height="80" rx="14" fill="white" stroke="#F59E0B" stroke-width="2"/>
+            <text x="900" y="132" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">制御手段: Local Preference</text>
+            <text x="900" y="160" text-anchor="middle" font-size="18" fill="#78350F">自分のルーターで確実に制御可能</text>
+            <text x="900" y="180" text-anchor="middle" font-size="16" fill="#94A3B8">値が高い = 優先度が高い</text>
+
+            <!-- Inbound (Bottom) -->
+            <rect x="40" y="220" width="1120" height="150" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="120" y="258" font-size="22" font-weight="700" fill="#9A3412">&#128233; 入方向（AWS → オンプレ）</text>
+            <!-- AWS box -->
+            <rect x="80" y="280" width="150" height="56" rx="10" fill="white" stroke="#FDBA74" stroke-width="1.5"/>
+            <text x="155" y="314" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#9729; AWS</text>
+            <!-- Arrow -->
+            <line x1="230" y1="308" x2="380" y2="308" stroke="#F97316" stroke-width="4" marker-end="url(#a-org)"/>
+            <text x="305" y="298" text-anchor="middle" font-size="32">&#128663;</text>
+            <!-- On-prem box -->
+            <rect x="390" y="280" width="180" height="56" rx="10" fill="white" stroke="#FDBA74" stroke-width="1.5"/>
+            <text x="480" y="314" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#127968; オンプレミス</text>
+            <!-- Control methods -->
+            <rect x="680" y="258" width="440" height="90" rx="14" fill="white" stroke="#F97316" stroke-width="2"/>
+            <text x="900" y="288" text-anchor="middle" font-size="20" font-weight="700" fill="#9A3412">制御手段: AS_PATH Prepending + MED</text>
+            <text x="900" y="316" text-anchor="middle" font-size="18" fill="#7C2D12">Prependingが最も確実（相手のポリシーに依存しない）</text>
+            <text x="900" y="340" text-anchor="middle" font-size="16" fill="#94A3B8">MED = 相手への提案。採用されるとは限らない</text>
+
+            <defs>
+              <marker id="a-ylw" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#F59E0B"><polygon points="0 0,10 3.5,0 7"/></marker>
+              <marker id="a-org" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#F97316"><polygon points="0 0,10 3.5,0 7"/></marker>
+            </defs>
+          </svg>
+          <p class="svg-caption">図5: 出方向はLocal Preference（自分で確実に制御）、入方向はAS_PATH Prepending（最も確実）</p>
+        </div>
+      </section>
+
+      <!-- ==================== SCENARIOS ==================== -->
+      <section class="section" id="scenarios" aria-label="運用シナリオ">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128203;</span>
+          <h2 id="scenarios">2つのVIF構成の運用シナリオ</h2>
+        </div>
+
+        <!-- Active/Standby vs Active/Active comparison -->
+        <div class="vs-panel">
+          <div class="vs-side left">
+            <h4><span aria-hidden="true">&#128994;</span> Active / Standby</h4>
+            <p style="font-size:20px; margin-bottom: 12px; color: #065F46;">普段はルートAのみ。ルートBは障害時の迂回路</p>
+            <ul>
+              <li>VIF 2側で<strong>AS_PATH Prepending</strong>（AS番号を2〜3回繰り返し）</li>
+              <li>Local Preferenceを差別化（VIF1=200, VIF2=100）</li>
+              <li>VIF 1障害時に自動フェイルオーバー</li>
+              <li>コスト最適化に有効</li>
+            </ul>
+          </div>
+          <div class="vs-divider" aria-hidden="true">VS</div>
+          <div class="vs-side right">
+            <h4><span aria-hidden="true">&#128309;</span> Active / Active</h4>
+            <p style="font-size:20px; margin-bottom: 12px; color: #3730A3;">両方のルートを常時使用して負荷分散</p>
+            <ul>
+              <li><strong>プレフィックスを分割</strong>して広告（/17前半＋/17後半）</li>
+              <li>Transit GatewayならECMP対応</li>
+              <li>帯域幅を最大化</li>
+              <li>両接続を常に有効活用</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Active/Standby SVG -->
+        <h3 id="active-standby-prepending">Active/Standby — AS_PATH Prependingの仕組み</h3>
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AS_PATH Prependingの仕組みを視覚化した図。VIF1のAS_PATHは1つ（短い）、VIF2のAS_PATHは3つ（Prependingで水増し）であることを示しています。">
+            <rect x="0" y="0" width="1200" height="380" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="36" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">AS_PATH Prependingで経路長を操作</text>
+
+            <!-- VIF 1 (short path) -->
+            <rect x="40" y="65" width="1120" height="120" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="100" y="100" font-size="20" font-weight="700" fill="#059669">VIF 1（Active）— AS_PATH長 = 1</text>
+
+            <!-- AS boxes for VIF 1 -->
+            <rect x="80" y="115" width="140" height="50" rx="10" fill="white" stroke="#34D399" stroke-width="2"/>
+            <text x="150" y="146" text-anchor="middle" font-size="18" font-weight="600" fill="#059669">AS 65000</text>
+            <text x="245" y="146" text-anchor="middle" font-size="24" fill="#34D399">→</text>
+            <rect x="270" y="115" width="140" height="50" rx="10" fill="white" stroke="#34D399" stroke-width="2"/>
+            <text x="340" y="146" text-anchor="middle" font-size="18" font-weight="600" fill="#059669">AS 64512</text>
+            <text x="445" y="146" text-anchor="middle" font-size="20" fill="#34D399">→</text>
+            <!-- Result -->
+            <rect x="480" y="115" width="200" height="50" rx="25" fill="#10B981"/>
+            <text x="580" y="147" text-anchor="middle" font-size="20" font-weight="700" fill="white">&#10003; 料金所1つ</text>
+
+            <text x="780" y="140" font-size="40">&#128663;</text>
+            <text x="830" y="146" font-size="20" font-weight="700" fill="#059669">← こちらが選ばれる！</text>
+
+            <!-- VIF 2 (long path) -->
+            <rect x="40" y="205" width="1120" height="140" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="100" y="240" font-size="20" font-weight="700" fill="#DC2626">VIF 2（Standby）— AS_PATH長 = 3（Prependingで水増し）</text>
+
+            <!-- AS boxes for VIF 2 -->
+            <rect x="80" y="260" width="120" height="50" rx="10" fill="white" stroke="#F87171" stroke-width="1.5"/>
+            <text x="140" y="291" text-anchor="middle" font-size="16" font-weight="600" fill="#DC2626">AS 65000</text>
+            <text x="218" y="291" font-size="20" fill="#F87171">→</text>
+            <rect x="236" y="260" width="120" height="50" rx="10" fill="#FEE2E2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="296" y="291" text-anchor="middle" font-size="16" font-weight="600" fill="#DC2626">AS 64512</text>
+            <text x="374" y="291" font-size="20" fill="#F87171">→</text>
+            <rect x="392" y="260" width="120" height="50" rx="10" fill="#FEE2E2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="452" y="291" text-anchor="middle" font-size="16" font-weight="600" fill="#DC2626">AS 64512</text>
+            <text x="530" y="291" font-size="20" fill="#F87171">→</text>
+            <rect x="548" y="260" width="120" height="50" rx="10" fill="#FEE2E2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="608" y="291" text-anchor="middle" font-size="16" font-weight="600" fill="#DC2626">AS 64512</text>
+            <text x="700" y="291" font-size="20" fill="#F87171">→</text>
+            <rect x="730" y="262" width="200" height="46" rx="23" fill="#FCA5A5"/>
+            <text x="830" y="292" text-anchor="middle" font-size="18" font-weight="700" fill="#7F1D1D">&#10060; 料金所3つ</text>
+
+            <!-- Annotation -->
+            <rect x="392" y="318" width="276" height="24" rx="4" fill="#FEF2F2"/>
+            <text x="530" y="336" text-anchor="middle" font-size="16" fill="#991B1B">↑ この2つがPrependingで追加</text>
+          </svg>
+          <p class="svg-caption">図6: AS_PATH Prependingの仕組み — VIF 2のAS番号を水増しして「遠回り」に見せる</p>
+        </div>
+
+        <!-- Active/Active SVG -->
+        <h3 id="active-active-prefix-split">Active/Active — プレフィックス分割による負荷分散</h3>
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Active/Active構成でプレフィックスを分割して2つのVIFに負荷分散する図。VIF1は前半サブネット、VIF2は後半サブネットを担当しています。">
+            <rect x="0" y="0" width="1200" height="360" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="36" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">Active/Active: プレフィックス分割で負荷分散</text>
+
+            <!-- On-prem -->
+            <rect x="40" y="120" width="180" height="100" rx="14" fill="#F0F9FF" stroke="#93C5FD" stroke-width="2"/>
+            <text x="130" y="162" text-anchor="middle" font-size="28">&#127968;</text>
+            <text x="130" y="196" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">オンプレミス</text>
+
+            <!-- VIF 1 -->
+            <rect x="360" y="60" width="340" height="100" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <text x="530" y="95" text-anchor="middle" font-size="20" font-weight="700" fill="#4338CA">VIF 1 — 前半サブネット担当</text>
+            <rect x="390" y="110" width="280" height="36" rx="18" fill="#818CF8"/>
+            <text x="530" y="134" text-anchor="middle" font-size="18" font-weight="700" fill="white">10.0.0.0/17 → 50%</text>
+
+            <!-- VIF 2 -->
+            <rect x="360" y="200" width="340" height="100" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="530" y="235" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">VIF 2 — 後半サブネット担当</text>
+            <rect x="390" y="250" width="280" height="36" rx="18" fill="#F97316"/>
+            <text x="530" y="274" text-anchor="middle" font-size="18" font-weight="700" fill="white">10.0.128.0/17 → 50%</text>
+
+            <!-- AWS VPC -->
+            <rect x="840" y="100" width="320" height="170" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+            <text x="1000" y="145" text-anchor="middle" font-size="20" font-weight="700" fill="#065F46">&#9729; VPC: 10.0.0.0/16</text>
+            <rect x="870" y="160" width="260" height="40" rx="8" fill="white" stroke="#818CF8" stroke-width="1.5"/>
+            <text x="1000" y="186" text-anchor="middle" font-size="18" fill="#4338CA">前半: 10.0.0.0/17</text>
+            <rect x="870" y="210" width="260" height="40" rx="8" fill="white" stroke="#F97316" stroke-width="1.5"/>
+            <text x="1000" y="236" text-anchor="middle" font-size="18" fill="#92400E">後半: 10.0.128.0/17</text>
+
+            <!-- Arrows -->
+            <line x1="220" y1="155" x2="356" y2="115" stroke="#818CF8" stroke-width="3" marker-end="url(#a-grn)"/>
+            <line x1="220" y1="185" x2="356" y2="245" stroke="#F97316" stroke-width="3" marker-end="url(#a-org)"/>
+            <line x1="700" y1="110" x2="836" y2="175" stroke="#818CF8" stroke-width="3"/>
+            <line x1="700" y1="250" x2="836" y2="230" stroke="#F97316" stroke-width="3"/>
+          </svg>
+          <p class="svg-caption">図7: プレフィックスを/17で分割して2つのVIFに均等分散</p>
+        </div>
+      </section>
+
+      <!-- ==================== CODE EXAMPLES ==================== -->
+      <section class="section" id="config-examples" aria-label="設定例">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128187;</span>
+          <h2 id="config-examples">設定例：AWS CLI / ルーター設定</h2>
+        </div>
+
+        <h3 id="vif-creation-cli">VIF作成（AWS CLI）</h3>
+        <div class="code-tabs">
+          <div class="code-tab-buttons" role="tablist">
+            <button class="code-tab-btn active" role="tab" aria-selected="true" data-tab="cli1" aria-controls="panel-cli1">AWS CLI</button>
+            <button class="code-tab-btn" role="tab" aria-selected="false" data-tab="cfn1" aria-controls="panel-cfn1">CloudFormation</button>
+          </div>
+          <div class="code-panel active" id="panel-cli1" role="tabpanel">
+<pre><span class="code-comment"># VIF 1（プライマリ）</span>
+aws directconnect create-private-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-private-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"VIF-Primary"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">100</span>,<span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">amazonAddress</span>=<span class="code-string">"169.254.100.1/30"</span>,\\
+    <span class="code-keyword">customerAddress</span>=<span class="code-string">"169.254.100.2/30"</span>,\\
+    <span class="code-keyword">virtualGatewayId</span>=<span class="code-string">"vgw-0123456789abcdef"</span>
+
+<span class="code-comment"># VIF 2（スタンバイ）</span>
+aws directconnect create-private-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-def67890</span> \\
+  --new-private-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"VIF-Standby"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">200</span>,<span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">amazonAddress</span>=<span class="code-string">"169.254.200.1/30"</span>,\\
+    <span class="code-keyword">customerAddress</span>=<span class="code-string">"169.254.200.2/30"</span>,\\
+    <span class="code-keyword">virtualGatewayId</span>=<span class="code-string">"vgw-0123456789abcdef"</span></pre>
+          </div>
+          <div class="code-panel" id="panel-cfn1" role="tabpanel">
+<pre><span class="code-keyword">AWSTemplateFormatVersion</span>: <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Resources</span>:
+  <span class="code-keyword">PrimaryVIF</span>:
+    <span class="code-keyword">Type</span>: AWS::DirectConnect::VirtualInterface
+    <span class="code-keyword">Properties</span>:
+      <span class="code-keyword">ConnectionId</span>: <span class="code-string">dxcon-abc12345</span>
+      <span class="code-keyword">VirtualInterfaceName</span>: <span class="code-string">VIF-Primary</span>
+      <span class="code-keyword">Type</span>: <span class="code-string">private</span>
+      <span class="code-keyword">Vlan</span>: <span class="code-value">100</span>
+      <span class="code-keyword">Asn</span>: <span class="code-value">65000</span>
+  <span class="code-keyword">StandbyVIF</span>:
+    <span class="code-keyword">Type</span>: AWS::DirectConnect::VirtualInterface
+    <span class="code-keyword">Properties</span>:
+      <span class="code-keyword">ConnectionId</span>: <span class="code-string">dxcon-def67890</span>
+      <span class="code-keyword">VirtualInterfaceName</span>: <span class="code-string">VIF-Standby</span>
+      <span class="code-keyword">Type</span>: <span class="code-string">private</span>
+      <span class="code-keyword">Vlan</span>: <span class="code-value">200</span>
+      <span class="code-keyword">Asn</span>: <span class="code-value">65000</span></pre>
+          </div>
+        </div>
+
+        <h3 id="as-path-prepending-config">AS_PATH Prepending設定（Cisco IOS）</h3>
+        <div class="code-tabs">
+          <div class="code-tab-buttons" role="tablist">
+            <button class="code-tab-btn active" role="tab" aria-selected="true" data-tab="cisco1" aria-controls="panel-cisco1">Cisco IOS</button>
+            <button class="code-tab-btn" role="tab" aria-selected="false" data-tab="junos1" aria-controls="panel-junos1">Juniper JunOS</button>
+          </div>
+          <div class="code-panel active" id="panel-cisco1" role="tabpanel">
+<pre><span class="code-comment">! VIF 1（プライマリ）- 通常設定</span>
+<span class="code-keyword">router bgp</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-string">169.254.100.1</span> <span class="code-keyword">remote-as</span> <span class="code-value">64512</span>
+
+<span class="code-comment">! VIF 2（スタンバイ）- AS_PATH Prepending</span>
+ <span class="code-keyword">neighbor</span> <span class="code-string">169.254.200.1</span> <span class="code-keyword">remote-as</span> <span class="code-value">64512</span>
+ <span class="code-keyword">neighbor</span> <span class="code-string">169.254.200.1</span> <span class="code-keyword">route-map</span> <span class="code-string">PREPEND-OUT</span> <span class="code-keyword">out</span>
+
+<span class="code-keyword">route-map</span> <span class="code-string">PREPEND-OUT</span> <span class="code-keyword">permit</span> <span class="code-value">10</span>
+ <span class="code-keyword">set as-path prepend</span> <span class="code-value">65000 65000</span></pre>
+          </div>
+          <div class="code-panel" id="panel-junos1" role="tabpanel">
+<pre><span class="code-comment"># VIF 2（スタンバイ）- AS_PATH Prepending</span>
+<span class="code-keyword">set protocols bgp group</span> <span class="code-string">DX-STANDBY</span>
+  <span class="code-keyword">neighbor</span> <span class="code-string">169.254.200.1</span> <span class="code-keyword">peer-as</span> <span class="code-value">64512</span>
+  <span class="code-keyword">neighbor</span> <span class="code-string">169.254.200.1</span> <span class="code-keyword">export</span> <span class="code-string">PREPEND-POLICY</span>
+
+<span class="code-keyword">set policy-options policy-statement</span> <span class="code-string">PREPEND-POLICY</span>
+  <span class="code-keyword">term prepend then</span>
+    <span class="code-keyword">as-path-prepend</span> <span class="code-string">"65000 65000"</span>
+    <span class="code-keyword">accept</span></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== BEST PRACTICES ==================== -->
+      <section class="section" id="best-practices" aria-label="ベストプラクティス">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#9989;</span>
+          <h2 id="best-practices">ベストプラクティス vs アンチパターン</h2>
+        </div>
+        <div class="practice-grid">
+          <div class="practice-card good">
+            <h4><span aria-hidden="true">&#9989;</span> ベストプラクティス</h4>
+            <ul>
+              <li>AS_PATH Prependingで<strong>Active/Standby</strong>を明確に制御</li>
+              <li><strong>BFD</strong>を有効化して高速フェイルオーバー（サブ秒検知）</li>
+              <li>異なるDXロケーションに冗長VIFを配置</li>
+              <li>BGPセッション状態を<strong>常時モニタリング</strong></li>
+              <li>Active/Active時は<strong>プレフィックス分割</strong>で負荷分散</li>
+            </ul>
+          </div>
+          <div class="practice-card bad">
+            <h4><span aria-hidden="true">&#10060;</span> アンチパターン</h4>
+            <ul>
+              <li>2つのVIFに<strong>同一設定でフェイルオーバーを期待</strong>（不確定動作）</li>
+              <li>AS_PATH Prependingの<strong>回数を過度に増やす</strong>（3回程度で十分）</li>
+              <li><strong>MEDだけで入方向を制御</strong>（AWS側のLocal Preferenceに上書きされうる）</li>
+              <li>両VIFを<strong>同じ物理接続上</strong>に構成（単一障害点）</li>
+              <li><strong>BFD無効</strong>のまま運用（フェイルオーバーに最大90秒）</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TROUBLESHOOTING ==================== -->
+      <section class="section" id="troubleshooting" aria-label="トラブルシューティング">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128295;</span>
+          <h2 id="troubleshooting">トラブルシューティング</h2>
+        </div>
+        <div class="trouble-grid">
+          <div class="trouble-card">
+            <div class="tc-icon" aria-hidden="true">&#128683;</div>
+            <div class="tc-title">BGPセッションが確立しない</div>
+            <div class="tc-desc">ASN、ピアIP、VLAN ID、MD5パスワードの不一致が原因</div>
+            <div class="tc-fix">&#10003; VIFステータスが「available」か確認。設定値を照合</div>
+          </div>
+          <div class="trouble-card">
+            <div class="tc-icon" aria-hidden="true">&#9201;</div>
+            <div class="tc-title">フェイルオーバーが遅い</div>
+            <div class="tc-desc">BFD無効時はHold Timer（90秒）で検知に最大90秒</div>
+            <div class="tc-fix">&#10003; BFDを有効化してサブ秒検知を実現</div>
+          </div>
+          <div class="trouble-card">
+            <div class="tc-icon" aria-hidden="true">&#128260;</div>
+            <div class="tc-title">想定外のVIFにルーティング</div>
+            <div class="tc-desc">AS_PATH長やLocal Preferenceが期待値と異なる</div>
+            <div class="tc-fix">&#10003; BGPテーブルで各属性値を確認。プレフィックス長も確認</div>
+          </div>
+          <div class="trouble-card">
+            <div class="tc-icon" aria-hidden="true">&#128256;</div>
+            <div class="tc-title">非対称ルーティングが発生</div>
+            <div class="tc-desc">行きと帰りで異なるVIFを通過している</div>
+            <div class="tc-fix">&#10003; 出方向（LP）と入方向（Prepending）を両方設定</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== EXAM TIPS ==================== -->
+      <section class="exam-tips" id="exam-tips" aria-label="ANS-C01試験対策">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128218;</span>
+          <h2 id="exam-tips">ANS-C01 試験対策</h2>
+        </div>
+        <div class="exam-pattern-grid">
+          <div class="exam-card question">
+            <div class="ec-label">&#128161; 頻出パターン①</div>
+            <p>「Active/Standbyを実現するには？」→ <strong>AS_PATH Prepending</strong>。スタンバイ側のAS_PATHを長くする。</p>
+          </div>
+          <div class="exam-card question">
+            <div class="ec-label">&#128161; 頻出パターン②</div>
+            <p>「/16と/24が同時広告されたらどちらが選択？」→ 常に<strong>/24（最長プレフィックスマッチ）</strong>。AS_PATHに関係なく。</p>
+          </div>
+          <div class="exam-card question">
+            <div class="ec-label">&#128161; 頻出パターン③</div>
+            <p>「出方向の制御手段は？」→ <strong>Local Preference</strong>。「入方向は？」→ <strong>AS_PATH Prepending / MED</strong>。</p>
+          </div>
+          <div class="exam-card trap">
+            <div class="ec-label">&#9888; ひっかけ①</div>
+            <p>「AS_PATHが最優先」は<strong>誤り</strong>。Local Preferenceの方が先に評価。さらにその前に最長プレフィックスマッチ。</p>
+          </div>
+          <div class="exam-card trap">
+            <div class="ec-label">&#9888; ひっかけ②</div>
+            <p>MEDは<strong>同一隣接ASからのルート間でのみ</strong>比較。異なるASからのルートでは比較されない（デフォルト）。</p>
+          </div>
+          <div class="exam-card trap">
+            <div class="ec-label">&#9888; ひっかけ③</div>
+            <p>「BFD有効でBGP不要」は<strong>誤り</strong>。BFDはBGPの<strong>障害検知を高速化する補助機能</strong>であり代替ではない。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== FAQ ==================== -->
+      <section class="section" id="faq" aria-label="よくある質問">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#10067;</span>
+          <h2 id="faq">よくある質問（FAQ）</h2>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>2つのVIFは同じDirect Connect接続上に作れますか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            はい可能ですが、物理接続が単一障害点になります。高可用性のためには異なるDirect Connect接続（できれば異なるDXロケーション）に配置を推奨します。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>VGWでECMPは使えますか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            VGWではECMP非対応です。Transit Gatewayを使用すればECMPが利用可能です。VGWでのActive/Activeはプレフィックス分割が必要です。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>AS_PATH Prependingは何回まで？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            2〜3回で十分です。過度なPrependingはBGPメッセージを肥大化させ、一部ISPでフィルタリングされる可能性もあります。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>BGPフェイルオーバーの所要時間は？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            BFDなし = 最大90秒、BFDあり = サブ秒（300ms〜1秒）。本番環境ではBFD有効化を強く推奨します。
+          </div></div>
+        </div>
+      </section>
+
+      <!-- ==================== GLOSSARY ==================== -->
+      <section class="section" id="glossary" aria-label="用語集">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128214;</span>
+          <h2 id="glossary">用語集</h2>
+        </div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">VIF（Virtual Interface）</div>
+            <div class="glossary-def">DX上の仮想接続。Private / Public / Transit の3種類</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">VGW</div>
+            <div class="glossary-def">VPC側のDX接続ポイント。BGPピアの対向</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">AS_PATH</div>
+            <div class="glossary-def">ルートが通過したAS一覧。短い方が優先</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Local Preference</div>
+            <div class="glossary-def">iBGP内の優先度値。高い方が優先。出方向制御用</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">MED</div>
+            <div class="glossary-def">隣接ASへの入口推奨値。低い方が優先。提案値</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">BFD</div>
+            <div class="glossary-def">サブ秒で障害検知するプロトコル。BGPフェイルオーバー高速化</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">ECMP</div>
+            <div class="glossary-def">同一コスト複数経路に分散。Transit Gatewayで対応</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">AS_PATH Prepending</div>
+            <div class="glossary-def">自AS番号を繰り返し追加して経路優先度を下げるテクニック</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== CHEAT SHEET ==================== -->
+      <section class="cheatsheet" id="cheatsheet" aria-label="チートシート">
+        <h2 id="cheatsheet"><span aria-hidden="true">&#128640;</span> Direct Connect BGP チートシート</h2>
+        <div class="cheatsheet-grid">
+          <div class="cheatsheet-item">
+            <h4>ルート選択の優先順位</h4>
+            <p>最長プレフィックスマッチ → Local Preference（最大） → AS_PATH（最短） → Origin → MED（最小） → タイブレーク</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>出方向の制御</h4>
+            <p>Local Preference 使用。VIF1=200（高）、VIF2=100（低）。自分のルーターで完結。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>入方向の制御</h4>
+            <p>AS_PATH Prependingが最確実。スタンバイVIFで自AS番号を2〜3回Prepend。</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h4>高速フェイルオーバー</h4>
+            <p>BFD必須。BFDなし=最大90秒。BFDあり=サブ秒で検知。</p>
+          </div>
+        </div>
+      </section>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

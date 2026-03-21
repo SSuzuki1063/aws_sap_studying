@@ -77,13 +77,13 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 78,
+    "count": 82,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
-        "count": 16,
-        "lastUpdated": "2026-03-14",
+        "count": 17,
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
@@ -215,6 +215,20 @@ export const categoriesData: Category[] = [
             ]
           },
           {
+            "title": "AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド",
+            "href": "networking/dx-bgp-routing-2vifs.html",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 30,
+            "tags": [
+              "networking",
+              "ha"
+            ]
+          },
+          {
             "title": "Direct Connect Gateway・VGW・VIF 完全ガイド | AWS SAP学習リソース",
             "href": "networking/dx-gateway-vgw-vif-guide.html",
             "priority": "high",
@@ -312,8 +326,8 @@ export const categoriesData: Category[] = [
       {
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
-        "count": 46,
-        "lastUpdated": "2026-03-14",
+        "count": 47,
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
@@ -760,6 +774,20 @@ export const categoriesData: Category[] = [
             ]
           },
           {
+            "title": "インターフェースVPCエンドポイントのDNS動作 完全ガイド",
+            "href": "networking/vpc-endpoint-dns-behavior-guide.html",
+            "service": "VPC PrivateLink",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "networking"
+            ]
+          },
+          {
             "title": "VPCフローログ フィールド完全ガイド",
             "href": "networking/vpc-flow-log-fields-guide.html",
             "priority": "medium",
@@ -949,8 +977,8 @@ export const categoriesData: Category[] = [
       {
         "title": "Transit Gateway & ゲートウェイ",
         "icon": "🚪",
-        "count": 14,
-        "lastUpdated": "2026-03-14",
+        "count": 16,
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWSネットワークゲートウェイの比較",
@@ -1030,6 +1058,22 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 25
           },
           {
+            "title": "AWS Transit Gateway クロスアカウント共有 完全ガイド",
+            "href": "networking/tgw-cross-account-sharing.html",
+            "service": "Transit Gateway",
+            "exam_domains": [
+              1,
+              2,
+              3
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "networking",
+              "multi-account"
+            ]
+          },
+          {
             "title": "AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン",
             "href": "networking/tgw-isolated-shared-services.html",
             "service": "Transit Gateway"
@@ -1091,6 +1135,20 @@ export const categoriesData: Category[] = [
             "summary": "TGWピアリングによるリージョン間接続を試験シナリオ付きで図解"
           },
           {
+            "title": "WAN・SD-WAN・AWS Transit Gateway 完全図解ガイド",
+            "href": "networking/wan-sdwan-transit-gateway-guide.html",
+            "service": "Transit Gateway",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 30,
+            "tags": [
+              "networking"
+            ]
+          },
+          {
             "title": "AWS Transit Gateway共有の超簡単ガイド",
             "href": "organizational-complexity/aws-ram-tgw-sharing.html",
             "priority": "high",
@@ -1122,7 +1180,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-14",
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
@@ -1142,13 +1200,13 @@ export const categoriesData: Category[] = [
     "id": "security-governance",
     "title": "セキュリティ・ガバナンス",
     "icon": "🛡️",
-    "count": 80,
+    "count": 81,
     "sections": [
       {
         "title": "セキュリティ監視・脅威検知",
         "icon": "🛡️",
         "count": 16,
-        "lastUpdated": "2026-03-10",
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWS Elastic Disaster Recovery を災害対策で理解しよう",
@@ -1364,7 +1422,7 @@ export const categoriesData: Category[] = [
         "title": "IAM & 認証・認可",
         "icon": "👤",
         "count": 19,
-        "lastUpdated": "2026-03-10",
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWS IAM フェデレーション入門",
@@ -1628,7 +1686,7 @@ export const categoriesData: Category[] = [
         "title": "Organizations & ガバナンス",
         "icon": "🏢",
         "count": 38,
-        "lastUpdated": "2026-03-10",
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWS Organizations SCPの継承：超シンプル解説",
@@ -2128,8 +2186,8 @@ export const categoriesData: Category[] = [
       {
         "title": "暗号化 & 証明書管理",
         "icon": "🔐",
-        "count": 7,
-        "lastUpdated": "2026-03-10",
+        "count": 8,
+        "lastUpdated": "2026-03-21",
         "resources": [
           {
             "title": "AWS KMS BYOK 完全ガイド",
@@ -2164,6 +2222,21 @@ export const categoriesData: Category[] = [
             ],
             "difficulty": "beginner",
             "estimated_minutes": 15
+          },
+          {
+            "title": "証明書ベースVPN認証 & ACM完全ガイド",
+            "href": "security-governance/cert-vpn-acm-guide.html",
+            "service": "VPN",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "security",
+              "networking"
+            ]
           },
           {
             "title": "エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2",
@@ -4318,13 +4391,13 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 78
+    "count": 82
   },
   {
     "id": "security-governance",
     "icon": "🔒",
     "text": "セキュリティ・ガバナンス",
-    "count": 80
+    "count": 81
   },
   {
     "id": "compute-applications",
@@ -4868,7 +4941,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "Transit Gateway",
-    "count": 10,
+    "count": 12,
     "categories": [
       "networking"
     ]
@@ -4891,7 +4964,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "VPC PrivateLink",
-    "count": 5,
+    "count": 6,
     "categories": [
       "networking",
       "compute-applications"
@@ -4906,9 +4979,10 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "VPN",
-    "count": 8,
+    "count": 9,
     "categories": [
-      "networking"
+      "networking",
+      "security-governance"
     ]
   },
   {
@@ -5048,7 +5122,7 @@ export const learningModes: LearningMode[] = [
 export const domainIndex: DomainIndexItem[] = [
   {
     "domainId": 1,
-    "count": 128,
+    "count": 133,
     "categories": [
       "networking",
       "security-governance",
@@ -5058,7 +5132,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 229,
+    "count": 234,
     "categories": [
       "networking",
       "security-governance",
@@ -5071,7 +5145,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 3,
-    "count": 158,
+    "count": 159,
     "categories": [
       "networking",
       "security-governance",
@@ -5094,7 +5168,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "302+",
+  "totalResources": "307+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/03/20"
+  "lastUpdated": "2026/03/21"
 };

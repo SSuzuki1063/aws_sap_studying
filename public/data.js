@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 78,
+    count: 82,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
-        count: 16,
-        lastUpdated: '2026-03-14',
+        count: 17,
+        lastUpdated: '2026-03-21',
         resources: [
           {
             title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう',
@@ -145,6 +145,20 @@ const categoriesData = [
             ]
           },
           {
+            title: 'AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド',
+            href: 'networking/dx-bgp-routing-2vifs.html',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'advanced',
+            estimated_minutes: 30,
+            tags: [
+              'networking',
+              'ha'
+            ]
+          },
+          {
             title: 'Direct Connect Gateway・VGW・VIF 完全ガイド | AWS SAP学習リソース',
             href: 'networking/dx-gateway-vgw-vif-guide.html',
             priority: 'high',
@@ -242,8 +256,8 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 46,
-        lastUpdated: '2026-03-14',
+        count: 47,
+        lastUpdated: '2026-03-21',
         resources: [
           {
             title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD',
@@ -690,6 +704,20 @@ const categoriesData = [
             ]
           },
           {
+            title: 'インターフェースVPCエンドポイントのDNS動作 完全ガイド',
+            href: 'networking/vpc-endpoint-dns-behavior-guide.html',
+            service: 'VPC PrivateLink',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 25,
+            tags: [
+              'networking'
+            ]
+          },
+          {
             title: 'VPCフローログ フィールド完全ガイド',
             href: 'networking/vpc-flow-log-fields-guide.html',
             priority: 'medium',
@@ -879,8 +907,8 @@ const categoriesData = [
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 14,
-        lastUpdated: '2026-03-14',
+        count: 16,
+        lastUpdated: '2026-03-21',
         resources: [
           {
             title: 'AWSネットワークゲートウェイの比較',
@@ -960,6 +988,22 @@ const categoriesData = [
             estimated_minutes: 25
           },
           {
+            title: 'AWS Transit Gateway クロスアカウント共有 完全ガイド',
+            href: 'networking/tgw-cross-account-sharing.html',
+            service: 'Transit Gateway',
+            exam_domains: [
+              1,
+              2,
+              3
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 25,
+            tags: [
+              'networking',
+              'multi-account'
+            ]
+          },
+          {
             title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン',
             href: 'networking/tgw-isolated-shared-services.html',
             service: 'Transit Gateway'
@@ -1021,6 +1065,20 @@ const categoriesData = [
             summary: 'TGWピアリングによるリージョン間接続を試験シナリオ付きで図解'
           },
           {
+            title: 'WAN・SD-WAN・AWS Transit Gateway 完全図解ガイド',
+            href: 'networking/wan-sdwan-transit-gateway-guide.html',
+            service: 'Transit Gateway',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 30,
+            tags: [
+              'networking'
+            ]
+          },
+          {
             title: 'AWS Transit Gateway共有の超簡単ガイド',
             href: 'organizational-complexity/aws-ram-tgw-sharing.html',
             priority: 'high',
@@ -1052,7 +1110,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-14',
+        lastUpdated: '2026-03-21',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html', service: 'EC2' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' }
@@ -1064,13 +1122,13 @@ const categoriesData = [
     id: 'security-governance',
     title: 'セキュリティ・ガバナンス',
     icon: '🛡️',
-    count: 80,
+    count: 81,
     sections: [
       {
         title: 'セキュリティ監視・脅威検知',
         icon: '🛡️',
         count: 16,
-        lastUpdated: '2026-03-10',
+        lastUpdated: '2026-03-21',
         resources: [
           {
             title: 'AWS Elastic Disaster Recovery を災害対策で理解しよう',
@@ -1286,7 +1344,7 @@ const categoriesData = [
         title: 'IAM & 認証・認可',
         icon: '👤',
         count: 19,
-        lastUpdated: '2026-03-10',
+        lastUpdated: '2026-03-21',
         resources: [
           {
             title: 'AWS IAM フェデレーション入門',
@@ -1550,7 +1608,7 @@ const categoriesData = [
         title: 'Organizations & ガバナンス',
         icon: '🏢',
         count: 38,
-        lastUpdated: '2026-03-10',
+        lastUpdated: '2026-03-21',
         resources: [
           {
             title: 'AWS Organizations SCPの継承：超シンプル解説',
@@ -2050,12 +2108,13 @@ const categoriesData = [
       {
         title: '暗号化 & 証明書管理',
         icon: '🔐',
-        count: 7,
-        lastUpdated: '2026-03-10',
+        count: 8,
+        lastUpdated: '2026-03-21',
         resources: [
           { title: 'AWS KMS BYOK 完全ガイド', href: 'organizational-complexity/kms_byok_infographic.html', service: 'KMS', exam_domains: [1, 2], difficulty: 'beginner', estimated_minutes: 15 },
           { title: 'AWS ACMでSANを利用した複数ドメインSSL証明書取得ガイド', href: 'security-governance/acm-san-infographic.html', priority: 'low', service: 'ACM', exam_domains: [1, 2], difficulty: 'beginner', estimated_minutes: 15 },
           { title: 'AWS CMK（暗号化キー）を銀行の貸金庫で理解しよう', href: 'security-governance/aws_cmk_infographic.html', service: 'KMS', exam_domains: [1, 2], difficulty: 'beginner', estimated_minutes: 15 },
+          { title: '証明書ベースVPN認証 & ACM完全ガイド', href: 'security-governance/cert-vpn-acm-guide.html', service: 'VPN', exam_domains: [1, 2], difficulty: 'intermediate', estimated_minutes: 25, tags: ['security', 'networking'] },
           { title: 'エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2', href: 'security-governance/e2e-encryption-guide.html', service: 'CloudFront', exam_domains: [1, 2], difficulty: 'intermediate', estimated_minutes: 25, tags: ['security'] },
           { title: 'AWS KMS グラント（Grants）完全ガイド - 一時的なアクセス許可の仕組み', href: 'security-governance/kms-grants-guide.html', priority: 'high', service: 'KMS', exam_domains: [1, 2], difficulty: 'intermediate', estimated_minutes: 20, summary: 'KMSグラントによる一時的な暗号化キー権限委任の仕組みを解説' },
           { title: 'AWS KMS キーの種類 完全ガイド', href: 'security-governance/kms-key-types.html', priority: 'high', service: 'KMS', exam_domains: [1, 2], difficulty: 'intermediate', estimated_minutes: 20, summary: 'AWS管理/カスタマー管理/持ち込みキーの3種比較と選定フロー' },
@@ -3742,13 +3801,13 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 78
+    count: 82
   },
   {
     id: 'security-governance',
     icon: '🔒',
     text: 'セキュリティ・ガバナンス',
-    count: 80
+    count: 81
   },
   {
     id: 'compute-applications',
@@ -3792,7 +3851,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '302+',
+  totalResources: '307+',
   offlineSupport: '100%',
   lastUpdated: '2026/03/20'
 };
@@ -4302,7 +4361,7 @@ const serviceIndex = [
   },
   {
     name: 'Transit Gateway',
-    count: 10,
+    count: 12,
     categories: [
       'networking'
     ]
@@ -4325,7 +4384,7 @@ const serviceIndex = [
   },
   {
     name: 'VPC PrivateLink',
-    count: 5,
+    count: 6,
     categories: [
       'networking',
       'compute-applications'
@@ -4340,9 +4399,10 @@ const serviceIndex = [
   },
   {
     name: 'VPN',
-    count: 8,
+    count: 9,
     categories: [
-      'networking'
+      'networking',
+      'security-governance'
     ]
   },
   {
@@ -4365,7 +4425,7 @@ const serviceIndex = [
 const domainIndex = [
   {
     domainId: 1,
-    count: 128,
+    count: 133,
     categories: [
       'networking',
       'security-governance',
@@ -4375,7 +4435,7 @@ const domainIndex = [
   },
   {
     domainId: 2,
-    count: 229,
+    count: 234,
     categories: [
       'networking',
       'security-governance',
@@ -4388,7 +4448,7 @@ const domainIndex = [
   },
   {
     domainId: 3,
-    count: 158,
+    count: 159,
     categories: [
       'networking',
       'security-governance',
@@ -4531,6 +4591,29 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-21',
+    type: 'content',
+    title: '5リソース追加 — 証明書VPN認証, DX BGP 2VIF, TGWクロスアカウント, VPCエンドポイントDNS, WAN/SD-WAN',
+    description: '証明書ベースVPN認証&ACM完全ガイド、Direct Connect BGPルーティング(2VIF構成)ガイド、Transit Gatewayクロスアカウント共有ガイド、VPCエンドポイントDNS動作ガイド、WAN・SD-WAN・Transit Gateway完全図解ガイドの5件を追加。',
+    categories: [
+      'security-governance',
+      'networking'
+    ],
+    tags: [
+      'VPN',
+      'ACM',
+      '証明書',
+      'Direct Connect',
+      'BGP',
+      'Transit Gateway',
+      'クロスアカウント',
+      'VPCエンドポイント',
+      'DNS',
+      'SD-WAN',
+      'WAN'
+    ]
+  },
   {
     date: '2026-03-14',
     type: 'content',

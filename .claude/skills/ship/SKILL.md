@@ -144,6 +144,22 @@ If both directories are empty, skip to Step 2 (validate existing uncommitted cha
 ### ❌ GATE 1: If any conversion fails, STOP.
 Report which files failed and why. Do NOT proceed to Step 2.
 
+### 1e. Clean up staging directories
+
+After successful integration, delete the original HTML files from staging:
+
+```bash
+# Remove processed files
+rm -f new_html/*.html 2>/dev/null
+rm -f replace_html/*.html 2>/dev/null
+
+# Remove empty staging directories (optional)
+rmdir new_html 2>/dev/null
+rmdir replace_html 2>/dev/null
+```
+
+Report which files were cleaned up. This prevents duplicate processing on subsequent `/ship` runs.
+
 ### ⚠️ Common Astro Build Pitfalls (from past failures)
 
 | Problem | Cause | Solution |

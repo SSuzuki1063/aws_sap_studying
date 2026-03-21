@@ -1,0 +1,1078 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Cert Vpn Acm Guide',
+  pageTitle: '証明書ベースVPN認証 & ACM完全ガイド',
+  category: 'security-governance',
+  categoryLabel: 'セキュリティ・ガバナンス',
+  subcategory: '暗号化 & 証明書管理',
+  slug: 'cert-vpn-acm-guide',
+  tocItems: [
+    { id: 'key-takeaways', text: '最初に押さえる4つの要点', level: 'h2' },
+    { id: 'analogy', text: '社員証システムで理解するVPN認証', level: 'h2' },
+    { id: 'psk-vs-cert', text: 'PSK認証 vs 証明書認証の比較', level: 'h2' },
+    { id: 'architecture', text: '証明書ベースVPN認証の仕組み', level: 'h2' },
+    { id: 'cert-features', text: '証明書認証の5つの特徴', level: 'h2' },
+    { id: 'acm', text: 'AWS Certificate Manager（ACM）での証明書管理', level: 'h2' },
+    { id: 'cert-types', text: '証明書の種類', level: 'h3' },
+    { id: 'acm-main-features', text: 'ACMの主要機能', level: 'h3' },
+    { id: 'acm-integration', text: 'ACMとAWSサービスの統合パターン', level: 'h2' },
+    { id: 'lifecycle', text: '証明書ライフサイクル管理', level: 'h2' },
+    { id: 'code-examples', text: '実装コード例', level: 'h2' },
+    { id: 'acm-private-ca-vpn', text: 'ACM Private CA & VPN証明書の作成', level: 'h3' },
+    { id: 'best-practices', text: 'ベストプラクティス vs アンチパターン', level: 'h2' },
+    { id: 'troubleshooting', text: 'トラブルシューティング', level: 'h2' },
+    { id: 'exam-tips', text: 'ANS-C01 / SAP-C02 試験対策', level: 'h2' },
+    { id: 'faq', text: 'よくある質問（FAQ）', level: 'h2' },
+    { id: 'glossary', text: '用語集', level: 'h2' },
+    { id: 'cheatsheet', text: 'チートシート（まとめ）', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/cert-vpn-acm-guide.css',
+};
+
+const rawContent = `
+    <!-- ヒーローセクション -->
+    <section class="hero" aria-label="ページ概要">
+        <div class="hero-badge">&#128274; Security / VPN / ACM</div>
+        <h1>証明書ベースVPN認証 &amp;<br>AWS Certificate Manager</h1>
+        <p class="hero-subtitle">
+            従来のPSK（事前共有鍵）認証に代わる高セキュリティ認証方式と、
+            AWSの証明書管理マネージドサービスを「社員証システム」のたとえで徹底解説
+        </p>
+    </section>
+
+    <!-- キーテイクアウェイ -->
+    <section class="key-takeaways">
+        <h2 id="key-takeaways">&#128161; 最初に押さえる4つの要点</h2>
+        <div class="takeaway-grid">
+            <div class="takeaway-item">
+                <div class="takeaway-icon">&#128272;</div>
+                <div class="takeaway-text">
+                    <strong>PSKは「合言葉」、証明書は「社員証」</strong><br>
+                    PSKは全員同じ合言葉を使い回すのに対し、証明書は一人一枚の社員証。個別管理・個別失効が可能
+                </div>
+            </div>
+            <div class="takeaway-item">
+                <div class="takeaway-icon">&#128196;</div>
+                <div class="takeaway-text">
+                    <strong>ACMは証明書の「総務部門」</strong><br>
+                    発行・更新・配布・失効をまとめて管理するマネージドサービス。手作業ゼロで証明書ライフサイクルを自動化
+                </div>
+            </div>
+            <div class="takeaway-item">
+                <div class="takeaway-icon">&#128737;</div>
+                <div class="takeaway-text">
+                    <strong>パブリック証明書＝公的身分証、プライベート証明書＝社内ID</strong><br>
+                    外向けWebサイトにはパブリック、VPN・内部通信にはプライベート証明書を使い分ける
+                </div>
+            </div>
+            <div class="takeaway-item">
+                <div class="takeaway-icon">&#128260;</div>
+                <div class="takeaway-text">
+                    <strong>自動更新で「期限切れ事故」を防止</strong><br>
+                    ACMはパブリック証明書を自動更新。プライベート証明書もAPI連携で自動ローテーション対応
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- たとえ話セクション -->
+    <section class="section">
+        <h2 id="analogy">&#127970; 社員証システムで理解するVPN認証</h2>
+        <p>
+            VPN認証の仕組みを「会社の入退館管理」にたとえてみましょう。
+            PSK認証が「全員同じ合言葉で入館する方式」だとすれば、
+            証明書認証は「顔写真付き社員証で入館する方式」です。
+        </p>
+
+        <div class="analogy-table-wrapper">
+            <table class="analogy-table">
+                <thead>
+                    <tr>
+                        <th class="emoji-col"></th>
+                        <th>社員証システム（たとえ）</th>
+                        <th>AWS/VPN（実際の仕組み）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="emoji-col">&#127970;</td>
+                        <td>会社のビル（入りたい場所）</td>
+                        <td>AWS VPC（接続先ネットワーク）</td>
+                    </tr>
+                    <tr>
+                        <td class="emoji-col">&#128101;</td>
+                        <td>社員（入館したい人）</td>
+                        <td>VPNクライアント（接続元デバイス）</td>
+                    </tr>
+                    <tr>
+                        <td class="emoji-col">&#128179;</td>
+                        <td>社員証（個人の身分証明）</td>
+                        <td>クライアント証明書（デバイス認証情報）</td>
+                    </tr>
+                    <tr>
+                        <td class="emoji-col">&#127971;</td>
+                        <td>総務部門（社員証を発行・管理）</td>
+                        <td>ACM / プライベートCA（証明書管理）</td>
+                    </tr>
+                    <tr>
+                        <td class="emoji-col">&#128682;</td>
+                        <td>入退館ゲート（出入りを管理）</td>
+                        <td>VPNエンドポイント（接続制御ポイント）</td>
+                    </tr>
+                    <tr>
+                        <td class="emoji-col">&#128466;</td>
+                        <td>退職者リスト（無効社員証の一覧）</td>
+                        <td>CRL（証明書失効リスト）</td>
+                    </tr>
+                    <tr>
+                        <td class="emoji-col">&#128197;</td>
+                        <td>社員証の有効期限</td>
+                        <td>証明書の有効期限（自動更新対応）</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="highlight-box">
+            <p>
+                &#128161; <strong>ポイント：</strong>社員証（証明書）なら退職者の分だけ無効化すればよいですが、
+                合言葉（PSK）は一人に漏れると全員分の変更が必要になります。これがスケーラビリティの決定的な差です。
+            </p>
+        </div>
+    </section>
+
+    <!-- PSK vs 証明書比較 -->
+    <section class="section">
+        <h2 id="psk-vs-cert">&#128275; PSK認証 vs 証明書認証の比較</h2>
+        <p>VPN接続の認証方式を入退館管理のたとえで比べてみましょう。</p>
+
+        <!-- 比較SVG図 -->
+        <div class="svg-container">
+            <svg viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PSK認証と証明書認証の比較図">
+                <!-- 背景 -->
+                <rect x="0" y="0" width="1200" height="520" rx="18" fill="#F8FAFC"/>
+
+                <!-- タイトル -->
+                <text x="600" y="42" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">PSK認証 vs 証明書認証 ― 入退館管理で比較</text>
+
+                <!-- 左：PSK認証 -->
+                <rect x="30" y="65" width="560" height="430" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+                <text x="310" y="100" text-anchor="middle" font-size="20" font-weight="700" fill="#DC2626">&#10060; PSK認証 = 合言葉方式</text>
+
+                <!-- PSK: 守衛 -->
+                <rect x="200" y="130" width="220" height="70" rx="12" fill="white" stroke="#F87171" stroke-width="2"/>
+                <text x="310" y="160" text-anchor="middle" font-size="20" fill="#1E293B">&#127970; 守衛室</text>
+                <text x="310" y="185" text-anchor="middle" font-size="16" fill="#475569">合言葉：「ABCD1234」</text>
+
+                <!-- PSK: 社員たち -->
+                <g>
+                    <rect x="60" y="240" width="150" height="60" rx="10" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+                    <text x="135" y="268" text-anchor="middle" font-size="18" fill="#1E293B">&#128100; 社員A</text>
+                    <text x="135" y="288" text-anchor="middle" font-size="14" fill="#475569">合言葉で入館</text>
+                </g>
+                <g>
+                    <rect x="230" y="240" width="150" height="60" rx="10" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+                    <text x="305" y="268" text-anchor="middle" font-size="18" fill="#1E293B">&#128100; 社員B</text>
+                    <text x="305" y="288" text-anchor="middle" font-size="14" fill="#475569">同じ合言葉</text>
+                </g>
+                <g>
+                    <rect x="400" y="240" width="150" height="60" rx="10" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+                    <text x="475" y="268" text-anchor="middle" font-size="18" fill="#1E293B">&#128100; 退職者</text>
+                    <text x="475" y="288" text-anchor="middle" font-size="14" fill="#DC2626">合言葉を知ってる!</text>
+                </g>
+
+                <!-- PSK: 矢印 -->
+                <line x1="135" y1="235" x2="260" y2="205" stroke="#F87171" stroke-width="2" marker-end="url(#arrowRed)"/>
+                <line x1="305" y1="235" x2="305" y2="205" stroke="#F87171" stroke-width="2" marker-end="url(#arrowRed)"/>
+                <line x1="475" y1="235" x2="355" y2="205" stroke="#DC2626" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrowRed)"/>
+
+                <!-- PSK: 問題点ボックス -->
+                <rect x="60" y="330" width="500" height="150" rx="10" fill="white" stroke="#FECACA" stroke-width="1.5"/>
+                <text x="310" y="360" text-anchor="middle" font-size="18" font-weight="600" fill="#DC2626">&#9888;&#65039; PSKの問題点</text>
+                <text x="80" y="390" font-size="16" fill="#475569">• 全員が同じ鍵を共有 → 1人漏洩で全体がリスク</text>
+                <text x="80" y="416" font-size="16" fill="#475569">• 退職者の個別無効化が不可能</text>
+                <text x="80" y="442" font-size="16" fill="#475569">• 鍵の変更時は全ユーザーへ再配布が必要</text>
+                <text x="80" y="468" font-size="16" fill="#475569">• 誰がいつ接続したか追跡困難</text>
+
+                <!-- 右：証明書認証 -->
+                <rect x="610" y="65" width="560" height="430" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                <text x="890" y="100" text-anchor="middle" font-size="20" font-weight="700" fill="#059669">&#9989; 証明書認証 = 社員証方式</text>
+
+                <!-- 証明書: 総務部 -->
+                <rect x="780" y="130" width="220" height="70" rx="12" fill="white" stroke="#34D399" stroke-width="2"/>
+                <text x="890" y="160" text-anchor="middle" font-size="20" fill="#1E293B">&#127971; 総務部(CA)</text>
+                <text x="890" y="185" text-anchor="middle" font-size="16" fill="#475569">個別社員証を発行</text>
+
+                <!-- 証明書: 社員たち -->
+                <g>
+                    <rect x="640" y="240" width="150" height="60" rx="10" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+                    <text x="715" y="268" text-anchor="middle" font-size="18" fill="#1E293B">&#129707; 社員A</text>
+                    <text x="715" y="288" text-anchor="middle" font-size="14" fill="#059669">固有の社員証</text>
+                </g>
+                <g>
+                    <rect x="810" y="240" width="150" height="60" rx="10" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+                    <text x="885" y="268" text-anchor="middle" font-size="18" fill="#1E293B">&#129707; 社員B</text>
+                    <text x="885" y="288" text-anchor="middle" font-size="14" fill="#059669">固有の社員証</text>
+                </g>
+                <g>
+                    <rect x="980" y="240" width="150" height="60" rx="10" fill="white" stroke="#6EE7B7" stroke-width="2" stroke-dasharray="6,4"/>
+                    <text x="1055" y="268" text-anchor="middle" font-size="18" fill="#1E293B">&#128683; 退職者</text>
+                    <text x="1055" y="288" text-anchor="middle" font-size="14" fill="#DC2626">証明書を失効</text>
+                </g>
+
+                <!-- 証明書: 矢印 -->
+                <line x1="715" y1="235" x2="835" y2="205" stroke="#34D399" stroke-width="2" marker-end="url(#arrowGreen)"/>
+                <line x1="885" y1="235" x2="885" y2="205" stroke="#34D399" stroke-width="2" marker-end="url(#arrowGreen)"/>
+                <line x1="1055" y1="240" x2="940" y2="205" stroke="#EF4444" stroke-width="2.5" marker-end="url(#arrowRedX)"/>
+                <text x="1010" y="225" text-anchor="middle" font-size="20" fill="#DC2626">&#10006;</text>
+
+                <!-- 証明書: メリットボックス -->
+                <rect x="640" y="330" width="500" height="150" rx="10" fill="white" stroke="#A7F3D0" stroke-width="1.5"/>
+                <text x="890" y="360" text-anchor="middle" font-size="18" font-weight="600" fill="#059669">&#9989; 証明書認証のメリット</text>
+                <text x="660" y="390" font-size="16" fill="#475569">• 一人一枚の固有証明書 → 個別管理が可能</text>
+                <text x="660" y="416" font-size="16" fill="#475569">• 退職者の証明書だけをCRLで即座に失効</text>
+                <text x="660" y="442" font-size="16" fill="#475569">• 他のユーザーには一切影響なし</text>
+                <text x="660" y="468" font-size="16" fill="#475569">• 証明書ごとに詳細な接続ログ（監査証跡）</text>
+
+                <!-- 矢印マーカー定義 -->
+                <defs>
+                    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#F87171"/>
+                    </marker>
+                    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#34D399"/>
+                    </marker>
+                    <marker id="arrowRedX" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#EF4444"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+    </section>
+
+    <!-- 証明書ベースVPN認証の仕組み -->
+    <section class="section">
+        <h2 id="architecture">&#128736; 証明書ベースVPN認証の仕組み</h2>
+        <p>社員証で入館する流れを、証明書認証のプロセスに対応させて見ていきましょう。</p>
+
+        <!-- 認証フロー SVG -->
+        <div class="svg-container">
+            <svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="証明書ベースVPN認証フロー図">
+                <!-- 外側カード -->
+                <rect x="24" y="24" width="1152" height="592" rx="22" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+
+                <!-- タイトル -->
+                <text x="600" y="62" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">証明書ベースVPN認証フロー（社員証での入館プロセス）</text>
+
+                <!-- 内側パネル -->
+                <rect x="40" y="82" width="1120" height="510" rx="18" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+
+                <!-- Row 1: メイン認証フロー -->
+
+                <!-- Node 1: VPNクライアント -->
+                <g>
+                    <rect x="50" y="150" width="220" height="96" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+                    <text x="160" y="188" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#128100; VPNクライアント</text>
+                    <text x="160" y="216" text-anchor="middle" font-size="16" fill="#475569">（社員 / 入館希望者）</text>
+                </g>
+
+                <!-- Node 2: Client VPN Endpoint -->
+                <g>
+                    <rect x="350" y="150" width="240" height="96" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+                    <text x="470" y="185" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#128682; Client VPN</text>
+                    <text x="470" y="212" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">Endpoint</text>
+                    <text x="470" y="238" text-anchor="middle" font-size="14" fill="#475569">（入退館ゲート）</text>
+                </g>
+
+                <!-- Node 3: AWS VPC -->
+                <g>
+                    <rect x="670" y="150" width="240" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="790" y="188" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#127970; AWS VPC</text>
+                    <text x="790" y="216" text-anchor="middle" font-size="16" fill="#475569">（会社のビル内）</text>
+                </g>
+
+                <!-- Node 4: ACM Private CA -->
+                <g>
+                    <rect x="940" y="150" width="220" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="1060" y="185" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#127971; ACM</text>
+                    <text x="1060" y="212" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">Private CA</text>
+                    <text x="1060" y="238" text-anchor="middle" font-size="14" fill="#475569">（総務部門）</text>
+                </g>
+
+                <!-- Row 2: 認証検証フロー -->
+
+                <!-- Node 5: クライアント証明書 -->
+                <g>
+                    <rect x="50" y="330" width="220" height="96" rx="16" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+                    <text x="160" y="365" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#129707; クライアント</text>
+                    <text x="160" y="393" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">証明書</text>
+                    <text x="160" y="418" text-anchor="middle" font-size="14" fill="#475569">（社員証）</text>
+                </g>
+
+                <!-- Node 6: 証明書検証 -->
+                <g>
+                    <rect x="350" y="330" width="240" height="96" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+                    <text x="470" y="368" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#128269; 証明書検証</text>
+                    <text x="470" y="396" text-anchor="middle" font-size="16" fill="#475569">有効期限・CA署名・</text>
+                    <text x="470" y="418" text-anchor="middle" font-size="16" fill="#475569">CRL照合</text>
+                </g>
+
+                <!-- Node 7: CRL（失効リスト） -->
+                <g>
+                    <rect x="670" y="330" width="240" height="96" rx="16" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+                    <text x="790" y="365" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#128203; CRL</text>
+                    <text x="790" y="393" text-anchor="middle" font-size="16" fill="#475569">証明書失効リスト</text>
+                    <text x="790" y="418" text-anchor="middle" font-size="14" fill="#475569">（退職者リスト）</text>
+                </g>
+
+                <!-- Node 8: サーバー証明書 -->
+                <g>
+                    <rect x="940" y="330" width="220" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="1060" y="368" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">&#128220; サーバー証明書</text>
+                    <text x="1060" y="396" text-anchor="middle" font-size="16" fill="#475569">VPN側の身分証明</text>
+                    <text x="1060" y="418" text-anchor="middle" font-size="14" fill="#475569">（ビルの許可証）</text>
+                </g>
+
+                <!-- 矢印（フロー） -->
+                <!-- 1→2: クライアントが証明書を提示 -->
+                <line x1="275" y1="198" x2="345" y2="198" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+                <text x="310" y="186" text-anchor="middle" font-size="13" fill="#3B82F6" font-weight="600">&#9312;証明書提示</text>
+
+                <!-- 2→3: 認証OK → 接続許可 -->
+                <line x1="595" y1="198" x2="665" y2="198" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen2)"/>
+                <text x="630" y="186" text-anchor="middle" font-size="13" fill="#10B981" font-weight="600">&#9315;接続許可</text>
+
+                <!-- 4→2: CAがサーバー証明書を発行（ノード上方を迂回） -->
+                <path d="M 1060 150 L 1060 108 L 470 108 L 470 145" stroke="#F59E0B" stroke-width="2" stroke-dasharray="6,4" fill="none" marker-end="url(#arrowAmber)"/>
+                <text x="760" y="100" text-anchor="middle" font-size="13" fill="#92400E" font-weight="600">事前：サーバー証明書発行</text>
+
+                <!-- 5→1: 証明書をインストール -->
+                <line x1="160" y1="326" x2="160" y2="252" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowBlue)"/>
+                <text x="100" y="290" text-anchor="middle" font-size="13" fill="#3B82F6" font-weight="600">事前：</text>
+                <text x="100" y="306" text-anchor="middle" font-size="13" fill="#3B82F6" font-weight="600">インストール</text>
+
+                <!-- 2→6: 証明書を検証 -->
+                <line x1="470" y1="252" x2="470" y2="325" stroke="#818CF8" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+                <text x="508" y="290" text-anchor="middle" font-size="13" fill="#6D28D9" font-weight="600">&#9313;検証開始</text>
+
+                <!-- 6→7: CRL照合 -->
+                <line x1="595" y1="378" x2="665" y2="378" stroke="#F87171" stroke-width="2.5" marker-end="url(#arrowRedCRL)"/>
+                <text x="630" y="366" text-anchor="middle" font-size="13" fill="#DC2626" font-weight="600">&#9314;CRL照合</text>
+
+                <!-- 4→8: サーバー証明書発行（ACM→サーバー証明書） -->
+                <line x1="1060" y1="252" x2="1060" y2="325" stroke="#FDBA74" stroke-width="2" marker-end="url(#arrowAmber)"/>
+                <text x="1078" y="293" text-anchor="start" font-size="13" fill="#92400E" font-weight="600">発行</text>
+
+                <!-- 4→5: CAがクライアント証明書発行 -->
+                <path d="M 1160 210 L 1175 210 L 1175 450 L 160 450 L 160 432" stroke="#F59E0B" stroke-width="2" stroke-dasharray="6,4" fill="none" marker-end="url(#arrowAmber)"/>
+                <text x="600" y="470" text-anchor="middle" font-size="13" fill="#92400E" font-weight="600">事前：CAがクライアント証明書を発行 → デバイスにインストール</text>
+
+                <!-- 矢印マーカー -->
+                <defs>
+                    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arrowGreen2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10B981"/>
+                    </marker>
+                    <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#F59E0B"/>
+                    </marker>
+                    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#818CF8"/>
+                    </marker>
+                    <marker id="arrowRedCRL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#F87171"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="highlight-box info">
+            <p>
+                &#128161; <strong>認証フローの流れ：</strong>
+                &#9312;社員（クライアント）がゲートに社員証を見せる →
+                &#9313;ゲートが社員証の真贋・有効期限を確認 →
+                &#9314;退職者リスト（CRL）に載っていないか照合 →
+                &#9315;問題なければ入館（VPC接続）を許可
+            </p>
+        </div>
+    </section>
+
+    <!-- 証明書認証の5つの特徴 -->
+    <section class="section">
+        <h2 id="cert-features">&#11088; 証明書認証の5つの特徴</h2>
+
+        <div class="feature-grid">
+            <div class="feature-card blue">
+                <div class="feature-card-icon">&#128272;</div>
+                <h4>公開鍵暗号化方式</h4>
+                <p>
+                    PSKが「全員同じ合言葉」なのに対し、証明書は「秘密鍵＋公開鍵」のペア。
+                    社員証の本人しか持っていない署名（秘密鍵）と、
+                    受付が確認できる情報（公開鍵）で確実に本人確認。
+                </p>
+            </div>
+            <div class="feature-card green">
+                <div class="feature-card-icon">&#128466;</div>
+                <h4>証明書失効管理（CRL）</h4>
+                <p>
+                    退職者の社員証だけを無効にできるのと同様に、
+                    CRL（証明書失効リスト）で個別証明書を即座に無効化。
+                    他ユーザーへの影響はゼロ。
+                </p>
+            </div>
+            <div class="feature-card purple">
+                <div class="feature-card-icon">&#128200;</div>
+                <h4>スケーラビリティ</h4>
+                <p>
+                    社員が100人でも10,000人でも、一人一枚の社員証を管理するだけ。
+                    PSKのように鍵変更時に全員へ再配布する必要なし。
+                    ACM Private CAで大量発行も自動化。
+                </p>
+            </div>
+            <div class="feature-card red">
+                <div class="feature-card-icon">&#128269;</div>
+                <h4>監査証跡</h4>
+                <p>
+                    社員証のゲート通過記録と同じく、
+                    誰がいつどの証明書で接続したかの詳細ログを記録。
+                    CloudTrailと連携して完全な監査証跡を保持。
+                </p>
+            </div>
+        </div>
+
+        <!-- 5つ目は下段に「共通原理」として配置 -->
+        <div class="highlight-box success" style="margin-top: var(--spacing-base);">
+            <p>
+                &#128260; <strong>上記4つを支える共通原理：自動化対応</strong> ―
+                ACM Private CAと連携することで、証明書の発行・更新・失効を自動化。
+                社員証の発行・期限更新・退職時の回収を総務部門が一括で管理するのと同じです。
+            </p>
+        </div>
+    </section>
+
+    <!-- ACMでの証明書管理 -->
+    <section class="section">
+        <h2 id="acm">&#128196; AWS Certificate Manager（ACM）での証明書管理</h2>
+        <p>
+            ACMはSSL/TLS証明書を管理するAWSマネージドサービスです。
+            会社の総務部門が社員証の発行から更新、廃棄までを一手に担うのと同じ役割を果たします。
+        </p>
+
+        <h3 id="cert-types">証明書の種類</h3>
+        <div class="cert-type-grid">
+            <div class="cert-type-card">
+                <h4>&#127760; パブリック証明書</h4>
+                <p style="margin: 0 0 10px 0; font-size: 0.9em; color: var(--color-text-secondary);">
+                    = 公的な身分証明書（パスポート）
+                </p>
+                <ul>
+                    <li>第三者認証局（Amazon Trust Services）が発行</li>
+                    <li>Webサイト・API等の外部公開サービスで使用</li>
+                    <li>ブラウザに信頼されている（緑の鍵マーク）</li>
+                    <li><strong>ACMで無料発行・自動更新</strong></li>
+                </ul>
+            </div>
+            <div class="cert-type-card private">
+                <h4>&#128274; プライベート証明書</h4>
+                <p style="margin: 0 0 10px 0; font-size: 0.9em; color: var(--color-text-secondary);">
+                    = 社内専用の社員証
+                </p>
+                <ul>
+                    <li>自社の内部認証局（ACM Private CA）が発行</li>
+                    <li><strong>VPN認証・内部システム間通信で使用</strong></li>
+                    <li>社外では通用しない（自社内でのみ有効）</li>
+                    <li>ACM Private CA料金が発生（月額\\$400/CA）</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ACM構成図 -->
+        <div class="svg-container">
+            <svg viewBox="0 0 1200 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ACM証明書管理の全体像">
+                <rect x="0" y="0" width="1200" height="540" rx="18" fill="#F8FAFC"/>
+                <text x="600" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">ACM証明書管理の全体像 ― 総務部門のワークフロー</text>
+
+                <!-- ACM中央 -->
+                <rect x="430" y="70" width="340" height="100" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+                <text x="600" y="110" text-anchor="middle" font-size="22" font-weight="700" fill="#1E293B">&#127971; ACM（総務部門）</text>
+                <text x="600" y="140" text-anchor="middle" font-size="16" fill="#475569">証明書の発行・更新・配布・失効を一元管理</text>
+
+                <!-- パブリック証明書配布先 (左) -->
+                <text x="200" y="220" text-anchor="middle" font-size="18" font-weight="600" fill="#3B82F6">パブリック証明書の配布先</text>
+
+                <!-- ELB -->
+                <rect x="40" y="245" width="180" height="80" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5"/>
+                <text x="130" y="280" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#9878;&#65039; ELB/ALB</text>
+                <text x="130" y="304" text-anchor="middle" font-size="14" fill="#475569">ロードバランサー</text>
+
+                <!-- CloudFront -->
+                <rect x="240" y="245" width="180" height="80" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5"/>
+                <text x="330" y="280" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#127760; CloudFront</text>
+                <text x="330" y="304" text-anchor="middle" font-size="14" fill="#475569">CDN配信</text>
+
+                <!-- API Gateway -->
+                <rect x="40" y="345" width="180" height="80" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5"/>
+                <text x="130" y="380" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#128279; API Gateway</text>
+                <text x="130" y="404" text-anchor="middle" font-size="14" fill="#475569">API管理</text>
+
+                <!-- Elastic Beanstalk -->
+                <rect x="240" y="345" width="180" height="80" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="1.5"/>
+                <text x="330" y="380" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#127793; Beanstalk</text>
+                <text x="330" y="404" text-anchor="middle" font-size="14" fill="#475569">アプリ環境</text>
+
+                <!-- プライベート証明書配布先 (右) -->
+                <text x="1000" y="220" text-anchor="middle" font-size="18" font-weight="600" fill="#8B5CF6">プライベート証明書の配布先</text>
+
+                <!-- Client VPN -->
+                <rect x="780" y="245" width="200" height="80" rx="12" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1.5"/>
+                <text x="880" y="280" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#128274; Client VPN</text>
+                <text x="880" y="304" text-anchor="middle" font-size="14" fill="#475569">VPNクライアント認証</text>
+
+                <!-- 内部ALB -->
+                <rect x="1000" y="245" width="180" height="80" rx="12" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1.5"/>
+                <text x="1090" y="280" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#128274; 内部ALB</text>
+                <text x="1090" y="304" text-anchor="middle" font-size="14" fill="#475569">社内通信暗号化</text>
+
+                <!-- IoTデバイス -->
+                <rect x="780" y="345" width="200" height="80" rx="12" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1.5"/>
+                <text x="880" y="380" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#128225; IoT Core</text>
+                <text x="880" y="404" text-anchor="middle" font-size="14" fill="#475569">デバイス認証</text>
+
+                <!-- ECS/EKS -->
+                <rect x="1000" y="345" width="180" height="80" rx="12" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1.5"/>
+                <text x="1090" y="380" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">&#128051; ECS/EKS</text>
+                <text x="1090" y="404" text-anchor="middle" font-size="14" fill="#475569">サービス間mTLS</text>
+
+                <!-- ACMから左への矢印 -->
+                <path d="M 430 130 L 200 130 L 200 240" stroke="#3B82F6" stroke-width="2" fill="none" marker-end="url(#arrowBlueACM)"/>
+
+                <!-- ACMから右への矢印 -->
+                <path d="M 770 130 L 1000 130 L 1000 240" stroke="#8B5CF6" stroke-width="2" fill="none" marker-end="url(#arrowPurpleACM)"/>
+
+                <!-- 自動更新表示 -->
+                <rect x="430" y="460" width="340" height="60" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                <text x="600" y="496" text-anchor="middle" font-size="18" font-weight="600" fill="#059669">&#128260; 自動更新 ― 期限切れ事故をゼロに</text>
+
+                <!-- 自動更新矢印 -->
+                <path d="M 600 175 L 600 455" stroke="#34D399" stroke-width="2" stroke-dasharray="8,5" fill="none" marker-end="url(#arrowGreenACM)"/>
+
+                <defs>
+                    <marker id="arrowBlueACM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arrowPurpleACM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8B5CF6"/>
+                    </marker>
+                    <marker id="arrowGreenACM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#34D399"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <h3 id="acm-main-features">ACMの主要機能</h3>
+        <div class="feature-grid-3">
+            <div class="feature-card blue">
+                <div class="feature-card-icon">&#128260;</div>
+                <h4>自動更新</h4>
+                <p>パブリック証明書は期限切れ前に自動で更新。深夜の証明書切れ事故を根絶。</p>
+            </div>
+            <div class="feature-card green">
+                <div class="feature-card-icon">&#128279;</div>
+                <h4>AWSサービス統合</h4>
+                <p>ELB、CloudFront、API Gateway等にワンクリックで証明書をアタッチ。</p>
+            </div>
+            <div class="feature-card purple">
+                <div class="feature-card-icon">&#128203;</div>
+                <h4>一元管理</h4>
+                <p>全証明書の状態・期限をACMコンソールで一覧管理。棚卸しも簡単。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- AWSサービス統合 -->
+    <section class="section">
+        <h2 id="acm-integration">&#128279; ACMとAWSサービスの統合パターン</h2>
+        <p>ACMで管理する証明書を、各AWSサービスへどう配布するかを整理します。</p>
+
+        <div class="analogy-table-wrapper">
+            <table class="analogy-table">
+                <thead>
+                    <tr>
+                        <th>AWSサービス</th>
+                        <th>証明書タイプ</th>
+                        <th>用途</th>
+                        <th>たとえ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ELB / ALB</strong></td>
+                        <td>パブリック</td>
+                        <td>HTTPS終端</td>
+                        <td>ビル正面玄関の入館証</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CloudFront</strong></td>
+                        <td>パブリック</td>
+                        <td>CDNのSSL/TLS</td>
+                        <td>各支店の入館証（全国展開）</td>
+                    </tr>
+                    <tr>
+                        <td><strong>API Gateway</strong></td>
+                        <td>パブリック</td>
+                        <td>カスタムドメインSSL</td>
+                        <td>取引先との受付窓口の証明</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Client VPN</strong></td>
+                        <td>プライベート</td>
+                        <td>クライアント認証</td>
+                        <td>社員証（個人認証）</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IoT Core</strong></td>
+                        <td>プライベート</td>
+                        <td>デバイス認証</td>
+                        <td>設備の管理タグ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ECS / EKS</strong></td>
+                        <td>プライベート</td>
+                        <td>サービス間mTLS</td>
+                        <td>部署間の相互身分確認</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 証明書ライフサイクル -->
+    <section class="section">
+        <h2 id="lifecycle">&#128260; 証明書ライフサイクル管理</h2>
+        <p>社員証の発行から廃棄までの流れと同様に、証明書にもライフサイクルがあります。</p>
+
+        <div class="lifecycle-flow">
+            <div class="lifecycle-step">
+                <div class="step-icon">&#128221;</div>
+                <h4>&#9312;リクエスト</h4>
+                <p>新入社員の社員証発行申請</p>
+            </div>
+            <div class="lifecycle-step">
+                <div class="step-icon">&#9989;</div>
+                <h4>&#9313;検証・発行</h4>
+                <p>身元確認後に社員証を作成</p>
+            </div>
+            <div class="lifecycle-step">
+                <div class="step-icon">&#128230;</div>
+                <h4>&#9314;配布</h4>
+                <p>社員証を本人に渡す</p>
+            </div>
+            <div class="lifecycle-step">
+                <div class="step-icon">&#128260;</div>
+                <h4>&#9315;更新</h4>
+                <p>期限前に新しい社員証に切替</p>
+            </div>
+            <div class="lifecycle-step">
+                <div class="step-icon">&#128465;</div>
+                <h4>&#9316;失効・廃棄</h4>
+                <p>退職時に社員証を無効化</p>
+            </div>
+        </div>
+
+        <div class="highlight-box">
+            <p>
+                &#128161; <strong>ACMの自動化ポイント：</strong>
+                パブリック証明書は&#9313;〜&#9315;をACMが完全自動化。プライベート証明書は
+                ACM Private CA APIを使ってCI/CDパイプラインに組み込むことで自動化可能です。
+            </p>
+        </div>
+    </section>
+
+    <!-- コード例 -->
+    <section class="section">
+        <h2 id="code-examples">&#128187; 実装コード例</h2>
+
+        <h3 id="acm-private-ca-vpn">ACM Private CA &amp; VPN証明書の作成</h3>
+        <div class="code-tabs">
+            <div class="code-tab-buttons">
+                <button class="code-tab-btn active" data-tab="tab-cli">AWS CLI</button>
+                <button class="code-tab-btn" data-tab="tab-cfn">CloudFormation</button>
+                <button class="code-tab-btn" data-tab="tab-tf">Terraform</button>
+            </div>
+            <div class="code-tab-content active" id="tab-cli">
+<pre><span class="code-comment"># &#9312; Private CA を作成</span>
+<span class="code-keyword">aws</span> acm-pca create-certificate-authority \\
+  --certificate-authority-configuration \\
+    <span class="code-string">'{"KeyAlgorithm":"RSA_2048",
+      "SigningAlgorithm":"SHA256WITHRSA",
+      "Subject":{
+        "Country":"JP",
+        "Organization":"MyCompany",
+        "CommonName":"MyCompany VPN CA"
+      }}'</span> \\
+  --certificate-authority-type <span class="code-string">"ROOT"</span>
+
+<span class="code-comment"># &#9313; サーバー証明書を発行（VPNエンドポイント用）</span>
+<span class="code-keyword">aws</span> acm-pca issue-certificate \\
+  --certificate-authority-arn <span class="code-param">arn:aws:acm-pca:ap-northeast-1:123456:certificate-authority/xxx</span> \\
+  --csr <span class="code-string">fileb://server.csr</span> \\
+  --signing-algorithm <span class="code-string">"SHA256WITHRSA"</span> \\
+  --validity <span class="code-string">'{"Value":365,"Type":"DAYS"}'</span>
+
+<span class="code-comment"># &#9314; クライアント証明書を発行（VPNユーザー用）</span>
+<span class="code-keyword">aws</span> acm-pca issue-certificate \\
+  --certificate-authority-arn <span class="code-param">arn:aws:acm-pca:ap-northeast-1:123456:certificate-authority/xxx</span> \\
+  --csr <span class="code-string">fileb://client.csr</span> \\
+  --signing-algorithm <span class="code-string">"SHA256WITHRSA"</span> \\
+  --validity <span class="code-string">'{"Value":90,"Type":"DAYS"}'</span>
+
+<span class="code-comment"># &#9315; 証明書を失効（退職者対応）</span>
+<span class="code-keyword">aws</span> acm-pca revoke-certificate \\
+  --certificate-authority-arn <span class="code-param">arn:aws:acm-pca:ap-northeast-1:123456:certificate-authority/xxx</span> \\
+  --certificate-serial <span class="code-string">"1a:2b:3c:..."</span> \\
+  --revocation-reason <span class="code-string">"CESSATION_OF_OPERATION"</span></pre>
+            </div>
+            <div class="code-tab-content" id="tab-cfn">
+<pre><span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">"2010-09-09"</span>
+<span class="code-keyword">Description:</span> <span class="code-string">"Certificate-based VPN with ACM Private CA"</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-comment"># Private CA（総務部門に相当）</span>
+  <span class="code-param">VpnPrivateCA:</span>
+    <span class="code-keyword">Type:</span> AWS::ACMPCA::CertificateAuthority
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">Type:</span> ROOT
+      <span class="code-keyword">KeyAlgorithm:</span> RSA_2048
+      <span class="code-keyword">SigningAlgorithm:</span> SHA256WITHRSA
+      <span class="code-keyword">Subject:</span>
+        <span class="code-keyword">Country:</span> JP
+        <span class="code-keyword">Organization:</span> MyCompany
+        <span class="code-keyword">CommonName:</span> MyCompany VPN CA
+      <span class="code-keyword">RevocationConfiguration:</span>
+        <span class="code-keyword">CrlConfiguration:</span>
+          <span class="code-keyword">Enabled:</span> <span class="code-string">true</span>
+          <span class="code-keyword">ExpirationInDays:</span> 7
+          <span class="code-keyword">S3BucketName:</span> !Ref CrlBucket
+
+  <span class="code-comment"># CRL保管用S3バケット</span>
+  <span class="code-param">CrlBucket:</span>
+    <span class="code-keyword">Type:</span> AWS::S3::Bucket
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">BucketName:</span> !Sub <span class="code-string">"\${AWS::AccountId}-vpn-crl"</span>
+
+  <span class="code-comment"># Client VPN エンドポイント</span>
+  <span class="code-param">ClientVpnEndpoint:</span>
+    <span class="code-keyword">Type:</span> AWS::EC2::ClientVpnEndpoint
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">Description:</span> <span class="code-string">"Certificate-based VPN endpoint"</span>
+      <span class="code-keyword">ServerCertificateArn:</span> !Ref ServerCertificate
+      <span class="code-keyword">ClientCidrBlock:</span> <span class="code-string">"10.100.0.0/16"</span>
+      <span class="code-keyword">AuthenticationOptions:</span>
+        - <span class="code-keyword">Type:</span> certificate-authentication
+          <span class="code-keyword">MutualAuthentication:</span>
+            <span class="code-keyword">ClientRootCertificateChainArn:</span> !GetAtt VpnPrivateCA.Arn
+      <span class="code-keyword">ConnectionLogOptions:</span>
+        <span class="code-keyword">Enabled:</span> <span class="code-string">true</span>
+        <span class="code-keyword">CloudwatchLogGroup:</span> !Ref VpnLogGroup</pre>
+            </div>
+            <div class="code-tab-content" id="tab-tf">
+<pre><span class="code-comment"># Terraform: 証明書ベースVPN構成</span>
+
+<span class="code-comment"># Private CA（総務部門）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_acmpca_certificate_authority"</span> <span class="code-param">"vpn_ca"</span> {
+  certificate_authority_configuration {
+    key_algorithm     = <span class="code-string">"RSA_2048"</span>
+    signing_algorithm = <span class="code-string">"SHA256WITHRSA"</span>
+    subject {
+      country      = <span class="code-string">"JP"</span>
+      organization = <span class="code-string">"MyCompany"</span>
+      common_name  = <span class="code-string">"MyCompany VPN CA"</span>
+    }
+  }
+
+  revocation_configuration {
+    crl_configuration {
+      enabled            = <span class="code-string">true</span>
+      expiration_in_days = <span class="code-string">7</span>
+      s3_bucket_name     = aws_s3_bucket.crl.id
+    }
+  }
+
+  type = <span class="code-string">"ROOT"</span>
+}
+
+<span class="code-comment"># Client VPN Endpoint</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_ec2_client_vpn_endpoint"</span> <span class="code-param">"main"</span> {
+  description            = <span class="code-string">"Certificate-based VPN"</span>
+  server_certificate_arn = aws_acm_certificate.server.arn
+  client_cidr_block      = <span class="code-string">"10.100.0.0/16"</span>
+
+  authentication_options {
+    type                       = <span class="code-string">"certificate-authentication"</span>
+    root_certificate_chain_arn = aws_acmpca_certificate_authority.vpn_ca.arn
+  }
+
+  connection_log_options {
+    enabled               = <span class="code-string">true</span>
+    cloudwatch_log_group  = aws_cloudwatch_log_group.vpn.name
+  }
+}</pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- ベストプラクティス -->
+    <section class="section">
+        <h2 id="best-practices">&#9989; ベストプラクティス vs アンチパターン</h2>
+        <div class="practice-grid">
+            <div class="practice-card good">
+                <h4>&#9989; ベストプラクティス</h4>
+                <div class="practice-item">
+                    <span class="practice-icon">&#9989;</span>
+                    <span>クライアント証明書の有効期限を90日以内に設定し、定期ローテーションを実施</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#9989;</span>
+                    <span>CRL（失効リスト）をS3に公開し、VPNエンドポイントが常に最新のリストを参照できるようにする</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#9989;</span>
+                    <span>CloudTrailでACM Private CAのAPI操作を監査ログとして記録</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#9989;</span>
+                    <span>証明書の自動発行はCI/CDパイプラインに組み込み、手動ミスを排除</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#9989;</span>
+                    <span>秘密鍵はAWS KMSで暗号化し、最小権限のIAMポリシーで保護</span>
+                </div>
+            </div>
+            <div class="practice-card bad">
+                <h4>&#10060; アンチパターン</h4>
+                <div class="practice-item">
+                    <span class="practice-icon">&#10060;</span>
+                    <span>PSK（事前共有鍵）を全ユーザーで使い回す → 個別管理・失効が不可能</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#10060;</span>
+                    <span>CRLを設定せずにPrivate CAを運用 → 退職者の証明書が有効なままに</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#10060;</span>
+                    <span>証明書の有効期限を数年に設定 → 漏洩リスクの長期化</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#10060;</span>
+                    <span>秘密鍵をソースコードやSlack等に平文で保存 → 漏洩の温床</span>
+                </div>
+                <div class="practice-item">
+                    <span class="practice-icon">&#10060;</span>
+                    <span>証明書更新をカレンダーリマインダーだけに頼る → 更新忘れで障害</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- トラブルシューティング -->
+    <section class="section">
+        <h2 id="troubleshooting">&#128295; トラブルシューティング</h2>
+
+        <div class="trouble-card">
+            <h4>&#9888;&#65039; VPN接続が「認証失敗」で拒否される</h4>
+            <p class="symptom">症状：クライアントが接続を試みると即座に切断される</p>
+            <p class="cause">原因：クライアント証明書がCRLに登録されている、またはCAの信頼チェーンが切れている</p>
+            <p class="fix">対処：&#9312; CRLにクライアント証明書のシリアル番号が含まれていないか確認 &#9313; CAのルート証明書がVPNエンドポイントに正しくインポートされているか確認 &#9314; 証明書の有効期限切れをチェック</p>
+        </div>
+
+        <div class="trouble-card">
+            <h4>&#9888;&#65039; ACMの証明書が自動更新されない</h4>
+            <p class="symptom">症状：パブリック証明書の期限が迫っているが更新されない</p>
+            <p class="cause">原因：DNS検証用のCNAMEレコードが削除されている、またはドメインの所有権確認が失敗</p>
+            <p class="fix">対処：&#9312; Route 53のCNAMEレコードを確認 &#9313; ACMコンソールで「検証状態」を確認 &#9314; ドメインのネームサーバー設定を確認</p>
+        </div>
+
+        <div class="trouble-card">
+            <h4>&#9888;&#65039; Private CAの証明書発行でエラー</h4>
+            <p class="symptom">症状：IssueCertificate API呼び出しがAccessDeniedで失敗</p>
+            <p class="cause">原因：IAMポリシーにacm-pca:IssueCertificate権限がない、またはリソースベースポリシーの不備</p>
+            <p class="fix">対処：&#9312; IAMポリシーにacm-pcaの必要なActionが含まれているか確認 &#9313; Private CAのリソースポリシーでRAM共有設定を確認</p>
+        </div>
+    </section>
+
+    <!-- 試験対策 -->
+    <section class="exam-tips">
+        <h2 id="exam-tips">&#127891; ANS-C01 / SAP-C02 試験対策</h2>
+
+        <div class="exam-tip-item">
+            <p><strong>&#128313; 出題パターン&#9312;：</strong>「退職者のVPNアクセスを即座に遮断したい」→
+            答えは<strong>証明書ベース認証 + CRL（証明書失効リスト）</strong>。PSKでは個別無効化不可能。</p>
+        </div>
+
+        <div class="exam-tip-item">
+            <p><strong>&#128313; 出題パターン&#9313;：</strong>「VPN認証を個別管理しつつ監査証跡を残したい」→
+            答えは<strong>ACM Private CA + CloudTrail</strong>。証明書ごとの発行・使用・失効をログに記録。</p>
+        </div>
+
+        <div class="exam-tip-item">
+            <p><strong>&#128313; 出題パターン&#9314;：</strong>「HTTPS証明書の管理負荷を軽減したい」→
+            答えは<strong>ACMパブリック証明書</strong>（無料・自動更新）。CloudFrontはus-east-1のACMのみ対応に注意。</p>
+        </div>
+
+        <div class="exam-tip-item">
+            <p><strong>&#128313; 出題パターン&#9315;：</strong>「マイクロサービス間の通信をmTLSで保護したい」→
+            答えは<strong>ACM Private CA + App Mesh/ECS</strong>。相互認証（mutual TLS）でサービス間を暗号化。</p>
+        </div>
+
+        <div class="exam-tip-item">
+            <p><strong>&#128313; 頻出キーワード：</strong>
+            「certificate-based authentication」「mutual authentication」「CRL」「Private CA」
+            「revocation」が問題文に出たら証明書ベース認証を疑う。</p>
+        </div>
+
+        <div class="highlight-box info">
+            <p>
+                &#127891; <strong>注意点：</strong>CloudFrontの証明書はus-east-1（バージニア北部）のACMで発行する必要があります。
+                東京リージョンのACM証明書はCloudFrontにアタッチできません。これは頻出の引っかけ問題です。
+            </p>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section">
+        <h2 id="faq">&#10067; よくある質問（FAQ）</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+                ACM Private CAの料金はどのくらい？
+                <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <p>ACM Private CAは月額約\\$400/CAです。加えて、発行した証明書1枚ごとに\\$0.75が課金されます（月1,000枚を超えると割引あり）。小規模環境では短期モード（\\$50/月、7日間有効の証明書に限定）も利用できます。</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+                パブリック証明書とプライベート証明書、どちらを使うべき？
+                <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <p>インターネットに公開するWebサイトやAPIにはパブリック証明書（無料・自動更新）を使います。VPN認証・社内通信・IoTデバイス認証など、社外に公開しないサービスにはプライベート証明書を使います。「外向け＝パブリック、内向け＝プライベート」と覚えましょう。</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+                PSK認証はもう使わないほうがいい？
+                <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <p>テスト環境や少人数の一時的なVPN接続であればPSKも選択肢です。ただし、本番環境・大規模ユーザー・コンプライアンス要件がある場合は、証明書ベース認証が推奨されます。特に退職者管理と監査証跡の観点で証明書が圧倒的に優れています。</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+                CRL以外に証明書を失効する方法はある？
+                <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <p>OCSP（Online Certificate Status Protocol）があります。CRLがリスト全体をダウンロードするのに対し、OCSPは個別の証明書の状態をリアルタイムで確認します。ACM Private CAはOCSPレスポンダーもサポートしています。大規模環境ではOCSPの方が効率的です。</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+                証明書認証とActive Directory認証は併用できる？
+                <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+                <p>はい。AWS Client VPNは「証明書認証 + Active Directory認証」の組み合わせ（二重認証）をサポートしています。証明書でデバイスを認証し、ADでユーザーを認証する構成が最もセキュアです。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 用語集 -->
+    <section class="section">
+        <h2 id="glossary">&#128218; 用語集</h2>
+        <div class="glossary-grid">
+            <div class="glossary-item">
+                <dl>
+                    <dt>PSK（Pre-Shared Key）</dt>
+                    <dd>事前共有鍵。接続する双方が同じ秘密の鍵を事前に共有する認証方式。たとえ：全員同じ合言葉。</dd>
+                </dl>
+            </div>
+            <div class="glossary-item">
+                <dl>
+                    <dt>CA（Certificate Authority）</dt>
+                    <dd>認証局。証明書を発行する機関。たとえ：社員証を発行する総務部門。</dd>
+                </dl>
+            </div>
+            <div class="glossary-item">
+                <dl>
+                    <dt>CRL（Certificate Revocation List）</dt>
+                    <dd>証明書失効リスト。無効化された証明書のシリアル番号一覧。たとえ：退職者名簿。</dd>
+                </dl>
+            </div>
+            <div class="glossary-item">
+                <dl>
+                    <dt>OCSP</dt>
+                    <dd>Online Certificate Status Protocol。個別の証明書の有効/無効をリアルタイムで確認するプロトコル。</dd>
+                </dl>
+            </div>
+            <div class="glossary-item">
+                <dl>
+                    <dt>mTLS（mutual TLS）</dt>
+                    <dd>相互TLS認証。サーバーとクライアントの双方が証明書を提示して互いに認証する方式。</dd>
+                </dl>
+            </div>
+            <div class="glossary-item">
+                <dl>
+                    <dt>ACM Private CA</dt>
+                    <dd>AWS内部のプライベート認証局。社内専用の証明書を発行・管理するマネージドサービス。</dd>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    <!-- チートシート -->
+    <section class="cheatsheet">
+        <h2 id="cheatsheet">&#128203; チートシート（まとめ）</h2>
+        <div class="cheatsheet-grid">
+            <div class="cheatsheet-item">
+                <h4>&#128272; PSK vs 証明書</h4>
+                <p>PSK＝合言葉（全員共有）、証明書＝社員証（個別管理）。本番環境は証明書一択。</p>
+            </div>
+            <div class="cheatsheet-item">
+                <h4>&#128196; ACMの2つの証明書</h4>
+                <p>パブリック＝外向け（無料・自動更新）、プライベート＝内向け（\\$400/月/CA）。</p>
+            </div>
+            <div class="cheatsheet-item">
+                <h4>&#128466; 失効管理</h4>
+                <p>CRL（リスト一括）またはOCSP（リアルタイム）。CRLはS3に配置。</p>
+            </div>
+            <div class="cheatsheet-item">
+                <h4>&#127891; 試験必須知識</h4>
+                <p>CloudFrontの証明書はus-east-1必須。VPN個別無効化＝証明書+CRL。</p>
+            </div>
+            <div class="cheatsheet-item">
+                <h4>&#128260; 自動化</h4>
+                <p>パブリックはACM自動更新。プライベートはAPI+CI/CDで自動ローテーション。</p>
+            </div>
+            <div class="cheatsheet-item">
+                <h4>&#128274; セキュリティ</h4>
+                <p>秘密鍵はKMSで暗号化。IAM最小権限。CloudTrailで全操作を監査。</p>
+            </div>
+        </div>
+    </section>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

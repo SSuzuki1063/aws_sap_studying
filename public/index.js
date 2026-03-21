@@ -181,6 +181,7 @@ const searchData = [
   { title: 'sts:ExternalId 完全マスターガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/sts-externalid-complete-guide.html', service: 'STS', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'VPC トラフィックミラーリング完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/vpc-traffic-mirroring-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2', category: 'セキュリティ・ガバナンス', file: 'security-governance/e2e-encryption-guide.html', service: 'CloudFront', tags: 'security', domains: [1,2], difficulty: 'intermediate' },
+  { title: '証明書ベースVPN認証 & ACM完全ガイド', category: 'セキュリティ・ガバナンス', file: 'security-governance/cert-vpn-acm-guide.html', service: 'VPN', tags: 'security networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'Amazon EC2 Elastic Fabric Adapter (EFA) 完全ガイド', category: 'その他', file: 'new-solutions/efa_infographic.html', service: 'EFA', tags: '', domains: [2,3], difficulty: 'beginner' },
   { title: 'AWS CloudFront オリジングループ簡単解説', category: 'その他', file: 'new-solutions/cloudfront-origin-groups.html', service: 'CloudFront', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'EC2 Auto Scaling ライフサイクルフックの図解', category: 'その他', file: 'new-solutions/ec2-autoscaling-lifecycle-hooks.html', service: 'EC2', tags: 'scaling', domains: [2,3], difficulty: 'intermediate' },
@@ -197,6 +198,7 @@ const searchData = [
   { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', category: 'ネットワーキング', file: 'networking/byoip-guide.html', service: 'VPC', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/cloudwan-static-routing-segment-sharing-v2.html', service: '', tags: 'ha networking', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド', category: 'ネットワーキング', file: 'networking/dx-bgp-routing-2vifs.html', service: '', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', category: 'ネットワーキング', file: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
@@ -217,6 +219,7 @@ const searchData = [
   { title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法', category: 'ネットワーキング', file: 'networking/aws-vpn-asymmetric-routing-guide.html', service: 'VPN', tags: 'networking monitoring', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html', service: 'Transit Gateway Route Analyzer', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Transit Gateway クロスアカウント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-cross-account-sharing.html', service: 'Transit Gateway', tags: 'networking multi-account', domains: [1,2,3], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信', category: 'ネットワーキング', file: 'networking/tgw-multicast-guide.html', service: 'Transit Gateway', tags: '', domains: [], difficulty: '' },
   { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html', service: 'Transit Gateway', tags: '', domains: [], difficulty: '' },
@@ -254,6 +257,8 @@ const searchData = [
   { title: 'VPCフローログ フィールド完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-flow-log-fields-guide.html', service: 'VPC', tags: 'networking monitoring', domains: [1,2,3], difficulty: 'intermediate' },
   { title: 'VPNアクセラレーション vs Global Accelerator - 関係と違いを徹底解説', category: 'ネットワーキング', file: 'networking/vpn-acceleration-vs-global-accelerator.html', service: 'VPN', tags: 'comparison', domains: [1,2], difficulty: 'advanced' },
   { title: 'VPNピアリングとPrivatelinkの比較', category: 'ネットワーキング', file: 'new-solutions/vpn-vs-privatelink.html', service: 'VPC PrivateLink', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'WAN・SD-WAN・AWS Transit Gateway 完全図解ガイド', category: 'ネットワーキング', file: 'networking/wan-sdwan-transit-gateway-guide.html', service: 'Transit Gateway', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'インターフェースVPCエンドポイントのDNS動作 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-endpoint-dns-behavior-guide.html', service: 'VPC PrivateLink', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', category: 'ネットワーキング', file: 'networking/cross-region-ec2-communication.html', service: 'EC2', tags: '', domains: [], difficulty: '' },
   { title: 'ジャンボフレーム＆MTU問題 完全図解ガイド', category: 'ネットワーキング', file: 'networking/jumbo-frame-mtu-guide.html', service: 'EC2', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'スプリットトンネル vs フルトンネル VPN - AWS Client VPN | AWS SAP学習リソース', category: 'ネットワーキング', file: 'networking/split-vs-full-tunnel-vpn.html', service: 'VPN', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
@@ -296,6 +301,21 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
