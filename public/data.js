@@ -3853,7 +3853,7 @@ const siteStats = {
   minorCategories: 29,
   totalResources: '307+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/20'
+  lastUpdated: '2026/03/21'
 };
 
 // サービスインデックス（自動生成）
