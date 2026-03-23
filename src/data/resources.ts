@@ -77,13 +77,13 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 82,
+    "count": 87,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
-        "count": 17,
-        "lastUpdated": "2026-03-21",
+        "count": 18,
+        "lastUpdated": "2026-03-23",
         "resources": [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
@@ -242,6 +242,16 @@ export const categoriesData: Category[] = [
             "summary": "DXGW・VGW・VIFの3層構造と接続パターンをステップ解説"
           },
           {
+            "title": "AWS Direct Connect ゲートウェイ 許可プレフィックスリスト完全ガイド - Transit Gateway構成",
+            "href": "networking/dx-gw-allowed-prefix.html",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 20
+          },
+          {
             "title": "Direct Connect ルーティングポリシーと BGP コミュニティ - AWS図解ガイド",
             "href": "networking/dx-routing-bgp-community-guide.html",
             "priority": "high",
@@ -326,8 +336,8 @@ export const categoriesData: Category[] = [
       {
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
-        "count": 47,
-        "lastUpdated": "2026-03-21",
+        "count": 49,
+        "lastUpdated": "2026-03-23",
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
@@ -395,6 +405,16 @@ export const categoriesData: Category[] = [
               2
             ],
             "difficulty": "intermediate",
+            "estimated_minutes": 25
+          },
+          {
+            "title": "AWS Network Firewall デプロイモデル完全ガイド - 分散型・集中型・複合型",
+            "href": "networking/aws-network-firewall-deploy-models.html",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "advanced",
             "estimated_minutes": 25
           },
           {
@@ -566,6 +586,16 @@ export const categoriesData: Category[] = [
               "security",
               "containers"
             ]
+          },
+          {
+            "title": "AWS ファイアウォール デプロイメントモデル完全ガイド - シングルアーム vs デュアルアーム",
+            "href": "networking/firewall-deployment-models.html",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 20
           },
           {
             "title": "AWS Global Accelerator × VPN パフォーマンス向上ガイド",
@@ -977,8 +1007,8 @@ export const categoriesData: Category[] = [
       {
         "title": "Transit Gateway & ゲートウェイ",
         "icon": "🚪",
-        "count": 16,
-        "lastUpdated": "2026-03-21",
+        "count": 18,
+        "lastUpdated": "2026-03-23",
         "resources": [
           {
             "title": "AWSネットワークゲートウェイの比較",
@@ -995,6 +1025,17 @@ export const categoriesData: Category[] = [
           {
             "title": "AWS Cloud WAN アタッチメント承認ポリシー完全ガイド",
             "href": "networking/cloud-wan-attachment-policy-guide.html",
+            "service": "Cloud WAN",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 25
+          },
+          {
+            "title": "AWS Cloud WAN ポリシールールと評価順序・タグベースセグメントマッピング完全ガイド",
+            "href": "networking/cloud-wan-policy-rules.html",
             "service": "Cloud WAN",
             "exam_domains": [
               1,
@@ -1082,6 +1123,17 @@ export const categoriesData: Category[] = [
             "title": "AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信",
             "href": "networking/tgw-multicast-guide.html",
             "service": "Transit Gateway"
+          },
+          {
+            "title": "AWS Transit Gateway Network Manager 完全ガイド",
+            "href": "networking/tgw-network-manager-guide.html",
+            "service": "Transit Gateway",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25
           },
           {
             "title": "Transit Gateway ルーティング完全ガイド - クロスリージョン・クロスアカウントVPC接続",
@@ -1180,7 +1232,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-21",
+        "lastUpdated": "2026-03-23",
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
@@ -4391,7 +4443,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 82
+    "count": 87
   },
   {
     "id": "security-governance",
@@ -4515,7 +4567,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "Cloud WAN",
-    "count": 1,
+    "count": 2,
     "categories": [
       "networking"
     ]
@@ -4941,7 +4993,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "Transit Gateway",
-    "count": 12,
+    "count": 13,
     "categories": [
       "networking"
     ]
@@ -5122,7 +5174,7 @@ export const learningModes: LearningMode[] = [
 export const domainIndex: DomainIndexItem[] = [
   {
     "domainId": 1,
-    "count": 133,
+    "count": 138,
     "categories": [
       "networking",
       "security-governance",
@@ -5132,7 +5184,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 234,
+    "count": 239,
     "categories": [
       "networking",
       "security-governance",
@@ -5168,7 +5220,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "307+",
+  "totalResources": "312+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/03/22"
+  "lastUpdated": "2026/03/23"
 };

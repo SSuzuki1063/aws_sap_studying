@@ -198,8 +198,10 @@ const searchData = [
   { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', category: 'ネットワーキング', file: 'networking/byoip-guide.html', service: 'VPC', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/cloudwan-static-routing-segment-sharing-v2.html', service: '', tags: 'ha networking', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Cloud WAN ポリシールールと評価順序・タグベースセグメントマッピング完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-policy-rules.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド', category: 'ネットワーキング', file: 'networking/dx-bgp-routing-2vifs.html', service: '', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', category: 'ネットワーキング', file: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Direct Connect ゲートウェイ 許可プレフィックスリスト完全ガイド - Transit Gateway構成', category: 'ネットワーキング', file: 'networking/dx-gw-allowed-prefix.html', service: '', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect 接続タイプ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-connection-types-guide.html', service: 'Direct Connect', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
@@ -212,6 +214,7 @@ const searchData = [
   { title: 'AWS Hyperplane 完全ガイド - 見えないけど超重要なAWSの交通システム', category: 'ネットワーキング', file: 'networking/aws-hyperplane-guide.html', service: 'Hyperplane', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS IPv6サポート完全ガイド - 住所体系の大革命', category: 'ネットワーキング', file: 'networking/aws-ipv6-support-guide-v2.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Local Zones 完全ガイド - 都市のユーザーに最も近い場所でAWSを動かす', category: 'ネットワーキング', file: 'networking/aws-local-zones-guide.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Network Firewall デプロイモデル完全ガイド - 分散型・集中型・複合型', category: 'ネットワーキング', file: 'networking/aws-network-firewall-deploy-models.html', service: '', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', service: 'VPC PrivateLink', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', category: 'ネットワーキング', file: 'networking/site-to-site-vpn-route53-resolver-guide.html', service: 'VPN', tags: 'dns', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', category: 'ネットワーキング', file: 'networking/vpn-ike-dpd-recovery-guide.html', service: 'VPN', tags: 'ha', domains: [1,2], difficulty: 'advanced' },
@@ -219,12 +222,14 @@ const searchData = [
   { title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法', category: 'ネットワーキング', file: 'networking/aws-vpn-asymmetric-routing-guide.html', service: 'VPN', tags: 'networking monitoring', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Transit Gateway Network Manager Route Analyzer 完全ガイド', category: 'ネットワーキング', file: 'networking/route-analyzer-guide.html', service: 'Transit Gateway Route Analyzer', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Transit Gateway Network Manager 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-network-manager-guide.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway クロスアカウント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/tgw-cross-account-sharing.html', service: 'Transit Gateway', tags: 'networking multi-account', domains: [1,2,3], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway ピアリング完全ガイド - 空港ネットワークで理解する', category: 'ネットワーキング', file: 'networking/transit-gateway-peering-guide.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信', category: 'ネットワーキング', file: 'networking/tgw-multicast-guide.html', service: 'Transit Gateway', tags: '', domains: [], difficulty: '' },
   { title: 'AWS Transit Gateway 完全図解 - 共有サービスによる分離VPCパターン', category: 'ネットワーキング', file: 'networking/tgw-isolated-shared-services.html', service: 'Transit Gateway', tags: '', domains: [], difficulty: '' },
   { title: 'AWS VPNスループットスケーリング完全ガイド - Transit Gateway + ECMP + アクセラレーション', category: 'ネットワーキング', file: 'networking/vpn-throughput-scaling-guide.html', service: 'VPN', tags: 'scaling', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS VPN接続を郵便システムで理解しよう + Direct Connect比較', category: 'ネットワーキング', file: 'networking/aws-vpn-with-direct-connect-guide.html', service: 'Direct Connect', tags: 'ha', domains: [1,2], difficulty: 'advanced' },
+  { title: 'AWS ファイアウォール デプロイメントモデル完全ガイド - シングルアーム vs デュアルアーム', category: 'ネットワーキング', file: 'networking/firewall-deployment-models.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS プレフィックスリスト完全ガイド', category: 'ネットワーキング', file: 'networking/aws-prefix-list-guide.html', service: 'Prefix List', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWSグローバルインフラストラクチャ完全ガイド | AWS初心者向けインフォグラフィック', category: 'ネットワーキング', file: 'networking/aws-global-infrastructure-guide.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWSネットワークゲートウェイの比較', category: 'ネットワーキング', file: 'networking/aws-gateways.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
@@ -301,6 +306,23 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

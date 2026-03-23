@@ -1,0 +1,1014 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'AWS Direct Connect ゲートウェイ 許可プレフィックスリスト完全ガイド - Transit Gateway構成',
+  pageTitle: 'AWS Direct Connect ゲートウェイ 許可プレフィックスリスト完全ガイド - Transit Gateway構成',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Direct Connect & ハイブリッドネットワーク',
+  slug: 'dx-gw-allowed-prefix',
+  tocItems: [
+    { id: 'mazu-osaeru-4tsu-no-pointo', text: 'まず押さえる4つのポイント', level: 'h2' },
+    { id: 'tatoebanashi-kokusai-butsuryu-hub-no-haisou-kyoka-risuto', text: 'たとえ話：国際物流ハブの配送許可リスト', level: 'h2' },
+    { id: 'akitekucha-zentaizu', text: 'アーキテクチャ全体図', level: 'h2' },
+    { id: 'kyoka-purefikkusu-risuto-no-shikumi', text: '許可プレフィックスリストの仕組み', level: 'h2' },
+    { id: 'cidr-shuyaku-no-jissen', text: 'CIDR集約の実践', level: 'h2' },
+    { id: 'settei-kodo-rei', text: '設定コード例', level: 'h2' },
+    { id: 'besuto-purakutisu-vs-anchi-patan', text: 'ベストプラクティス vs アンチパターン', level: 'h2' },
+    { id: 'toraburu-shutingu', text: 'トラブルシューティング', level: 'h2' },
+    { id: 'shiken-taisaku-ans-c01-sap-c02', text: '試験対策（ANS-C01 / SAP-C02）', level: 'h2' },
+    { id: 'yoku-aru-shitsumon-faq', text: 'よくある質問（FAQ）', level: 'h2' },
+    { id: 'yogoshu', text: '用語集', level: 'h2' },
+    { id: 'chito-shito', text: 'チートシート', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/dx-gw-allowed-prefix.css',
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 1,
+  pageTotal: 1,
+};
+
+const rawContent = `
+      <!-- ==========================================
+           Hero Section
+           ========================================== -->
+      <section class="hero" aria-label="ページ概要">
+        <div class="hero-badge">AWS Direct Connect &middot; ANS-C01対応</div>
+        <h1>許可プレフィックスリスト完全ガイド</h1>
+        <p class="hero-subtitle">Direct Connectゲートウェイ × Transit Gateway構成での<br>許可プレフィックスの相互作用をたとえ話で完全理解</p>
+      </section>
+
+      <!-- ==========================================
+           Key Takeaways (結論ファースト)
+           ========================================== -->
+      <section id="takeaways" class="section" aria-label="キーテイクアウェイ">
+        <div class="section-header">
+          <div class="section-icon">&#127919;</div>
+          <h2 id="mazu-osaeru-4tsu-no-pointo">まず押さえる4つのポイント</h2>
+        </div>
+        <div class="takeaways">
+          <div class="takeaway-card">
+            <div class="takeaway-num">1</div>
+            <h3>許可プレフィックスリスト＝フィルタ</h3>
+            <p>Transit Gateway関連付けでは、許可プレフィックスリストに<strong>明示的に登録されたCIDR</strong>のみがオンプレミスにアドバタイズされる。暗黙の許可はない。</p>
+          </div>
+          <div class="takeaway-card">
+            <div class="takeaway-num">2</div>
+            <h3>クォータは最大200プレフィックス</h3>
+            <p>以前の上限20個から<strong>200個</strong>に拡張済み。ただし効率化のためCIDR集約が推奨される。</p>
+          </div>
+          <div class="takeaway-card">
+            <div class="takeaway-num">3</div>
+            <h3>変更するとBGPリセット</h3>
+            <p>プレフィックスリストの変更は<strong>BGPセッションのリセット</strong>を引き起こし、全プレフィックスが再アドバタイズされる。</p>
+          </div>
+          <div class="takeaway-card">
+            <div class="takeaway-num">4</div>
+            <h3>複数TGWではオーバーラップ禁止</h3>
+            <p>同じDXGWに複数のTGWを関連付ける場合、それぞれの許可プレフィックスが<strong>重複してはならない</strong>。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Table of Contents
+           ========================================== -->
+      <nav class="toc" aria-label="目次">
+        <h3>&#128218; 目次</h3>
+        <ol class="toc-list">
+          <li><a href="#tatoebanashi-kokusai-butsuryu-hub-no-haisou-kyoka-risuto"><span class="toc-num">1.</span>たとえ話で理解する</a></li>
+          <li><a href="#akitekucha-zentaizu"><span class="toc-num">2.</span>アーキテクチャ全体図</a></li>
+          <li><a href="#kyoka-purefikkusu-risuto-no-shikumi"><span class="toc-num">3.</span>許可プレフィックスリストの仕組み</a></li>
+          <li><a href="#cidr-shuyaku-no-jissen"><span class="toc-num">4.</span>CIDR集約の実践</a></li>
+          <li><a href="#settei-kodo-rei"><span class="toc-num">5.</span>設定コード例</a></li>
+          <li><a href="#besuto-purakutisu-vs-anchi-patan"><span class="toc-num">6.</span>ベストプラクティス vs アンチパターン</a></li>
+          <li><a href="#toraburu-shutingu"><span class="toc-num">7.</span>トラブルシューティング</a></li>
+          <li><a href="#shiken-taisaku-ans-c01-sap-c02"><span class="toc-num">8.</span>試験対策（ANS-C01 / SAP-C02）</a></li>
+          <li><a href="#yoku-aru-shitsumon-faq"><span class="toc-num">9.</span>よくある質問</a></li>
+          <li><a href="#yogoshu"><span class="toc-num">10.</span>用語集</a></li>
+        </ol>
+      </nav>
+
+      <!-- ==========================================
+           Section 1: Analogy
+           ========================================== -->
+      <section id="analogy" class="section" aria-label="たとえ話で理解">
+        <div class="section-header">
+          <div class="section-icon">&#128666;</div>
+          <h2 id="tatoebanashi-kokusai-butsuryu-hub-no-haisou-kyoka-risuto">たとえ話：国際物流ハブの配送許可リスト</h2>
+        </div>
+
+        <div class="analogy-intro">
+          <h3>&#128161; このガイド全体で使うたとえ話</h3>
+          <p>Direct Connectゲートウェイを<strong>「国際物流ハブ」</strong>、Transit Gatewayを<strong>「地域配送センター」</strong>に見立てて考えましょう。許可プレフィックスリストは、物流ハブが海外（オンプレミス）に対して「ここに届けられますよ」と公開する<strong>配送可能エリアリスト</strong>です。リストに載っていないエリアは、実際には倉庫（VPC）が存在していても「配送不可」と案内されます。</p>
+        </div>
+
+        <table class="mapping-table" aria-label="たとえ話マッピング表">
+          <thead>
+            <tr>
+              <th class="emoji-col"></th>
+              <th>物流のたとえ</th>
+              <th>AWSの実体</th>
+              <th>役割</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="emoji-col">&#127758;</td>
+              <td>国際物流ハブ（中継拠点）</td>
+              <td>Direct Connect ゲートウェイ</td>
+              <td>オンプレミスとAWSの中継点。ルート情報を仲介する</td>
+            </tr>
+            <tr>
+              <td class="emoji-col">&#128230;</td>
+              <td>地域配送センター</td>
+              <td>Transit Gateway</td>
+              <td>複数の倉庫（VPC）をまとめ、ルートを集約する</td>
+            </tr>
+            <tr>
+              <td class="emoji-col">&#127970;</td>
+              <td>各倉庫・店舗</td>
+              <td>VPC（10.0.0.0/16 など）</td>
+              <td>実際のワークロードが動作するネットワーク</td>
+            </tr>
+            <tr>
+              <td class="emoji-col">&#128203;</td>
+              <td>配送可能エリアリスト</td>
+              <td>許可プレフィックスリスト</td>
+              <td>オンプレミスにアドバタイズするCIDRのフィルタ</td>
+            </tr>
+            <tr>
+              <td class="emoji-col">&#128187;</td>
+              <td>海外取引先</td>
+              <td>オンプレミスルーター</td>
+              <td>BGPで経路情報を受け取り、通信先を決定する</td>
+            </tr>
+            <tr>
+              <td class="emoji-col">&#128220;</td>
+              <td>エリア統合（区→市レベル）</td>
+              <td>CIDR集約</td>
+              <td>細かいCIDRを大きなブロックにまとめて効率化する</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==========================================
+           Section 2: Architecture Diagram
+           ========================================== -->
+      <section id="architecture" class="section" aria-label="アーキテクチャ図">
+        <div class="section-header">
+          <div class="section-icon">&#128506;</div>
+          <h2 id="akitekucha-zentaizu">アーキテクチャ全体図</h2>
+        </div>
+
+        <!-- SVG Diagram: Overall Architecture -->
+        <div class="svg-wrapper">
+          <svg width="1200" height="780" viewBox="0 0 1200 780" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Direct Connect GatewayとTransit Gatewayの許可プレフィックス構成図">
+            <defs>
+              <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+              </marker>
+              <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+              </marker>
+              <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+              </marker>
+              <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+              </filter>
+              <style>
+                .svg-title { font-family: Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                .svg-subtitle { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 500; fill: #475569; }
+                .node-title { font-family: Inter, Arial, sans-serif; font-size: 15px; font-weight: 700; fill: #1E293B; }
+                .node-sub { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+                .label-text { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 600; fill: #3B82F6; }
+                .label-green { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 600; fill: #10B981; }
+                .label-red { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 600; fill: #EF4444; }
+                .zone-label { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #64748B; letter-spacing: 1px; }
+                .prefix-label { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 600; }
+              </style>
+            </defs>
+
+            <!-- Background -->
+            <rect x="0" y="0" width="1200" height="780" fill="#F3F4F6"/>
+            <!-- Outer card -->
+            <rect x="24" y="24" width="1152" height="732" rx="22" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+
+            <!-- Title -->
+            <text x="600" y="68" text-anchor="middle" class="svg-title">許可プレフィックスリストによるルートアドバタイズ制御</text>
+            <text x="600" y="90" text-anchor="middle" class="svg-subtitle">Direct Connect GW × Transit GW 構成</text>
+
+            <!-- Inner panel -->
+            <rect x="40" y="104" width="1120" height="636" rx="18" fill="#F8FAFC"/>
+
+            <!-- Zone Labels -->
+            <text x="145" y="135" text-anchor="middle" class="zone-label">ON-PREMISES</text>
+            <text x="440" y="135" text-anchor="middle" class="zone-label">DIRECT CONNECT</text>
+            <text x="730" y="135" text-anchor="middle" class="zone-label">TRANSIT GATEWAY</text>
+            <text x="1030" y="135" text-anchor="middle" class="zone-label">VPCs</text>
+
+            <!-- On-Premises Router Node -->
+            <g>
+              <rect x="45" y="260" width="200" height="120" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+              <text x="145" y="300" text-anchor="middle" class="node-title">
+                <tspan x="145" dy="0">&#128187; オンプレミス</tspan>
+              </text>
+              <text x="145" y="322" text-anchor="middle" class="node-title">
+                <tspan x="145" dy="0">ルーター</tspan>
+              </text>
+              <text x="145" y="348" text-anchor="middle" class="node-sub">
+                <tspan x="145" dy="0">BGPピア</tspan>
+              </text>
+              <text x="145" y="366" text-anchor="middle" class="node-sub">
+                <tspan x="145" dy="0">192.168.0.0/16</tspan>
+              </text>
+            </g>
+
+            <!-- Direct Connect GW Node -->
+            <g>
+              <rect x="320" y="260" width="240" height="120" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+              <text x="440" y="300" text-anchor="middle" class="node-title">
+                <tspan x="440" dy="0">&#127758; Direct Connect</tspan>
+              </text>
+              <text x="440" y="320" text-anchor="middle" class="node-title">
+                <tspan x="440" dy="0">ゲートウェイ</tspan>
+              </text>
+              <text x="440" y="350" text-anchor="middle" class="node-sub">
+                <tspan x="440" dy="0">ルート仲介・中継</tspan>
+              </text>
+            </g>
+
+            <!-- Allowed Prefix List Box (between DXGW and TGW) -->
+            <g>
+              <rect x="490" y="430" width="200" height="100" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5" stroke-dasharray="6,3"/>
+              <text x="590" y="462" text-anchor="middle" class="node-title">
+                <tspan x="590" dy="0">&#128203; 許可プレフィックス</tspan>
+              </text>
+              <text x="590" y="482" text-anchor="middle" class="node-title">
+                <tspan x="590" dy="0">リスト</tspan>
+              </text>
+              <text x="590" y="510" text-anchor="middle" class="node-sub">
+                <tspan x="590" dy="0">10.0.0.0/16, 10.1.0.0/16</tspan>
+              </text>
+            </g>
+
+            <!-- Transit GW Node -->
+            <g>
+              <rect x="610" y="260" width="240" height="120" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+              <text x="730" y="300" text-anchor="middle" class="node-title">
+                <tspan x="730" dy="0">&#128230; Transit</tspan>
+              </text>
+              <text x="730" y="320" text-anchor="middle" class="node-title">
+                <tspan x="730" dy="0">Gateway</tspan>
+              </text>
+              <text x="730" y="350" text-anchor="middle" class="node-sub">
+                <tspan x="730" dy="0">ルート集約ハブ</tspan>
+              </text>
+            </g>
+
+            <!-- VPC-A Node -->
+            <g>
+              <rect x="930" y="190" width="200" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="1030" y="226" text-anchor="middle" class="node-title">
+                <tspan x="1030" dy="0">&#127970; VPC-A</tspan>
+              </text>
+              <text x="1030" y="252" text-anchor="middle" class="node-sub">
+                <tspan x="1030" dy="0">10.0.0.0/16</tspan>
+              </text>
+              <text x="1030" y="272" text-anchor="middle" class="node-sub">
+                <tspan x="1030" dy="0">（本番環境）</tspan>
+              </text>
+            </g>
+
+            <!-- VPC-B Node -->
+            <g>
+              <rect x="930" y="330" width="200" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="1030" y="366" text-anchor="middle" class="node-title">
+                <tspan x="1030" dy="0">&#127970; VPC-B</tspan>
+              </text>
+              <text x="1030" y="392" text-anchor="middle" class="node-sub">
+                <tspan x="1030" dy="0">10.1.0.0/16</tspan>
+              </text>
+              <text x="1030" y="412" text-anchor="middle" class="node-sub">
+                <tspan x="1030" dy="0">（開発環境）</tspan>
+              </text>
+            </g>
+
+            <!-- VPC-C Node (NOT in allowed prefix) -->
+            <g>
+              <rect x="930" y="480" width="200" height="96" rx="16" fill="#FEF2F2" stroke="#F87171" stroke-width="2" stroke-dasharray="6,3"/>
+              <text x="1030" y="516" text-anchor="middle" class="node-title">
+                <tspan x="1030" dy="0">&#127970; VPC-C</tspan>
+              </text>
+              <text x="1030" y="542" text-anchor="middle" class="node-sub">
+                <tspan x="1030" dy="0">10.2.0.0/16</tspan>
+              </text>
+              <text x="1030" y="562" text-anchor="middle" class="node-sub">
+                <tspan x="1030" dy="0">（リスト未登録）</tspan>
+              </text>
+            </g>
+
+            <!-- Arrows: OnPrem <-> DXGW -->
+            <line x1="245" y1="310" x2="318" y2="310" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+            <line x1="318" y1="330" x2="245" y2="330" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+            <text x="282" y="298" text-anchor="middle" class="label-text">BGP</text>
+
+            <!-- Arrows: DXGW <-> TGW -->
+            <line x1="560" y1="310" x2="608" y2="310" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+            <line x1="608" y1="330" x2="560" y2="330" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+            <text x="584" y="298" text-anchor="middle" class="label-text">関連付け</text>
+
+            <!-- Arrow: Allowed Prefix List connection (filter indication) -->
+            <line x1="590" y1="430" x2="590" y2="385" stroke="#FACC15" stroke-width="2" stroke-dasharray="5,3"/>
+            <text x="570" y="410" text-anchor="middle" class="prefix-label" fill="#B45309">フィルタ適用</text>
+
+            <!-- Arrows: TGW -> VPCs -->
+            <line x1="850" y1="300" x2="928" y2="248" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+            <line x1="850" y1="330" x2="928" y2="378" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+            <line x1="850" y1="350" x2="928" y2="518" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-gray)"/>
+
+            <!-- Labels for VPC connections -->
+            <text x="900" y="265" text-anchor="middle" class="label-green">&#10003; 許可</text>
+            <text x="900" y="355" text-anchor="middle" class="label-green">&#10003; 許可</text>
+            <text x="900" y="445" text-anchor="middle" class="label-red">&#10007; 未登録</text>
+
+            <!-- Advertise flow annotation -->
+            <rect x="60" y="460" width="360" height="90" rx="12" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5"/>
+            <text x="240" y="488" text-anchor="middle" class="node-title" style="fill:#1E40AF">
+              <tspan x="240" dy="0">&#128226; オンプレミスに広告される経路</tspan>
+            </text>
+            <text x="240" y="512" text-anchor="middle" class="node-sub" style="fill:#3B82F6">
+              <tspan x="240" dy="0">10.0.0.0/16, 10.1.0.0/16</tspan>
+            </text>
+            <text x="240" y="534" text-anchor="middle" class="node-sub" style="fill:#EF4444">
+              <tspan x="240" dy="0">10.2.0.0/16 はアドバタイズされない</tspan>
+            </text>
+
+            <!-- Legend -->
+            <rect x="60" y="600" width="1080" height="120" rx="12" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="100" y="628" class="node-title" style="fill:#64748B">凡例</text>
+
+            <rect x="80" y="644" width="20" height="14" rx="3" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+            <text x="108" y="656" class="node-sub">許可プレフィックスに登録済みVPC</text>
+
+            <rect x="380" y="644" width="20" height="14" rx="3" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5" stroke-dasharray="4,2"/>
+            <text x="408" y="656" class="node-sub">許可プレフィックス未登録VPC</text>
+
+            <rect x="680" y="644" width="20" height="14" rx="3" fill="#FEFCE8" stroke="#FACC15" stroke-width="1.5" stroke-dasharray="4,2"/>
+            <text x="708" y="656" class="node-sub">許可プレフィックスリスト（フィルタ）</text>
+
+            <line x1="80" y1="686" x2="120" y2="686" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+            <text x="132" y="690" class="node-sub">ルート広告方向</text>
+
+            <line x1="380" y1="686" x2="420" y2="686" stroke="#10B981" stroke-width="2" marker-end="url(#arrow-green)"/>
+            <text x="432" y="690" class="node-sub">戻り経路</text>
+
+            <line x1="680" y1="686" x2="720" y2="686" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-gray)"/>
+            <text x="732" y="690" class="node-sub">ブロックされた経路</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 3: How it Works
+           ========================================== -->
+      <section id="how-it-works" class="section" aria-label="仕組みの詳細">
+        <div class="section-header">
+          <div class="section-icon">&#9881;</div>
+          <h2 id="kyoka-purefikkusu-risuto-no-shikumi">許可プレフィックスリストの仕組み</h2>
+        </div>
+
+        <div class="callout callout-warning">
+          <div class="callout-icon">&#9888;&#65039;</div>
+          <div>
+            <h4>AWSマネージドプレフィックスリストとは別物！</h4>
+            <p>VPCのルートテーブルで使う「AWSマネージドプレフィックスリスト」とは異なります。ここで言う許可プレフィックスリストは、<strong>Direct Connectゲートウェイの関連付け設定に対する専用のフィルタ機能</strong>です。混同しないように注意しましょう。</p>
+          </div>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#EEF2FF; color:#4F46E5;">&#128270;</div>
+              <h4>ホワイトリスト方式</h4>
+            </div>
+            <p>TGW関連付けでは、許可プレフィックスリストに<strong>明示的に登録されたCIDRのみ</strong>がオンプレミスにアドバタイズされます。たとえ話でいうと、配送可能エリアリストに載っていない地域には「配送不可」と案内されるのと同じです。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#FEF2F2; color:#EF4444;">&#128260;</div>
+              <h4>BGPリセットの影響</h4>
+            </div>
+            <p>プレフィックスリストを変更すると、<strong>BGPセッションがリセット</strong>されます。物流にたとえると、配送可能エリアリストを更新すると、一度すべての配送契約を破棄して、新しいリストで再契約するようなものです。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#F0FDF4; color:#16A34A;">&#128200;</div>
+              <h4>上限200プレフィックス</h4>
+            </div>
+            <p>1つのTGW関連付けに対して<strong>最大200個</strong>のプレフィックスを登録可能です。以前は20個が上限でした。ただし、CIDR集約で数を抑えることがベストプラクティスです。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#FFFBEB; color:#D97706;">&#128683;</div>
+              <h4>複数TGWのオーバーラップ禁止</h4>
+            </div>
+            <p>同じDXGWに複数のTGWが関連付けられている場合、各TGWの許可プレフィックスが<strong>重複してはなりません</strong>。物流でいうと、2つの配送センターが同じ配送エリアを担当宣言するのは禁止ということです。</p>
+          </div>
+        </div>
+
+        <!-- SVG: Prefix Filter Flow -->
+        <div class="svg-wrapper">
+          <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="許可プレフィックスリストのフィルタ処理フロー">
+            <defs>
+              <marker id="arr-b2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+              </marker>
+              <marker id="arr-r2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#EF4444"/>
+              </marker>
+              <marker id="arr-g2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+              </marker>
+              <filter id="sh2" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+              </filter>
+              <style>
+                .ft { font-family: Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                .fn { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #1E293B; }
+                .fs { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+                .fl { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 600; }
+              </style>
+            </defs>
+
+            <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+            <rect x="24" y="24" width="1152" height="472" rx="22" fill="#FFFFFF" filter="url(#sh2)"/>
+            <text x="600" y="66" text-anchor="middle" class="ft">フィルタ処理フロー ― 物流ハブのたとえ</text>
+            <rect x="40" y="84" width="1120" height="396" rx="18" fill="#F8FAFC"/>
+
+            <!-- Step 1: TGW has routes from VPCs -->
+            <g>
+              <rect x="60" y="110" width="230" height="160" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+              <text x="175" y="140" text-anchor="middle" class="fn">&#9312; TGWのルートテーブル</text>
+              <text x="175" y="168" text-anchor="middle" class="fs">10.0.0.0/16 (VPC-A)</text>
+              <text x="175" y="190" text-anchor="middle" class="fs">10.1.0.0/16 (VPC-B)</text>
+              <text x="175" y="212" text-anchor="middle" class="fs">10.2.0.0/16 (VPC-C)</text>
+              <text x="175" y="240" text-anchor="middle" class="fs" style="fill:#818CF8">=全VPCの経路を保持=</text>
+              <text x="175" y="256" text-anchor="middle" class="fs" style="fill:#818CF8">(配送センターの在庫台帳)</text>
+            </g>
+
+            <!-- Arrow Step 1 -> Step 2 -->
+            <line x1="290" y1="190" x2="370" y2="190" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-b2)"/>
+            <text x="330" y="178" text-anchor="middle" class="fl" fill="#3B82F6">経路送出</text>
+
+            <!-- Step 2: Allowed Prefix Filter -->
+            <g>
+              <rect x="372" y="110" width="240" height="160" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+              <text x="492" y="140" text-anchor="middle" class="fn">&#9313; 許可プレフィックスフィルタ</text>
+              <text x="492" y="168" text-anchor="middle" class="fs" style="fill:#166534; font-weight:700;">&#10003; 10.0.0.0/16 → 許可</text>
+              <text x="492" y="190" text-anchor="middle" class="fs" style="fill:#166534; font-weight:700;">&#10003; 10.1.0.0/16 → 許可</text>
+              <text x="492" y="212" text-anchor="middle" class="fs" style="fill:#EF4444; font-weight:700;">&#10007; 10.2.0.0/16 → 拒否</text>
+              <text x="492" y="244" text-anchor="middle" class="fs" style="fill:#B45309">=リストに載ったものだけ通過=</text>
+              <text x="492" y="260" text-anchor="middle" class="fs" style="fill:#B45309">(配送可能エリアリスト)</text>
+            </g>
+
+            <!-- Arrow Step 2 -> Step 3 (pass) -->
+            <line x1="612" y1="170" x2="692" y2="170" stroke="#10B981" stroke-width="2.5" marker-end="url(#arr-g2)"/>
+            <text x="652" y="158" text-anchor="middle" class="fl" fill="#10B981">通過</text>
+
+            <!-- Arrow Step 2 -> Drop (rejected) -->
+            <line x1="492" y1="270" x2="492" y2="340" stroke="#EF4444" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr-r2)"/>
+
+            <!-- Dropped -->
+            <rect x="412" y="342" width="160" height="50" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="492" y="372" text-anchor="middle" class="fn" style="fill:#EF4444">&#128683; ドロップ</text>
+            <text x="492" y="414" text-anchor="middle" class="fs" style="fill:#EF4444">10.2.0.0/16は</text>
+            <text x="492" y="432" text-anchor="middle" class="fs" style="fill:#EF4444">オンプレミスに届かない</text>
+
+            <!-- Step 3: DXGW advertises to On-Prem -->
+            <g>
+              <rect x="694" y="110" width="230" height="160" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="809" y="140" text-anchor="middle" class="fn">&#9314; DXGWが広告</text>
+              <text x="809" y="170" text-anchor="middle" class="fs" style="fill:#166534; font-weight:700;">10.0.0.0/16</text>
+              <text x="809" y="192" text-anchor="middle" class="fs" style="fill:#166534; font-weight:700;">10.1.0.0/16</text>
+              <text x="809" y="224" text-anchor="middle" class="fs" style="fill:#B45309">=フィルタ済みの経路のみ=</text>
+              <text x="809" y="240" text-anchor="middle" class="fs" style="fill:#B45309">(物流ハブが海外に通知)</text>
+            </g>
+
+            <!-- Arrow Step 3 -> Step 4 -->
+            <line x1="924" y1="190" x2="1004" y2="190" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-b2)"/>
+            <text x="964" y="178" text-anchor="middle" class="fl" fill="#3B82F6">BGP広告</text>
+
+            <!-- Step 4: On-Prem receives -->
+            <g>
+              <rect x="1006" y="110" width="140" height="160" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+              <text x="1076" y="142" text-anchor="middle" class="fn">&#9315; オンプレミス</text>
+              <text x="1076" y="175" text-anchor="middle" class="fs">受信した経路:</text>
+              <text x="1076" y="198" text-anchor="middle" class="fs" style="fill:#166534; font-weight:700;">10.0.0.0/16</text>
+              <text x="1076" y="218" text-anchor="middle" class="fs" style="fill:#166534; font-weight:700;">10.1.0.0/16</text>
+              <text x="1076" y="248" text-anchor="middle" class="fs" style="fill:#475569">(海外取引先の</text>
+              <text x="1076" y="264" text-anchor="middle" class="fs" style="fill:#475569">受領リスト)</text>
+            </g>
+
+            <!-- Bottom annotation -->
+            <rect x="620" y="330" width="520" height="130" rx="12" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.5"/>
+            <text x="880" y="358" text-anchor="middle" class="fn" style="fill:#92400E">&#128161; 物流たとえでの理解</text>
+            <text x="880" y="386" text-anchor="middle" class="fs" style="fill:#78350F">配送センター（TGW）は在庫台帳に全倉庫を記載</text>
+            <text x="880" y="406" text-anchor="middle" class="fs" style="fill:#78350F">→ 国際物流ハブ（DXGW）は配送可能エリアリスト</text>
+            <text x="880" y="426" text-anchor="middle" class="fs" style="fill:#78350F">　（許可プレフィックス）に載った倉庫だけを</text>
+            <text x="880" y="446" text-anchor="middle" class="fs" style="fill:#78350F">　海外取引先（オンプレミス）に通知する</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 4: CIDR Aggregation
+           ========================================== -->
+      <section id="cidr" class="section" aria-label="CIDR集約">
+        <div class="section-header">
+          <div class="section-icon">&#128202;</div>
+          <h2 id="cidr-shuyaku-no-jissen">CIDR集約の実践</h2>
+        </div>
+
+        <div class="analogy-intro">
+          <h3>&#128666; 物流たとえ：エリアの統合</h3>
+          <p>細かい「○○町1丁目」「○○町2丁目」を個別に配送可能リストに書く代わりに、「○○町全域」とまとめて書くのがCIDR集約です。リストの行数が減り、管理が楽になります。</p>
+        </div>
+
+        <!-- CIDR aggregation benefits -->
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#F0FDF4; color:#16A34A;">&#128200;</div>
+              <h4>ルートテーブル削減</h4>
+            </div>
+            <p>集約によりオンプレミスルーターが保持するルートエントリ数が減り、ルックアップ速度が向上します。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#EEF2FF; color:#4F46E5;">&#128736;</div>
+              <h4>設定の簡素化</h4>
+            </div>
+            <p>プレフィックスリストの管理が容易になり、変更時のBGPリセット回数も最小限に抑えられます。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#FFFBEB; color:#D97706;">&#9889;</div>
+              <h4>帯域幅の効率化</h4>
+            </div>
+            <p>BGPアップデートメッセージのサイズが小さくなり、コンバージェンス時間が短縮されます。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-card-icon" style="background:#FEF2F2; color:#EF4444;">&#128640;</div>
+              <h4>スケーラビリティ</h4>
+            </div>
+            <p>将来VPCを追加しても、集約CIDRの範囲内であれば許可プレフィックスリストの変更が不要です。</p>
+          </div>
+        </div>
+
+        <!-- Binary calculation -->
+        <div class="binary-box">
+          <h4>&#128270; 集約の具体例：10.0.32.0/21 と 10.0.40.0/21</h4>
+          <div class="binary-line">
+            <span class="binary-label">10.0.32.0/21 =</span>
+            <span class="binary-bits">
+              <span class="match">00001010.00000000.001</span><span class="match">00</span><span class="diff">000</span>.00000000
+            </span>
+          </div>
+          <div class="binary-line">
+            <span class="binary-label">10.0.40.0/21 =</span>
+            <span class="binary-bits">
+              <span class="match">00001010.00000000.001</span><span class="diff">01</span><span class="diff">000</span>.00000000
+            </span>
+          </div>
+          <div class="binary-line" style="margin-top:12px; padding-top:12px; border-top:2px dashed #86EFAC;">
+            <span class="binary-label">共通プレフィックス =</span>
+            <span class="binary-bits">
+              <span class="match">00001010.00000000.001</span><span style="color:#94A3B8">?????</span>.00000000
+            </span>
+          </div>
+          <div class="binary-line">
+            <span class="binary-label">共通ビット数 =</span>
+            <span class="binary-bits"><strong>20ビット</strong>（第3オクテット上位3ビットまで一致）</span>
+          </div>
+          <div class="binary-result">
+            &#10148; 集約結果：<strong>10.0.32.0/20</strong>（32～47のサブネット範囲をカバー）
+          </div>
+        </div>
+
+        <!-- SVG: CIDR Aggregation Visual -->
+        <div class="svg-wrapper">
+          <svg width="1200" height="440" viewBox="0 0 1200 440" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CIDR集約のビジュアル説明">
+            <defs>
+              <marker id="arr-b3" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+              </marker>
+              <filter id="sh3" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+              </filter>
+              <style>
+                .ct { font-family: Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                .cn { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #1E293B; }
+                .cs { font-family: Inter, Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+              </style>
+            </defs>
+
+            <rect x="0" y="0" width="1200" height="440" fill="#F3F4F6"/>
+            <rect x="24" y="24" width="1152" height="392" rx="22" fill="#FFFFFF" filter="url(#sh3)"/>
+            <text x="600" y="66" text-anchor="middle" class="ct">CIDR集約：細かいブロックを大きなブロックにまとめる</text>
+            <rect x="40" y="84" width="1120" height="316" rx="18" fill="#F8FAFC"/>
+
+            <!-- Before aggregation -->
+            <text x="280" y="116" text-anchor="middle" class="cn" style="fill:#64748B">集約前（個別エントリ）</text>
+
+            <rect x="80" y="136" width="180" height="70" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="170" y="168" text-anchor="middle" class="cn">10.0.32.0/21</text>
+            <text x="170" y="190" text-anchor="middle" class="cs">32～39 のサブネット</text>
+
+            <rect x="290" y="136" width="180" height="70" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="380" y="168" text-anchor="middle" class="cn">10.0.40.0/21</text>
+            <text x="380" y="190" text-anchor="middle" class="cs">40～47 のサブネット</text>
+
+            <!-- Arrow down -->
+            <line x1="280" y1="216" x2="280" y2="270" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-b3)"/>
+            <text x="310" y="248" class="cn" style="fill:#3B82F6">集約</text>
+
+            <!-- After aggregation -->
+            <rect x="140" y="280" width="280" height="80" rx="14" fill="#F0FDF4" stroke="#16A34A" stroke-width="2.5"/>
+            <text x="280" y="314" text-anchor="middle" class="cn" style="fill:#166534; font-size:16px;">10.0.32.0/20</text>
+            <text x="280" y="340" text-anchor="middle" class="cs" style="fill:#166534">32～47 のサブネット全体をカバー</text>
+
+            <!-- Analogy side -->
+            <rect x="560" y="116" width="580" height="90" rx="14" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.5"/>
+            <text x="850" y="146" text-anchor="middle" class="cn" style="fill:#92400E">&#128666; 物流たとえ</text>
+            <text x="850" y="172" text-anchor="middle" class="cs" style="fill:#78350F">「○○町1～8丁目」+「○○町9～16丁目」</text>
+            <text x="850" y="192" text-anchor="middle" class="cs" style="fill:#78350F">→ 「○○町 全域」に統合して1行で記載</text>
+
+            <!-- Benefits list -->
+            <rect x="560" y="230" width="580" height="150" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5"/>
+            <text x="850" y="260" text-anchor="middle" class="cn" style="fill:#1E40AF">&#10003; 集約の効果</text>
+            <text x="620" y="290" class="cs" style="fill:#1E293B">&#9679; プレフィックスリストのエントリ数: 2 → 1</text>
+            <text x="620" y="314" class="cs" style="fill:#1E293B">&#9679; オンプレミスルーターの負荷軽減</text>
+            <text x="620" y="338" class="cs" style="fill:#1E293B">&#9679; 将来 10.0.33.0/24 等を追加しても変更不要</text>
+            <text x="620" y="362" class="cs" style="fill:#1E293B">&#9679; BGPリセットの発生回数を最小化</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 5: Code Examples
+           ========================================== -->
+      <section id="code-examples" class="section" aria-label="設定コード例">
+        <div class="section-header">
+          <div class="section-icon">&#128187;</div>
+          <h2 id="settei-kodo-rei">設定コード例</h2>
+        </div>
+
+        <div class="code-tabs">
+          <div class="tab-buttons" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="cli" id="tab-cli" aria-controls="panel-cli">AWS CLI</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="cfn" id="tab-cfn" aria-controls="panel-cfn">CloudFormation</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="tf" id="tab-tf" aria-controls="panel-tf">Terraform</button>
+          </div>
+
+          <div class="tab-panel active" id="panel-cli" role="tabpanel" aria-labelledby="tab-cli">
+            <pre><code># TGWとDXGWの関連付け作成（許可プレフィックス付き）
+aws directconnect create-transit-gateway-association \\
+  --direct-connect-gateway-id dxgw-xxxxxxxx \\
+  --gateway-id tgw-yyyyyyyy \\
+  --add-allowed-prefixes-to-direct-connect-gateway \\
+    cidr=10.0.0.0/16 \\
+    cidr=10.1.0.0/16
+
+# 許可プレフィックスリストの更新
+aws directconnect update-direct-connect-gateway-association \\
+  --association-id dxgw-assoc-zzzzzzzz \\
+  --add-allowed-prefixes-to-direct-connect-gateway \\
+    cidr=10.2.0.0/16 \\
+  --remove-allowed-prefixes-to-direct-connect-gateway \\
+    cidr=10.1.0.0/16
+
+# 関連付けの確認
+aws directconnect describe-direct-connect-gateway-associations \\
+  --direct-connect-gateway-id dxgw-xxxxxxxx</code></pre>
+          </div>
+
+          <div class="tab-panel" id="panel-cfn" role="tabpanel" aria-labelledby="tab-cfn">
+            <pre><code>AWSTemplateFormatVersion: '2010-09-09'
+Description: DXGW - TGW Association with Allowed Prefixes
+
+Resources:
+  DxGwTgwAssociation:
+    Type: AWS::DirectConnect::TransitGatewayAssociation
+    Properties:
+      DirectConnectGatewayId: !Ref DirectConnectGateway
+      GatewayId: !Ref TransitGateway
+      AllowedPrefixes:
+        - Cidr: '10.0.0.0/16'
+        - Cidr: '10.1.0.0/16'
+
+  DirectConnectGateway:
+    Type: AWS::DirectConnect::DirectConnectGateway
+    Properties:
+      DirectConnectGatewayName: my-dxgw
+      AmazonSideAsn: 64512
+
+Outputs:
+  AssociationId:
+    Value: !Ref DxGwTgwAssociation</code></pre>
+          </div>
+
+          <div class="tab-panel" id="panel-tf" role="tabpanel" aria-labelledby="tab-tf">
+            <pre><code># Direct Connect Gateway
+resource "aws_dx_gateway" "main" {
+  name            = "my-dxgw"
+  amazon_side_asn = 64512
+}
+
+# TGW Association with Allowed Prefixes
+resource "aws_dx_gateway_association" "tgw" {
+  dx_gateway_id         = aws_dx_gateway.main.id
+  associated_gateway_id = aws_ec2_transit_gateway.main.id
+
+  allowed_prefixes = [
+    "10.0.0.0/16",
+    "10.1.0.0/16",
+  ]
+}
+
+# 集約版（推奨）
+resource "aws_dx_gateway_association" "tgw_aggregated" {
+  dx_gateway_id         = aws_dx_gateway.main.id
+  associated_gateway_id = aws_ec2_transit_gateway.main.id
+
+  # /16 × 2 を /15 に集約
+  allowed_prefixes = [
+    "10.0.0.0/15",
+  ]
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 6: Best Practices vs Anti-patterns
+           ========================================== -->
+      <section id="best-practices" class="section" aria-label="ベストプラクティス">
+        <div class="section-header">
+          <div class="section-icon">&#9989;</div>
+          <h2 id="besuto-purakutisu-vs-anchi-patan">ベストプラクティス vs アンチパターン</h2>
+        </div>
+
+        <div class="practices-grid">
+          <div class="practice-card practice-good">
+            <h4>&#9989; ベストプラクティス</h4>
+            <div class="practice-item">
+              <span class="icon">&#128994;</span>
+              <span>CIDRを集約して許可プレフィックス数を最小化する。将来の拡張を見越してスーパーネットで登録する。</span>
+            </div>
+            <div class="practice-item">
+              <span class="icon">&#128994;</span>
+              <span>変更はメンテナンスウィンドウ中に行う。BGPリセットが発生するため、業務影響の少ない時間帯を選ぶ。</span>
+            </div>
+            <div class="practice-item">
+              <span class="icon">&#128994;</span>
+              <span>複数TGW構成では、IP空間を事前に整理し、オーバーラップが発生しない設計にする。</span>
+            </div>
+            <div class="practice-item">
+              <span class="icon">&#128994;</span>
+              <span>CloudFormation/Terraformで許可プレフィックスをIaCとして管理し、変更履歴を追跡する。</span>
+            </div>
+          </div>
+          <div class="practice-card practice-bad">
+            <h4>&#10060; アンチパターン</h4>
+            <div class="practice-item">
+              <span class="icon">&#128308;</span>
+              <span>全VPCのCIDRを個別に登録する。管理が煩雑になり、BGPリセットの頻度が上がる。</span>
+            </div>
+            <div class="practice-item">
+              <span class="icon">&#128308;</span>
+              <span>本番トラフィック中に許可プレフィックスを変更する。BGPリセットで一時的に通信断が発生する。</span>
+            </div>
+            <div class="practice-item">
+              <span class="icon">&#128308;</span>
+              <span>複数TGWの許可プレフィックスを重複させる。AWSが関連付けを拒否する。</span>
+            </div>
+            <div class="practice-item">
+              <span class="icon">&#128308;</span>
+              <span>AWSマネージドプレフィックスリストと混同して、VPCルートテーブルで代用しようとする。</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 7: Troubleshooting
+           ========================================== -->
+      <section id="troubleshooting" class="section" aria-label="トラブルシューティング">
+        <div class="section-header">
+          <div class="section-icon">&#128295;</div>
+          <h2 id="toraburu-shutingu">トラブルシューティング</h2>
+        </div>
+
+        <div class="trouble-card">
+          <h4>&#128680; オンプレミスからVPCに到達できない</h4>
+          <p class="trouble-cause"><strong>原因：</strong>該当VPCのCIDRが許可プレフィックスリストに登録されていない。リストに登録されていないCIDRはオンプレミスにアドバタイズされないため、オンプレミスルーターはそのVPCへのルートを知らない。</p>
+          <div class="trouble-fix">
+            <strong>対処：</strong>aws directconnect describe-direct-connect-gateway-associations でリストを確認し、不足しているCIDRを update-direct-connect-gateway-association で追加する。
+          </div>
+        </div>
+
+        <div class="trouble-card">
+          <h4>&#128680; TGW関連付けが「associating」のまま進まない</h4>
+          <p class="trouble-cause"><strong>原因：</strong>同じDXGWに関連付けられた別のTGWの許可プレフィックスとオーバーラップしている可能性がある。</p>
+          <div class="trouble-fix">
+            <strong>対処：</strong>すべてのTGW関連付けの許可プレフィックスを確認し、CIDR範囲の重複がないか検証する。重複がある場合はIP設計を見直す。
+          </div>
+        </div>
+
+        <div class="trouble-card">
+          <h4>&#128680; 許可プレフィックス変更後に通信断が発生</h4>
+          <p class="trouble-cause"><strong>原因：</strong>プレフィックスリストの変更によりBGPセッションがリセットされ、経路が再アドバタイズされるまで通信が途切れる。</p>
+          <div class="trouble-fix">
+            <strong>対処：</strong>変更はメンテナンスウィンドウ中に実施する。また、変更前にBGP Graceful Restartの設定を確認し、コンバージェンス時間を最小化する。
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 8: Exam Tips
+           ========================================== -->
+      <section id="exam-tips" class="section" aria-label="試験対策">
+        <div class="section-header">
+          <div class="section-icon">&#127891;</div>
+          <h2 id="shiken-taisaku-ans-c01-sap-c02">試験対策（ANS-C01 / SAP-C02）</h2>
+        </div>
+
+        <div class="exam-tips">
+          <h3>&#128161; 出題されやすいポイント</h3>
+          <div class="exam-tip-item">
+            <span class="tip-icon">&#128312;</span>
+            <span><strong>TGW関連付けの許可プレフィックス＝ホワイトリスト。</strong>登録されたCIDRのみがアドバタイズされる。VGW関連付けとは動作が異なる点に注意（VGWではVPC CIDRが自動広告される）。</span>
+          </div>
+          <div class="exam-tip-item">
+            <span class="tip-icon">&#128312;</span>
+            <span><strong>複数TGWではオーバーラップ禁止。</strong>同じDXGWに複数のTGWを関連付ける場合、許可プレフィックスの重複は許されない。IPアドレス設計の問題として出題されやすい。</span>
+          </div>
+          <div class="exam-tip-item">
+            <span class="tip-icon">&#128312;</span>
+            <span><strong>CIDR集約の計算。</strong>2つのCIDRブロックをバイナリで展開し、共通プレフィックスを求める問題が出題される。スーパーネットの計算に慣れておく。</span>
+          </div>
+          <div class="exam-tip-item">
+            <span class="tip-icon">&#128312;</span>
+            <span><strong>BGPリセットの影響を理解。</strong>許可プレフィックスリストの変更がBGPセッションに与える影響と、メンテナンスウィンドウの必要性が問われる。</span>
+          </div>
+          <div class="exam-tip-item">
+            <span class="tip-icon">&#128312;</span>
+            <span><strong>AWSマネージドプレフィックスリストとの区別。</strong>DXGWの許可プレフィックスリストとVPCルートテーブルのマネージドプレフィックスリストの違いを正確に把握する。</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 9: FAQ
+           ========================================== -->
+      <section id="faq" class="section" aria-label="よくある質問">
+        <div class="section-header">
+          <div class="section-icon">&#10067;</div>
+          <h2 id="yoku-aru-shitsumon-faq">よくある質問（FAQ）</h2>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>許可プレフィックスリストを空にするとどうなる？</span>
+              <span class="arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+              <p>許可プレフィックスリストが空の場合、TGWからのルートはオンプレミスにアドバタイズされません。つまり、オンプレミスからAWS側のVPCには到達できなくなります。物流でいうと、配送可能エリアリストが白紙 ＝ どこにも配送しない、という状態です。</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>VGWとTGWの関連付けで許可プレフィックスの動作は同じ？</span>
+              <span class="arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+              <p>いいえ、大きく異なります。VGW関連付けではVPCのCIDRが自動的にアドバタイズされ、許可プレフィックスリストは追加のプレフィックスを広告するために使われます。一方、TGW関連付けでは許可プレフィックスリストに登録されたCIDRのみがアドバタイズされるホワイトリスト方式です。</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>許可プレフィックスリストの変更はどのくらい反映に時間がかかる？</span>
+              <span class="arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+              <p>通常、BGPセッションのリセットと再コンバージェンスに数十秒～数分程度かかります。ネットワーク環境やBGPの設定（タイマー値、Graceful Restart等）により変動します。メンテナンスウィンドウでの実施が推奨されます。</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>集約CIDRでなく個別VPCのCIDRを登録しても問題ない？</span>
+              <span class="arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+              <p>機能的には問題ありません。ただし、200個の上限に達しやすくなり、管理も煩雑になります。また、VPCを追加するたびにリストの更新（= BGPリセット）が必要になるため、集約が強く推奨されます。</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>0.0.0.0/0 を許可プレフィックスに登録できる？</span>
+              <span class="arrow">&#9660;</span>
+            </button>
+            <div class="faq-answer">
+              <p>TGW関連付けの許可プレフィックスリストではデフォルトルート（0.0.0.0/0）を登録できます。ただし、これはTGWに接続されたすべてのルートがアドバタイズ対象になることを意味するため、セキュリティ上のリスクがあります。最小権限の原則に基づき、必要なCIDRのみを登録することが推奨されます。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           Section 10: Glossary
+           ========================================== -->
+      <section id="glossary" class="section" aria-label="用語集">
+        <div class="section-header">
+          <div class="section-icon">&#128214;</div>
+          <h2 id="yogoshu">用語集</h2>
+        </div>
+
+        <dl class="glossary-grid">
+          <div class="glossary-item">
+            <dt>Direct Connect Gateway (DXGW)</dt>
+            <dd>複数のDirect Connect接続やVIFを集約し、複数リージョンのVPCやTGWと接続するためのグローバルなゲートウェイリソース。</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>Transit Gateway (TGW)</dt>
+            <dd>複数のVPC、VPN、Direct Connect接続を中央ハブとして接続するリージョナルなルーティングサービス。</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>許可プレフィックスリスト</dt>
+            <dd>DXGWとTGWの関連付けにおいて、オンプレミスにアドバタイズするCIDRブロックを制御するフィルタリスト。</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>CIDR集約（スーパーネッティング）</dt>
+            <dd>複数の小さなCIDRブロックを1つの大きなブロックにまとめる技術。ルーティングテーブルの効率化に寄与する。</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>BGP (Border Gateway Protocol)</dt>
+            <dd>自律システム間の経路情報を交換するプロトコル。Direct Connectではオンプレミスとの経路交換に使用される。</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>アドバタイズ</dt>
+            <dd>BGPにおいて、自身のネットワーク経路情報を隣接ルーターに通知（広告）すること。</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+           Cheat Sheet
+           ========================================== -->
+      <section class="section" aria-label="チートシート">
+        <div class="section-header">
+          <div class="section-icon">&#128203;</div>
+          <h2 id="chito-shito">チートシート</h2>
+        </div>
+
+        <div class="cheatsheet">
+          <h3>&#9889; 許可プレフィックスリスト 早見表</h3>
+          <dl class="cheatsheet-grid">
+            <div class="cheatsheet-item">
+              <dt>動作モード</dt>
+              <dd>TGW: ホワイトリスト（登録されたCIDRのみ広告）<br>VGW: 追加広告（VPC CIDRは自動 + リストで追加）</dd>
+            </div>
+            <div class="cheatsheet-item">
+              <dt>上限</dt>
+              <dd>1つのTGW関連付けあたり200プレフィックス（旧上限: 20）</dd>
+            </div>
+            <div class="cheatsheet-item">
+              <dt>変更時の影響</dt>
+              <dd>BGPセッションがリセットされ、全プレフィックスが再アドバタイズされる</dd>
+            </div>
+            <div class="cheatsheet-item">
+              <dt>複数TGW制約</dt>
+              <dd>同一DXGWに関連付けられたTGW間で、許可プレフィックスのオーバーラップ禁止</dd>
+            </div>
+            <div class="cheatsheet-item">
+              <dt>CIDR集約のコツ</dt>
+              <dd>バイナリ展開 → 共通プレフィックスビットを数える → /N で集約</dd>
+            </div>
+            <div class="cheatsheet-item">
+              <dt>混同注意</dt>
+              <dd>VPCルートテーブルの「AWSマネージドプレフィックスリスト」とは別物</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

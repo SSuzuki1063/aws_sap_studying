@@ -1,0 +1,907 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'AWS ファイアウォール デプロイメントモデル完全ガイド - シングルアーム vs デュアルアーム',
+  pageTitle: 'AWS ファイアウォール デプロイメントモデル完全ガイド - シングルアーム vs デュアルアーム',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'VPC & ネットワーク基礎',
+  slug: 'firewall-deployment-models',
+  tocItems: [
+    { id: 'saishoni-osaeru-3tsu-no-pointo', text: '最初に押さえる3つのポイント', level: 'h2' },
+    { id: 'tatoebanashi-biru-keibi-de-rikai-suru-deploimento-moderu', text: 'たとえ話：ビル警備で理解するデプロイメントモデル', level: 'h2' },
+    { id: '2tsu-no-deploimento-moderu-gaiyou', text: '2つのデプロイメントモデル概要', level: 'h2' },
+    { id: 'shinguru-aamu-moudo-shousai', text: 'シングルアームモード詳細', level: 'h2' },
+    { id: 'tatoebanashi-deiriguchi-ga-1tsu-no-keibiin', text: 'たとえ話：出入口が1つの警備員', level: 'h3' },
+    { id: 'gijutsuteki-na-shikumi-single', text: '技術的な仕組み', level: 'h3' },
+    { id: 'dyuaru-aamu-moudo-shousai', text: 'デュアルアームモード詳細', level: 'h2' },
+    { id: 'tatoebanashi-2tsu-no-deiriguchi-wo-kanri-suru-keibiin', text: 'たとえ話：2つの出入口を管理する警備員', level: 'h3' },
+    { id: 'gijutsuteki-na-shikumi-dual', text: '技術的な仕組み', level: 'h3' },
+    { id: 'hikaku-aakitekucha-zu-shinguru-vs-dyuaru', text: '比較アーキテクチャ図：シングル vs デュアル', level: 'h2' },
+    { id: 'tettei-hikaku-hyou', text: '徹底比較表', level: 'h2' },
+    { id: 'kosuto-hikaku', text: 'コスト比較', level: 'h2' },
+    { id: 'sentei-furou-chaato', text: '選定フローチャート', level: 'h2' },
+    { id: 'settei-rei', text: '設定例', level: 'h2' },
+    { id: 'shinguru-aamu-kousei-no-ruuto-teeburu-rei', text: 'シングルアーム構成のルートテーブル例', level: 'h3' },
+    { id: 'dyuaru-aamu-kousei-no-ruuto-teeburu-rei', text: 'デュアルアーム構成のルートテーブル例', level: 'h3' },
+    { id: 'besuto-purakutisu-vs-anchi-pataan', text: 'ベストプラクティス vs アンチパターン', level: 'h2' },
+    { id: 'toraburu-shuutingu', text: 'トラブルシューティング', level: 'h2' },
+    { id: 'shiken-taisaku', text: '試験対策', level: 'h2' },
+    { id: 'yoku-aru-shitsumon-faq', text: 'よくある質問（FAQ）', level: 'h2' },
+    { id: 'yougo-shuu', text: '用語集', level: 'h2' },
+    { id: 'chiito-shiito', text: 'チートシート', level: 'h2' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/firewall-deployment-models.css',
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 1,
+  pageTotal: 1,
+};
+
+const rawContent = `
+      <!-- Hero Section -->
+      <section class="hero">
+        <span class="hero-badge">Networking &amp; Security</span>
+        <h1>ファイアウォール<br>デプロイメントモデル完全ガイド</h1>
+        <p>シングルアーム（One-arm）とデュアルアーム（Two-arm）の2つのデプロイメントモデルを、ビル警備のたとえ話で直感的に理解しましょう。</p>
+      </section>
+
+      <!-- Key Takeaways (結論ファースト) -->
+      <section class="key-takeaways" id="key-takeaways">
+        <h2 id="saishoni-osaeru-3tsu-no-pointo">最初に押さえる3つのポイント</h2>
+        <div class="takeaway-grid">
+          <div class="takeaway-item">
+            <div class="takeaway-num">1</div>
+            <div class="takeaway-text"><strong>シングルアーム</strong>はNIC 1つで「検査だけ」を担当し、NAT処理は別途NATゲートウェイが必要</div>
+          </div>
+          <div class="takeaway-item">
+            <div class="takeaway-num">2</div>
+            <div class="takeaway-text"><strong>デュアルアーム</strong>はNIC 2つで「検査＋NAT」を両方こなし、NATゲートウェイが不要になりコスト削減できる</div>
+          </div>
+          <div class="takeaway-item">
+            <div class="takeaway-num">3</div>
+            <div class="takeaway-text">NATゲートウェイは<strong>時間課金＋データ処理量課金</strong>のため、大規模環境では高額になりやすい</div>
+          </div>
+          <div class="takeaway-item">
+            <div class="takeaway-num">4</div>
+            <div class="takeaway-text">デュアルアームを選ぶには<strong>ファイアウォールベンダーのNATサポート</strong>が前提条件</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analogy Section -->
+      <section class="section" id="analogy">
+        <h2 id="tatoebanashi-biru-keibi-de-rikai-suru-deploimento-moderu">たとえ話：ビル警備で理解するデプロイメントモデル</h2>
+        <div class="analogy-box">
+          <div class="analogy-title">オフィスビルの警備体制にたとえてみよう</div>
+          <p>ファイアウォールのデプロイメントモデルは、<strong>オフィスビルの警備体制</strong>にそっくりです。
+            ビルに入ってくる来客（トラフィック）をどうチェックし、どう受付処理するかの違いです。</p>
+
+          <table class="analogy-mapping">
+            <thead>
+              <tr>
+                <th>AWSの概念</th>
+                <th>ビル警備のたとえ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>ファイアウォールアプライアンス</strong></td>
+                <td>警備員（来客をチェックする人）</td>
+              </tr>
+              <tr>
+                <td><strong>NIC（ネットワークインターフェイス）</strong></td>
+                <td>警備員が配置される出入口の数</td>
+              </tr>
+              <tr>
+                <td><strong>トラフィック検査</strong></td>
+                <td>身分証の確認・手荷物検査</td>
+              </tr>
+              <tr>
+                <td><strong>NAT処理</strong></td>
+                <td>来客用の入館証を発行（内部IDへ変換）</td>
+              </tr>
+              <tr>
+                <td><strong>NATゲートウェイ</strong></td>
+                <td>入館証発行を担当する受付カウンター（別料金）</td>
+              </tr>
+              <tr>
+                <td><strong>シングルアーム</strong></td>
+                <td>1つの出入口に立つ警備員。検査だけ担当し、入館証発行は別の受付へ</td>
+              </tr>
+              <tr>
+                <td><strong>デュアルアーム</strong></td>
+                <td>外用・内用2つの出入口に立つ警備員。検査も入館証発行も一人でこなす</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Mode Overview Cards -->
+      <section class="section" id="modes-overview">
+        <h2 id="2tsu-no-deploimento-moderu-gaiyou">2つのデプロイメントモデル概要</h2>
+        <div class="mode-grid">
+          <!-- Single Arm -->
+          <div class="mode-card single-arm">
+            <div class="mode-card-header">
+              <div class="mode-icon">1</div>
+              <div>
+                <h3>シングルアームモード</h3>
+                <div class="mode-card-subtitle">One-arm Mode</div>
+              </div>
+            </div>
+            <ul>
+              <li>NIC は<strong>1つだけ</strong>構成</li>
+              <li>トラフィック<strong>検査のみ</strong>を担当</li>
+              <li>NAT処理は<strong>NATゲートウェイ</strong>が別途必要</li>
+              <li><strong>構成がシンプル</strong>で導入しやすい</li>
+              <li>NATゲートウェイの<strong>追加コスト</strong>が発生</li>
+            </ul>
+          </div>
+          <!-- Dual Arm -->
+          <div class="mode-card dual-arm">
+            <div class="mode-card-header">
+              <div class="mode-icon">2</div>
+              <div>
+                <h3>デュアルアームモード</h3>
+                <div class="mode-card-subtitle">Two-arm Mode</div>
+              </div>
+            </div>
+            <ul>
+              <li>NIC は<strong>2つ</strong>構成（パブリック＋プライベート）</li>
+              <li>トラフィック<strong>検査＋NAT</strong>の両方を担当</li>
+              <li>NATゲートウェイが<strong>不要</strong></li>
+              <li>ベンダーの<strong>NAT機能サポート</strong>が前提</li>
+              <li>NATゲートウェイ費用を<strong>削減</strong>できる</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Single Arm Detail -->
+      <section class="section" id="single-arm-detail">
+        <h2 id="shinguru-aamu-moudo-shousai">シングルアームモード詳細</h2>
+        <h3 id="tatoebanashi-deiriguchi-ga-1tsu-no-keibiin">たとえ話：出入口が1つの警備員</h3>
+        <p>シングルアームは、ビルの<strong>1つの出入口だけに立つ警備員</strong>です。
+          来客（トラフィック）が通るたびに身分証を確認しますが、入館証の発行は<strong>別の受付カウンター（NATゲートウェイ）</strong>にお任せします。</p>
+
+        <h3 id="gijutsuteki-na-shikumi-single">技術的な仕組み</h3>
+        <p>ファイアウォールアプライアンスに<strong>単一のENI（Elastic Network Interface）</strong>をアタッチします。
+          トラフィックはルートテーブルによってファイアウォールに転送され、検査後に同じインターフェイスから戻されます。
+          送信元/宛先のIPアドレス変換（NAT）は行わないため、インターネットへの通信には別途NATゲートウェイを配置する必要があります。</p>
+
+        <!-- SVG: Single Arm Architecture -->
+        <div class="svg-container">
+          <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="シングルアームモードのアーキテクチャ図。ファイアウォールが1つのインターフェイスでトラフィックを検査し、NATゲートウェイが別途NAT処理を行う構成">
+            <defs>
+              <marker id="sa-arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+              </marker>
+              <marker id="sa-arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+              </marker>
+              <filter id="sa-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+              </filter>
+              <style>
+                .sa-title { font-family: -apple-system, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                .sa-node-title { font-family: -apple-system, sans-serif; font-size: 16px; font-weight: 700; fill: #1E293B; }
+                .sa-node-sub { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+                .sa-label { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 600; fill: #3B82F6; }
+                .sa-label-green { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 600; fill: #10B981; }
+                .sa-zone { font-family: -apple-system, sans-serif; font-size: 14px; font-weight: 700; fill: #6B7280; }
+              </style>
+            </defs>
+            <!-- Background -->
+            <rect x="0" y="0" width="1200" height="520" rx="18" fill="#F3F4F6"/>
+            <rect x="20" y="20" width="1160" height="480" rx="16" fill="#FFFFFF" filter="url(#sa-shadow)"/>
+            <!-- Title -->
+            <text x="600" y="58" text-anchor="middle" class="sa-title">シングルアームモード構成図</text>
+            <!-- Zone Labels -->
+            <text x="160" y="90" text-anchor="middle" class="sa-zone">インターネット</text>
+            <text x="440" y="90" text-anchor="middle" class="sa-zone">パブリックサブネット</text>
+            <text x="780" y="90" text-anchor="middle" class="sa-zone">ファイアウォール</text>
+            <text x="1060" y="90" text-anchor="middle" class="sa-zone">プライベートサブネット</text>
+            <!-- Zone backgrounds -->
+            <rect x="40" y="100" width="200" height="380" rx="12" fill="#F0F9FF" stroke="#BAE6FD" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="270" y="100" width="340" height="380" rx="12" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="640" y="100" width="260" height="380" rx="12" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="930" y="100" width="230" height="380" rx="12" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5" stroke-dasharray="6 3"/>
+
+            <!-- Internet Node: cx=140, cy=230 -->
+            <g>
+              <rect x="60" y="185" width="160" height="90" rx="14" fill="#F0F9FF" stroke="#0EA5E9" stroke-width="2"/>
+              <text x="140" y="222" text-anchor="middle" class="sa-node-title">インターネット</text>
+              <text x="140" y="252" text-anchor="middle" class="sa-node-sub">外部トラフィック</text>
+            </g>
+
+            <!-- IGW Node: cx=340, cy=170 -->
+            <g>
+              <rect x="290" y="125" width="210" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="395" y="158" text-anchor="middle" class="sa-node-title">Internet Gateway</text>
+              <text x="395" y="183" text-anchor="middle" class="sa-node-sub">IGW</text>
+            </g>
+
+            <!-- NAT GW Node: cx=395, cy=310 -->
+            <g>
+              <rect x="290" y="265" width="210" height="90" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+              <text x="395" y="298" text-anchor="middle" class="sa-node-title">NAT Gateway</text>
+              <text x="395" y="323" text-anchor="middle" class="sa-node-sub">アドレス変換（別料金）</text>
+              <text x="395" y="343" text-anchor="middle" class="sa-node-sub">※追加コストが発生</text>
+            </g>
+
+            <!-- Firewall Node: cx=770, cy=245 -->
+            <g>
+              <rect x="660" y="195" width="220" height="100" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+              <text x="770" y="232" text-anchor="middle" class="sa-node-title">ファイアウォール</text>
+              <text x="770" y="257" text-anchor="middle" class="sa-node-sub">NIC: 1つ（検査のみ）</text>
+              <text x="770" y="277" text-anchor="middle" class="sa-node-sub">NATは行わない</text>
+            </g>
+
+            <!-- Private Resource: cx=1045, cy=245 -->
+            <g>
+              <rect x="950" y="195" width="190" height="100" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="1045" y="232" text-anchor="middle" class="sa-node-title">EC2 / RDS</text>
+              <text x="1045" y="257" text-anchor="middle" class="sa-node-sub">プライベート</text>
+              <text x="1045" y="277" text-anchor="middle" class="sa-node-sub">リソース</text>
+            </g>
+
+            <!-- Arrows: Internet → IGW -->
+            <line x1="220" y1="215" x2="288" y2="175" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#sa-arrow-blue)"/>
+            <!-- IGW → Firewall -->
+            <line x1="500" y1="165" x2="658" y2="225" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#sa-arrow-blue)"/>
+            <text x="580" y="178" text-anchor="middle" class="sa-label">トラフィック転送</text>
+            <!-- Firewall → Private -->
+            <line x1="880" y1="245" x2="948" y2="245" stroke="#10B981" stroke-width="2.5" marker-end="url(#sa-arrow-green)"/>
+            <text x="914" y="232" text-anchor="middle" class="sa-label-green">検査済み</text>
+            <!-- Private → NAT GW (return) -->
+            <line x1="1045" y1="295" x2="1045" y2="410" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3"/>
+            <line x1="1045" y1="410" x2="502" y2="410" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3"/>
+            <line x1="502" y1="410" x2="502" y2="340" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#sa-arrow-blue)"/>
+            <text x="770" y="435" text-anchor="middle" class="sa-label">戻りトラフィック → NAT GWへ</text>
+            <!-- NAT GW → IGW -->
+            <line x1="395" y1="265" x2="395" y2="210" stroke="#10B981" stroke-width="2" marker-end="url(#sa-arrow-green)"/>
+            <text x="345" y="240" text-anchor="end" class="sa-label-green">NAT変換後</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Dual Arm Detail -->
+      <section class="section" id="dual-arm-detail">
+        <h2 id="dyuaru-aamu-moudo-shousai">デュアルアームモード詳細</h2>
+        <h3 id="tatoebanashi-2tsu-no-deiriguchi-wo-kanri-suru-keibiin">たとえ話：2つの出入口を管理する警備員</h3>
+        <p>デュアルアームは、<strong>外向き出入口と内向き出入口の2カ所に立つ警備員</strong>です。
+          来客の身分証確認（検査）だけでなく、入館証の発行（NAT処理）も自分で行います。
+          <strong>別の受付カウンター（NATゲートウェイ）が不要</strong>なので、人件費（＝AWSコスト）が削減できます。</p>
+
+        <h3 id="gijutsuteki-na-shikumi-dual">技術的な仕組み</h3>
+        <p>ファイアウォールアプライアンスに<strong>2つのENI</strong>をアタッチします。
+          1つ目はパブリックサブネットに、2つ目はプライベートサブネットに接続されます。
+          トラフィックはプライベート側のENIから入り、ファイアウォールが検査し、送信元NATを実行して、パブリック側のENIからインターネットに出ていきます。
+          NATゲートウェイを経由しないため、そのぶん<strong>コストを大幅に削減</strong>できます。</p>
+
+        <!-- SVG: Dual Arm Architecture -->
+        <div class="svg-container">
+          <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="デュアルアームモードのアーキテクチャ図。ファイアウォールが2つのインターフェイスでトラフィック検査とNAT処理の両方を行う構成">
+            <defs>
+              <marker id="da-arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+              </marker>
+              <marker id="da-arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+              </marker>
+              <style>
+                .da-title { font-family: -apple-system, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                .da-node-title { font-family: -apple-system, sans-serif; font-size: 16px; font-weight: 700; fill: #1E293B; }
+                .da-node-sub { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+                .da-label { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 600; fill: #3B82F6; }
+                .da-label-green { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 600; fill: #10B981; }
+                .da-zone { font-family: -apple-system, sans-serif; font-size: 14px; font-weight: 700; fill: #6B7280; }
+                .da-highlight { font-family: -apple-system, sans-serif; font-size: 14px; font-weight: 700; fill: #059669; }
+              </style>
+            </defs>
+            <!-- Background -->
+            <rect x="0" y="0" width="1200" height="520" rx="18" fill="#F3F4F6"/>
+            <rect x="20" y="20" width="1160" height="480" rx="16" fill="#FFFFFF" filter="url(#sa-shadow)"/>
+            <!-- Title -->
+            <text x="600" y="58" text-anchor="middle" class="da-title">デュアルアームモード構成図</text>
+            <!-- Zone Labels -->
+            <text x="130" y="90" text-anchor="middle" class="da-zone">インターネット</text>
+            <text x="380" y="90" text-anchor="middle" class="da-zone">パブリックサブネット</text>
+            <text x="720" y="90" text-anchor="middle" class="da-zone">ファイアウォール（2 NIC）</text>
+            <text x="1060" y="90" text-anchor="middle" class="da-zone">プライベートサブネット</text>
+            <!-- Zone backgrounds -->
+            <rect x="40" y="100" width="180" height="380" rx="12" fill="#F0F9FF" stroke="#BAE6FD" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="250" y="100" width="260" height="380" rx="12" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="540" y="100" width="370" height="380" rx="12" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="940" y="100" width="220" height="380" rx="12" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5" stroke-dasharray="6 3"/>
+
+            <!-- Internet Node: cx=130, cy=230 -->
+            <g>
+              <rect x="55" y="185" width="150" height="90" rx="14" fill="#F0F9FF" stroke="#0EA5E9" stroke-width="2"/>
+              <text x="130" y="222" text-anchor="middle" class="da-node-title">インターネット</text>
+              <text x="130" y="252" text-anchor="middle" class="da-node-sub">外部トラフィック</text>
+            </g>
+
+            <!-- IGW Node: cx=380, cy=230 -->
+            <g>
+              <rect x="275" y="185" width="210" height="90" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="380" y="222" text-anchor="middle" class="da-node-title">Internet Gateway</text>
+              <text x="380" y="252" text-anchor="middle" class="da-node-sub">IGW</text>
+            </g>
+
+            <!-- Firewall NIC1 (public): cx=610, cy=185 -->
+            <g>
+              <rect x="560" y="130" width="200" height="80" rx="14" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+              <text x="660" y="162" text-anchor="middle" class="da-node-title">NIC 1（パブリック）</text>
+              <text x="660" y="192" text-anchor="middle" class="da-node-sub">ENI #1</text>
+            </g>
+
+            <!-- Firewall Main: cx=720, cy=310 -->
+            <g>
+              <rect x="580" y="240" width="280" height="110" rx="14" fill="#ECFDF5" stroke="#059669" stroke-width="2.5"/>
+              <text x="720" y="275" text-anchor="middle" class="da-node-title">ファイアウォール</text>
+              <text x="720" y="300" text-anchor="middle" class="da-node-sub">検査 ＋ NAT処理</text>
+              <text x="720" y="325" text-anchor="middle" class="da-highlight">NATゲートウェイ不要</text>
+            </g>
+
+            <!-- Firewall NIC2 (private): cx=830, cy=420 -->
+            <g>
+              <rect x="730" y="380" width="200" height="80" rx="14" fill="#D1FAE5" stroke="#34D399" stroke-width="2"/>
+              <text x="830" y="412" text-anchor="middle" class="da-node-title">NIC 2（プライベート）</text>
+              <text x="830" y="442" text-anchor="middle" class="da-node-sub">ENI #2</text>
+            </g>
+
+            <!-- Private Resource: cx=1050, cy=300 -->
+            <g>
+              <rect x="960" y="250" width="180" height="100" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="1050" y="290" text-anchor="middle" class="da-node-title">EC2 / RDS</text>
+              <text x="1050" y="315" text-anchor="middle" class="da-node-sub">プライベート</text>
+              <text x="1050" y="335" text-anchor="middle" class="da-node-sub">リソース</text>
+            </g>
+
+            <!-- Arrows -->
+            <!-- Internet → IGW -->
+            <line x1="205" y1="230" x2="273" y2="230" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#da-arrow-blue)"/>
+            <!-- IGW → NIC1 -->
+            <line x1="485" y1="210" x2="558" y2="180" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#da-arrow-blue)"/>
+            <text x="522" y="183" text-anchor="middle" class="da-label">受信</text>
+            <!-- NIC1 → Firewall body -->
+            <line x1="660" y1="210" x2="680" y2="238" stroke="#3B82F6" stroke-width="2" marker-end="url(#da-arrow-blue)"/>
+            <!-- Firewall body → NIC2 -->
+            <line x1="750" y1="350" x2="790" y2="378" stroke="#10B981" stroke-width="2" marker-end="url(#da-arrow-green)"/>
+            <!-- NIC2 → Private -->
+            <line x1="930" y1="420" x2="1050" y2="420" stroke="#10B981" stroke-width="2" stroke-dasharray="0"/>
+            <line x1="1050" y1="420" x2="1050" y2="352" stroke="#10B981" stroke-width="2" marker-end="url(#da-arrow-green)"/>
+            <text x="1000" y="405" text-anchor="middle" class="da-label-green">検査+NAT済み</text>
+            <!-- Return path: Private → NIC2 → FW → NIC1 → IGW -->
+            <line x1="960" y1="310" x2="862" y2="310" stroke="#3B82F6" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#da-arrow-blue)"/>
+            <text x="910" y="298" text-anchor="middle" class="da-label">戻り</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Comparison Architecture SVG -->
+      <section class="section" id="architecture">
+        <h2 id="hikaku-aakitekucha-zu-shinguru-vs-dyuaru">比較アーキテクチャ図：シングル vs デュアル</h2>
+        <div class="svg-container">
+          <svg width="1200" height="640" viewBox="0 0 1200 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="シングルアームとデュアルアームの比較図。シングルアームはNATゲートウェイが必要、デュアルアームはファイアウォール自体がNATを処理する">
+            <defs>
+              <marker id="cmp-arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+              </marker>
+              <marker id="cmp-arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+              </marker>
+              <marker id="cmp-arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#EF4444"/>
+              </marker>
+              <style>
+                .cmp-title { font-family: -apple-system, sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+                .cmp-subtitle { font-family: -apple-system, sans-serif; font-size: 18px; font-weight: 700; }
+                .cmp-node { font-family: -apple-system, sans-serif; font-size: 14px; font-weight: 600; fill: #1E293B; }
+                .cmp-sub { font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+                .cmp-label { font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
+                .cmp-verdict { font-family: -apple-system, sans-serif; font-size: 15px; font-weight: 700; }
+              </style>
+            </defs>
+            <rect x="0" y="0" width="1200" height="640" rx="18" fill="#F3F4F6"/>
+            <rect x="20" y="20" width="1160" height="600" rx="16" fill="#FFFFFF"/>
+            <text x="600" y="56" text-anchor="middle" class="cmp-title">シングルアーム vs デュアルアーム 比較</text>
+
+            <!-- Left: Single Arm -->
+            <rect x="40" y="70" width="555" height="530" rx="14" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.5"/>
+            <text x="317" y="100" text-anchor="middle" class="cmp-subtitle" fill="#6D28D9">シングルアームモード</text>
+
+            <!-- SA: Internet → IGW -->
+            <rect x="70" y="130" width="140" height="60" rx="10" fill="#F0F9FF" stroke="#0EA5E9" stroke-width="2"/>
+            <text x="140" y="165" text-anchor="middle" class="cmp-node">Internet</text>
+            <line x1="210" y1="160" x2="258" y2="160" stroke="#3B82F6" stroke-width="2" marker-end="url(#cmp-arrow-blue)"/>
+            <rect x="260" y="130" width="140" height="60" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="330" y="165" text-anchor="middle" class="cmp-node">IGW</text>
+
+            <!-- SA: Firewall (1 NIC) -->
+            <rect x="190" y="230" width="200" height="70" rx="10" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <text x="290" y="258" text-anchor="middle" class="cmp-node">Firewall (1 NIC)</text>
+            <text x="290" y="280" text-anchor="middle" class="cmp-sub">検査のみ</text>
+            <line x1="330" y1="190" x2="310" y2="228" stroke="#3B82F6" stroke-width="2" marker-end="url(#cmp-arrow-blue)"/>
+
+            <!-- SA: NAT Gateway -->
+            <rect x="430" y="230" width="150" height="70" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="505" y="258" text-anchor="middle" class="cmp-node">NAT GW</text>
+            <text x="505" y="280" text-anchor="middle" class="cmp-sub">追加コスト発生</text>
+            <line x1="390" y1="265" x2="428" y2="265" stroke="#EF4444" stroke-width="2" marker-end="url(#cmp-arrow-red)"/>
+            <text x="408" y="255" text-anchor="middle" class="cmp-label" fill="#EF4444">NAT</text>
+
+            <!-- SA: Private Resource -->
+            <rect x="225" y="340" width="180" height="60" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="315" y="375" text-anchor="middle" class="cmp-node">EC2 / RDS</text>
+            <line x1="290" y1="300" x2="290" y2="338" stroke="#10B981" stroke-width="2" marker-end="url(#cmp-arrow-green)"/>
+
+            <!-- SA Verdict -->
+            <rect x="100" y="430" width="400" height="70" rx="12" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+            <text x="300" y="458" text-anchor="middle" class="cmp-verdict" fill="#92400E">構成シンプル、でもNAT GW費用が追加</text>
+            <text x="300" y="483" text-anchor="middle" class="cmp-sub">NAT GW: 約$0.045/h + $0.045/GB</text>
+
+            <!-- SA cost icon -->
+            <rect x="100" y="520" width="400" height="55" rx="10" fill="#FEF2F2" stroke="#FECACA" stroke-width="1"/>
+            <text x="300" y="553" text-anchor="middle" class="cmp-verdict" fill="#DC2626">コスト：高い（NAT GW料金が追加）</text>
+
+            <!-- Right: Dual Arm -->
+            <rect x="605" y="70" width="555" height="530" rx="14" fill="#ECFDF5" stroke="#86EFAC" stroke-width="1.5"/>
+            <text x="882" y="100" text-anchor="middle" class="cmp-subtitle" fill="#059669">デュアルアームモード</text>
+
+            <!-- DA: Internet → IGW -->
+            <rect x="635" y="130" width="140" height="60" rx="10" fill="#F0F9FF" stroke="#0EA5E9" stroke-width="2"/>
+            <text x="705" y="165" text-anchor="middle" class="cmp-node">Internet</text>
+            <line x1="775" y1="160" x2="823" y2="160" stroke="#3B82F6" stroke-width="2" marker-end="url(#cmp-arrow-blue)"/>
+            <rect x="825" y="130" width="140" height="60" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="895" y="165" text-anchor="middle" class="cmp-node">IGW</text>
+
+            <!-- DA: Firewall (2 NIC) -->
+            <rect x="720" y="225" width="270" height="85" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="2.5"/>
+            <text x="855" y="253" text-anchor="middle" class="cmp-node">Firewall (2 NIC)</text>
+            <text x="855" y="275" text-anchor="middle" class="cmp-sub">検査 ＋ NAT処理</text>
+            <text x="855" y="296" text-anchor="middle" class="cmp-label" fill="#059669">NAT GW不要</text>
+            <line x1="895" y1="190" x2="870" y2="223" stroke="#3B82F6" stroke-width="2" marker-end="url(#cmp-arrow-blue)"/>
+
+            <!-- DA: Private Resource -->
+            <rect x="770" y="350" width="180" height="60" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="860" y="385" text-anchor="middle" class="cmp-node">EC2 / RDS</text>
+            <line x1="855" y1="310" x2="855" y2="348" stroke="#10B981" stroke-width="2" marker-end="url(#cmp-arrow-green)"/>
+
+            <!-- DA Verdict -->
+            <rect x="665" y="430" width="400" height="70" rx="12" fill="#D1FAE5" stroke="#34D399" stroke-width="1.5"/>
+            <text x="865" y="458" text-anchor="middle" class="cmp-verdict" fill="#065F46">構成やや複雑、でもコスト削減効果大</text>
+            <text x="865" y="483" text-anchor="middle" class="cmp-sub">ベンダーのNAT機能サポートが前提</text>
+
+            <!-- DA cost icon -->
+            <rect x="665" y="520" width="400" height="55" rx="10" fill="#D1FAE5" stroke="#86EFAC" stroke-width="1"/>
+            <text x="865" y="553" text-anchor="middle" class="cmp-verdict" fill="#059669">コスト：低い（NAT GW料金が不要）</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Comparison Table -->
+      <section class="section" id="comparison">
+        <h2 id="tettei-hikaku-hyou">徹底比較表</h2>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>比較項目</th>
+              <th>シングルアーム（One-arm）</th>
+              <th>デュアルアーム（Two-arm）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>NIC数</strong></td>
+              <td>1つ</td>
+              <td>2つ（パブリック＋プライベート）</td>
+            </tr>
+            <tr>
+              <td><strong>トラフィック検査</strong></td>
+              <td class="check-green">対応</td>
+              <td class="check-green">対応</td>
+            </tr>
+            <tr>
+              <td><strong>NAT処理</strong></td>
+              <td class="check-orange">別途NATゲートウェイが必要</td>
+              <td class="check-green">アプライアンス自体で処理</td>
+            </tr>
+            <tr>
+              <td><strong>構成の複雑さ</strong></td>
+              <td class="check-green">シンプル</td>
+              <td class="check-orange">やや複雑</td>
+            </tr>
+            <tr>
+              <td><strong>NATゲートウェイ</strong></td>
+              <td class="check-orange">必要（追加コスト）</td>
+              <td class="check-green">不要（コスト削減）</td>
+            </tr>
+            <tr>
+              <td><strong>ベンダーNATサポート</strong></td>
+              <td>不要</td>
+              <td class="check-orange">必要（前提条件）</td>
+            </tr>
+            <tr>
+              <td><strong>コスト効率</strong></td>
+              <td class="check-orange">低い（NAT GW課金あり）</td>
+              <td class="check-green">高い（NAT GW不要）</td>
+            </tr>
+            <tr>
+              <td><strong>ビルのたとえ</strong></td>
+              <td>警備員は検査のみ。入館証は別窓口</td>
+              <td>警備員が検査＋入館証発行を兼任</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Cost Comparison -->
+      <section class="section" id="cost">
+        <h2 id="kosuto-hikaku">コスト比較</h2>
+        <p>NATゲートウェイは<strong>時間単位と処理データ量</strong>に基づく二重課金のサービスです。
+          大規模なトラフィックを処理する環境では、この費用が無視できないレベルになります。</p>
+
+        <div class="cost-grid">
+          <div class="cost-card expensive">
+            <div class="cost-label">シングルアーム（NAT GW追加時）</div>
+            <div class="cost-value">月額 $200〜$1,000+</div>
+            <div class="cost-detail">NAT GW: $0.045/時間 + $0.045/GB処理<br>
+              例: 月500GB処理 → 約 $55（NATだけで）<br>
+              ＋ファイアウォールアプライアンス料金</div>
+          </div>
+          <div class="cost-card saving">
+            <div class="cost-label">デュアルアーム（NAT GW不要）</div>
+            <div class="cost-value">NAT GW分を節約</div>
+            <div class="cost-detail">ファイアウォールアプライアンスのみ<br>
+              NAT機能は追加料金なしで内蔵<br>
+              大規模環境ほど節約効果が大きい</div>
+          </div>
+        </div>
+
+        <div class="analogy-box">
+          <div class="analogy-title">ビル警備のたとえで理解するコスト</div>
+          <p><strong>シングルアーム</strong> ＝ 警備員（月給あり）＋ 別の受付カウンター（入館証発行の外注費が毎月かかる）<br>
+             <strong>デュアルアーム</strong> ＝ 警備員（月給あり）のみ。入館証発行も自分でやるので外注費ゼロ</p>
+        </div>
+      </section>
+
+      <!-- Decision Flow -->
+      <section class="section" id="decision">
+        <h2 id="sentei-furou-chaato">選定フローチャート</h2>
+        <div class="decision-flow">
+          <div class="decision-step question">
+            <strong>ファイアウォールベンダーはNAT機能をサポートしている？</strong>
+          </div>
+          <div class="decision-arrow">&#11015;</div>
+          <div style="display:flex; gap:20px; width:80%;">
+            <div class="decision-step answer-a" style="flex:1;">
+              <div class="decision-label">いいえ → 選択肢なし</div>
+              <strong>シングルアームモード</strong>
+              <p style="font-size:0.88em; margin-top:8px;">NATゲートウェイを追加配置</p>
+            </div>
+            <div class="decision-step question" style="flex:1;">
+              <div class="decision-label">はい → 次の質問へ</div>
+              <strong>コスト削減が優先事項？</strong>
+            </div>
+          </div>
+          <div class="decision-arrow">&#11015;</div>
+          <div style="display:flex; gap:20px; width:80%;">
+            <div class="decision-step answer-a" style="flex:1;">
+              <div class="decision-label">いいえ（シンプルさ優先）</div>
+              <strong>シングルアームモード</strong>
+              <p style="font-size:0.88em; margin-top:8px;">構成のシンプルさを優先</p>
+            </div>
+            <div class="decision-step answer-b" style="flex:1;">
+              <div class="decision-label">はい（コスト優先）</div>
+              <strong>デュアルアームモード</strong>
+              <p style="font-size:0.88em; margin-top:8px;">NAT GW費用を削減</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Code Examples -->
+      <section class="section" id="code-examples">
+        <h2 id="settei-rei">設定例</h2>
+        <h3 id="shinguru-aamu-kousei-no-ruuto-teeburu-rei">シングルアーム構成のルートテーブル例</h3>
+        <div class="tab-container">
+          <div class="tab-buttons" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="cli1">AWS CLI</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="cfn1">CloudFormation</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="tf1">Terraform</button>
+          </div>
+          <div class="tab-content active" id="cli1" role="tabpanel">
+<pre><span class="code-comment"># シングルアーム: プライベートサブネットのルートテーブル</span>
+<span class="code-comment"># トラフィックをファイアウォールENIに転送</span>
+aws ec2 create-route \\
+  --route-table-id <span class="code-value">rtb-private-xxxxx</span> \\
+  --destination-cidr-block <span class="code-string">0.0.0.0/0</span> \\
+  --network-interface-id <span class="code-value">eni-firewall-xxxxx</span>
+
+<span class="code-comment"># NATゲートウェイの作成（シングルアームでは必須）</span>
+aws ec2 create-nat-gateway \\
+  --subnet-id <span class="code-value">subnet-public-xxxxx</span> \\
+  --allocation-id <span class="code-value">eipalloc-xxxxx</span></pre>
+          </div>
+          <div class="tab-content" id="cfn1" role="tabpanel">
+<pre><span class="code-key">Resources</span>:
+  <span class="code-key">NatGateway</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::NatGateway</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">SubnetId</span>: <span class="code-value">!Ref PublicSubnet</span>
+      <span class="code-key">AllocationId</span>: <span class="code-value">!GetAtt EIP.AllocationId</span>
+
+  <span class="code-key">PrivateRoute</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::Route</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">RouteTableId</span>: <span class="code-value">!Ref PrivateRouteTable</span>
+      <span class="code-key">DestinationCidrBlock</span>: <span class="code-string">0.0.0.0/0</span>
+      <span class="code-key">NetworkInterfaceId</span>: <span class="code-value">!Ref FirewallENI</span></pre>
+          </div>
+          <div class="tab-content" id="tf1" role="tabpanel">
+<pre><span class="code-comment"># シングルアーム: NATゲートウェイ（必須）</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_nat_gateway"</span> <span class="code-string">"main"</span> {
+  <span class="code-key">allocation_id</span> = <span class="code-value">aws_eip.nat.id</span>
+  <span class="code-key">subnet_id</span>     = <span class="code-value">aws_subnet.public.id</span>
+}
+
+<span class="code-comment"># プライベートルート → ファイアウォールENI</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_route"</span> <span class="code-string">"private_to_fw"</span> {
+  <span class="code-key">route_table_id</span>         = <span class="code-value">aws_route_table.private.id</span>
+  <span class="code-key">destination_cidr_block</span> = <span class="code-string">"0.0.0.0/0"</span>
+  <span class="code-key">network_interface_id</span>   = <span class="code-value">aws_network_interface.fw.id</span>
+}</pre>
+          </div>
+        </div>
+
+        <h3 id="dyuaru-aamu-kousei-no-ruuto-teeburu-rei">デュアルアーム構成のルートテーブル例</h3>
+        <div class="tab-container">
+          <div class="tab-buttons" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="cli2">AWS CLI</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="cfn2">CloudFormation</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="tf2">Terraform</button>
+          </div>
+          <div class="tab-content active" id="cli2" role="tabpanel">
+<pre><span class="code-comment"># デュアルアーム: プライベートサブネットのルートテーブル</span>
+<span class="code-comment"># トラフィックをファイアウォールのプライベート側ENIに転送</span>
+aws ec2 create-route \\
+  --route-table-id <span class="code-value">rtb-private-xxxxx</span> \\
+  --destination-cidr-block <span class="code-string">0.0.0.0/0</span> \\
+  --network-interface-id <span class="code-value">eni-fw-private-xxxxx</span>
+
+<span class="code-comment"># NATゲートウェイは不要！</span>
+<span class="code-comment"># ファイアウォールアプライアンスがNATを処理</span></pre>
+          </div>
+          <div class="tab-content" id="cfn2" role="tabpanel">
+<pre><span class="code-key">Resources</span>:
+  <span class="code-comment"># NATゲートウェイは不要！</span>
+  <span class="code-key">FirewallPublicENI</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::NetworkInterface</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">SubnetId</span>: <span class="code-value">!Ref PublicSubnet</span>
+      <span class="code-key">SourceDestCheck</span>: <span class="code-value">false</span>
+
+  <span class="code-key">FirewallPrivateENI</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::NetworkInterface</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">SubnetId</span>: <span class="code-value">!Ref PrivateSubnet</span>
+      <span class="code-key">SourceDestCheck</span>: <span class="code-value">false</span>
+
+  <span class="code-key">PrivateRoute</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::Route</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">RouteTableId</span>: <span class="code-value">!Ref PrivateRouteTable</span>
+      <span class="code-key">DestinationCidrBlock</span>: <span class="code-string">0.0.0.0/0</span>
+      <span class="code-key">NetworkInterfaceId</span>: <span class="code-value">!Ref FirewallPrivateENI</span></pre>
+          </div>
+          <div class="tab-content" id="tf2" role="tabpanel">
+<pre><span class="code-comment"># デュアルアーム: NATゲートウェイは不要</span>
+<span class="code-comment"># 2つのENIを作成</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_network_interface"</span> <span class="code-string">"fw_public"</span> {
+  <span class="code-key">subnet_id</span>         = <span class="code-value">aws_subnet.public.id</span>
+  <span class="code-key">source_dest_check</span> = <span class="code-value">false</span>
+}
+
+<span class="code-key">resource</span> <span class="code-string">"aws_network_interface"</span> <span class="code-string">"fw_private"</span> {
+  <span class="code-key">subnet_id</span>         = <span class="code-value">aws_subnet.private.id</span>
+  <span class="code-key">source_dest_check</span> = <span class="code-value">false</span>
+}
+
+<span class="code-comment"># プライベートルート → FWプライベートENI</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_route"</span> <span class="code-string">"private_to_fw"</span> {
+  <span class="code-key">route_table_id</span>         = <span class="code-value">aws_route_table.private.id</span>
+  <span class="code-key">destination_cidr_block</span> = <span class="code-string">"0.0.0.0/0"</span>
+  <span class="code-key">network_interface_id</span>   = <span class="code-value">aws_network_interface.fw_private.id</span>
+}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Best Practices -->
+      <section class="section" id="best-practices">
+        <h2 id="besuto-purakutisu-vs-anchi-pataan">ベストプラクティス vs アンチパターン</h2>
+        <div class="practices-grid">
+          <div class="practice-card do">
+            <div class="practice-title">ベストプラクティス</div>
+            <ul class="practice-list">
+              <li>デュアルアーム選択前にベンダーのNATサポートを確認する</li>
+              <li><strong>Source/Dest Check を無効</strong>にする（両モード共通で必須）</li>
+              <li>ファイアウォールENIにElastic IPを関連付ける（デュアルアーム時）</li>
+              <li>AZ ごとにファイアウォールを配置して冗長化する</li>
+              <li>Gateway Load Balancer（GWLB）との組み合わせを検討する</li>
+              <li>コスト試算を行い、NAT GWの費用対効果を事前に比較する</li>
+            </ul>
+          </div>
+          <div class="practice-card dont">
+            <div class="practice-title">アンチパターン</div>
+            <ul class="practice-list">
+              <li>ベンダーNATサポート未確認でデュアルアームを選択する</li>
+              <li>Source/Dest Check を有効のままにする</li>
+              <li>単一AZにのみファイアウォールを配置する</li>
+              <li>NATゲートウェイのコストを見積もらずにシングルアームを選ぶ</li>
+              <li>ルートテーブルの更新漏れ（特にAZ追加時）</li>
+              <li>ファイアウォールの可用性監視を怠る</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Troubleshooting -->
+      <section class="section" id="troubleshooting">
+        <h2 id="toraburu-shuutingu">トラブルシューティング</h2>
+        <div class="trouble-item">
+          <div class="trouble-q">プライベートリソースからインターネットに接続できない</div>
+          <div class="trouble-a">
+            <strong>原因1</strong>: Source/Dest Check が無効になっていない → ファイアウォールENIの Source/Dest Check を必ず無効にする<br>
+            <strong>原因2</strong>: ルートテーブルがファイアウォールENIを指していない → 0.0.0.0/0 のネクストホップを確認<br>
+            <strong>原因3</strong>: （シングルアーム時）NATゲートウェイが未作成 → NATゲートウェイをパブリックサブネットに配置
+          </div>
+        </div>
+        <div class="trouble-item">
+          <div class="trouble-q">デュアルアームでNATが動作しない</div>
+          <div class="trouble-a">
+            <strong>原因1</strong>: ファイアウォールのNAT機能が有効化されていない → ベンダー管理画面でNAT設定を確認<br>
+            <strong>原因2</strong>: パブリック側ENIにElastic IPが割り当てられていない → EIPをアタッチする<br>
+            <strong>原因3</strong>: パブリックサブネットのルートテーブルにIGWへのルートがない → 0.0.0.0/0 → IGW を追加
+          </div>
+        </div>
+        <div class="trouble-item">
+          <div class="trouble-q">非対称ルーティングが発生している</div>
+          <div class="trouble-a">
+            <strong>原因</strong>: 行きと戻りのパスが異なるルートを通っている → ルートテーブルで行き・戻りの両方がファイアウォールを経由するよう設定する。GWLBを使うと自動的に対称ルーティングが保証される。
+          </div>
+        </div>
+      </section>
+
+      <!-- Exam Tips -->
+      <section class="section" id="exam-tips">
+        <h2 id="shiken-taisaku">試験対策</h2>
+        <div class="exam-box">
+          <div class="exam-title">ANS-C01 / SAP-C02 出題ポイント</div>
+          <div class="exam-point">
+            <span class="exam-badge">頻出</span>
+            <span>「コスト削減」がキーワードの場合、NATゲートウェイを排除する<strong>デュアルアーム</strong>が正解になりやすい</span>
+          </div>
+          <div class="exam-point">
+            <span class="exam-badge">頻出</span>
+            <span>サードパーティ ファイアウォールアプライアンスのデプロイ時は<strong>Source/Dest Check の無効化</strong>が必須</span>
+          </div>
+          <div class="exam-point">
+            <span class="exam-badge">注意</span>
+            <span>「シンプルな構成」が要求される場合は、シングルアームが適切（NATゲートウェイの追加コストは許容）</span>
+          </div>
+          <div class="exam-point">
+            <span class="exam-badge">注意</span>
+            <span>Gateway Load Balancer（GWLB）はファイアウォールのスケーリングと可用性を向上させるサービスとして頻出</span>
+          </div>
+          <div class="exam-point">
+            <span class="exam-badge">ひっかけ</span>
+            <span>NATインスタンス vs NATゲートウェイの違いと混同しないこと。デプロイメントモデルの話はアプライアンス配置の話</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="section" id="faq">
+        <h2 id="yoku-aru-shitsumon-faq">よくある質問（FAQ）</h2>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            AWS Network Firewallの場合はどちらのモード？
+            <span class="arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            AWS Network Firewallはマネージドサービスのため、ユーザーがNIC数を選択する概念はありません。NATゲートウェイとの組み合わせで動作し、AWSが内部的にトラフィックのルーティングを管理します。シングルアーム/デュアルアームの選択は、主にサードパーティ製ファイアウォールアプライアンス（Palo Alto、Fortinet、Check Pointなど）をEC2上にデプロイする場合に関係します。
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Gateway Load Balancer（GWLB）を使う場合はどうなる？
+            <span class="arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            GWLBを使う場合、GWLBエンドポイント経由でトラフィックがファイアウォールに転送されます。GWLBはGENEVEカプセル化を使い、トラフィックを透過的に転送するため、シングルアームに近い構成になりますが、スケーラビリティと可用性が大幅に向上します。NATゲートウェイとの組み合わせが一般的です。
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Source/Dest Checkとは何ですか？
+            <span class="arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            EC2インスタンスのENIに設定される属性で、有効にすると「自分宛て/自分からのトラフィック以外は破棄」されます。ファイアウォールはトラフィックを中継する必要があるため、この機能を無効にしないと他のインスタンス宛てのトラフィックが破棄されてしまいます。NATゲートウェイやロードバランサーでは自動的に無効になっていますが、EC2ベースのアプライアンスでは手動で無効にする必要があります。
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            デュアルアームで対応しているベンダーは？
+            <span class="arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            主要なファイアウォールベンダーの多くがデュアルアームモードをサポートしています。Palo Alto Networks（VM-Series）、Fortinet（FortiGate）、Check Point（CloudGuard）、Cisco（FTDv）などが代表的です。ただし、各ベンダーのAWS向けデプロイガイドで最新のサポート状況を確認することを推奨します。
+          </div>
+        </div>
+      </section>
+
+      <!-- Glossary -->
+      <section class="section" id="glossary">
+        <h2 id="yougo-shuu">用語集</h2>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">ENI（Elastic Network Interface）</div>
+            <div class="glossary-def">VPC内の仮想ネットワークカード。EC2にアタッチしてネットワーク接続を提供する。</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">NAT（Network Address Translation）</div>
+            <div class="glossary-def">プライベートIPをパブリックIPに変換する仕組み。インターネット通信に必要。</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">NATゲートウェイ</div>
+            <div class="glossary-def">AWSマネージドのNATサービス。時間課金＋データ処理量課金の二重課金。</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Source/Dest Check</div>
+            <div class="glossary-def">ENIの属性。有効時は自分宛て以外のパケットを破棄。FW利用時は無効にする必要あり。</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">GWLB（Gateway Load Balancer）</div>
+            <div class="glossary-def">サードパーティアプライアンスへの透過的なトラフィック転送とスケーリングを実現するLB。</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">GENEVE</div>
+            <div class="glossary-def">GWLBが使用するトンネリングプロトコル。元パケットのメタデータを保持したまま転送できる。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cheat Sheet -->
+      <section class="cheatsheet" id="cheatsheet">
+        <h2 id="chiito-shiito">チートシート</h2>
+        <div class="cheat-grid">
+          <div class="cheat-item">
+            <div class="cheat-label">シングルアーム = NIC 1つ</div>
+            <div class="cheat-value">検査のみ。NAT GW必要。シンプルだが高コスト。</div>
+          </div>
+          <div class="cheat-item">
+            <div class="cheat-label">デュアルアーム = NIC 2つ</div>
+            <div class="cheat-value">検査＋NAT。NAT GW不要。ベンダーサポート必須。</div>
+          </div>
+          <div class="cheat-item">
+            <div class="cheat-label">必ずやること</div>
+            <div class="cheat-value">Source/Dest Check 無効化。ルートテーブル更新。冗長化。</div>
+          </div>
+          <div class="cheat-item">
+            <div class="cheat-label">試験の急所</div>
+            <div class="cheat-value">「コスト削減」→ デュアルアーム。「シンプル」→ シングルアーム。</div>
+          </div>
+        </div>
+      </section>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
