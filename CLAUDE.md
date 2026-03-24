@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository built 
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Astro 5.x SSG (build: `npm run build` → `dist/`) |
-| **Content** | 290 resource pages (.astro), 8 display categories, 12 page directories |
+| **Content** | 312+ resource pages (.astro), 8 display categories, 12 page directories |
 | **Branches** | `master` (source), `gh-pages` (build output, CI-managed) |
 
 ## ⚠️ CRITICAL RULES
@@ -64,7 +64,7 @@ The build (`npm run build`) runs these steps in order:
 3. `generate-data.mjs` — reads `src/data/resource-registry.json` and produces **three outputs**:
    - `public/data.js` — runtime data for index, knowledge-base, bookmark pages (loaded via `<script>`)
    - `public/index.js` — search data (searchData array) for client-side search
-   - `src/data/resources.ts` — build-time TypeScript data imported by `learning-resources.astro`
+   - `src/data/resources.ts` — build-time TypeScript data imported by hub + category detail pages
 4. `astro build` — SSG render to `dist/`
 
 **`src/data/resources.ts` is auto-generated** — never edit it manually.
@@ -75,6 +75,7 @@ The build (`npm run build`) runs these steps in order:
 |---|---|---|
 | Adding/removing a resource page | `src/data/resource-registry.json` + `src/data/update-history.json` | `node scripts/generate-data.mjs` |
 | Changing resource metadata (title, category, tags) | `src/data/resource-registry.json` | `node scripts/generate-data.mjs` |
+| Changing category descriptions/exam relevance/recommended reads | `src/data/category-descriptions.json` | `npm run build` (no script needed) |
 | Adding/editing concept map data | `concepts/services/<service>.json` | `python3 scripts/concept_management/generate_concept_index.py` |
 
 Use `/skill resource` or `/ship` for the full workflow — they handle these updates automatically.
@@ -91,10 +92,10 @@ Resource pages live in `src/pages/<directory>/`. There are **12 page directories
 
 | Display Category (data.js) | Page Directory | Resources |
 |---|---|---|
-| `networking` | `networking/` | 72 |
-| `security-governance` | `security-governance/` | 80 |
+| `networking` | `networking/` | 87 |
+| `security-governance` | `security-governance/` | 81 |
 | `compute-applications` | `compute-applications/` | 57 |
-| `content-delivery-dns` | `content-delivery-dns/` | 23 |
+| `content-delivery-dns` | `content-delivery-dns/` | 25 |
 | `development-deployment` | `development-deployment/` | 22 |
 | `storage-database` | `storage-database/` | 14 |
 | `migration` | `migration/` | 11 |
@@ -102,13 +103,29 @@ Resource pages live in `src/pages/<directory>/`. There are **12 page directories
 
 Additional directories (`continuous-improvement/`, `cost-control/`, `new-solutions/`, `organizational-complexity/`) contain pages whose `displayCategory` in `resource-registry.json` maps them into one of the 8 display categories above.
 
+### Learning Resources: Hub + Category Detail Pages
+
+The learning-resources section uses a **two-layer architecture**:
+
+| Page | File | URL |
+|------|------|-----|
+| **Hub** (overview, category cards, search, recent updates) | `src/pages/learning-resources.astro` | `/learning-resources.html` |
+| **Category detail** (overview, exam relevance, filters, resource list) | `src/pages/learning-resources/[category].astro` | `/learning-resources/<id>.html` |
+
+`[category].astro` uses `getStaticPaths()` to generate all 8 category pages from `categoriesData`. Category descriptions/exam relevance come from `src/data/category-descriptions.json`.
+
+**Key patterns:**
+- Resource hrefs in `resources.ts` are relative (e.g., `networking/foo.html`). Category pages are under `learning-resources/`, so `[category].astro` prefixes hrefs with `../` to resolve correctly.
+- Category pages use a hidden `<input id="categoryFilter" value={category.id}>` to scope `index.js` filters without JS changes.
+- Search (`public/index.js`) uses absolute paths (`/aws_sap_studying/` + `item.file`) so links work from any page depth.
+
 ### Key Layouts
 
 | Layout | Used by |
 |--------|---------|
 | `BaseLayout.astro` | Most pages (index, quiz, concept-map, etc.) |
 | `ResourceLayout.astro` | Individual resource pages (`src/pages/<category>/*.astro`) |
-| `LearningResourcesLayout.astro` | `learning-resources.astro` (build-time rendered catalog) |
+| `LearningResourcesLayout.astro` | Hub page + category detail pages (accepts `extraCss` prop for page-specific CSS) |
 
 ### Astro Resource Authoring Pattern
 
