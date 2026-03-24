@@ -401,6 +401,9 @@ const searchData = [
 
 
 
+
+
+
 // ─── フィルター機能 ───────────────────────────────────────────────────────
 
 function applyFilters() {
@@ -767,7 +770,7 @@ function performSearch(query) {
             li.className = 'search-result-item';
 
             const a = document.createElement('a');
-            a.href = item.file;
+            a.href = '/aws_sap_studying/' + item.file;
             a.textContent = item.title;
 
             const catDiv = document.createElement('div');

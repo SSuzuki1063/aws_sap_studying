@@ -1,44 +1,64 @@
 ---
 import LearningResourcesLayout from '../layouts/LearningResourcesLayout.astro';
-import CategoryQuickNav from '../components/CategoryQuickNav.astro';
-import MajorCategory from '../components/MajorCategory.astro';
+import CategoryCard from '../components/CategoryCard.astro';
 import LearningModeSelector from '../components/LearningModeSelector.astro';
 import DomainNav from '../components/DomainNav.astro';
-import { categoriesData, categoryQuickNav, siteStats, serviceIndex, examDomains, learningModes, domainIndex } from '../data/resources';
-import { generateSectionSlug } from '../utils/slug';
+import { categoriesData, siteStats, examDomains, learningModes, domainIndex } from '../data/resources';
+import categoryDescriptions from '../data/category-descriptions.json';
+import updateHistory from '../data/update-history.json';
+
+const base = '/aws_sap_studying';
+const descriptions = categoryDescriptions as Record<string, { description: string; color: string }>;
 
 const pageTitle = `AWS SAP 学習リソース集 - ${siteStats.totalResources}リソース`;
 
-// Build TOC at compile time
+// Recent updates (latest 5)
+const recentUpdates = (updateHistory as Array<{ date: string; title: string; categories: string[] }>).slice(0, 5);
+
+// Priority picks: high priority + advanced resources across all categories (max 10)
+const priorityPicks = categoriesData.flatMap(cat =>
+  cat.sections.flatMap(sec =>
+    sec.resources
+      .filter(r => r.priority === 'high' && r.difficulty === 'advanced')
+      .map(r => ({ ...r, categoryId: cat.id, categoryTitle: cat.title, categoryIcon: cat.icon }))
+  )
+).slice(0, 10);
+
+// Build TOC
 const tocItems = [
-  { level: 'h3', id: 'learning-modes-heading', text: '🎓 学習モード' },
-  { level: 'h3', id: 'exam-domains-heading', text: '📋 試験ドメイン' },
-  { level: 'h3', id: 'search-heading', text: '🔍リソースを検索' },
-  ...categoriesData.flatMap(cat => [
-    { level: 'h2', id: cat.id, text: `${cat.icon} ${cat.title}` },
-    ...cat.sections.map(sec => ({
-      level: 'h3', id: generateSectionSlug(sec.title), text: `${sec.icon} ${sec.title}`,
-    })),
-  ]),
+  { level: 'h3', id: 'learning-modes-heading', text: '学習モード' },
+  { level: 'h3', id: 'exam-domains-heading', text: '試験ドメイン' },
+  { level: 'h3', id: 'search-heading', text: 'リソースを検索' },
+  { level: 'h2', id: 'categories', text: 'カテゴリ一覧' },
+  { level: 'h2', id: 'recent-updates', text: '最近の更新' },
+  { level: 'h2', id: 'priority-picks', text: '直前対策ピックアップ' },
 ];
 ---
 
-<LearningResourcesLayout pageTitle={pageTitle} tocItems={tocItems}>
+<LearningResourcesLayout
+  pageTitle={pageTitle}
+  tocItems={tocItems}
+  extraCss={[`${base}/css/pages/learning-resources-hub.css`]}
+>
 <div class="container">
 <header class="header">
-<h1>📚 AWS SAP 学習リソース集</h1>
+<h1>AWS SAP 学習リソース集</h1>
 <p>{siteStats.majorCategories}カテゴリ、{siteStats.minorCategories}セクション、{siteStats.totalResources}リソース</p>
 <div style="margin-top: 20px;">
 <a href="index.html" style="color: white; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 8px; text-decoration: none; display: inline-block; transition: all 0.3s;">
-  ← リソース集に戻る
+  ← トップに戻る
 </a>
 </div>
 </header>
+
 <main class="content" id="main-content">
+
 <!-- 学習モードセクション -->
 <LearningModeSelector modes={learningModes} />
+
 <!-- 試験ドメインナビゲーション -->
 <DomainNav domains={examDomains} domainIndex={domainIndex} />
+
 <!-- 検索セクション (client-side: public/index.js) -->
 <div aria-label="リソース検索" class="search-section" role="search">
 <h3 id="search-heading"><span aria-hidden="true">🔍</span>リソースを検索</h3>
@@ -58,71 +78,74 @@ const tocItems = [
 </div>
 </div>
 </div>
-<!-- フィルターセクション -->
-<div class="filter-section" role="region" aria-label="リソースフィルター">
-<h3 id="filter-heading"><span aria-hidden="true">🎯</span>フィルター</h3>
-<div class="filter-controls">
-  <div class="filter-group">
-    <label for="categoryFilter">カテゴリ</label>
-    <select id="categoryFilter" aria-label="カテゴリで絞り込み">
-      <option value="">すべてのカテゴリ</option>
-      {categoriesData.map(cat => (
-        <option value={cat.id}>{cat.icon} {cat.title}（{cat.count}）</option>
+
+<!-- カテゴリ一覧 -->
+<section class="hub-categories-section" id="categories" aria-labelledby="categories-heading">
+  <h2 id="categories-heading">カテゴリ一覧</h2>
+  <p style="color: var(--color-text-secondary, #6b7280); margin-top: 0.25rem;">各カテゴリをクリックすると、詳細な学習ガイドとリソース一覧を表示します</p>
+  <div class="hub-categories-grid">
+    {categoriesData.map(cat => (
+      <CategoryCard
+        id={cat.id}
+        title={cat.title}
+        icon={cat.icon}
+        count={cat.count}
+        description={descriptions[cat.id]?.description || ''}
+        color={descriptions[cat.id]?.color || '#6b7280'}
+      />
+    ))}
+  </div>
+</section>
+
+<!-- 最近の更新 -->
+<section class="hub-recent-updates" id="recent-updates" aria-labelledby="recent-updates-heading">
+  <h2 id="recent-updates-heading">最近の更新</h2>
+  <ul class="hub-updates-list">
+    {recentUpdates.map(entry => (
+      <li class="hub-update-item">
+        <span class="hub-update-date">{entry.date}</span>
+        <div class="hub-update-content">
+          <p class="hub-update-title">{entry.title}</p>
+          <div class="hub-update-categories">
+            {entry.categories.map(catId => {
+              const cat = categoriesData.find(c => c.id === catId);
+              return cat ? (
+                <a href={`${base}/learning-resources/${catId}.html`} class="hub-update-cat-badge">
+                  {cat.icon} {cat.title}
+                </a>
+              ) : null;
+            })}
+          </div>
+        </div>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<!-- 直前対策ピックアップ -->
+{priorityPicks.length > 0 && (
+  <section class="hub-priority-picks" id="priority-picks" aria-labelledby="priority-picks-heading">
+    <h2 id="priority-picks-heading">直前対策ピックアップ</h2>
+    <p style="color: var(--color-text-secondary, #6b7280); margin-top: 0.25rem;">高優先度 × 上級レベルのリソースを厳選</p>
+    <div class="hub-picks-grid">
+      {priorityPicks.map(r => (
+        <a href={r.href} class="hub-pick-card">
+          <span class="hub-pick-priority-dot" aria-hidden="true"></span>
+          <div class="hub-pick-content">
+            <span class="hub-pick-title">{r.title}</span>
+            <div class="hub-pick-meta">
+              <span class="hub-pick-cat">{r.categoryIcon} {r.categoryTitle}</span>
+              {r.estimated_minutes && (
+                <span class="hub-pick-cat">⏱ {r.estimated_minutes}分</span>
+              )}
+            </div>
+          </div>
+        </a>
       ))}
-    </select>
-  </div>
-  <div class="filter-group">
-    <label for="serviceFilter">サービス</label>
-    <select id="serviceFilter" aria-label="サービスで絞り込み">
-      <option value="">すべてのサービス</option>
-      {serviceIndex.map(svc => (
-        <option value={svc.name} data-categories={svc.categories.join(',')}>{svc.name}（{svc.count}）</option>
-      ))}
-    </select>
-  </div>
-  <div class="filter-group">
-    <label for="domainFilter">試験ドメイン</label>
-    <select id="domainFilter" aria-label="試験ドメインで絞り込み">
-      <option value="">すべてのドメイン</option>
-      {examDomains.map(d => (
-        <option value={String(d.id)}>{d.icon} D{d.id}: {d.title_ja}</option>
-      ))}
-    </select>
-  </div>
-  <div class="filter-group">
-    <label for="difficultyFilter">難易度</label>
-    <select id="difficultyFilter" aria-label="難易度で絞り込み">
-      <option value="">すべての難易度</option>
-      <option value="beginner">🟢 初級</option>
-      <option value="intermediate">🔵 中級</option>
-      <option value="advanced">🔴 上級</option>
-    </select>
-  </div>
-  <div class="filter-group">
-    <label for="timeFilter">所要時間</label>
-    <select id="timeFilter" aria-label="所要時間で絞り込み">
-      <option value="">すべて</option>
-      <option value="0-15">〜15分</option>
-      <option value="15-30">15〜30分</option>
-      <option value="30-60">30〜60分</option>
-      <option value="60+">60分〜</option>
-    </select>
-  </div>
-  <button id="filterClear" class="filter-clear-btn" aria-label="フィルターをリセット" style="display: none;">
-    フィルターをリセット
-  </button>
-</div>
-<div id="filterStatus" class="filter-status" aria-live="polite" style="display: none;"></div>
-<div id="filterNoResults" class="filter-no-results" style="display: none;">
-  <div class="filter-no-results-icon" aria-hidden="true">📭</div>
-  <p>条件に該当するリソースがありません</p>
-  <p class="filter-no-results-hint">条件を緩めるか、フィルターをリセットしてください</p>
-</div>
-</div>
-<!-- カテゴリクイックナビゲーション (build-time) -->
-<CategoryQuickNav navData={categoryQuickNav} />
-<!-- 大カテゴリ (build-time) -->
-{categoriesData.map(cat => <MajorCategory category={cat} />)}
+    </div>
+  </section>
+)}
+
 <div class="footer-note">
 <p>
   すべてのリソースはオフラインで利用可能です<br/>

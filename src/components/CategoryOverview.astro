@@ -1,0 +1,96 @@
+---
+import type { Category, Resource } from '../data/resources';
+
+interface CategoryDescription {
+  description: string;
+  exam_relevance: string;
+  key_topics: string[];
+  recommended_first: string[];
+  related_categories: string[];
+  color: string;
+}
+
+interface Props {
+  category: Category;
+  desc: CategoryDescription;
+}
+
+const { category, desc } = Astro.props;
+
+// Collect all resources from all sections for recommended lookup
+const allResources: Resource[] = category.sections.flatMap(s => s.resources);
+
+// Find recommended resources by matching href (strip ../ prefix if present)
+const recommendedResources = desc.recommended_first
+  .map(href => {
+    const resource = allResources.find(r => {
+      const normalizedHref = r.href.replace(/^\.\.\//, '');
+      return normalizedHref === href;
+    });
+    return resource ? { ...resource, href: `../${href}` } : null;
+  })
+  .filter((r): r is Resource & { href: string } => r !== null);
+---
+
+<section class="category-overview" id="category-overview" aria-labelledby="overview-heading">
+  <div class="category-overview-intro">
+    <h2 id="overview-heading" class="category-overview-title">
+      <span class="category-overview-icon" aria-hidden="true">{category.icon}</span>
+      カテゴリ概要
+    </h2>
+    <p class="category-overview-desc">{desc.description}</p>
+  </div>
+
+  <div class="category-overview-grid">
+    <div class="category-overview-card">
+      <h3 class="category-overview-card-title">
+        <span aria-hidden="true">📋</span> SAP試験での出題傾向
+      </h3>
+      <p class="category-overview-card-text">{desc.exam_relevance}</p>
+    </div>
+
+    <div class="category-overview-card">
+      <h3 class="category-overview-card-title">
+        <span aria-hidden="true">🎯</span> キートピック
+      </h3>
+      <ul class="category-overview-topics">
+        {desc.key_topics.map(topic => (
+          <li>{topic}</li>
+        ))}
+      </ul>
+    </div>
+  </div>
+
+  {recommendedResources.length > 0 && (
+    <div class="recommended-reads" id="recommended-reads">
+      <h3 class="recommended-reads-title">
+        <span aria-hidden="true">🚀</span> まず読むべき記事
+      </h3>
+      <div class="recommended-reads-grid">
+        {recommendedResources.map((resource, i) => (
+          <a href={resource.href} class="recommended-card">
+            <span class="recommended-card-number">{i + 1}</span>
+            <div class="recommended-card-content">
+              <span class="recommended-card-title">{resource.title}</span>
+              {resource.summary && (
+                <span class="recommended-card-summary">{resource.summary}</span>
+              )}
+              <div class="recommended-card-meta">
+                {resource.difficulty && (
+                  <span class={`meta-badge difficulty-${resource.difficulty}`}>
+                    {resource.difficulty === 'beginner' ? '初級' : resource.difficulty === 'intermediate' ? '中級' : '上級'}
+                  </span>
+                )}
+                {resource.estimated_minutes && (
+                  <span class="meta-badge time-badge">
+                    <span aria-hidden="true">⏱</span>{resource.estimated_minutes}分
+                  </span>
+                )}
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+</section>

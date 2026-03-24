@@ -1,0 +1,168 @@
+---
+import LearningResourcesLayout from '../../layouts/LearningResourcesLayout.astro';
+import MajorCategory from '../../components/MajorCategory.astro';
+import CategoryOverview from '../../components/CategoryOverview.astro';
+import RelatedCategories from '../../components/RelatedCategories.astro';
+import { categoriesData, serviceIndex, examDomains } from '../../data/resources';
+import { generateSectionSlug } from '../../utils/slug';
+import categoryDescriptions from '../../data/category-descriptions.json';
+
+export function getStaticPaths() {
+  return categoriesData.map(cat => ({
+    params: { category: cat.id },
+    props: {
+      category: cat,
+      desc: (categoryDescriptions as Record<string, any>)[cat.id],
+    },
+  }));
+}
+
+const { category, desc } = Astro.props;
+const base = '/aws_sap_studying';
+
+// Adjust resource hrefs: from learning-resources/ subdir, need ../ to reach top-level dirs
+const adjustedCategory = {
+  ...category,
+  sections: category.sections.map((sec: any) => ({
+    ...sec,
+    resources: sec.resources.map((r: any) => ({ ...r, href: `../${r.href}` })),
+  })),
+};
+
+// Filter service index to only services appearing in this category
+const categoryServices = serviceIndex.filter(s => s.categories.includes(category.id));
+
+// Build page title
+const pageTitle = `${category.icon} ${category.title} — AWS SAP 学習リソース`;
+
+// Build TOC
+const tocItems = [
+  { level: 'h2', id: 'category-overview', text: `${category.icon} カテゴリ概要` },
+  { level: 'h3', id: 'recommended-reads', text: 'まず読むべき記事' },
+  { level: 'h3', id: 'search-heading', text: '検索・フィルター' },
+  ...category.sections.map((sec: any) => ({
+    level: 'h2', id: generateSectionSlug(sec.title), text: `${sec.icon} ${sec.title}`,
+  })),
+  { level: 'h2', id: 'related-categories', text: '関連カテゴリ' },
+];
+---
+
+<LearningResourcesLayout
+  pageTitle={pageTitle}
+  tocItems={tocItems}
+  extraCss={[`${base}/css/pages/category-detail.css`]}
+>
+<div class="container">
+
+<!-- パンくず -->
+<nav class="category-breadcrumb" aria-label="パンくずリスト">
+  <a href={`${base}/index.html`}>ホーム</a>
+  <span class="category-breadcrumb-separator" aria-hidden="true">›</span>
+  <a href={`${base}/learning-resources.html`}>学習リソース</a>
+  <span class="category-breadcrumb-separator" aria-hidden="true">›</span>
+  <span class="category-breadcrumb-current">{category.icon} {category.title}</span>
+</nav>
+
+<!-- ヘッダー -->
+<header class="header">
+  <h1>{category.icon} {category.title}</h1>
+  <p>{category.count} リソース・{category.sections.length} セクション</p>
+  <div style="margin-top: 20px;">
+    <a href={`${base}/learning-resources.html`} style="color: white; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 8px; text-decoration: none; display: inline-block; transition: all 0.3s;">
+      ← 学習リソース トップに戻る
+    </a>
+  </div>
+</header>
+
+<main class="content" id="main-content">
+
+<!-- カテゴリ概要 -->
+<CategoryOverview category={category} desc={desc} />
+
+<!-- 検索セクション -->
+<div aria-label="リソース検索" class="search-section" role="search">
+  <h3 id="search-heading"><span aria-hidden="true">🔍</span>リソースを検索</h3>
+  <div class="search-container">
+    <input aria-describedby="search-heading" aria-label="リソース検索" autocomplete="off" class="search-input" id="searchInput" placeholder={`${category.title}のリソースを検索...`} type="text"/>
+    <button aria-label="検索をクリア" class="search-clear" id="searchClear" title="検索をクリア">×</button>
+  </div>
+  <div aria-label="検索結果" aria-live="polite" class="search-results" id="searchResults" role="region">
+    <div class="search-results-header">
+      検索結果: <span class="search-results-count" id="searchResultsCount">0</span>件
+    </div>
+    <ul class="search-results-list" id="searchResultsList"></ul>
+    <div class="search-no-results" id="searchNoResults" style="display: none;">
+      <div aria-hidden="true" class="search-no-results-icon">🔍</div>
+      <p>該当するリソースが見つかりませんでした</p>
+      <p style="font-size: 0.9em; margin-top: 10px;">別のキーワードで検索してください</p>
+    </div>
+  </div>
+</div>
+
+<!-- フィルターセクション（カテゴリフィルターは hidden で固定） -->
+<div class="filter-section" role="region" aria-label="リソースフィルター">
+  <h3 id="filter-heading"><span aria-hidden="true">🎯</span>フィルター</h3>
+  <input type="hidden" id="categoryFilter" value={category.id} />
+  <div class="filter-controls">
+    <div class="filter-group">
+      <label for="serviceFilter">サービス</label>
+      <select id="serviceFilter" aria-label="サービスで絞り込み">
+        <option value="">すべてのサービス</option>
+        {categoryServices.map(svc => (
+          <option value={svc.name} data-categories={svc.categories.join(',')}>{svc.name}（{svc.count}）</option>
+        ))}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="domainFilter">試験ドメイン</label>
+      <select id="domainFilter" aria-label="試験ドメインで絞り込み">
+        <option value="">すべてのドメイン</option>
+        {examDomains.map(d => (
+          <option value={String(d.id)}>{d.icon} D{d.id}: {d.title_ja}</option>
+        ))}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="difficultyFilter">難易度</label>
+      <select id="difficultyFilter" aria-label="難易度で絞り込み">
+        <option value="">すべての難易度</option>
+        <option value="beginner">🟢 初級</option>
+        <option value="intermediate">🔵 中級</option>
+        <option value="advanced">🔴 上級</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="timeFilter">所要時間</label>
+      <select id="timeFilter" aria-label="所要時間で絞り込み">
+        <option value="">すべて</option>
+        <option value="0-15">〜15分</option>
+        <option value="15-30">15〜30分</option>
+        <option value="30-60">30〜60分</option>
+        <option value="60+">60分〜</option>
+      </select>
+    </div>
+    <button id="filterClear" class="filter-clear-btn" aria-label="フィルターをリセット" style="display: none;">
+      フィルターをリセット
+    </button>
+  </div>
+  <div id="filterStatus" class="filter-status" aria-live="polite" style="display: none;"></div>
+  <div id="filterNoResults" class="filter-no-results" style="display: none;">
+    <div class="filter-no-results-icon" aria-hidden="true">📭</div>
+    <p>条件に該当するリソースがありません</p>
+    <p class="filter-no-results-hint">条件を緩めるか、フィルターをリセットしてください</p>
+  </div>
+</div>
+
+<!-- リソース一覧 -->
+<MajorCategory category={adjustedCategory} />
+
+<!-- 関連カテゴリ -->
+<RelatedCategories
+  current={category.id}
+  related={desc.related_categories}
+  allCategories={categoriesData}
+/>
+
+</main>
+</div>
+</LearningResourcesLayout>
