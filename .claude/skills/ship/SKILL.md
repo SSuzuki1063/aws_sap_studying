@@ -132,6 +132,12 @@ const rawContent = `
    ```
    This produces both `public/data.js` and `src/data/resources.ts`.
 
+4. **`src/data/category-descriptions.json`** — Consider updating if:
+   - A new high-priority/advanced resource should appear in `recommended_first` (max 5 per category)
+   - The resource is the first in a new topic area that should be reflected in `key_topics`
+   - This file is NOT auto-generated — it requires manual editing
+   - Changes here are picked up by `npm run build` (no script needed)
+
 ### 1c. Process replacement files (if replace_html/ has files)
 
 Same conversion process as 1b, but **overwrite** the existing `.astro` and `.css` files.
@@ -168,6 +174,9 @@ Report which files were cleaned up. This prevents duplicate processing on subseq
 | `Expected ) but found {` | `{'{'}` escaping inside `<style>` tags | Never use `{'{'}` escaping — use `rawContent` pattern instead |
 | `Unterminated string literal` | Multiline text in tocItems strings | `clean_text()`: strip HTML, normalize whitespace to single spaces |
 | Missing CSS styles | `<style>` left in body instead of extracted | Extract ALL `<style>` from `<head>` to `css/pages/` |
+| Category page resource links 404 | Resource hrefs resolve wrong from `learning-resources/` | `[category].astro` prefixes `../` to all resource hrefs — verify adjustment exists |
+| Search results link to wrong page | `index.js` uses relative paths | Search links must use absolute paths: `/aws_sap_studying/` + `item.file` |
+| Category page missing from build | `category-descriptions.json` missing entry for new category | Add entry with `description`, `exam_relevance`, `key_topics`, `recommended_first`, `related_categories`, `color` |
 
 ---
 
@@ -241,14 +250,22 @@ This runs the full pipeline:
 1. `sync:concepts` — Copy concept map JSON
 2. `sync:static` — Copy CSS/JS/images to public/
 3. `generate-data.mjs` — Produce data.js + resources.ts
-4. `astro build` — SSG render to dist/
+4. `astro build` — SSG render to dist/ (includes hub page + 8 category detail pages)
 
 ### 4a. Verify critical outputs exist
 
 After build, confirm these exist in `dist/`:
 ```bash
 ls dist/index.html dist/data.js dist/css/common.css dist/js/ 2>/dev/null
+# Hub + category detail pages (two-layer architecture)
+ls dist/learning-resources.html dist/learning-resources/ 2>/dev/null
 ```
+
+The learning-resources section uses a two-layer architecture:
+- `dist/learning-resources.html` — Hub page (category cards, search, recent updates, priority picks)
+- `dist/learning-resources/*.html` — 8 category detail pages (overview, exam relevance, filters, resource list)
+
+Both are generated automatically from `categoriesData` + `category-descriptions.json`.
 
 ### ❌ GATE 4: If build fails (exit ≠ 0), STOP.
 
