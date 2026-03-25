@@ -68,9 +68,28 @@ For each `.html` file in `new_html/`, perform the **HTML → Astro conversion**:
 - Build `tocItems` array: `{ id: 'heading-id', text: 'Heading Text', level: 2 }`
 
 #### 1b-iv. Determine category and section
-- Read `src/data/resource-registry.json` for existing category/section patterns
-- Determine the correct category directory (one of 8: networking, security-governance, etc.)
-- Determine the section within that category
+
+Use the **Category Reference Table** below to classify. NEVER guess — always match against the table.
+
+| displayCategory | AWS Services | Sections |
+|---|---|---|
+| `networking` | VPC, Subnet, Security Group, NACL, ENI, IPv6, Flow Logs, Transit Gateway, VPN, Direct Connect, VGW, DGW, PrivateLink, VPC Endpoint, VPC Peering, Network Firewall, Cloud WAN, Prefix List | VPC & ネットワーク基礎 / Direct Connect & ハイブリッドネットワーク / Transit Gateway & ゲートウェイ |
+| `security-governance` | IAM, STS, SSO, Organizations, SCP, AWS Config, CloudTrail, GuardDuty, Security Hub, Inspector, Macie, KMS, ACM, Secrets Manager, WAF, Shield, Firewall Manager, Control Tower | IAM & 認証・認可 / Organizations & ガバナンス / セキュリティ監視・脅威検知 / 暗号化 & 証明書管理 |
+| `compute-applications` | EC2, Placement Groups, AMI, Auto Scaling, ELB (ALB/NLB/CLB), Lambda, ECS, EKS, Fargate, App Runner, Elastic Beanstalk, SSM, Patch Manager | EC2 & インスタンス管理 / Auto Scaling & ロードバランシング / Lambda & サーバーレス / コンテナ & アプリケーション統合 / システム運用 & パッチ管理 |
+| `content-delivery-dns` | CloudFront, Route 53, Global Accelerator, WAF (CloudFront-specific) | CloudFront & コンテンツ配信 / Route53 & DNS管理 |
+| `development-deployment` | CodePipeline, CodeBuild, CodeDeploy, CodeCommit, CloudFormation, CDK, SAM, API Gateway, EventBridge, SNS, SQS, Step Functions | CI/CD & デプロイ / CI/CD & デプロイメント / IaC & CloudFormation / API & イベント駆動 |
+| `storage-database` | S3, EBS, EFS, FSx, Storage Gateway, RDS, Aurora, DynamoDB, ElastiCache, Redshift, DocumentDB | S3 & オブジェクトストレージ / ブロック & ファイルストレージ / データベース & キャッシング |
+| `migration` | DMS, SCT, Migration Hub, Application Discovery Service, MGN, DataSync, Transfer Family, Backup (DR context) | DMS & データベース移行 / Migration Hub & 移行戦略 / ディザスタリカバリ (DR) |
+| `analytics-operations` | Athena, Glue, EMR, Kinesis, QuickSight, Lake Formation, CloudWatch, X-Ray, OpenSearch | データ分析 / 分析・運用 / 理解度クイズ・用語集 |
+
+**Ambiguous services (frequently misclassified):**
+- Route 53, CloudFront, Global Accelerator → `content-delivery-dns` (NOT networking)
+- WAF → `security-governance` (default) or `content-delivery-dns` (CloudFront-specific context)
+- VPN, PrivateLink → `networking` (NOT security)
+- Systems Manager → `compute-applications` (manages compute instances)
+- Backup → `migration` (DR context) or `storage-database` (storage context)
+
+**Page directory ≠ displayCategory:** Files in `new-solutions/`, `continuous-improvement/`, `cost-control/`, `organizational-complexity/` are mapped to one of the 8 display categories via `displayCategory` in `resource-registry.json`.
 
 #### 1b-v. Create .astro file
 
@@ -182,7 +201,9 @@ Report which files were cleaned up. This prevents duplicate processing on subseq
 
 ## Step 2: Category Validation
 
-**Goal:** Verify every resource file's frontmatter `category` matches its directory.
+**Goal:** Verify (a) frontmatter `category` matches directory, and (b) `displayCategory` in registry is correct for the AWS service.
+
+### 2a. Frontmatter/directory consistency
 
 ```bash
 node scripts/validate-categories.js --verbose
@@ -190,13 +211,24 @@ node scripts/validate-categories.js --verbose
 
 This checks all `src/pages/<category>/*.astro` files: the frontmatter `category: 'X'` field must equal the directory name `X`.
 
-### ❌ GATE 2: If validation fails (exit ≠ 0), STOP.
+### 2b. displayCategory verification (new/changed resources only)
+
+For each resource added or modified in this `/ship` run, verify:
+
+1. `displayCategory` in `resource-registry.json` matches the **Category Reference Table** in Step 1b-iv
+2. `section` matches one of the listed sections for that category
+3. If the service is in the "Ambiguous services" list, the decision rule was followed
+
+This is a manual check — cross-reference the resource's AWS service against the table. If a mismatch is found, fix `resource-registry.json` and re-run `node scripts/generate-data.mjs` before proceeding.
+
+### ❌ GATE 2: If validation fails (exit ≠ 0) or displayCategory is wrong, STOP.
 
 Report each mismatched file. Offer to fix by either:
 - Moving the file to the correct directory, OR
-- Updating the frontmatter category to match the directory
+- Updating the frontmatter category to match the directory, OR
+- Correcting the `displayCategory`/`section` in `resource-registry.json`
 
-Do NOT proceed to Step 3 until all files pass.
+Do NOT proceed to Step 3 until all checks pass.
 
 ---
 
