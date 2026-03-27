@@ -3938,7 +3938,7 @@ const siteStats = {
   minorCategories: 29,
   totalResources: '316+',
   offlineSupport: '100%',
-  lastUpdated: '2026/03/26'
+  lastUpdated: '2026/03/27'
 };
 
 // サービスインデックス（自動生成）
