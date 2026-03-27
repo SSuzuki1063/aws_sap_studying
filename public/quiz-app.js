@@ -7,7 +7,11 @@ class QuizApp {
         this.questions = [];
         this.selectedAnswer = null;
         this.isAnswerSubmitted = false;
-        
+        this.quizMode = 'normal';
+        this.timerInterval = null;
+        this.timerRemaining = 0;
+        this.timerTotal = 0;
+
         this.init();
     }
 
@@ -48,12 +52,28 @@ class QuizApp {
                 }
             };
 
+            // 問題単位の統計
+            const wrongCount = QuizAnswerHistory.getWrongQuestions(categoryKey).length;
+            const unanswered = QuizAnswerHistory.getUnansweredCount(categoryKey);
+            const totalQ = getTotalQuestions(categoryKey);
+            const attempted = totalQ - unanswered;
+            const attemptPercent = Math.round((attempted / totalQ) * 100);
+            const perQAccuracy = QuizAnswerHistory.getCategoryAccuracy(categoryKey);
+
             let statsHTML = '';
-            if (attemptCount > 0) {
+            if (attemptCount > 0 || attempted > 0) {
+                const reviewBtnHTML = wrongCount > 0
+                    ? `<button class="review-btn" onclick="event.stopPropagation(); startReviewQuiz('${categoryKey}')" aria-label="${quizData[categoryKey].title}の復習モード（${wrongCount}問）"><span aria-hidden="true">🔄</span> 復習: ${wrongCount}問</button>`
+                    : '';
                 statsHTML = `
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.85em;">
-                        <div><span aria-hidden="true">🏆</span> 最高スコア: ${bestScore}%</div>
-                        <div><span aria-hidden="true">📝</span> 受験回数: ${attemptCount}回</div>
+                    <div class="category-stats">
+                        <div class="category-progress-bar"><div class="category-progress-fill" style="width: ${attemptPercent}%"></div></div>
+                        <div class="category-stat-row">
+                            <span>${perQAccuracy !== null ? '正答率: ' + perQAccuracy + '%' : ''}</span>
+                            <span>未回答: ${unanswered}問</span>
+                        </div>
+                        ${attemptCount > 0 ? `<div class="category-stat-row" style="margin-top: 4px;"><span><span aria-hidden="true">🏆</span> 最高: ${bestScore}%</span><span><span aria-hidden="true">📝</span> ${attemptCount}回</span></div>` : ''}
+                        ${reviewBtnHTML}
                     </div>
                 `;
             }
@@ -69,16 +89,42 @@ class QuizApp {
         });
     }
 
-    startQuiz(categoryKey) {
+    startQuiz(categoryKey, mode = 'normal') {
         this.currentCategory = categoryKey;
-        this.questions = getAllQuestions(categoryKey);
+        this.quizMode = mode;
         this.currentQuestionIndex = 0;
         this.userAnswers = [];
         this.selectedAnswer = null;
         this.isAnswerSubmitted = false;
 
-        // 問題をシャッフル（オプション）
-        // this.shuffleArray(this.questions);
+        // ディープコピー（シャッフル時の元データ破壊防止）
+        let rawQuestions = getAllQuestions(categoryKey).map(q => ({
+            ...q,
+            options: [...q.options]
+        }));
+
+        // 復習モード: 不正解問題のみフィルタ
+        if (mode === 'review') {
+            const wrongIds = QuizAnswerHistory.getWrongQuestions(categoryKey);
+            rawQuestions = rawQuestions.filter(q => wrongIds.includes(q.id));
+            if (rawQuestions.length === 0) {
+                alert('復習する問題がありません。すべて正解済みです！');
+                return;
+            }
+        }
+
+        // シャッフル（設定が有効な場合）
+        const settings = QuizSettings.get();
+        if (settings.shuffle) {
+            this.shuffleArray(rawQuestions);
+            rawQuestions.forEach(q => {
+                const correctOption = q.options[q.correct];
+                this.shuffleArray(q.options);
+                q.correct = q.options.indexOf(correctOption);
+            });
+        }
+
+        this.questions = rawQuestions;
 
         this.showQuizSection();
         this.renderQuestion();
@@ -89,6 +135,8 @@ class QuizApp {
         document.getElementById('quizSection').style.display = 'none';
         document.getElementById('resultsSection').style.display = 'none';
 
+        // 設定パネルを表示
+        this.renderSettings();
         // 全体統計を表示
         this.displayOverallStats();
     }
@@ -161,10 +209,16 @@ class QuizApp {
         document.getElementById('categorySelection').style.display = 'none';
         document.getElementById('quizSection').style.display = 'block';
         document.getElementById('resultsSection').style.display = 'none';
-        
+
         // クイズタイトルを設定
-        document.getElementById('quizTitle').textContent = 
-            `${quizData[this.currentCategory].icon} ${quizData[this.currentCategory].title} クイズ`;
+        const cat = quizData[this.currentCategory];
+        document.getElementById('quizTitle').textContent = `${cat.icon} ${cat.title} クイズ`;
+
+        // 復習モードバッジ
+        const badge = document.getElementById('quizModeBadge');
+        if (badge) {
+            badge.style.display = this.quizMode === 'review' ? 'inline-block' : 'none';
+        }
     }
 
     showResultsSection() {
@@ -225,6 +279,10 @@ class QuizApp {
         if (resourcesContainer) {
             resourcesContainer.style.display = 'none';
         }
+
+        // タイマー開始
+        this.stopTimer();
+        this.startTimer();
     }
 
     selectAnswer(answerIndex) {
@@ -248,6 +306,7 @@ class QuizApp {
     submitAnswer() {
         if (this.selectedAnswer === null || this.isAnswerSubmitted) return;
 
+        this.stopTimer();
         this.isAnswerSubmitted = true;
         const question = this.questions[this.currentQuestionIndex];
         const isCorrect = this.selectedAnswer === question.correct;
@@ -259,6 +318,9 @@ class QuizApp {
             correct: question.correct,
             isCorrect: isCorrect
         });
+
+        // 問題単位の回答履歴を保存
+        QuizAnswerHistory.recordAnswer(this.currentCategory, question.id, isCorrect);
 
         // 選択肢に正解/不正解のスタイルを適用
         const optionButtons = document.querySelectorAll('.option-button');
@@ -313,8 +375,8 @@ class QuizApp {
         document.getElementById('explanationText').textContent = question.explanation;
         document.getElementById('explanation').classList.add('show');
 
-        // 関連リソースを表示（存在する場合）
-        this.renderRelatedResources(question.relatedResources);
+        // 関連リソースを表示（不正解時はCTAバナー付き）
+        this.renderRelatedResources(question.relatedResources, !isCorrect);
 
         // ボタンの状態を更新
         document.getElementById('submitBtn').style.display = 'none';
@@ -379,6 +441,12 @@ class QuizApp {
         }
 
         document.getElementById('scoreMessage').textContent = message;
+
+        // レーダーチャート表示
+        this.renderRadarChart('radarChartContainer');
+
+        // 不正解問題一覧表示
+        this.renderWrongAnswerResources();
 
         // 学習履歴を表示
         this.displayLearningHistory();
@@ -445,7 +513,7 @@ class QuizApp {
     }
 
     // 関連リソースを表示する
-    renderRelatedResources(relatedResources) {
+    renderRelatedResources(relatedResources, emphasize = false) {
         const resourcesContainer = document.getElementById('explanationResources');
         const resourcesList = document.getElementById('resourcesList');
 
@@ -457,6 +525,21 @@ class QuizApp {
 
         // リストをクリア（安全なDOM操作）
         resourcesList.replaceChildren();
+
+        // 不正解時のCTAバナー（内部リソースがある場合のみ）
+        const existingCta = resourcesContainer.querySelector('.resource-cta-banner');
+        if (existingCta) existingCta.remove();
+
+        if (emphasize && relatedResources.some(r => r.type === 'internal')) {
+            const cta = document.createElement('div');
+            cta.className = 'resource-cta-banner';
+            const icon = document.createElement('span');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '📖';
+            cta.appendChild(icon);
+            cta.appendChild(document.createTextNode(' この分野の学習リソースを確認しましょう'));
+            resourcesContainer.insertBefore(cta, resourcesList);
+        }
 
         // 各リソースをリンクとして生成
         relatedResources.forEach(resource => {
@@ -492,6 +575,389 @@ class QuizApp {
         // カテゴリカードを再レンダリング（統計情報を更新するため）
         this.renderCategories();
         this.showCategorySelection();
+    }
+
+    // SVGレーダーチャートを描画
+    renderRadarChart(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const categories = Object.keys(quizData);
+        const attempted = categories.filter(c => QuizAnswerHistory.getCategoryAccuracy(c) !== null);
+
+        if (attempted.length < 3) {
+            container.textContent = '';
+            const msg = document.createElement('p');
+            msg.style.cssText = 'text-align: center; color: #6B7280; font-size: 0.9em;';
+            msg.textContent = '3カテゴリ以上の学習後にレーダーチャートが表示されます';
+            container.appendChild(msg);
+            return;
+        }
+
+        const n = attempted.length;
+        const centerX = 150, centerY = 150, radius = 110;
+        const angleStep = (2 * Math.PI) / n;
+
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', '0 0 300 300');
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', 'カテゴリ別正答率レーダーチャート');
+        svg.classList.add('radar-chart');
+
+        // ガイド同心多角形（25%, 50%, 75%, 100%）
+        [0.25, 0.5, 0.75, 1.0].forEach(scale => {
+            const points = attempted.map((_, i) => {
+                const angle = angleStep * i - Math.PI / 2;
+                const x = centerX + radius * scale * Math.cos(angle);
+                const y = centerY + radius * scale * Math.sin(angle);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            const poly = document.createElementNS(ns, 'polygon');
+            poly.setAttribute('points', points);
+            poly.classList.add('radar-guide');
+            svg.appendChild(poly);
+        });
+
+        // 軸線
+        attempted.forEach((_, i) => {
+            const angle = angleStep * i - Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', centerX);
+            line.setAttribute('y1', centerY);
+            line.setAttribute('x2', x.toFixed(1));
+            line.setAttribute('y2', y.toFixed(1));
+            line.classList.add('radar-axis');
+            svg.appendChild(line);
+        });
+
+        // データ多角形
+        const dataPoints = attempted.map((cat, i) => {
+            const accuracy = QuizAnswerHistory.getCategoryAccuracy(cat) / 100;
+            const angle = angleStep * i - Math.PI / 2;
+            const x = centerX + radius * accuracy * Math.cos(angle);
+            const y = centerY + radius * accuracy * Math.sin(angle);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        const dataPoly = document.createElementNS(ns, 'polygon');
+        dataPoly.setAttribute('points', dataPoints);
+        dataPoly.classList.add('radar-data');
+        svg.appendChild(dataPoly);
+
+        // ラベル
+        attempted.forEach((cat, i) => {
+            const angle = angleStep * i - Math.PI / 2;
+            const labelRadius = radius + 25;
+            const x = centerX + labelRadius * Math.cos(angle);
+            const y = centerY + labelRadius * Math.sin(angle);
+            const accuracy = QuizAnswerHistory.getCategoryAccuracy(cat);
+            const title = quizData[cat].title;
+            // 長いタイトルは6文字で切る
+            const shortTitle = title.length > 6 ? title.substring(0, 6) + '…' : title;
+
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', x.toFixed(1));
+            text.setAttribute('y', y.toFixed(1));
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.classList.add('radar-label');
+            text.textContent = shortTitle;
+            svg.appendChild(text);
+
+            // パーセント表示
+            const pctText = document.createElementNS(ns, 'text');
+            pctText.setAttribute('x', x.toFixed(1));
+            pctText.setAttribute('y', (y + 10).toFixed(1));
+            pctText.setAttribute('text-anchor', 'middle');
+            pctText.setAttribute('dominant-baseline', 'middle');
+            pctText.classList.add('radar-pct-label');
+            pctText.textContent = `${accuracy}%`;
+            svg.appendChild(pctText);
+        });
+
+        container.replaceChildren(svg);
+    }
+
+    // 不正解問題一覧と関連リソースを結果画面に表示
+    renderWrongAnswerResources() {
+        const container = document.getElementById('wrongAnswerResources');
+        if (!container) return;
+
+        const wrongAnswers = this.userAnswers.filter(a => !a.isCorrect);
+        if (wrongAnswers.length === 0) {
+            container.replaceChildren();
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'wrong-answer-summary';
+
+        const heading = document.createElement('h3');
+        heading.textContent = '📝 不正解の問題と関連リソース';
+        wrapper.appendChild(heading);
+
+        wrongAnswers.forEach(answer => {
+            const question = this.questions.find(q => q.id === answer.questionId);
+            if (!question) return;
+
+            const item = document.createElement('div');
+            item.className = 'wrong-answer-item';
+
+            const qText = document.createElement('div');
+            qText.className = 'wa-question';
+            qText.textContent = question.question;
+            item.appendChild(qText);
+
+            if (question.relatedResources && question.relatedResources.length > 0) {
+                const resourcesDiv = document.createElement('div');
+                resourcesDiv.className = 'wa-resources';
+                question.relatedResources.forEach(res => {
+                    if (res.type === 'internal') {
+                        const link = document.createElement('a');
+                        link.href = res.path;
+                        link.textContent = '📖 ' + res.title;
+                        resourcesDiv.appendChild(link);
+                        resourcesDiv.appendChild(document.createTextNode(' '));
+                    }
+                });
+                if (resourcesDiv.children.length > 0) {
+                    item.appendChild(resourcesDiv);
+                }
+            }
+
+            wrapper.appendChild(item);
+        });
+
+        container.replaceChildren(wrapper);
+    }
+
+    // 設定パネルを描画
+    renderSettings() {
+        const container = document.getElementById('quizSettings');
+        if (!container) return;
+
+        const settings = QuizSettings.get();
+
+        // 安全なDOM構築
+        container.replaceChildren();
+
+        // シャッフル設定
+        const shuffleItem = document.createElement('div');
+        shuffleItem.className = 'setting-item';
+
+        const shuffleLabel = document.createElement('label');
+        shuffleLabel.className = 'toggle-switch';
+        const shuffleInput = document.createElement('input');
+        shuffleInput.type = 'checkbox';
+        shuffleInput.id = 'shuffleToggle';
+        shuffleInput.setAttribute('role', 'switch');
+        shuffleInput.setAttribute('aria-label', '問題・選択肢シャッフル');
+        shuffleInput.checked = settings.shuffle;
+        const shuffleSlider = document.createElement('span');
+        shuffleSlider.className = 'toggle-slider';
+        shuffleLabel.appendChild(shuffleInput);
+        shuffleLabel.appendChild(shuffleSlider);
+
+        const shuffleText = document.createElement('span');
+        shuffleText.className = 'setting-label';
+        shuffleText.textContent = 'シャッフル';
+
+        shuffleItem.appendChild(shuffleLabel);
+        shuffleItem.appendChild(shuffleText);
+
+        // タイマー設定
+        const timerItem = document.createElement('div');
+        timerItem.className = 'setting-item';
+
+        const timerLabel = document.createElement('label');
+        timerLabel.className = 'toggle-switch';
+        const timerInput = document.createElement('input');
+        timerInput.type = 'checkbox';
+        timerInput.id = 'timerToggle';
+        timerInput.setAttribute('role', 'switch');
+        timerInput.setAttribute('aria-label', 'タイマーモード');
+        timerInput.checked = settings.timerEnabled;
+        const timerSlider = document.createElement('span');
+        timerSlider.className = 'toggle-slider';
+        timerLabel.appendChild(timerInput);
+        timerLabel.appendChild(timerSlider);
+
+        const timerText = document.createElement('span');
+        timerText.className = 'setting-label';
+        timerText.textContent = 'タイマー';
+
+        const timerSecondsInput = document.createElement('input');
+        timerSecondsInput.type = 'number';
+        timerSecondsInput.id = 'timerSecondsInput';
+        timerSecondsInput.className = 'timer-seconds-input';
+        timerSecondsInput.value = settings.timerSeconds;
+        timerSecondsInput.min = 30;
+        timerSecondsInput.max = 600;
+        timerSecondsInput.step = 10;
+        timerSecondsInput.setAttribute('aria-label', '1問あたりの制限時間（秒）');
+        timerSecondsInput.disabled = !settings.timerEnabled;
+
+        const secLabel = document.createElement('span');
+        secLabel.className = 'setting-label';
+        secLabel.style.fontSize = '0.85rem';
+        secLabel.style.color = '#6B7280';
+        secLabel.textContent = '秒';
+
+        timerItem.appendChild(timerLabel);
+        timerItem.appendChild(timerText);
+        timerItem.appendChild(timerSecondsInput);
+        timerItem.appendChild(secLabel);
+
+        container.appendChild(shuffleItem);
+        container.appendChild(timerItem);
+
+        // イベントリスナー
+        shuffleInput.addEventListener('change', (e) => {
+            QuizSettings.set('shuffle', e.target.checked);
+        });
+
+        timerInput.addEventListener('change', (e) => {
+            QuizSettings.set('timerEnabled', e.target.checked);
+            timerSecondsInput.disabled = !e.target.checked;
+        });
+
+        timerSecondsInput.addEventListener('change', (e) => {
+            const val = Math.max(30, Math.min(600, parseInt(e.target.value) || 144));
+            e.target.value = val;
+            QuizSettings.set('timerSeconds', val);
+        });
+    }
+
+    // タイマー開始
+    startTimer() {
+        const settings = QuizSettings.get();
+        if (!settings.timerEnabled) {
+            const timerContainer = document.getElementById('timerContainer');
+            if (timerContainer) timerContainer.style.display = 'none';
+            return;
+        }
+
+        this.timerRemaining = settings.timerSeconds;
+        this.timerTotal = settings.timerSeconds;
+
+        const timerContainer = document.getElementById('timerContainer');
+        if (timerContainer) timerContainer.style.display = 'flex';
+
+        this.updateTimerDisplay();
+
+        this.timerInterval = setInterval(() => {
+            this.timerRemaining--;
+            this.updateTimerDisplay();
+
+            if (this.timerRemaining === 30 || this.timerRemaining === 10) {
+                this.announceTimer(this.timerRemaining);
+            }
+
+            if (this.timerRemaining <= 0) {
+                this.onTimeout();
+            }
+        }, 1000);
+    }
+
+    // タイマー停止
+    stopTimer() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+
+    // タイマー表示更新
+    updateTimerDisplay() {
+        const fill = document.getElementById('timerFill');
+        const text = document.getElementById('timerText');
+        if (!fill || !text) return;
+
+        const pct = (this.timerRemaining / this.timerTotal) * 100;
+        fill.style.width = `${pct}%`;
+
+        // 色の切り替え
+        fill.classList.remove('warning', 'danger');
+        if (pct <= 25) {
+            fill.classList.add('danger');
+        } else if (pct <= 50) {
+            fill.classList.add('warning');
+        }
+
+        const min = Math.floor(this.timerRemaining / 60);
+        const sec = this.timerRemaining % 60;
+        text.textContent = `${min}:${String(sec).padStart(2, '0')}`;
+    }
+
+    // タイムアウト処理
+    onTimeout() {
+        this.stopTimer();
+
+        if (this.isAnswerSubmitted) return;
+
+        this.isAnswerSubmitted = true;
+        const question = this.questions[this.currentQuestionIndex];
+
+        // タイムアウトを不正解として記録
+        this.userAnswers.push({
+            questionId: question.id,
+            selectedAnswer: -1,
+            correct: question.correct,
+            isCorrect: false
+        });
+        QuizAnswerHistory.recordAnswer(this.currentCategory, question.id, false);
+
+        // 正解をハイライト
+        const optionButtons = document.querySelectorAll('.option-button');
+        optionButtons.forEach((button, index) => {
+            button.disabled = true;
+            if (index === question.correct) {
+                button.classList.add('correct');
+                if (!button.querySelector('.result-icon')) {
+                    const icon = document.createElement('span');
+                    icon.className = 'result-icon';
+                    icon.setAttribute('aria-hidden', 'true');
+                    icon.textContent = ' ✅';
+                    button.appendChild(icon);
+                }
+            }
+        });
+
+        // フィードバック
+        const answerFeedback = document.getElementById('answerFeedback');
+        if (answerFeedback) {
+            answerFeedback.textContent = '時間切れです。';
+        }
+
+        // 解説表示
+        document.getElementById('explanationText').textContent = question.explanation;
+        document.getElementById('explanation').classList.add('show');
+        this.renderRelatedResources(question.relatedResources, true);
+
+        // ボタン切り替え
+        document.getElementById('submitBtn').style.display = 'none';
+        if (this.currentQuestionIndex < this.questions.length - 1) {
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            document.getElementById('nextBtn').textContent = '次の問題 →';
+        } else {
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            document.getElementById('nextBtn').textContent = '結果を見る 🎯';
+        }
+
+        this.announceTimer(0);
+    }
+
+    // タイマーARIAアナウンス
+    announceTimer(seconds) {
+        const announce = document.getElementById('timerAnnounce');
+        if (!announce) return;
+        if (seconds === 0) {
+            announce.textContent = '時間切れです。';
+        } else {
+            announce.textContent = `残り${seconds}秒です。`;
+        }
     }
 
     // 配列をシャッフルする関数（オプション）
@@ -530,6 +996,10 @@ function restartQuiz() {
     quizApp.restartQuiz();
 }
 
+function startReviewQuiz(categoryKey) {
+    quizApp.startQuiz(categoryKey, 'review');
+}
+
 function goBack() {
     // メインページ（index.html）に戻る
     window.location.href = 'index.html';
@@ -539,6 +1009,118 @@ function goBack() {
 document.addEventListener('DOMContentLoaded', function() {
     quizApp = new QuizApp();
 });
+
+// 問題単位の回答履歴管理
+class QuizAnswerHistory {
+    static STORAGE_KEY = 'aws-sap-quiz-answers';
+
+    static _getData() {
+        try {
+            const raw = localStorage.getItem(this.STORAGE_KEY);
+            if (!raw) return { version: 1, answers: {} };
+            const data = JSON.parse(raw);
+            if (!data.version || !data.answers) return { version: 1, answers: {} };
+            return data;
+        } catch {
+            return { version: 1, answers: {} };
+        }
+    }
+
+    static _saveData(data) {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+        } catch {
+            // localStorage quota exceeded — silently fail
+        }
+    }
+
+    static recordAnswer(categoryKey, questionId, isCorrect) {
+        const data = this._getData();
+        const key = `${categoryKey}:${questionId}`;
+        const existing = data.answers[key] || { attempts: 0, correct: 0, lastWrong: false, lastDate: '' };
+        existing.attempts++;
+        if (isCorrect) existing.correct++;
+        existing.lastWrong = !isCorrect;
+        existing.lastDate = new Date().toISOString().split('T')[0];
+        data.answers[key] = existing;
+        this._saveData(data);
+    }
+
+    static getWrongQuestions(categoryKey) {
+        const data = this._getData();
+        const prefix = `${categoryKey}:`;
+        const wrongIds = [];
+        for (const [key, val] of Object.entries(data.answers)) {
+            if (key.startsWith(prefix) && val.lastWrong) {
+                // Extract questionId — may be number or string
+                const qId = key.slice(prefix.length);
+                wrongIds.push(isNaN(qId) ? qId : Number(qId));
+            }
+        }
+        return wrongIds;
+    }
+
+    static getCategoryAccuracy(categoryKey) {
+        const data = this._getData();
+        const prefix = `${categoryKey}:`;
+        let totalAttempts = 0;
+        let totalCorrect = 0;
+        for (const [key, val] of Object.entries(data.answers)) {
+            if (key.startsWith(prefix)) {
+                totalAttempts += val.attempts;
+                totalCorrect += val.correct;
+            }
+        }
+        if (totalAttempts === 0) return null;
+        return Math.round((totalCorrect / totalAttempts) * 100);
+    }
+
+    static getUnansweredCount(categoryKey) {
+        const data = this._getData();
+        const prefix = `${categoryKey}:`;
+        const answeredIds = new Set();
+        for (const key of Object.keys(data.answers)) {
+            if (key.startsWith(prefix)) {
+                const qId = key.slice(prefix.length);
+                answeredIds.add(isNaN(qId) ? qId : Number(qId));
+            }
+        }
+        const allQuestions = getAllQuestions(categoryKey);
+        return allQuestions.filter(q => !answeredIds.has(q.id)).length;
+    }
+
+    static getQuestionStats(categoryKey, questionId) {
+        const data = this._getData();
+        const key = `${categoryKey}:${questionId}`;
+        return data.answers[key] || null;
+    }
+}
+
+// クイズ設定の永続化
+class QuizSettings {
+    static STORAGE_KEY = 'aws-sap-quiz-settings';
+    static DEFAULTS = { shuffle: false, timerEnabled: false, timerSeconds: 144 };
+
+    static get() {
+        try {
+            const raw = localStorage.getItem(this.STORAGE_KEY);
+            if (!raw) return { ...this.DEFAULTS };
+            return { ...this.DEFAULTS, ...JSON.parse(raw) };
+        } catch {
+            return { ...this.DEFAULTS };
+        }
+    }
+
+    static set(key, value) {
+        const settings = this.get();
+        settings[key] = value;
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(settings));
+        } catch {
+            // quota exceeded
+        }
+    }
+}
 
 // ローカルストレージを使用した学習進捗の保存（オプション機能）
 class QuizProgress {
