@@ -236,7 +236,7 @@ class QuizApp {
         this.updateProgress();
 
         // 質問番号
-        document.getElementById('questionNumber').textContent = `Question ${questionNumber}`;
+        document.getElementById('questionNumber').textContent = `第${questionNumber}問`;
         
         // 質問文
         document.getElementById('questionText').textContent = question.question;
@@ -280,9 +280,31 @@ class QuizApp {
             resourcesContainer.style.display = 'none';
         }
 
+        // 前回のフィードバックバナーをクリア
+        const oldBanner = document.getElementById('feedbackBanner');
+        if (oldBanner) oldBanner.remove();
+
+        // カテゴリメタタグを表示
+        // ※将来 question.difficulty が追加された場合はここでタグ追加可能
+        const metaContainer = document.getElementById('questionMeta');
+        if (metaContainer) {
+            metaContainer.replaceChildren();
+            const tag = document.createElement('span');
+            tag.className = 'question-meta-tag';
+            tag.textContent = quizData[this.currentCategory].title;
+            metaContainer.appendChild(tag);
+        }
+
         // タイマー開始
         this.stopTimer();
         this.startTimer();
+
+        // アクセシビリティ: 問題文にフォーカスを移動
+        const questionTextEl = document.getElementById('questionText');
+        if (questionTextEl) {
+            questionTextEl.setAttribute('tabindex', '-1');
+            questionTextEl.focus();
+        }
     }
 
     selectAnswer(answerIndex) {
@@ -371,23 +393,44 @@ class QuizApp {
             }
         }
 
+        // フィードバックバナーを表示
+        const existingBanner = document.getElementById('feedbackBanner');
+        if (existingBanner) existingBanner.remove();
+
+        const feedbackBanner = document.createElement('div');
+        feedbackBanner.className = `answer-feedback-banner ${isCorrect ? 'correct' : 'incorrect'}`;
+        feedbackBanner.id = 'feedbackBanner';
+        const feedbackIcon = document.createElement('span');
+        feedbackIcon.setAttribute('aria-hidden', 'true');
+        feedbackIcon.textContent = isCorrect ? '✅' : '❌';
+        feedbackBanner.appendChild(feedbackIcon);
+        feedbackBanner.appendChild(document.createTextNode(
+            isCorrect ? '正解！よくできました' : '不正解 — 解説を確認しましょう'
+        ));
+        const explanation = document.getElementById('explanation');
+        explanation.parentNode.insertBefore(feedbackBanner, explanation);
+
         // 解説を表示
         document.getElementById('explanationText').textContent = question.explanation;
-        document.getElementById('explanation').classList.add('show');
+        explanation.classList.add('show');
 
         // 関連リソースを表示（不正解時はCTAバナー付き）
         this.renderRelatedResources(question.relatedResources, !isCorrect);
 
         // ボタンの状態を更新
         document.getElementById('submitBtn').style.display = 'none';
-        
+
+        const nextBtn = document.getElementById('nextBtn');
         if (this.currentQuestionIndex < this.questions.length - 1) {
-            document.getElementById('nextBtn').style.display = 'inline-block';
-            document.getElementById('nextBtn').textContent = '次の問題 →';
+            nextBtn.style.display = 'inline-block';
+            nextBtn.textContent = '次の問題へ';
         } else {
-            document.getElementById('nextBtn').style.display = 'inline-block';
-            document.getElementById('nextBtn').textContent = '結果を見る 🎯';
+            nextBtn.style.display = 'inline-block';
+            nextBtn.textContent = '成績を確認する';
         }
+
+        // アクセシビリティ: 次のアクションボタンにフォーカス
+        nextBtn.focus();
     }
 
     nextQuestion() {
@@ -400,10 +443,13 @@ class QuizApp {
     }
 
     updateProgress() {
-        const progress = ((this.currentQuestionIndex + 1) / this.questions.length) * 100;
+        const current = this.currentQuestionIndex + 1;
+        const total = this.questions.length;
+        const remaining = total - current;
+        const progress = (current / total) * 100;
         document.getElementById('progressFill').style.width = `${progress}%`;
-        document.getElementById('progressText').textContent = 
-            `${this.currentQuestionIndex + 1}/${this.questions.length}`;
+        document.getElementById('progressText').textContent =
+            `第${current}問 / ${total}問（残り${remaining}問）`;
     }
 
     showResults() {
@@ -442,6 +488,13 @@ class QuizApp {
 
         document.getElementById('scoreMessage').textContent = message;
 
+        // 「間違えた問題だけ再挑戦」ボタンの表示制御
+        const retryBtn = document.getElementById('retryWrongBtn');
+        if (retryBtn) {
+            const hasWrong = this.userAnswers.some(a => !a.isCorrect);
+            retryBtn.style.display = hasWrong ? 'inline-block' : 'none';
+        }
+
         // レーダーチャート表示
         this.renderRadarChart('radarChartContainer');
 
@@ -466,7 +519,7 @@ class QuizApp {
         }
 
         let historyHTML = '<div style="max-height: 300px; overflow-y: auto;">';
-        historyHTML += '<h3 style="margin-bottom: 15px; color: #2c3e50;">📊 最近の学習履歴（最大10回分）</h3>';
+        historyHTML += '<h3 style="margin-bottom: 15px; color: #2c3e50;">📊 学習履歴（直近10回）</h3>';
         historyHTML += '<div style="display: grid; gap: 10px;">';
 
         // 最新から順に表示（逆順）
@@ -695,7 +748,7 @@ class QuizApp {
         wrapper.className = 'wrong-answer-summary';
 
         const heading = document.createElement('h3');
-        heading.textContent = '📝 不正解の問題と関連リソース';
+        heading.textContent = '📝 間違えた問題と復習リンク';
         wrapper.appendChild(heading);
 
         wrongAnswers.forEach(answer => {
@@ -931,20 +984,37 @@ class QuizApp {
             answerFeedback.textContent = '時間切れです。';
         }
 
+        // フィードバックバナー（時間切れ）
+        const existingBanner = document.getElementById('feedbackBanner');
+        if (existingBanner) existingBanner.remove();
+
+        const feedbackBanner = document.createElement('div');
+        feedbackBanner.className = 'answer-feedback-banner timeout';
+        feedbackBanner.id = 'feedbackBanner';
+        const feedbackIcon = document.createElement('span');
+        feedbackIcon.setAttribute('aria-hidden', 'true');
+        feedbackIcon.textContent = '⏰';
+        feedbackBanner.appendChild(feedbackIcon);
+        feedbackBanner.appendChild(document.createTextNode('時間切れ — 正解を確認しましょう'));
+        const explanation = document.getElementById('explanation');
+        explanation.parentNode.insertBefore(feedbackBanner, explanation);
+
         // 解説表示
         document.getElementById('explanationText').textContent = question.explanation;
-        document.getElementById('explanation').classList.add('show');
+        explanation.classList.add('show');
         this.renderRelatedResources(question.relatedResources, true);
 
         // ボタン切り替え
         document.getElementById('submitBtn').style.display = 'none';
+        const nextBtn = document.getElementById('nextBtn');
         if (this.currentQuestionIndex < this.questions.length - 1) {
-            document.getElementById('nextBtn').style.display = 'inline-block';
-            document.getElementById('nextBtn').textContent = '次の問題 →';
+            nextBtn.style.display = 'inline-block';
+            nextBtn.textContent = '次の問題へ';
         } else {
-            document.getElementById('nextBtn').style.display = 'inline-block';
-            document.getElementById('nextBtn').textContent = '結果を見る 🎯';
+            nextBtn.style.display = 'inline-block';
+            nextBtn.textContent = '成績を確認する';
         }
+        nextBtn.focus();
 
         this.announceTimer(0);
     }
@@ -998,6 +1068,10 @@ function restartQuiz() {
 
 function startReviewQuiz(categoryKey) {
     quizApp.startQuiz(categoryKey, 'review');
+}
+
+function retryWrongQuestions() {
+    quizApp.startQuiz(quizApp.currentCategory, 'review');
 }
 
 function goBack() {
