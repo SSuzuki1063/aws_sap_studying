@@ -53,6 +53,7 @@ const searchData = [
   { title: 'CodeシリーズでECS Fargateローリングデプロイ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ecs-fargate-rolling-deploy-complete-guide.html', service: 'ECS', tags: 'deployment serverless containers', domains: [2,3], difficulty: 'intermediate' },
   { title: 'EC2 Auto Recovery完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-auto-recovery-guide.html', service: 'EC2', tags: 'ha', domains: [2,3], difficulty: 'intermediate' },
   { title: 'EC2 Auto Scaling SNS通知完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-autoscaling-notifications-guide.html', service: 'EC2', tags: 'scaling', domains: [2,3], difficulty: 'advanced' },
+  { title: 'EC2 ネットワークパフォーマンス最適化 完全ガイド | Enhanced Networking・EFA・インスタンスサイジング', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-network-performance.html', service: 'EC2', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'EC2ステータスチェック図解ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-status-check-guide.html', service: 'EC2', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'EC2終了前ログ退避設計ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/ec2-log-backup-before-termination-guide.html', service: 'EC2', tags: 'monitoring', domains: [2,3], difficulty: 'advanced' },
   { title: 'Fargate awslogsログドライバ完全ガイド', category: 'コンピュート・アプリケーション', file: 'compute-applications/fargate-awslogs-complete-guide.html', service: 'ECS', tags: 'monitoring serverless', domains: [2,3], difficulty: 'advanced' },
@@ -196,6 +197,7 @@ const searchData = [
   { title: 'Amazon VPC CNI 完全ガイド', category: 'ネットワーキング', file: 'networking/vpc-cni-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'Amazon VPC Network Access Analyzer 完全図解ガイド', category: 'ネットワーキング', file: 'networking/vpc-network-access-analyzer-guide.html', service: 'VPC', tags: 'networking', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS BYOIP 完全ガイド - 自社IPアドレスをAWSに持ち込む', category: 'ネットワーキング', file: 'networking/byoip-guide.html', service: 'VPC', tags: '', domains: [1,2], difficulty: 'advanced' },
+  { title: 'AWS Cloud WAN アタッチメントポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloudwan-attachment-policy.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Cloud WAN アタッチメント承認ポリシー完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-attachment-policy-guide.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド', category: 'ネットワーキング', file: 'networking/cloudwan-static-routing-segment-sharing-v2.html', service: '', tags: 'ha networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Cloud WAN ポリシールールと評価順序・タグベースセグメントマッピング完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-policy-rules.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
@@ -218,6 +220,7 @@ const searchData = [
   { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', service: 'VPC PrivateLink', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', category: 'ネットワーキング', file: 'networking/site-to-site-vpn-route53-resolver-guide.html', service: 'VPN', tags: 'dns', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', category: 'ネットワーキング', file: 'networking/vpn-ike-dpd-recovery-guide.html', service: 'VPN', tags: 'ha', domains: [1,2], difficulty: 'advanced' },
+  { title: 'AWS Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-site-to-site-vpn-ipv4-ipv6-guide.html', service: 'VPN', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-site-to-site-vpn-guide.html', service: 'VPN', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法', category: 'ネットワーキング', file: 'networking/aws-vpn-asymmetric-routing-guide.html', service: 'VPN', tags: 'networking monitoring', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Transit Gateway Deep Dive 完全ガイド', category: 'ネットワーキング', file: 'networking/transit-gateway-deep-dive.html', service: 'Transit Gateway', tags: '', domains: [1,2], difficulty: 'advanced' },
@@ -302,10 +305,16 @@ const searchData = [
   { title: 'AWS コスト管理ツール比較', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-cost-tools.html', service: 'Cost Explorer', tags: '', domains: [1,3], difficulty: 'intermediate' },
   { title: 'AWSエラー比較: InstanceLimitExceeded vs Insufficient Instance Capacity', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-errors-infographic.html', service: '', tags: '', domains: [3], difficulty: 'beginner' },
   { title: 'AWS可用性指標：MTTD・MTTR・MTBF完全ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws_availability_infographic.html', service: '', tags: '', domains: [3], difficulty: 'beginner' },
+  { title: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/cw-agent-vpc-endpoint.html', service: 'VPC PrivateLink', tags: '', domains: [1,4], difficulty: 'intermediate' },
   { title: 'Kinesis Data Firehose 高度機能完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/kinesis_firehose_infographic.html', service: 'Kinesis', tags: '', domains: [3], difficulty: 'beginner' },
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
 
 
 

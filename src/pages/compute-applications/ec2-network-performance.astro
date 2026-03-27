@@ -1,0 +1,1160 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'EC2 ネットワークパフォーマンス最適化 完全ガイド',
+  pageTitle: 'EC2 ネットワークパフォーマンス最適化 完全ガイド | Enhanced Networking・EFA・インスタンスサイジング',
+  category: 'compute-applications',
+  categoryLabel: 'コンピュート・アプリケーション',
+  subcategory: 'EC2 & インスタンス管理',
+  slug: 'ec2-network-performance',
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 1,
+  pageTotal: 1,
+  tocItems: [
+    { level: 'h2', id: 'key-takeaways', text: '最初に押さえる4つのポイント' },
+    { level: 'h2', id: 'analogy', text: 'たとえ話マッピング' },
+    { level: 'h2', id: 'enhanced-networking', text: 'Enhanced Networking の仕組み' },
+    { level: 'h3', id: 'sriov', text: 'SR-IOV（Single Root I/O Virtualization）とは？' },
+    { level: 'h3', id: 'ena-vs-intel', text: '2つのEnhanced Networking方式' },
+    { level: 'h3', id: 'perf-comparison', text: 'パフォーマンス比較' },
+    { level: 'h2', id: 'efa', text: 'EFA（Elastic Fabric Adapter）' },
+    { level: 'h3', id: 'efa-features', text: 'EFA の主な特徴' },
+    { level: 'h2', id: 'instance-sizing', text: 'インスタンスサイジングとネットワーク帯域幅' },
+    { level: 'h3', id: 'c5-bandwidth', text: 'C5 ファミリー：サイズ別ネットワーク帯域幅' },
+    { level: 'h3', id: 'burst-credit', text: 'ネットワーク I/O クレジット（バースト制）' },
+    { level: 'h3', id: 'n-series', text: 'ネットワーク最適化「n」シリーズ' },
+    { level: 'h2', id: 'traffic-rules', text: 'トラフィック宛先と帯域幅の関係' },
+    { level: 'h2', id: 'code-examples', text: '確認・設定コマンド例' },
+    { level: 'h2', id: 'best-practices', text: 'ベストプラクティス vs アンチパターン' },
+    { level: 'h2', id: 'troubleshooting', text: 'トラブルシューティング' },
+    { level: 'h2', id: 'exam-tips', text: '試験対策ポイント（ANS-C01 / SAP-C02）' },
+    { level: 'h2', id: 'faq', text: 'よくある質問（FAQ）' },
+    { level: 'h2', id: 'cheatsheet', text: 'チートシート' },
+    { level: 'h2', id: 'glossary', text: '用語集' },
+    { level: 'h2', id: 'references', text: '参考文献' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/ec2-network-performance.css',
+};
+
+const rawContent = `  <!-- Fixed Navigation Header -->
+  <header class="fixed-nav-header" role="banner">
+    <div class="fixed-nav-container">
+      <span class="fixed-nav-logo">☁ AWS学習ガイド</span>
+      <nav class="fixed-nav-links" aria-label="メインナビゲーション">
+        <a href="#overview">概要</a>
+        <a href="#enhanced-networking">拡張NW</a>
+        <a href="#instance-sizing">サイジング</a>
+        <a href="#best-practices">ベストプラクティス</a>
+        <a href="#exam-tips">試験対策</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Reading Progress Bar -->
+  <div class="progress-bar" id="progressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+
+  <!-- Hero Section -->
+  <section class="hero" id="overview">
+    <div class="container">
+      <span class="hero-badge">EC2 Networking ・ ANS-C01 / SAP-C02 対応</span>
+      <h1>EC2 ネットワークパフォーマンス<br>最適化 完全ガイド</h1>
+      <p class="hero-subtitle">Enhanced Networking（SR-IOV）・EFA・インスタンスサイジングで<br>単一インスタンスのネットワーク性能を最大化する方法</p>
+      <div class="hero-analogy">
+        <span class="hero-analogy-icon">🛣️</span>
+        <strong>このガイドのたとえ話：「高速道路と車線の最適化」</strong><br>
+        EC2のネットワーク最適化は、道路交通の改善に似ています。<br>
+        通常のネットワーク処理は「信号だらけの一般道」を走るようなもの。<strong>Enhanced Networking</strong>は「信号を全撤去した高速道路」を敷設すること。そして<strong>インスタンスサイズの増加</strong>は「車線を増やして同時通行量を上げる」ことに相当します。
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="container">
+
+    <!-- Key Takeaways -->
+    <section class="key-takeaways" aria-label="キーテイクアウェイ">
+      <h2 id="key-takeaways">📌 最初に押さえる4つのポイント</h2>
+      <div class="takeaway-grid">
+        <div class="takeaway-item">
+          <span class="takeaway-num">1</span>
+          <span class="takeaway-text"><strong>Enhanced Networking</strong>はSR-IOVでハイパーバイザーを迂回し、CPUオーバーヘッドを削減。追加料金なしで有効化できる</span>
+        </div>
+        <div class="takeaway-item">
+          <span class="takeaway-num">2</span>
+          <span class="takeaway-text"><strong>ENA</strong>（最大100Gbps）と<strong>Intel 82599 VF</strong>（最大10Gbps）の2方式があり、現世代はほぼ全てENA対応</span>
+        </div>
+        <div class="takeaway-item">
+          <span class="takeaway-num">3</span>
+          <span class="takeaway-text"><strong>EFA</strong>はHPC/ML向けの超低レイテンシ通信デバイスで、OS バイパスによりノード間通信を高速化</span>
+        </div>
+        <div class="takeaway-item">
+          <span class="takeaway-num">4</span>
+          <span class="takeaway-text"><strong>帯域幅はインスタンスサイズに比例</strong>。16 vCPU以下はバースト制、「n」シリーズで最大100〜200Gbps</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analogy Mapping Table -->
+    <section class="section" id="analogy">
+      <h2>🛣️ たとえ話マッピング</h2>
+      <p class="section-lead">EC2のネットワーク最適化を「高速道路システム」にたとえて整理します。</p>
+      <div class="analogy-table-wrapper">
+        <table class="analogy-table">
+          <thead>
+            <tr>
+              <th>AWS概念</th>
+              <th>高速道路のたとえ</th>
+              <th>効果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>従来のVM ネットワーク</strong></td>
+              <td><span class="analogy-emoji">🚦</span>信号だらけの一般道</td>
+              <td>CPUが毎パケットを仲介→遅い</td>
+            </tr>
+            <tr>
+              <td><strong>Enhanced Networking（SR-IOV）</strong></td>
+              <td><span class="analogy-emoji">🛣️</span>信号撤去の高速道路</td>
+              <td>ハイパーバイザー迂回→低レイテンシ</td>
+            </tr>
+            <tr>
+              <td><strong>ENA（Elastic Network Adapter）</strong></td>
+              <td><span class="analogy-emoji">🏎️</span>最新式スマート高速道路</td>
+              <td>最大100Gbps、Nitro連携</td>
+            </tr>
+            <tr>
+              <td><strong>Intel 82599 VF</strong></td>
+              <td><span class="analogy-emoji">🚗</span>旧型の高速道路</td>
+              <td>最大10Gbps、旧世代インスタンス用</td>
+            </tr>
+            <tr>
+              <td><strong>EFA（Elastic Fabric Adapter）</strong></td>
+              <td><span class="analogy-emoji">🚄</span>専用新幹線（超高速直通線）</td>
+              <td>HPC/ML向け超低レイテンシ通信</td>
+            </tr>
+            <tr>
+              <td><strong>インスタンスサイズ増加</strong></td>
+              <td><span class="analogy-emoji">🛤️</span>車線数を2→4→8車線に拡張</td>
+              <td>vCPU比例で帯域幅増加</td>
+            </tr>
+            <tr>
+              <td><strong>「n」シリーズ（C5n, M5n等）</strong></td>
+              <td><span class="analogy-emoji">🏗️</span>車線幅を拡げた特設ハイウェイ</td>
+              <td>同サイズで最大4倍の帯域幅</td>
+            </tr>
+            <tr>
+              <td><strong>Placement Group（クラスター）</strong></td>
+              <td><span class="analogy-emoji">🏘️</span>隣同士の家を直結する私道</td>
+              <td>低レイテンシ、単一フロー最大10Gbps</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Architecture Diagram: Enhanced Networking ===== -->
+    <section class="section" id="enhanced-networking">
+      <h2>🔧 Enhanced Networking の仕組み</h2>
+      <p class="section-lead">SR-IOV技術によりハイパーバイザーをバイパスし、NICに直接アクセスすることで、CPUオーバーヘッドを大幅に削減します。</p>
+
+      <!-- SVG: Traditional vs Enhanced Networking -->
+      <div class="svg-container">
+        <svg width="1200" height="680" viewBox="0 0 1200 680" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="従来のネットワーク処理とEnhanced Networking（SR-IOV）の比較図">
+          <defs>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+            </marker>
+            <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#EF4444"/>
+            </marker>
+            <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+            </marker>
+            <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+            </filter>
+            <style>
+              .svg-title { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+              .svg-subtitle { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 16px; font-weight: 600; fill: #475569; }
+              .svg-node-title { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 15px; font-weight: 700; fill: #1E293B; }
+              .svg-node-sub { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+              .svg-label { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 13px; font-weight: 600; fill: #475569; }
+              .svg-badge { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 12px; font-weight: 700; }
+            </style>
+          </defs>
+
+          <!-- Background -->
+          <rect x="0" y="0" width="1200" height="680" fill="#F3F4F6"/>
+
+          <!-- ===== Left Panel: Traditional ===== -->
+          <rect x="24" y="24" width="560" height="632" rx="18" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <!-- Panel header -->
+          <rect x="24" y="24" width="560" height="52" rx="18" fill="#FEF2F2"/>
+          <rect x="24" y="58" width="560" height="18" fill="#FEF2F2"/>
+          <text x="304" y="58" text-anchor="middle" class="svg-subtitle" fill="#991B1B">❌ 従来のネットワーク処理</text>
+
+          <!-- Inner panel -->
+          <rect x="44" y="90" width="520" height="550" rx="14" fill="#F8FAFC"/>
+
+          <!-- VM (App) node at top - cx=304, cy=145 -->
+          <g>
+            <rect x="184" y="110" width="240" height="70" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="304" y="140" text-anchor="middle" class="svg-node-title">
+              <tspan x="304" dy="0">🖥️ VMインスタンス</tspan>
+            </text>
+            <text x="304" y="162" text-anchor="middle" class="svg-node-sub">アプリケーション</text>
+          </g>
+
+          <!-- vNIC node - cx=304, cy=252 -->
+          <g>
+            <rect x="184" y="216" width="240" height="70" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+            <text x="304" y="246" text-anchor="middle" class="svg-node-title">
+              <tspan x="304" dy="0">📋 仮想NIC（vNIC）</tspan>
+            </text>
+            <text x="304" y="268" text-anchor="middle" class="svg-node-sub">ソフトウェアエミュレーション</text>
+          </g>
+
+          <!-- Arrow: VM -> vNIC -->
+          <line x1="304" y1="180" x2="304" y2="210" stroke="#EF4444" stroke-width="2" marker-end="url(#arrow-red)"/>
+
+          <!-- Hypervisor node - cx=304, cy=358 -->
+          <g>
+            <rect x="184" y="322" width="240" height="70" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="304" y="352" text-anchor="middle" class="svg-node-title">
+              <tspan x="304" dy="0">⚙️ ハイパーバイザー</tspan>
+            </text>
+            <text x="304" y="374" text-anchor="middle" class="svg-node-sub">毎パケットCPU処理が発生</text>
+          </g>
+
+          <!-- Arrow: vNIC -> Hypervisor -->
+          <line x1="304" y1="286" x2="304" y2="316" stroke="#EF4444" stroke-width="2" marker-end="url(#arrow-red)"/>
+          <text x="360" y="306" class="svg-label" fill="#EF4444">CPU負荷 大</text>
+
+          <!-- Physical NIC - cx=304, cy=465 -->
+          <g>
+            <rect x="184" y="428" width="240" height="70" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="304" y="458" text-anchor="middle" class="svg-node-title">
+              <tspan x="304" dy="0">🔌 物理NIC</tspan>
+            </text>
+            <text x="304" y="480" text-anchor="middle" class="svg-node-sub">ネットワークカード</text>
+          </g>
+
+          <!-- Arrow: Hypervisor -> Physical NIC -->
+          <line x1="304" y1="392" x2="304" y2="422" stroke="#EF4444" stroke-width="2" marker-end="url(#arrow-red)"/>
+
+          <!-- Network cloud - cx=304, cy=570 -->
+          <g>
+            <rect x="204" y="534" width="200" height="70" rx="35" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="304" y="575" text-anchor="middle" class="svg-node-title">🌐 ネットワーク</text>
+          </g>
+
+          <!-- Arrow: NIC -> Network -->
+          <line x1="304" y1="498" x2="304" y2="528" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrow-gray)"/>
+
+          <!-- Slow badge -->
+          <rect x="68" y="345" width="90" height="30" rx="15" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+          <text x="113" y="365" text-anchor="middle" class="svg-badge" fill="#DC2626">🐌 低速</text>
+
+
+          <!-- ===== Right Panel: Enhanced Networking ===== -->
+          <rect x="616" y="24" width="560" height="632" rx="18" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <!-- Panel header -->
+          <rect x="616" y="24" width="560" height="52" rx="18" fill="#ECFDF5"/>
+          <rect x="616" y="58" width="560" height="18" fill="#ECFDF5"/>
+          <text x="896" y="58" text-anchor="middle" class="svg-subtitle" fill="#065F46">✅ Enhanced Networking（SR-IOV）</text>
+
+          <!-- Inner panel -->
+          <rect x="636" y="90" width="520" height="550" rx="14" fill="#F8FAFC"/>
+
+          <!-- VM (App) node - cx=896, cy=145 -->
+          <g>
+            <rect x="776" y="110" width="240" height="70" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="896" y="140" text-anchor="middle" class="svg-node-title">
+              <tspan x="896" dy="0">🖥️ VMインスタンス</tspan>
+            </text>
+            <text x="896" y="162" text-anchor="middle" class="svg-node-sub">アプリケーション</text>
+          </g>
+
+          <!-- VF (Virtual Function) - cx=896, cy=252 -->
+          <g>
+            <rect x="776" y="216" width="240" height="70" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="896" y="246" text-anchor="middle" class="svg-node-title">
+              <tspan x="896" dy="0">⚡ VF（Virtual Function）</tspan>
+            </text>
+            <text x="896" y="268" text-anchor="middle" class="svg-node-sub">NICの仮想的な分身</text>
+          </g>
+
+          <!-- Arrow: VM -> VF (direct, fast) -->
+          <line x1="896" y1="180" x2="896" y2="210" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+          <!-- Hypervisor node (grayed out/bypassed) - cx=766, cy=358 -->
+          <g opacity="0.35">
+            <rect x="660" y="322" width="210" height="70" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="765" y="352" text-anchor="middle" class="svg-node-title" fill="#94A3B8">
+              <tspan x="765" dy="0">⚙️ ハイパーバイザー</tspan>
+            </text>
+            <text x="765" y="374" text-anchor="middle" class="svg-node-sub" fill="#94A3B8">制御プレーンのみ</text>
+          </g>
+
+          <!-- Bypass arrow from VF to Physical NIC -->
+          <path d="M896,286 L896,316 L896,422" stroke="#10B981" stroke-width="2.5" fill="none" marker-end="url(#arrow-green)"/>
+          <text x="952" y="360" class="svg-label" fill="#059669">直接アクセス!</text>
+          <text x="952" y="378" class="svg-label" fill="#059669">CPU負荷 小</text>
+
+          <!-- Physical NIC (SR-IOV) - cx=896, cy=465 -->
+          <g>
+            <rect x="776" y="428" width="240" height="70" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="896" y="454" text-anchor="middle" class="svg-node-title">
+              <tspan x="896" dy="0">🔌 物理NIC（SR-IOV）</tspan>
+            </text>
+            <text x="896" y="476" text-anchor="middle" class="svg-node-sub">
+              <tspan x="896" dy="0">ハードウェアで分割管理</tspan>
+            </text>
+          </g>
+
+          <!-- Network cloud - cx=896, cy=570 -->
+          <g>
+            <rect x="796" y="534" width="200" height="70" rx="35" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="896" y="575" text-anchor="middle" class="svg-node-title">🌐 ネットワーク</text>
+          </g>
+
+          <!-- Arrow: NIC -> Network -->
+          <line x1="896" y1="498" x2="896" y2="528" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrow-gray)"/>
+
+          <!-- Fast badge -->
+          <rect x="1060" y="345" width="90" height="30" rx="15" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+          <text x="1105" y="365" text-anchor="middle" class="svg-badge" fill="#059669">🚀 高速</text>
+
+        </svg>
+      </div>
+      <p class="svg-caption">図1: 従来のネットワーク処理（左）vs Enhanced Networking / SR-IOV（右）の比較</p>
+
+      <h3 id="sriov">SR-IOV（Single Root I/O Virtualization）とは？</h3>
+      <p>SR-IOVは、1つの物理NICを複数の仮想NIC（Virtual Function = VF）に分割するハードウェア技術です。各VMがVFに直接アクセスできるため、ハイパーバイザーを経由する必要がなくなり、パケット処理のCPUオーバーヘッドが大幅に削減されます。</p>
+
+      <div class="highlight-box highlight-box-info">
+        <strong>🛣️ たとえ話で理解する</strong>
+        従来のネットワーク処理は「料金所で毎回止まる有料道路」のようなもの。SR-IOVは「ETCレーンで直接通過」に相当します。車（パケット）は止まらず、料金所の係員（CPU）の手を煩わせません。
+      </div>
+
+      <!-- ENA vs Intel 82599 VF -->
+      <h3 id="ena-vs-intel">2つのEnhanced Networking方式</h3>
+      <div class="card-grid-2">
+        <div class="feature-card card-green">
+          <div class="feature-card-icon">🏎️</div>
+          <h3>ENA（Elastic Network Adapter）</h3>
+          <p>AWS独自の次世代ネットワークアダプタ。最大100Gbpsの帯域幅をサポートし、すべてのNitroベースインスタンスに標準搭載。C5、M5、R5など現世代の主力インスタンスで利用可能。</p>
+        </div>
+        <div class="feature-card card-blue">
+          <div class="feature-card-icon">🚗</div>
+          <h3>Intel 82599 VF インターフェイス</h3>
+          <p>旧世代の拡張ネットワーキング。最大10Gbpsをサポート。C3、C4、D2、I2、M4（m4.16xlarge除く）、R3で使用。新規設計では基本的にENA対応インスタンスを選択すべき。</p>
+        </div>
+      </div>
+
+      <!-- Performance comparison bars -->
+      <h3 id="perf-comparison">パフォーマンス比較</h3>
+      <div class="perf-meter">
+        <div class="perf-meter-row">
+          <span class="perf-meter-label">従来のvNIC</span>
+          <div class="perf-meter-track">
+            <div class="perf-meter-fill fill-red" style="width:20%;">低速</div>
+          </div>
+        </div>
+        <div class="perf-meter-row">
+          <span class="perf-meter-label">Intel 82599 VF</span>
+          <div class="perf-meter-track">
+            <div class="perf-meter-fill fill-blue" style="width:40%;">最大 10Gbps</div>
+          </div>
+        </div>
+        <div class="perf-meter-row">
+          <span class="perf-meter-label">ENA</span>
+          <div class="perf-meter-track">
+            <div class="perf-meter-fill fill-green" style="width:80%;">最大 100Gbps</div>
+          </div>
+        </div>
+        <div class="perf-meter-row">
+          <span class="perf-meter-label">EFA（HPC向け）</span>
+          <div class="perf-meter-track">
+            <div class="perf-meter-fill fill-purple" style="width:95%;">最大 200Gbps + 超低レイテンシ</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-box highlight-box-success">
+        <strong>💰 料金について</strong>
+        Enhanced Networkingは追加料金なしで利用できます。対応インスタンスであれば、ENAドライバーがインストールされたAMIを使用するだけで自動的に有効になります。
+      </div>
+    </section>
+
+    <!-- ===== EFA Section ===== -->
+    <section class="section" id="efa">
+      <h2>🚄 EFA（Elastic Fabric Adapter）</h2>
+      <p class="section-lead">HPC・機械学習ワークロード向けの特殊ネットワークデバイス。OS バイパスでノード間の超低レイテンシ通信を実現します。</p>
+
+      <div class="highlight-box highlight-box-info">
+        <strong>🚄 たとえ話で理解する</strong>
+        EFAは「専用新幹線」のようなもの。一般の高速道路（Enhanced Networking）でも十分に速いですが、新幹線は専用軌道（OS バイパス）を走るため、途中の交差点も信号もなし。他の車両と干渉せず、確実に超高速で目的地に到着します。
+      </div>
+
+      <!-- SVG: EFA Architecture -->
+      <div class="svg-container">
+        <svg width="1200" height="500" viewBox="0 0 1200 500" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EFA（Elastic Fabric Adapter）のアーキテクチャ図。OSバイパスによる直接通信を示す">
+          <defs>
+            <style>
+              .efa-title { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 20px; font-weight: 700; fill: #0F172A; }
+              .efa-node { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 14px; font-weight: 700; fill: #1E293B; }
+              .efa-sub { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+              .efa-label { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 12px; font-weight: 600; }
+            </style>
+          </defs>
+
+          <!-- Background -->
+          <rect x="0" y="0" width="1200" height="500" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="452" rx="18" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <text x="600" y="62" text-anchor="middle" class="efa-title">EFA の仕組み：OS バイパスによるノード間超高速通信</text>
+
+          <rect x="44" y="80" width="1112" height="380" rx="14" fill="#F8FAFC"/>
+
+          <!-- Node A: HPC Instance A at cx=240, cy=250 -->
+          <rect x="80" y="100" width="320" height="340" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" stroke-dasharray="0"/>
+          <text x="240" y="130" text-anchor="middle" class="efa-node" fill="#4338CA">🖥️ HPCインスタンス A</text>
+
+          <!-- App layer -->
+          <rect x="110" y="150" width="260" height="52" rx="10" fill="#FFFFFF" stroke="#818CF8" stroke-width="1.5"/>
+          <text x="240" y="172" text-anchor="middle" class="efa-node">MPI / NCCL アプリ</text>
+          <text x="240" y="190" text-anchor="middle" class="efa-sub">HPC / ML ワークロード</text>
+
+          <!-- Libfabric -->
+          <rect x="110" y="218" width="260" height="44" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+          <text x="240" y="246" text-anchor="middle" class="efa-node" fill="#065F46">Libfabric API</text>
+
+          <!-- OS Kernel (bypassed) -->
+          <rect x="110" y="278" width="260" height="44" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
+          <text x="240" y="306" text-anchor="middle" class="efa-node" fill="#94A3B8">OS カーネル（バイパス）</text>
+
+          <!-- EFA device -->
+          <rect x="110" y="340" width="260" height="52" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+          <text x="240" y="362" text-anchor="middle" class="efa-node">⚡ EFA デバイス</text>
+          <text x="240" y="380" text-anchor="middle" class="efa-sub">ハードウェアレベル通信</text>
+
+          <!-- OS bypass arrow -->
+          <path d="M380,176 C420,176 420,366 380,366" stroke="#10B981" stroke-width="2.5" fill="none" stroke-dasharray="6,3"/>
+          <text x="432" y="270" class="efa-label" fill="#059669">OS</text>
+          <text x="432" y="286" class="efa-label" fill="#059669">バイパス</text>
+
+          <!-- Node B: HPC Instance B at cx=960, cy=250 -->
+          <rect x="800" y="100" width="320" height="340" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+          <text x="960" y="130" text-anchor="middle" class="efa-node" fill="#4338CA">🖥️ HPCインスタンス B</text>
+
+          <!-- App layer B -->
+          <rect x="830" y="150" width="260" height="52" rx="10" fill="#FFFFFF" stroke="#818CF8" stroke-width="1.5"/>
+          <text x="960" y="172" text-anchor="middle" class="efa-node">MPI / NCCL アプリ</text>
+          <text x="960" y="190" text-anchor="middle" class="efa-sub">HPC / ML ワークロード</text>
+
+          <!-- Libfabric B -->
+          <rect x="830" y="218" width="260" height="44" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+          <text x="960" y="246" text-anchor="middle" class="efa-node" fill="#065F46">Libfabric API</text>
+
+          <!-- OS Kernel B (bypassed) -->
+          <rect x="830" y="278" width="260" height="44" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
+          <text x="960" y="306" text-anchor="middle" class="efa-node" fill="#94A3B8">OS カーネル（バイパス）</text>
+
+          <!-- EFA device B -->
+          <rect x="830" y="340" width="260" height="52" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+          <text x="960" y="362" text-anchor="middle" class="efa-node">⚡ EFA デバイス</text>
+          <text x="960" y="380" text-anchor="middle" class="efa-sub">ハードウェアレベル通信</text>
+
+          <!-- OS bypass arrow B -->
+          <path d="M820,176 C780,176 780,366 820,366" stroke="#10B981" stroke-width="2.5" fill="none" stroke-dasharray="6,3"/>
+          <text x="740" y="270" class="efa-label" fill="#059669">OS</text>
+          <text x="740" y="286" class="efa-label" fill="#059669">バイパス</text>
+
+          <!-- Connection between EFA devices -->
+          <line x1="370" y1="366" x2="830" y2="366" stroke="#8B5CF6" stroke-width="3" marker-end="url(#arrow-blue)"/>
+          <line x1="830" y1="374" x2="370" y2="374" stroke="#8B5CF6" stroke-width="3" marker-end="url(#arrow-blue)"/>
+          <rect x="500" y="345" width="200" height="50" rx="10" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
+          <text x="600" y="367" text-anchor="middle" class="efa-node" fill="#6D28D9">超低レイテンシ通信</text>
+          <text x="600" y="385" text-anchor="middle" class="efa-sub" fill="#7C3AED">SRD / RDMA-like</text>
+        </svg>
+      </div>
+      <p class="svg-caption">図2: EFA アーキテクチャ - OS バイパスにより、アプリケーションがカーネルを経由せずにEFAデバイスへ直接アクセス</p>
+
+      <h3 id="efa-features">EFA の主な特徴</h3>
+      <div class="card-grid-3">
+        <div class="feature-card card-purple">
+          <div class="feature-card-icon">🔗</div>
+          <h3>OS バイパス</h3>
+          <p>Libfabric APIを通じて、アプリがOS カーネルを経由せずに直接ネットワークハードウェアにアクセス。レイテンシを大幅削減。</p>
+        </div>
+        <div class="feature-card card-green">
+          <div class="feature-card-icon">📡</div>
+          <h3>MPI / NCCL 対応</h3>
+          <p>Message Passing Interface（MPI）とNVIDIA Collective Communications Library（NCCL）に対応。既存HPCアプリをそのまま利用可能。</p>
+        </div>
+        <div class="feature-card card-orange">
+          <div class="feature-card-icon">🎯</div>
+          <h3>対応インスタンス</h3>
+          <p>C5n.18xlarge、C6i、P4d、P5、Trn1、Hpc6aなどの大規模インスタンスでサポート。C7gnでは最大200Gbps。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Instance Sizing Section ===== -->
+    <section class="section" id="instance-sizing">
+      <h2>📐 インスタンスサイジングとネットワーク帯域幅</h2>
+      <p class="section-lead">EC2のネットワーク帯域幅はインスタンスサイズ（vCPU数）に比例して増加します。「車線を増やす」ことで同時通行量が上がるのと同じ原理です。</p>
+
+      <div class="highlight-box highlight-box-info">
+        <strong>🛤️ たとえ話で理解する</strong>
+        インスタンスサイズは「高速道路の車線数」に相当します。small = 2車線、xlarge = 4車線、4xlarge = 8車線。車線が多いほど、同時に多くの車（パケット）が通行できます。さらに「n」シリーズは各車線が通常より広い「特設ハイウェイ」です。
+      </div>
+
+      <!-- Bandwidth Table -->
+      <h3 id="c5-bandwidth">C5 ファミリー：サイズ別ネットワーク帯域幅</h3>
+      <div class="bw-table-wrapper">
+        <table class="bw-table">
+          <thead>
+            <tr>
+              <th>インスタンスタイプ</th>
+              <th>vCPU</th>
+              <th>メモリ (GiB)</th>
+              <th>NW 帯域幅</th>
+              <th>帯域幅タイプ</th>
+              <th>たとえ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>c5.large</td>
+              <td>2</td>
+              <td>4</td>
+              <td>最大 10 Gbps</td>
+              <td><span class="bw-badge bw-badge-burst">バースト</span></td>
+              <td>🛣️ 2車線</td>
+            </tr>
+            <tr>
+              <td>c5.xlarge</td>
+              <td>4</td>
+              <td>8</td>
+              <td>最大 10 Gbps</td>
+              <td><span class="bw-badge bw-badge-burst">バースト</span></td>
+              <td>🛣️ 4車線</td>
+            </tr>
+            <tr>
+              <td>c5.2xlarge</td>
+              <td>8</td>
+              <td>16</td>
+              <td>最大 10 Gbps</td>
+              <td><span class="bw-badge bw-badge-burst">バースト</span></td>
+              <td>🛣️ 8車線</td>
+            </tr>
+            <tr>
+              <td>c5.4xlarge</td>
+              <td>16</td>
+              <td>32</td>
+              <td>最大 10 Gbps</td>
+              <td><span class="bw-badge bw-badge-burst">バースト</span></td>
+              <td>🛣️ 16車線</td>
+            </tr>
+            <tr class="bw-highlight">
+              <td>c5.9xlarge</td>
+              <td>36</td>
+              <td>72</td>
+              <td>10 Gbps</td>
+              <td><span class="bw-badge bw-badge-baseline">ベースライン</span></td>
+              <td>🛣️ 36車線（安定）</td>
+            </tr>
+            <tr class="bw-highlight">
+              <td>c5.12xlarge</td>
+              <td>48</td>
+              <td>96</td>
+              <td>12 Gbps</td>
+              <td><span class="bw-badge bw-badge-dedicated">専用帯域</span></td>
+              <td>🛣️ 48車線</td>
+            </tr>
+            <tr class="bw-highlight">
+              <td>c5.18xlarge</td>
+              <td>72</td>
+              <td>144</td>
+              <td>25 Gbps</td>
+              <td><span class="bw-badge bw-badge-dedicated">専用帯域</span></td>
+              <td>🛣️🛣️ 大規模高速</td>
+            </tr>
+            <tr class="bw-highlight">
+              <td>c5.24xlarge / metal</td>
+              <td>96</td>
+              <td>192</td>
+              <td>25 Gbps</td>
+              <td><span class="bw-badge bw-badge-dedicated">専用帯域</span></td>
+              <td>🛣️🛣️ 最大規模</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Burst Mechanism -->
+      <h3 id="burst-credit">ネットワーク I/O クレジット（バースト制）</h3>
+      <p>16 vCPU以下のインスタンス（4xlarge以下）は、「最大 ○Gbps」とバースト制が適用されます。常時その帯域幅を使えるわけではなく、ネットワーク I/O クレジットの残量に依存します。</p>
+
+      <!-- SVG: Burst mechanism diagram -->
+      <div class="svg-container">
+        <svg width="1200" height="380" viewBox="0 0 1200 380" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ネットワークI/Oクレジットのバースト制の仕組み図">
+          <defs>
+            <style>
+              .burst-title { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 18px; font-weight: 700; fill: #0F172A; }
+              .burst-label { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 13px; font-weight: 600; fill: #475569; }
+              .burst-value { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 13px; font-weight: 700; }
+            </style>
+          </defs>
+          <rect x="0" y="0" width="1200" height="380" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="332" rx="18" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <text x="600" y="60" text-anchor="middle" class="burst-title">ネットワーク I/O クレジットの仕組み（16vCPU以下）</text>
+
+          <rect x="44" y="78" width="1112" height="262" rx="14" fill="#F8FAFC"/>
+
+          <!-- Graph area -->
+          <!-- Y-axis -->
+          <line x1="120" y1="100" x2="120" y2="310" stroke="#CBD5E1" stroke-width="2"/>
+          <!-- X-axis -->
+          <line x1="120" y1="310" x2="1100" y2="310" stroke="#CBD5E1" stroke-width="2"/>
+
+          <!-- Y-axis labels -->
+          <text x="110" y="128" text-anchor="end" class="burst-label">10 Gbps</text>
+          <text x="110" y="190" text-anchor="end" class="burst-label">ベースライン</text>
+          <text x="110" y="310" text-anchor="end" class="burst-label">0</text>
+
+          <!-- Baseline line -->
+          <line x1="120" y1="186" x2="1100" y2="186" stroke="#3B82F6" stroke-width="2" stroke-dasharray="8,4"/>
+          <text x="1108" y="186" class="burst-value" fill="#3B82F6">ベースライン帯域幅</text>
+
+          <!-- Burst line -->
+          <line x1="120" y1="124" x2="1100" y2="124" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <text x="1108" y="124" class="burst-value" fill="#F59E0B">バースト上限</text>
+
+          <!-- Traffic pattern (simplified as a path) -->
+          <path d="M120,260 L200,240 L280,186 L340,186 L380,120 L440,118 L480,125 L520,186 L600,220 L680,240 L740,186 L790,186 L830,122 L870,120 L910,180 L960,186 L1020,230 L1080,250" stroke="#10B981" stroke-width="3" fill="none"/>
+
+          <!-- Credit accumulation zone -->
+          <rect x="120" y="186" width="160" height="80" rx="0" fill="rgba(59,130,246,0.1)"/>
+          <text x="200" y="250" text-anchor="middle" class="burst-label" fill="#3B82F6">クレジット</text>
+          <text x="200" y="266" text-anchor="middle" class="burst-label" fill="#3B82F6">蓄積中</text>
+
+          <!-- Burst zone -->
+          <rect x="360" y="118" width="140" height="68" rx="0" fill="rgba(245,158,11,0.1)"/>
+          <text x="430" y="108" text-anchor="middle" class="burst-value" fill="#F59E0B">バースト消費</text>
+
+          <!-- Second burst -->
+          <rect x="810" y="118" width="110" height="68" rx="0" fill="rgba(245,158,11,0.1)"/>
+          <text x="865" y="108" text-anchor="middle" class="burst-value" fill="#F59E0B">バースト消費</text>
+
+          <!-- X-axis label -->
+          <text x="600" y="340" text-anchor="middle" class="burst-label">時間 →</text>
+
+          <!-- Legend -->
+          <line x1="160" y1="325" x2="185" y2="325" stroke="#10B981" stroke-width="3"/>
+          <text x="190" y="330" class="burst-label">実際のトラフィック</text>
+
+          <line x1="380" y1="325" x2="405" y2="325" stroke="#3B82F6" stroke-width="2" stroke-dasharray="8,4"/>
+          <text x="410" y="330" class="burst-label">ベースライン</text>
+
+          <line x1="560" y1="325" x2="585" y2="325" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4,4"/>
+          <text x="590" y="330" class="burst-label">バースト上限</text>
+        </svg>
+      </div>
+      <p class="svg-caption">図3: ネットワーク I/O クレジットの仕組み - ベースライン以下でクレジットを蓄積し、需要増加時にバースト利用</p>
+
+      <div class="highlight-box highlight-box-warning">
+        <strong>⚠️ バーストの注意点</strong>
+        バースト帯域幅はベストエフォートで提供され、クレジットがあっても保証されません。安定した高帯域幅が必要な場合は、「Up to」表記のない大きなインスタンスサイズ（9xlarge以上）を選択してください。
+      </div>
+
+      <!-- n-Series -->
+      <h3 id="n-series">ネットワーク最適化「n」シリーズ</h3>
+      <p>C5n、M5n、R5nなどの「n」サフィックス付きインスタンスは、通常版に比べてネットワーク帯域幅が大幅に強化されています。</p>
+
+      <div class="card-grid-2">
+        <div class="feature-card card-blue">
+          <div class="feature-card-icon">📊</div>
+          <h3>C5n.18xlarge</h3>
+          <p>帯域幅: <strong>100 Gbps</strong>（通常C5は最大25Gbps）。EFA対応。HPCやネットワークアプライアンス向け。vCPU: 72、メモリ: 192 GiB。</p>
+        </div>
+        <div class="feature-card card-orange">
+          <div class="feature-card-icon">🚀</div>
+          <h3>C7gn（最新世代）</h3>
+          <p>帯域幅: <strong>最大200Gbps</strong>。Graviton3Eプロセッサ搭載。従来のx86系NW最適化インスタンスの3倍のパケット処理性能。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Traffic Destination & Bandwidth ===== -->
+    <section class="section" id="traffic-rules">
+      <h2>🌐 トラフィック宛先と帯域幅の関係</h2>
+      <p class="section-lead">EC2のネットワーク帯域幅は、トラフィックの宛先によって実際に使える量が異なります。</p>
+
+      <!-- SVG: Traffic destination diagram -->
+      <div class="svg-container">
+        <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="トラフィック宛先別のネットワーク帯域幅制限を示す図">
+          <defs>
+            <style>
+              .td-title { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 20px; font-weight: 700; fill: #0F172A; }
+              .td-node { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 14px; font-weight: 700; fill: #1E293B; }
+              .td-sub { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 12px; font-weight: 500; fill: #475569; }
+              .td-bw { font-family: Inter, "Hiragino Sans", sans-serif; font-size: 13px; font-weight: 700; }
+            </style>
+          </defs>
+          <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="472" rx="18" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <text x="600" y="60" text-anchor="middle" class="td-title">トラフィック宛先別：利用可能な帯域幅</text>
+          <rect x="44" y="78" width="1112" height="402" rx="14" fill="#F8FAFC"/>
+
+          <!-- Source EC2 at center-left: cx=200, cy=290 -->
+          <rect x="80" y="230" width="240" height="120" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+          <text x="200" y="268" text-anchor="middle" class="td-node" fill="#4338CA">🖥️ EC2インスタンス</text>
+          <text x="200" y="290" text-anchor="middle" class="td-sub">例: m5.16xlarge</text>
+          <text x="200" y="308" text-anchor="middle" class="td-sub">（64vCPU / 20Gbps）</text>
+          <text x="200" y="332" text-anchor="middle" class="td-sub">ネットワーク帯域幅: 20Gbps</text>
+
+          <!-- Destination 1: Same Region (top right): cx=700, cy=140 -->
+          <rect x="560" y="100" width="280" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="700" y="130" text-anchor="middle" class="td-node" fill="#065F46">🏠 同一リージョン内</text>
+          <text x="700" y="150" text-anchor="middle" class="td-sub" fill="#065F46">VPC内、VPCピアリング等</text>
+
+          <!-- Arrow to Same Region -->
+          <path d="M320,260 L520,140 L554,140" stroke="#10B981" stroke-width="2.5" fill="none" marker-end="url(#arrow-green)"/>
+          <rect x="370" y="168" width="140" height="32" rx="8" fill="#D1FAE5"/>
+          <text x="440" y="190" text-anchor="middle" class="td-bw" fill="#065F46">✅ 100%（20Gbps）</text>
+
+          <!-- Destination 2: Cross Region / IGW (middle right): cx=700, cy=290 -->
+          <rect x="560" y="250" width="280" height="80" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+          <text x="700" y="280" text-anchor="middle" class="td-node">🌍 他リージョン / IGW</text>
+          <text x="700" y="300" text-anchor="middle" class="td-sub">インターネットGW経由</text>
+
+          <!-- Arrow to Cross Region -->
+          <line x1="320" y1="290" x2="554" y2="290" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrow-gray)"/>
+          <rect x="380" y="298" width="130" height="32" rx="8" fill="#FEF3C7"/>
+          <text x="445" y="320" text-anchor="middle" class="td-bw" fill="#92400E">⚠️ 50%（10Gbps）</text>
+
+          <!-- Destination 3: Single Flow (bottom right): cx=700, cy=420 -->
+          <rect x="560" y="380" width="280" height="80" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+          <text x="700" y="410" text-anchor="middle" class="td-node" fill="#991B1B">📡 単一フロー（5タプル）</text>
+          <text x="700" y="430" text-anchor="middle" class="td-sub">同一接続の帯域幅上限</text>
+
+          <!-- Arrow to Single Flow -->
+          <path d="M320,320 L520,420 L554,420" stroke="#EF4444" stroke-width="2.5" fill="none" marker-end="url(#arrow-red)"/>
+          <rect x="370" y="360" width="140" height="32" rx="8" fill="#FEE2E2"/>
+          <text x="440" y="382" text-anchor="middle" class="td-bw" fill="#991B1B">❌ 上限 5Gbps</text>
+
+          <!-- Note box -->
+          <rect x="880" y="120" width="260" height="110" rx="12" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5"/>
+          <text x="1010" y="148" text-anchor="middle" class="td-node" fill="#1E40AF">💡 帯域幅ルール</text>
+          <text x="900" y="172" class="td-sub" fill="#1E40AF">• 32vCPU以上 → 50%制限</text>
+          <text x="900" y="192" class="td-sub" fill="#1E40AF">• 32vCPU未満 → 5Gbps上限</text>
+          <text x="900" y="212" class="td-sub" fill="#1E40AF">• 単一フロー → 常に5Gbps</text>
+
+          <!-- Placement Group note -->
+          <rect x="880" y="368" width="260" height="80" rx="12" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1.5"/>
+          <text x="1010" y="396" text-anchor="middle" class="td-node" fill="#6D28D9">🏘️ Placement Group</text>
+          <text x="900" y="420" class="td-sub" fill="#6D28D9">クラスター配置なら</text>
+          <text x="900" y="438" class="td-sub" fill="#6D28D9">単一フロー最大10Gbps</text>
+        </svg>
+      </div>
+      <p class="svg-caption">図4: トラフィック宛先別の帯域幅制限 - 同一リージョン内ではフル帯域幅、IGW経由は50%制限</p>
+    </section>
+
+    <!-- ===== Code Examples ===== -->
+    <section class="section" id="code-examples">
+      <h2>💻 確認・設定コマンド例</h2>
+      <p class="section-lead">Enhanced Networkingの確認方法やインスタンスの帯域幅情報の取得コマンドです。</p>
+
+      <div class="code-tabs">
+        <div class="code-tab-buttons">
+          <button class="code-tab-btn active" data-tab="cli" type="button">AWS CLI</button>
+          <button class="code-tab-btn" data-tab="cfn" type="button">CloudFormation</button>
+          <button class="code-tab-btn" data-tab="terraform" type="button">Terraform</button>
+        </div>
+        <div class="code-tab-content active" id="tab-cli">
+<pre><span class="code-comment"># ENA対応確認（インスタンスのENAサポート状態）</span>
+aws ec2 describe-instances \\
+  --instance-ids <span class="code-string">i-1234567890abcdef0</span> \\
+  --query <span class="code-string">"Reservations[].Instances[].EnaSupport"</span>
+
+<span class="code-comment"># インスタンスタイプ別のネットワーク帯域幅を確認</span>
+aws ec2 describe-instance-types \\
+  --filters <span class="code-string">"Name=instance-type,Values=c5.*"</span> \\
+  --query <span class="code-string">"InstanceTypes[].[InstanceType, \\
+    NetworkInfo.NetworkPerformance, \\
+    NetworkInfo.NetworkCards[0].BaselineBandwidthInGbps]"</span> \\
+  --output table
+
+<span class="code-comment"># EFA対応インスタンスタイプの一覧</span>
+aws ec2 describe-instance-types \\
+  --filters <span class="code-string">"Name=network-info.efa-supported,Values=true"</span> \\
+  --query <span class="code-string">"InstanceTypes[].InstanceType"</span> \\
+  --output table
+
+<span class="code-comment"># 帯域幅重み付け設定（第8世代以降）</span>
+aws ec2 modify-instance-network-performance-options \\
+  --instance-id <span class="code-string">i-1234567890abcdef0</span> \\
+  --bandwidth-weighting=<span class="code-value">vpc-1</span></pre>
+        </div>
+        <div class="code-tab-content" id="tab-cfn">
+<pre><span class="code-comment"># Enhanced Networking対応インスタンス起動</span>
+<span class="code-key">AWSTemplateFormatVersion</span>: <span class="code-string">"2010-09-09"</span>
+<span class="code-key">Resources</span>:
+  <span class="code-key">HPCInstance</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::Instance</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">InstanceType</span>: <span class="code-value">c5n.18xlarge</span>
+      <span class="code-key">ImageId</span>: <span class="code-string">ami-xxxxxxxxxxxxxxxxx</span>
+      <span class="code-comment"># ENA対応AMIを使用（Amazon Linux 2以降は標準対応）</span>
+      <span class="code-key">NetworkInterfaces</span>:
+        - <span class="code-key">DeviceIndex</span>: <span class="code-value">0</span>
+          <span class="code-key">SubnetId</span>: <span class="code-string">!Ref PrivateSubnet</span>
+          <span class="code-key">GroupSet</span>:
+            - <span class="code-string">!Ref SecurityGroup</span>
+          <span class="code-key">InterfaceType</span>: <span class="code-value">efa</span>
+          <span class="code-comment"># ↑ EFAを有効にするにはInterfaceTypeをefaに設定</span>
+      <span class="code-key">Placement</span>:
+        <span class="code-key">GroupName</span>: <span class="code-string">!Ref ClusterPlacementGroup</span>
+
+  <span class="code-key">ClusterPlacementGroup</span>:
+    <span class="code-key">Type</span>: <span class="code-string">AWS::EC2::PlacementGroup</span>
+    <span class="code-key">Properties</span>:
+      <span class="code-key">Strategy</span>: <span class="code-value">cluster</span></pre>
+        </div>
+        <div class="code-tab-content" id="tab-terraform">
+<pre><span class="code-comment"># Enhanced Networking + EFA 対応インスタンス</span>
+<span class="code-key">resource</span> <span class="code-string">"aws_placement_group"</span> <span class="code-string">"hpc"</span> {
+  <span class="code-key">name</span>     = <span class="code-string">"hpc-cluster"</span>
+  <span class="code-key">strategy</span> = <span class="code-string">"cluster"</span>
+}
+
+<span class="code-key">resource</span> <span class="code-string">"aws_instance"</span> <span class="code-string">"hpc_node"</span> {
+  <span class="code-key">ami</span>           = <span class="code-string">"ami-xxxxxxxxxxxxxxxxx"</span>
+  <span class="code-key">instance_type</span> = <span class="code-string">"c5n.18xlarge"</span>
+
+  <span class="code-key">placement_group</span> = aws_placement_group.hpc.name
+
+  <span class="code-key">network_interface</span> {
+    <span class="code-key">device_index</span>         = <span class="code-value">0</span>
+    <span class="code-key">network_interface_id</span> = aws_network_interface.efa.id
+  }
+}
+
+<span class="code-key">resource</span> <span class="code-string">"aws_network_interface"</span> <span class="code-string">"efa"</span> {
+  <span class="code-key">subnet_id</span>       = aws_subnet.private.id
+  <span class="code-key">security_groups</span> = [aws_security_group.hpc.id]
+
+  <span class="code-comment"># EFA有効化</span>
+  <span class="code-key">interface_type</span> = <span class="code-string">"efa"</span>
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Best Practices ===== -->
+    <section class="section" id="best-practices">
+      <h2>✅ ベストプラクティス vs アンチパターン</h2>
+      <p class="section-lead">EC2ネットワーク性能を最大限に活用するための推奨事項と避けるべき構成。</p>
+
+      <div class="compare-grid">
+        <div class="compare-good">
+          <h3>✅ ベストプラクティス</h3>
+          <div class="compare-item">
+            <span class="compare-icon">✅</span>
+            <span>現世代のNitroベースインスタンス（C5以降）を選択し、ENA対応を確認する</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">✅</span>
+            <span>安定した高帯域幅が必要なら、9xlarge以上のバーストなしサイズを使用</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">✅</span>
+            <span>低レイテンシが必要な場合はクラスターPlacement Groupにインスタンスを配置</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">✅</span>
+            <span>HPC/MLワークロードではEFA対応インスタンスを選択し、Cluster配置</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">✅</span>
+            <span>ネットワーク集約型ワークロードには「n」シリーズ（C5n, M5n）を採用</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">✅</span>
+            <span>CloudWatch ENAドライバーメトリクスでネットワーク超過を監視</span>
+          </div>
+        </div>
+        <div class="compare-bad">
+          <h3>❌ アンチパターン</h3>
+          <div class="compare-item">
+            <span class="compare-icon">❌</span>
+            <span>旧世代インスタンス（C3, M3等）でネットワーク性能を期待する</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">❌</span>
+            <span>小さなインスタンスで「最大10Gbps」を常時利用可能と想定する</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">❌</span>
+            <span>単一フロー（1接続）で5Gbps超の帯域幅を期待する</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">❌</span>
+            <span>ENA非対応のAMI（古いカーネル）でENA対応インスタンスを起動する</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">❌</span>
+            <span>異なるAZのインスタンス間で低レイテンシ通信を期待する</span>
+          </div>
+          <div class="compare-item">
+            <span class="compare-icon">❌</span>
+            <span>ネットワーク帯域幅のベースラインとバーストの違いを意識しない</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Troubleshooting ===== -->
+    <section class="section" id="troubleshooting">
+      <h2>🔍 トラブルシューティング</h2>
+      <p class="section-lead">EC2ネットワーク性能に関する一般的な問題と解決方法。</p>
+
+      <div class="decision-tree">
+        <div class="decision-node decision-node-q">
+          <span class="decision-icon">❓</span>
+          <div class="decision-content">
+            <h3>Enhanced Networkingが有効か確認したい</h3>
+            <p><code>aws ec2 describe-instances</code> でEnaSupport=trueを確認。インスタンス内で <code>ethtool -i eth0</code> を実行し、driver: ena と表示されればENA有効。</p>
+          </div>
+        </div>
+        <div class="decision-node">
+          <span class="decision-icon">🔧</span>
+          <div class="decision-content">
+            <h3>期待するネットワーク帯域幅が出ない</h3>
+            <p>CloudWatch の NetworkIn/NetworkOut メトリクスを確認。ENAドライバーの bw_in_allowance_exceeded カウンタが増加していれば帯域幅制限に達しています。より大きなインスタンスサイズに変更するか、トラフィックを分散してください。</p>
+          </div>
+        </div>
+        <div class="decision-node">
+          <span class="decision-icon">🔧</span>
+          <div class="decision-content">
+            <h3>パケットロスが発生する</h3>
+            <p>ENAメトリクスの linklocal_allowance_exceeded（DNS/メタデータ等の制限超過）や pps_allowance_exceeded（パケット数制限）を確認。Jumbo Frame（MTU 9001）の利用も検討してください。</p>
+          </div>
+        </div>
+        <div class="decision-node">
+          <span class="decision-icon">🔧</span>
+          <div class="decision-content">
+            <h3>EFAが有効にならない</h3>
+            <p>EFA対応のインスタンスタイプか確認。セキュリティグループのインバウンドルールで自身のSGからの全トラフィックを許可する必要があります。EFAドライバーのインストールも確認してください。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Exam Tips ===== -->
+    <section class="section" id="exam-tips">
+      <h2>🎯 試験対策ポイント（ANS-C01 / SAP-C02）</h2>
+      <p class="section-lead">AWS認定試験で問われるEC2ネットワーク性能のポイントを整理します。</p>
+
+      <div class="card-grid-2">
+        <div class="feature-card card-orange">
+          <div class="feature-card-icon">📝</div>
+          <h3>ANS-C01 頻出ポイント</h3>
+          <p>Enhanced Networking = SR-IOV の関連付け。ENA vs Intel 82599 VFの違い。Placement GroupとSingle Flow 5Gbps制限。EFAの用途（HPC/ML）と対応インスタンス。IGW経由の50%帯域幅制限。</p>
+        </div>
+        <div class="feature-card card-blue">
+          <div class="feature-card-icon">📝</div>
+          <h3>SAP-C02 頻出ポイント</h3>
+          <p>ネットワーク最適化の選択肢としてのインスタンスサイジング。n系インスタンス（C5n, M5n等）の活用場面。コスト最適化とのバランス。バースト vs ベースラインの理解。</p>
+        </div>
+      </div>
+
+      <div class="highlight-box highlight-box-exam">
+        <strong>🎯 頻出シナリオ問題パターン</strong>
+        「HPCワークロードでノード間の低レイテンシ通信が必要」→ <strong>EFA + Cluster Placement Group</strong>。
+        「ネットワーク帯域幅を安定的に確保したい」→ <strong>バーストなしの大きなインスタンス or n系インスタンス</strong>。
+        「CPUオーバーヘッドを削減しながらネットワーク性能を向上させたい」→ <strong>Enhanced Networking（SR-IOV / ENA）</strong>。
+        「単一フローで5Gbps以上必要」→ <strong>Cluster Placement Group</strong>（最大10Gbps）。
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section class="section" id="faq">
+      <h2>❓ よくある質問（FAQ）</h2>
+
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false">
+          Enhanced Networkingの有効化に追加料金はかかりますか？
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-answer">
+          いいえ、Enhanced Networkingは追加料金なしで利用できます。対応インスタンスタイプとENA対応AMIを使用するだけで自動的に有効化されます。現世代のNitroベースインスタンスでは標準でENAが有効です。
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false">
+          EFAとENAの違いは何ですか？
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-answer">
+          ENA（Elastic Network Adapter）は一般的なネットワーク性能向上を目的としたデバイスで、すべてのNitroインスタンスで利用可能です。EFA（Elastic Fabric Adapter）はHPC・ML向けの特殊なネットワークデバイスで、OSバイパス機能によりMPI/NCCL通信を超低レイテンシで実現します。EFAは特定の大規模インスタンスでのみサポートされ、ENA機能も含みます。
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false">
+          「最大10Gbps」と「10Gbps」の表記の違いは？
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-answer">
+          「最大10Gbps（Up to 10 Gbps）」はバースト帯域幅を意味し、ネットワークI/Oクレジットがある場合のみ到達可能です。クレジットを使い切るとベースライン帯域幅に戻ります。一方「10Gbps」と明記されている場合は、常時その帯域幅を安定して利用できるベースライン帯域幅です。
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false">
+          Placement Groupは必ず使うべきですか？
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-answer">
+          必ずではありません。Cluster Placement Groupは低レイテンシ・高帯域幅が必要な場合（HPC、リアルタイム分析等）に有効です。ただし、単一AZに制限されるため可用性のトレードオフがあります。一般的なWebアプリケーションではSpread/Partition Placement Groupや、通常の配置で十分な場合が多いです。
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false">
+          Instance Bandwidth Configuration（IBC）とは何ですか？
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-answer">
+          2024年12月に一般提供が開始された機能で、第8世代Gravitonベースインスタンスにおいて、VPCとEBSの帯域幅配分を最大25%調整できます。例えば、VPC帯域幅を増やす（vpc-1）とEBS帯域幅が減少し、その逆も可能です。ストレージやネットワーク集約型ワークロードで帯域幅をより柔軟に活用できます。
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cheat Sheet ===== -->
+    <section class="cheatsheet" id="cheatsheet">
+      <h2>📋 チートシート</h2>
+      <div class="cheatsheet-grid">
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">Enhanced Networking</div>
+          <div class="cheatsheet-value">SR-IOVでハイパーバイザーを迂回。追加料金なし。ENA（最大100Gbps）とIntel 82599 VF（最大10Gbps）の2方式</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">EFA</div>
+          <div class="cheatsheet-value">HPC/ML向け。OSバイパスで超低レイテンシ。MPI/NCCL対応。特定の大規模インスタンスのみ。最大200Gbps（C7gn）</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">帯域幅ルール</div>
+          <div class="cheatsheet-value">同一リージョン=100%利用可。IGW/他リージョン=50%（32vCPU以上）or 5Gbps（32vCPU未満）。単一フロー=5Gbps上限</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">バースト制</div>
+          <div class="cheatsheet-value">16vCPU以下は「Up to」表記。ネットワークI/Oクレジット制。安定帯域幅が必要なら9xlarge以上を選択</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">n系インスタンス</div>
+          <div class="cheatsheet-value">C5n/M5n/R5n: ネットワーク帯域幅を大幅強化。C5n.18xlarge=100Gbps。C7gn=最大200Gbps</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">Placement Group</div>
+          <div class="cheatsheet-value">Cluster配置: 低レイテンシ・高帯域幅。単一フロー最大10Gbps。HPC/MLではEFAと併用推奨</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">IBC（第8世代）</div>
+          <div class="cheatsheet-value">VPC↔EBS帯域幅を最大25%調整可能。vpc-1/ebs-1で設定。追加コストなし</div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cheatsheet-label">監視</div>
+          <div class="cheatsheet-value">CloudWatch + ENAドライバーメトリクス。bw_in_allowance_exceeded / pps_allowance_exceeded でボトルネック検出</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Glossary ===== -->
+    <section class="section" id="glossary">
+      <h2>📖 用語集</h2>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">SR-IOV（Single Root I/O Virtualization）</div>
+          <div class="glossary-def">物理デバイスを複数の仮想デバイスに分割し、VMが直接アクセスできるようにするハードウェア仮想化技術</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">ENA（Elastic Network Adapter）</div>
+          <div class="glossary-def">AWS独自のネットワークアダプタ。Nitroインスタンスで標準搭載。最大100Gbps対応</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">EFA（Elastic Fabric Adapter）</div>
+          <div class="glossary-def">HPC/ML向けネットワークデバイス。OSバイパスで超低レイテンシなノード間通信を実現</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">VF（Virtual Function）</div>
+          <div class="glossary-def">SR-IOVで作成される仮想的なNIC。VMがハイパーバイザーを介さず直接利用できる</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Nitro System</div>
+          <div class="glossary-def">AWSの次世代仮想化基盤。専用ハードウェアと軽量ハイパーバイザーの組み合わせ</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">PPS（Packets Per Second）</div>
+          <div class="glossary-def">1秒あたりのパケット処理数。帯域幅とは別にインスタンスレベルで上限が設定される</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Placement Group（Cluster）</div>
+          <div class="glossary-def">同一AZ内の近接ラックにインスタンスを配置し、低レイテンシ・高帯域幅を実現する機能</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">IBC（Instance Bandwidth Configurations）</div>
+          <div class="glossary-def">第8世代インスタンスでVPCとEBSの帯域幅配分を調整できる機能。2024年12月GA</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== References ===== -->
+    <section class="section" id="references">
+      <h2>📚 参考文献</h2>
+      <p class="section-lead">公式ドキュメントと関連リソースへのリンク集です。</p>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Enhanced Networking 公式ドキュメント</div>
+          <div class="glossary-def"><a href="https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/enhanced-networking.html" target="_blank" rel="noopener">docs.aws.amazon.com - Enhanced Networking</a></div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">EC2 インスタンスのネットワーク帯域幅</div>
+          <div class="glossary-def"><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html" target="_blank" rel="noopener">docs.aws.amazon.com - Instance Network Bandwidth</a></div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">EC2 インスタンスタイプ</div>
+          <div class="glossary-def"><a href="https://aws.amazon.com/ec2/instance-types/" target="_blank" rel="noopener">aws.amazon.com - EC2 Instance Types</a></div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">帯域幅重み付け設定</div>
+          <div class="glossary-def"><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configure-bandwidth-weighting.html" target="_blank" rel="noopener">docs.aws.amazon.com - Bandwidth Weighting</a></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>AWS SAP / ANS 学習リソース | EC2 ネットワークパフォーマンス最適化ガイド</p>
+  </footer>
+
+  <!-- Scroll to Top -->
+  <button class="scroll-top" id="scrollTop" type="button" aria-label="ページの先頭に戻る">↑</button>
+
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

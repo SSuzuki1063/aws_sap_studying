@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 87,
+    count: 89,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
         count: 18,
-        lastUpdated: '2026-03-23',
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう',
@@ -266,8 +266,8 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 49,
-        lastUpdated: '2026-03-23',
+        count: 50,
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD',
@@ -386,6 +386,17 @@ const categoriesData = [
             difficulty: 'intermediate',
             estimated_minutes: 25,
             summary: 'Site-to-Site VPNの4大コンポーネントと冗長トンネル構成を図解'
+          },
+          {
+            title: 'AWS Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド',
+            href: 'networking/aws-site-to-site-vpn-ipv4-ipv6-guide.html',
+            service: 'VPN',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 25
           },
           {
             title: 'AWS Site-to-Site VPN 非対称ルーティング問題の解決方法',
@@ -937,8 +948,8 @@ const categoriesData = [
       {
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
-        count: 18,
-        lastUpdated: '2026-03-23',
+        count: 19,
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'AWSネットワークゲートウェイの比較',
@@ -989,6 +1000,16 @@ const categoriesData = [
               'comparison'
             ],
             summary: 'Cloud WANセグメントとTGWルートテーブルの分離設計を比較'
+          },
+          {
+            title: 'AWS Cloud WAN アタッチメントポリシー完全ガイド',
+            href: 'networking/cloudwan-attachment-policy.html',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 20
           },
           {
             title: 'AWS Cloud WAN スタティックルーティングとセグメント共有 完全ガイド',
@@ -1162,7 +1183,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-23',
+        lastUpdated: '2026-03-27',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html', service: 'EC2' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' }
@@ -2179,13 +2200,13 @@ const categoriesData = [
     id: 'compute-applications',
     title: 'コンピュート・アプリケーション',
     icon: '⚙️',
-    count: 57,
+    count: 58,
     sections: [
       {
         title: 'Auto Scaling & ロードバランシング',
         icon: '⚖️',
         count: 25,
-        lastUpdated: '2026-02-27',
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'なぜALBはVPCエンドポイントサービスとして使えないのか？',
@@ -2549,7 +2570,7 @@ const categoriesData = [
         title: 'コンテナ & アプリケーション統合',
         icon: '📦',
         count: 6,
-        lastUpdated: '2026-02-27',
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'Amazon AppStream 2.0 完全ガイド',
@@ -2633,8 +2654,8 @@ const categoriesData = [
       {
         title: 'EC2 & インスタンス管理',
         icon: '🖥️',
-        count: 9,
-        lastUpdated: '2026-02-27',
+        count: 10,
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'AWS EC2のInsufficientInstanceCapacityエラーと再起動による解決メカニズム',
@@ -2675,6 +2696,17 @@ const categoriesData = [
               'ha'
             ],
             summary: 'EC2 Auto Recoveryの動作フローと手動対応との違いを比較'
+          },
+          {
+            title: 'EC2 ネットワークパフォーマンス最適化 完全ガイド | Enhanced Networking・EFA・インスタンスサイジング',
+            href: 'compute-applications/ec2-network-performance.html',
+            service: 'EC2',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 25
           },
           {
             title: 'EC2ステータスチェック図解ガイド',
@@ -2753,7 +2785,7 @@ const categoriesData = [
         title: 'Lambda & サーバーレス',
         icon: 'λ',
         count: 8,
-        lastUpdated: '2026-02-27',
+        lastUpdated: '2026-03-27',
         resources: [
           {
             title: 'AWS Lambda Invocationメトリクスの完全ガイド',
@@ -2871,7 +2903,7 @@ const categoriesData = [
         title: 'システム運用 & パッチ管理',
         icon: '🔧',
         count: 9,
-        lastUpdated: '2026-02-27',
+        lastUpdated: '2026-03-27',
         resources: [
           { title: 'AWS Patch Manager - 大規模環境での自動パッチ適用', href: 'compute-applications/aws_patch_manager_infographic.html', priority: 'high', service: 'Systems Manager', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Patch Managerのパッチベースライン設定と適用手順を図解' },
           { title: 'AWS Systems Manager OpsCenter 完全ガイド', href: 'compute-applications/opscenter-guide.html', service: 'OpsCenter', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25 },
@@ -3803,18 +3835,19 @@ const categoriesData = [
     id: 'analytics-operations',
     title: '分析・運用・クイズ',
     icon: '📊',
-    count: 15,
+    count: 16,
     sections: [
       {
         title: '分析・運用',
         icon: '📉',
-        count: 5,
-        lastUpdated: '2026-02-19',
+        count: 6,
+        lastUpdated: '2026-03-27',
         resources: [
           { title: 'AWS コスト管理ツール比較', href: 'analytics-bigdata/aws-cost-tools.html', priority: 'high', service: 'Cost Explorer', exam_domains: [1, 3], difficulty: 'intermediate', estimated_minutes: 20, summary: 'Cost Explorer/Budgets/CUR等コスト管理ツールの使い分けを比較' },
           { title: 'AWS EC2ディスクメトリクスの違い', href: 'analytics-bigdata/aws-disk-metrics.html', priority: 'low', exam_domains: [3], difficulty: 'advanced', estimated_minutes: 20, tags: ['monitoring'] },
           { title: 'AWSエラー比較: InstanceLimitExceeded vs Insufficient Instance Capacity', href: 'analytics-bigdata/aws-errors-infographic.html', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15 },
           { title: 'AWS可用性指標：MTTD・MTTR・MTBF完全ガイド', href: 'analytics-bigdata/aws_availability_infographic.html', priority: 'high', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'MTTD/MTTR/MTBF可用性3指標の計算式と実装パターンを図解' },
+          { title: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド', href: 'analytics-bigdata/cw-agent-vpc-endpoint.html', service: 'VPC PrivateLink', exam_domains: [1, 4], difficulty: 'intermediate', estimated_minutes: 20 },
           { title: 'Amazon Kinesis Data Streamsをベルトコンベアで理解しよう', href: 'analytics-bigdata/kinesis-infographic.html', priority: 'high', service: 'Kinesis', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解' }
         ]
       },
@@ -3822,7 +3855,7 @@ const categoriesData = [
         title: 'データ分析',
         icon: '📈',
         count: 3,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-03-27',
         resources: [
           { title: 'Kinesis Data Firehose 高度機能完全図解', href: 'analytics-bigdata/kinesis_firehose_infographic.html', priority: 'high', service: 'Kinesis', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Firehoseの動的パーティショニングとParquet変換の高度機能を図解' },
           { title: 'Redshift スケーリング手段完全図解', href: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, tags: ['scaling'] },
@@ -3833,7 +3866,7 @@ const categoriesData = [
         title: '理解度クイズ・用語集',
         icon: '✏️',
         count: 7,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-03-27',
         resources: [
           { title: '🗺️ 開発向けロードマップ', href: 'development-roadmap.html', exam_domains: [3], difficulty: 'intermediate', estimated_minutes: 20 },
           { title: '📊 開発フローチャート', href: 'development-flowchart.html', exam_domains: [3], difficulty: 'intermediate', estimated_minutes: 20, tags: ['ha'] },
@@ -3853,7 +3886,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 87
+    count: 89
   },
   {
     id: 'security-governance',
@@ -3865,7 +3898,7 @@ const categoryQuickNav = [
     id: 'compute-applications',
     icon: '💻',
     text: 'コンピュート・アプリケーション',
-    count: 57
+    count: 58
   },
   {
     id: 'content-delivery-dns',
@@ -3895,7 +3928,7 @@ const categoryQuickNav = [
     id: 'analytics-operations',
     icon: '📊',
     text: '分析・運用・クイズ',
-    count: 15
+    count: 16
   }
 ];
 
@@ -3903,7 +3936,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '312+',
+  totalResources: '316+',
   offlineSupport: '100%',
   lastUpdated: '2026/03/26'
 };
@@ -4114,7 +4147,7 @@ const serviceIndex = [
   },
   {
     name: 'EC2',
-    count: 14,
+    count: 15,
     categories: [
       'networking',
       'compute-applications'
@@ -4436,10 +4469,11 @@ const serviceIndex = [
   },
   {
     name: 'VPC PrivateLink',
-    count: 6,
+    count: 7,
     categories: [
       'networking',
-      'compute-applications'
+      'compute-applications',
+      'analytics-operations'
     ]
   },
   {
@@ -4451,7 +4485,7 @@ const serviceIndex = [
   },
   {
     name: 'VPN',
-    count: 9,
+    count: 10,
     categories: [
       'networking',
       'security-governance'
@@ -4477,17 +4511,18 @@ const serviceIndex = [
 const domainIndex = [
   {
     domainId: 1,
-    count: 138,
+    count: 142,
     categories: [
       'networking',
       'security-governance',
+      'compute-applications',
       'content-delivery-dns',
       'analytics-operations'
     ]
   },
   {
     domainId: 2,
-    count: 239,
+    count: 242,
     categories: [
       'networking',
       'security-governance',
@@ -4513,9 +4548,10 @@ const domainIndex = [
   },
   {
     domainId: 4,
-    count: 11,
+    count: 12,
     categories: [
-      'migration'
+      'migration',
+      'analytics-operations'
     ]
   }
 ];
@@ -4643,6 +4679,26 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-27',
+    type: 'content',
+    title: '4リソース追加 — Site-to-Site VPN IPv4/IPv6, Cloud WAN Attachment Policy, CloudWatch Agent VPC Endpoint, EC2ネットワークパフォーマンス',
+    description: 'AWS Site-to-Site VPN IPv4/IPv6トラフィック完全ガイド、Cloud WANアタッチメントポリシー完全ガイド、CloudWatchエージェント×VPCエンドポイント完全ガイド、EC2ネットワークパフォーマンス完全ガイドの4件を追加。',
+    categories: [
+      'networking',
+      'analytics-operations',
+      'compute-applications'
+    ],
+    tags: [
+      'Site-to-Site VPN',
+      'IPv6',
+      'Cloud WAN',
+      'CloudWatch Agent',
+      'VPC Endpoint',
+      'EC2',
+      'ネットワークパフォーマンス'
+    ]
+  },
   {
     date: '2026-03-23',
     type: 'content',

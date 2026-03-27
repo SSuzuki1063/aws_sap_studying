@@ -1,0 +1,1106 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド',
+  pageTitle: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド',
+  category: 'analytics-bigdata',
+  categoryLabel: '分析・運用・クイズ',
+  subcategory: '分析・運用',
+  slug: 'cw-agent-vpc-endpoint',
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 1,
+  pageTotal: 1,
+  tocItems: [
+    { level: 'h2', id: 'analogy', text: 'たとえ話：「社内メール便」で理解する全体像' },
+    { level: 'h2', id: 'overview', text: 'CloudWatch エージェントの基本と通信先' },
+    { level: 'h2', id: 'architecture', text: 'アーキテクチャ図：通常経路 vs VPC エンドポイント経路' },
+    { level: 'h3', id: 'pattern-a', text: 'パターン A：インターネット経由（通常経路）' },
+    { level: 'h3', id: 'pattern-b', text: 'パターン B：VPC エンドポイント経由（推奨）' },
+    { level: 'h2', id: 'vpce-detail', text: 'VPC エンドポイントの仕組みと設定' },
+    { level: 'h3', id: 'required-vpce', text: '必要な VPC エンドポイント（2つ）' },
+    { level: 'h3', id: 'interface-endpoint-internal', text: 'Interface Endpoint の内部動作' },
+    { level: 'h2', id: 'dns', text: 'プライベート DNS と VPC の DNS 設定' },
+    { level: 'h3', id: 'required-dns-settings', text: '必須の VPC DNS 設定（2つとも true にする）' },
+    { level: 'h2', id: 'sg', text: 'セキュリティグループの設定' },
+    { level: 'h3', id: 'sg-example', text: 'VPC Endpoint 用セキュリティグループの設定例' },
+    { level: 'h2', id: 'setup-steps', text: '構築手順（ステップバイステップ）' },
+    { level: 'h2', id: 'code', text: '設定例' },
+    { level: 'h3', id: 'create-vpce-code', text: 'VPC エンドポイントの作成' },
+    { level: 'h3', id: 'dns-verify-code', text: 'DNS 解決の確認コマンド' },
+    { level: 'h2', id: 'bestpractice', text: 'ベストプラクティス vs アンチパターン' },
+    { level: 'h2', id: 'troubleshoot', text: 'トラブルシューティング' },
+    { level: 'h2', id: 'exam', text: '試験対策（ANS-C01 / SAP-C02）' },
+    { level: 'h2', id: 'faq', text: 'FAQ（よくある質問）' },
+    { level: 'h2', id: 'cheat', text: 'チートシート' },
+    { level: 'h2', id: 'glossary', text: '用語集' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/cw-agent-vpc-endpoint.css',
+};
+
+const rawContent = `
+<!-- Skip Link -->
+  <a href="#main-content" class="skip-link">メインコンテンツにスキップ</a>
+
+  <!-- Fixed Header -->
+  <header class="fixed-nav-header" role="banner">
+    <div class="fixed-nav-container">
+      <a href="#" class="fixed-nav-logo" aria-label="トップに戻る">☁️ AWS 学習ガイド</a>
+      <nav class="fixed-nav-links" aria-label="セクション移動">
+        <a href="#overview">概要</a>
+        <a href="#architecture">構成図</a>
+        <a href="#dns">DNS設定</a>
+        <a href="#sg">SG設定</a>
+        <a href="#code">設定例</a>
+        <a href="#exam">試験対策</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Reading Progress -->
+  <div class="reading-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+    <div class="reading-progress-bar"></div>
+  </div>
+
+  <!-- Main Content -->
+  <main id="main-content">
+    <div class="container">
+
+      <!-- Hero -->
+      <section class="hero" aria-label="ページ概要">
+        <span class="hero-badge">📡 Networking × Monitoring</span>
+        <h1>CloudWatch エージェント<br>× VPC エンドポイント<br>完全ガイド</h1>
+        <p class="hero-sub">インターネットを使わずに、プライベートネットワーク内から安全に CloudWatch へログ・メトリクスを送信する方法を「社内メール便」のたとえで図解解説</p>
+      </section>
+
+      <!-- Key Takeaways -->
+      <section class="key-takeaways" aria-label="重要ポイント">
+        <h2>🎯 最初に押さえる 4 つの結論</h2>
+        <div class="takeaway-grid">
+          <div class="takeaway-card">
+            <div class="num">1</div>
+            <h3>CW エージェントは 2 つの送信先を持つ</h3>
+            <p>ログ用（<code>logs.*</code>）とメトリクス用（<code>monitoring.*</code>）の 2 つの AWS エンドポイントに通信する</p>
+          </div>
+          <div class="takeaway-card">
+            <div class="num">2</div>
+            <h3>VPC エンドポイントで通信を閉域化</h3>
+            <p>Interface VPC Endpoint を作成すると、インターネットを経由せずにプライベートネットワーク内で通信できる</p>
+          </div>
+          <div class="takeaway-card">
+            <div class="num">3</div>
+            <h3>プライベート DNS が名前解決の鍵</h3>
+            <p>VPC の <code>enableDnsSupport</code> と <code>enableDnsHostnames</code> を両方有効にすることが必須条件</p>
+          </div>
+          <div class="takeaway-card">
+            <div class="num">4</div>
+            <h3>SG で HTTPS（443）を許可する</h3>
+            <p>VPC エンドポイントのセキュリティグループで、VPC CIDR からの TCP/443 インバウンドを許可する必要がある</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ToC -->
+      <nav class="toc" aria-label="目次">
+        <h2>📋 目次</h2>
+        <ol>
+          <li><a href="#analogy">たとえ話：「社内メール便」で理解する全体像</a></li>
+          <li><a href="#overview">CloudWatch エージェントの基本と通信先</a></li>
+          <li><a href="#architecture">アーキテクチャ図：通常 vs VPC エンドポイント</a></li>
+          <li><a href="#vpce-detail">VPC エンドポイントの仕組みと設定</a></li>
+          <li><a href="#dns">プライベート DNS と VPC の DNS 設定</a></li>
+          <li><a href="#sg">セキュリティグループの設定</a></li>
+          <li><a href="#setup-steps">構築手順（ステップバイステップ）</a></li>
+          <li><a href="#code">設定例（AWS CLI / CloudFormation / Terraform）</a></li>
+          <li><a href="#bestpractice">ベストプラクティス vs アンチパターン</a></li>
+          <li><a href="#troubleshoot">トラブルシューティング</a></li>
+          <li><a href="#exam">試験対策（ANS-C01 / SAP-C02）</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#cheat">チートシート</a></li>
+          <li><a href="#glossary">用語集</a></li>
+        </ol>
+      </nav>
+
+      <!-- Section 1: Analogy -->
+      <section id="analogy" class="section">
+        <h2 class="section-title">🏢 たとえ話：「社内メール便」で理解する全体像</h2>
+        <p>CloudWatch エージェントと VPC エンドポイントの関係を、<strong>オフィスビルの社内メール便</strong>にたとえて説明します。</p>
+
+        <div class="highlight-box">
+          <p>💡 <strong>イメージ：</strong>各部署（EC2）の事務員（CW エージェント）が業務報告書（ログ・メトリクス）を本社（CloudWatch）に届ける。通常は公道の郵便（インターネット）を使うが、機密保持のため<strong>社内専用通路（VPC エンドポイント）</strong>を使う方法がある。</p>
+        </div>
+
+        <div class="analogy-table-wrap">
+          <table class="analogy-table">
+            <thead>
+              <tr>
+                <th>AWS の概念</th>
+                <th>社内メール便のたとえ</th>
+                <th>役割</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>CloudWatch エージェント</strong></td>
+                <td>各部署の事務員</td>
+                <td>ログやメトリクスを収集して送信する</td>
+              </tr>
+              <tr>
+                <td><strong>EC2 インスタンス</strong></td>
+                <td>各部署のオフィス</td>
+                <td>エージェントが動作するサーバー</td>
+              </tr>
+              <tr>
+                <td><strong>CloudWatch（Logs / Metrics）</strong></td>
+                <td>本社の受付窓口</td>
+                <td>データを受け取る AWS サービス</td>
+              </tr>
+              <tr>
+                <td><strong>Internet Gateway</strong></td>
+                <td>ビルの正面玄関 → 公道</td>
+                <td>インターネット経由の通信経路</td>
+              </tr>
+              <tr>
+                <td><strong>VPC エンドポイント</strong></td>
+                <td>社内専用通路（地下通路）</td>
+                <td>AWS 内部ネットワーク経由の専用接続</td>
+              </tr>
+              <tr>
+                <td><strong>プライベート DNS</strong></td>
+                <td>社内電話帳</td>
+                <td>サービス名を専用通路の入口に変換</td>
+              </tr>
+              <tr>
+                <td><strong>セキュリティグループ</strong></td>
+                <td>専用通路の入口にいる警備員</td>
+                <td>通れる人（通信）をチェックする</td>
+              </tr>
+              <tr>
+                <td><strong>VPC エンドポイントポリシー</strong></td>
+                <td>通路の利用ルール掲示板</td>
+                <td>どの操作を許可するか制御する</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 2: Overview -->
+      <section id="overview" class="section">
+        <h2 class="section-title">📡 CloudWatch エージェントの基本と通信先</h2>
+
+        <p>CloudWatch エージェント（統合エージェント）は、EC2 やオンプレミスサーバーから<strong>ログとメトリクス</strong>の両方を CloudWatch に送信するソフトウェアです。以下の 2 つの AWS エンドポイントと HTTPS（TCP/443）で通信します。</p>
+
+        <div class="cards-grid" style="margin-top: 20px;">
+          <div class="card">
+            <div class="card-icon">📝</div>
+            <h3>CloudWatch Logs エンドポイント</h3>
+            <p><code>logs.{region}.amazonaws.com</code></p>
+            <p>ログデータの送信先。アプリログ、OS ログ、カスタムログなどを収集して送る。</p>
+            <p style="margin-top:8px; color: #6366F1; font-weight: 600;">たとえ：日報・議事録を受け取る窓口</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">📊</div>
+            <h3>CloudWatch Metrics エンドポイント</h3>
+            <p><code>monitoring.{region}.amazonaws.com</code></p>
+            <p>メトリクスデータの送信先。CPU 使用率、メモリ使用量などのカスタムメトリクスを送る。</p>
+            <p style="margin-top:8px; color: #6366F1; font-weight: 600;">たとえ：売上数値・KPI を受け取る窓口</p>
+          </div>
+        </div>
+
+        <div class="info-box" style="margin-top: 20px;">
+          <p>ℹ️ <strong>重要：</strong>CloudWatch Logs と CloudWatch Metrics は別のエンドポイントを使います。VPC エンドポイント経由にする場合、<strong>2 つとも</strong>作成する必要があります。片方だけ作成した場合、もう片方の通信はインターネット経由（または到達不能）になります。</p>
+        </div>
+      </section>
+
+      <!-- Section 3: Architecture Diagram -->
+      <section id="architecture" class="section">
+        <h2 class="section-title">🏗️ アーキテクチャ図：通常経路 vs VPC エンドポイント経路</h2>
+
+        <h3 id="pattern-a" class="section-subtitle">パターン A：インターネット経由（通常経路）</h3>
+        <p>IGW → インターネット → AWS サービスエンドポイント という経路。パブリックサブネットの EC2 や NAT Gateway 経由で通信する。</p>
+
+        <div class="diagram-container">
+          <!-- SVG: Pattern A - Internet route -->
+          <!-- Node layout:
+               Row 1 (y=160): EC2+Agent(cx=200), IGW(cx=500), Internet(cx=750), CW Logs(cx=1020)
+               Row 2 (y=320): (empty), (empty), (empty), CW Metrics(cx=1020)
+          -->
+          <svg viewBox="0 0 1200 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="通常経路（インターネット経由）のアーキテクチャ図">
+            <!-- Background -->
+            <rect x="0" y="0" width="1200" height="420" rx="18" fill="#F8FAFC"/>
+
+            <!-- Title -->
+            <text x="600" y="45" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">パターン A：インターネット経由（公道で郵便を送る）</text>
+
+            <!-- VPC boundary -->
+            <rect x="30" y="70" width="560" height="310" rx="14" fill="none" stroke="#818CF8" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="50" y="95" font-size="18" font-weight="600" fill="#4338CA">VPC（オフィスビル）</text>
+
+            <!-- Private Subnet -->
+            <rect x="50" y="110" width="280" height="250" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+            <text x="70" y="138" font-size="16" font-weight="600" fill="#065F46">プライベートサブネット</text>
+
+            <!-- EC2 + Agent node: cx=190, cy=220 -->
+            <g>
+              <rect x="80" y="160" width="220" height="100" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="190" y="195" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">EC2 インスタンス</text>
+              <text x="190" y="220" text-anchor="middle" font-size="16" fill="#475569">🔧 CW エージェント</text>
+              <text x="190" y="245" text-anchor="middle" font-size="14" fill="#94A3B8">（事務員が報告書を持つ）</text>
+            </g>
+
+            <!-- IGW node: cx=460, cy=220 -->
+            <g>
+              <rect x="370" y="175" width="180" height="90" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+              <text x="460" y="210" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">Internet</text>
+              <text x="460" y="235" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">Gateway</text>
+              <text x="460" y="258" text-anchor="middle" font-size="14" fill="#94A3B8">（正面玄関）</text>
+            </g>
+
+            <!-- Internet cloud: cx=720, cy=220 -->
+            <g>
+              <ellipse cx="720" cy="220" rx="100" ry="55" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+              <text x="720" y="215" text-anchor="middle" font-size="18" font-weight="600" fill="#991B1B">🌐 インターネット</text>
+              <text x="720" y="240" text-anchor="middle" font-size="14" fill="#94A3B8">（公道）</text>
+            </g>
+
+            <!-- CloudWatch Logs: cx=1020, cy=160 -->
+            <g>
+              <rect x="890" y="110" width="250" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="1015" y="142" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">CloudWatch Logs</text>
+              <text x="1015" y="170" text-anchor="middle" font-size="14" fill="#475569">logs.region.amazonaws.com</text>
+            </g>
+
+            <!-- CloudWatch Metrics: cx=1020, cy=300 -->
+            <g>
+              <rect x="890" y="260" width="250" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="1015" y="292" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">CloudWatch Metrics</text>
+              <text x="1015" y="320" text-anchor="middle" font-size="14" fill="#475569">monitoring.region.amazonaws.com</text>
+            </g>
+
+            <!-- Arrows -->
+            <defs>
+              <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6"/>
+              </marker>
+            </defs>
+            <!-- EC2 → IGW -->
+            <line x1="300" y1="220" x2="365" y2="220" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+            <!-- IGW → Internet -->
+            <line x1="550" y1="220" x2="615" y2="220" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+            <!-- Internet → CW Logs -->
+            <line x1="820" y1="195" x2="885" y2="160" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+            <!-- Internet → CW Metrics -->
+            <line x1="820" y1="245" x2="885" y2="290" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+
+            <!-- Labels -->
+            <text x="333" y="208" text-anchor="middle" font-size="14" fill="#3B82F6">HTTPS</text>
+            <text x="583" y="208" text-anchor="middle" font-size="14" fill="#3B82F6">HTTPS</text>
+            <text x="870" y="150" text-anchor="middle" font-size="14" fill="#3B82F6">443</text>
+            <text x="870" y="278" text-anchor="middle" font-size="14" fill="#3B82F6">443</text>
+
+            <!-- Caption -->
+            <text x="600" y="405" text-anchor="middle" font-size="16" fill="#6B7280">⚠️ インターネット経由 — パブリック IP または NAT GW が必要</text>
+          </svg>
+          <p class="diagram-caption">図1: 通常経路ではインターネットを経由して CloudWatch へデータを送信する</p>
+        </div>
+
+        <h3 id="pattern-b" class="section-subtitle">パターン B：VPC エンドポイント経由（推奨）</h3>
+        <p>VPC 内に Interface Endpoint を作成し、AWS PrivateLink を使って AWS 内部ネットワーク経由で通信する。インターネットへの露出がゼロになる。</p>
+
+        <div class="diagram-container">
+          <!-- SVG: Pattern B - VPC Endpoint route -->
+          <!-- Node layout:
+               Row 1 (y=175): EC2+Agent(cx=190)
+               Row 2 (y=175): VPCE Logs(cx=520), CW Logs(cx=900)
+               Row 3 (y=330): VPCE Metrics(cx=520), CW Metrics(cx=900)
+               SG icon near VPCEs
+               DNS resolver at top-right
+          -->
+          <svg viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VPC エンドポイント経由のアーキテクチャ図">
+            <!-- Background -->
+            <rect x="0" y="0" width="1200" height="500" rx="18" fill="#F8FAFC"/>
+
+            <!-- Title -->
+            <text x="600" y="45" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">パターン B：VPC エンドポイント経由（社内専用通路）</text>
+
+            <!-- VPC boundary -->
+            <rect x="30" y="70" width="770" height="400" rx="14" fill="none" stroke="#818CF8" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="50" y="95" font-size="18" font-weight="600" fill="#4338CA">VPC（オフィスビル）</text>
+
+            <!-- DNS label -->
+            <rect x="530" y="78" width="250" height="42" rx="8" fill="#FEFCE8" stroke="#FACC15" stroke-width="1.5"/>
+            <text x="655" y="105" text-anchor="middle" font-size="15" font-weight="600" fill="#854D0E">🔍 プライベート DNS（社内電話帳）</text>
+
+            <!-- Private Subnet -->
+            <rect x="50" y="120" width="280" height="330" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+            <text x="70" y="148" font-size="16" font-weight="600" fill="#065F46">プライベートサブネット</text>
+
+            <!-- EC2 + Agent: cx=190, cy=250 -->
+            <g>
+              <rect x="75" y="170" width="230" height="160" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="190" y="205" text-anchor="middle" font-size="18" font-weight="600" fill="#1E293B">EC2 インスタンス</text>
+              <text x="190" y="232" text-anchor="middle" font-size="16" fill="#475569">🔧 CW エージェント</text>
+              <text x="190" y="258" text-anchor="middle" font-size="14" fill="#94A3B8">（事務員が報告書を持つ）</text>
+              <text x="190" y="290" text-anchor="middle" font-size="14" fill="#6366F1">logs.region.amazonaws.com</text>
+              <text x="190" y="310" text-anchor="middle" font-size="14" fill="#6366F1">→ VPC EP のプライベート IP に解決</text>
+            </g>
+
+            <!-- VPC Endpoint (Logs): cx=520, cy=200 -->
+            <g>
+              <rect x="390" y="155" width="260" height="90" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+              <text x="520" y="185" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">VPC Endpoint (Logs)</text>
+              <text x="520" y="210" text-anchor="middle" font-size="14" fill="#475569">ENI + プライベート IP</text>
+              <text x="520" y="232" text-anchor="middle" font-size="14" fill="#94A3B8">（専用通路の入口 A）</text>
+            </g>
+
+            <!-- SG icon for Logs VPCE -->
+            <rect x="362" y="168" width="30" height="30" rx="6" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="377" y="189" text-anchor="middle" font-size="16">🛡️</text>
+
+            <!-- VPC Endpoint (Metrics): cx=520, cy=360 -->
+            <g>
+              <rect x="390" y="315" width="260" height="90" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+              <text x="520" y="345" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">VPC Endpoint (Metrics)</text>
+              <text x="520" y="370" text-anchor="middle" font-size="14" fill="#475569">ENI + プライベート IP</text>
+              <text x="520" y="392" text-anchor="middle" font-size="14" fill="#94A3B8">（専用通路の入口 B）</text>
+            </g>
+
+            <!-- SG icon for Metrics VPCE -->
+            <rect x="362" y="328" width="30" height="30" rx="6" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="377" y="349" text-anchor="middle" font-size="16">🛡️</text>
+
+            <!-- AWS PrivateLink area -->
+            <rect x="820" y="120" width="350" height="340" rx="14" fill="none" stroke="#FDBA74" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="995" y="148" text-anchor="middle" font-size="16" font-weight="600" fill="#92400E">AWS 内部ネットワーク（PrivateLink）</text>
+
+            <!-- CloudWatch Logs: cx=995, cy=220 -->
+            <g>
+              <rect x="860" y="170" width="270" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="995" y="202" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">☁️ CloudWatch Logs</text>
+              <text x="995" y="228" text-anchor="middle" font-size="14" fill="#475569">logs.region.amazonaws.com</text>
+            </g>
+
+            <!-- CloudWatch Metrics: cx=995, cy=380 -->
+            <g>
+              <rect x="860" y="340" width="270" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+              <text x="995" y="372" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">📊 CloudWatch Metrics</text>
+              <text x="995" y="398" text-anchor="middle" font-size="14" fill="#475569">monitoring.region.amazonaws.com</text>
+            </g>
+
+            <!-- Arrows -->
+            <defs>
+              <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981"/>
+              </marker>
+              <marker id="arrowBlue2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6"/>
+              </marker>
+            </defs>
+
+            <!-- EC2 → VPCE Logs -->
+            <line x1="305" y1="215" x2="385" y2="200" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue2)"/>
+            <text x="340" y="195" text-anchor="middle" font-size="14" fill="#3B82F6">443</text>
+
+            <!-- EC2 → VPCE Metrics -->
+            <line x1="305" y1="280" x2="385" y2="350" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue2)"/>
+            <text x="340" y="330" text-anchor="middle" font-size="14" fill="#3B82F6">443</text>
+
+            <!-- VPCE Logs → CW Logs (via PrivateLink) -->
+            <line x1="650" y1="200" x2="855" y2="210" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="750" y="192" text-anchor="middle" font-size="14" fill="#10B981" font-weight="600">PrivateLink</text>
+
+            <!-- VPCE Metrics → CW Metrics (via PrivateLink) -->
+            <line x1="650" y1="360" x2="855" y2="375" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="750" y="352" text-anchor="middle" font-size="14" fill="#10B981" font-weight="600">PrivateLink</text>
+
+            <!-- Caption -->
+            <text x="600" y="488" text-anchor="middle" font-size="16" fill="#059669" font-weight="600">✅ インターネット不要 — すべて AWS 内部ネットワーク経由で通信</text>
+          </svg>
+          <p class="diagram-caption">図2: VPC エンドポイントにより全通信が AWS 内部ネットワーク経由となる</p>
+        </div>
+      </section>
+
+      <!-- Section 4: VPC Endpoint Detail -->
+      <section id="vpce-detail" class="section">
+        <h2 class="section-title">🔗 VPC エンドポイントの仕組みと設定</h2>
+
+        <p>Interface VPC Endpoint（AWS PrivateLink ベース）を使うと、VPC 内にプライベート IP を持つ ENI（Elastic Network Interface）が作成され、AWS サービスへの通信がそのENI経由で行われます。</p>
+
+        <h3 id="required-vpce" class="section-subtitle">必要な VPC エンドポイント（2つ）</h3>
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon">📝</div>
+            <h3>com.amazonaws.{region}.logs</h3>
+            <p><strong>用途：</strong>CloudWatch Logs へのログデータ送信</p>
+            <p><strong>たとえ：</strong>日報・議事録を届ける専用通路 A</p>
+            <p style="margin-top:8px;"><strong>タイプ：</strong>Interface</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">📊</div>
+            <h3>com.amazonaws.{region}.monitoring</h3>
+            <p><strong>用途：</strong>CloudWatch Metrics へのメトリクス送信</p>
+            <p><strong>たとえ：</strong>売上数値を届ける専用通路 B</p>
+            <p style="margin-top:8px;"><strong>タイプ：</strong>Interface</p>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <p>⚠️ <strong>注意：</strong>両方のエンドポイントを作成しないと、CW エージェントはエラーを出します。Logs だけ作って Metrics を忘れる（またはその逆）のはよくあるミスです。</p>
+        </div>
+
+        <h3 id="interface-endpoint-internal" class="section-subtitle">Interface Endpoint の内部動作</h3>
+        <div class="diagram-container">
+          <!-- SVG: How Interface Endpoint works internally -->
+          <!-- Nodes:
+               EC2(cx=170, cy=190)
+               Route53 Resolver(cx=170, cy=360)
+               ENI/Private IP(cx=520, cy=190)
+               AWS Service(cx=870, cy=190)
+          -->
+          <svg viewBox="0 0 1100 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interface VPC Endpoint の内部動作図">
+            <rect x="0" y="0" width="1100" height="440" rx="18" fill="#F8FAFC"/>
+            <text x="550" y="42" text-anchor="middle" font-size="21" font-weight="700" fill="#0F172A">Interface Endpoint の名前解決と通信フロー</text>
+
+            <!-- Step labels -->
+            <!-- Step 1: DNS Query -->
+            <g>
+              <circle cx="170" cy="80" r="18" fill="#3B82F6"/>
+              <text x="170" y="86" text-anchor="middle" font-size="16" font-weight="700" fill="white">1</text>
+              <text x="200" y="86" font-size="16" fill="#1E293B" font-weight="600">DNS クエリ</text>
+            </g>
+
+            <!-- EC2 node: cx=170, cy=175 -->
+            <rect x="60" y="120" width="220" height="90" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="170" y="155" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">EC2 + CW エージェント</text>
+            <text x="170" y="180" text-anchor="middle" font-size="14" fill="#475569">logs.ap-northeast-1</text>
+            <text x="170" y="198" text-anchor="middle" font-size="14" fill="#475569">.amazonaws.com を問い合わせ</text>
+
+            <!-- Arrow: EC2 → Resolver (down) -->
+            <line x1="170" y1="210" x2="170" y2="280" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrowBlue2)"/>
+            <text x="190" y="250" font-size="14" fill="#3B82F6">DNS</text>
+
+            <!-- Route53 Resolver: cx=170, cy=330 -->
+            <rect x="50" y="290" width="240" height="90" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+            <text x="170" y="325" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">Route 53 Resolver</text>
+            <text x="170" y="350" text-anchor="middle" font-size="14" fill="#475569">（社内電話帳の受付係）</text>
+            <text x="170" y="372" text-anchor="middle" font-size="14" fill="#854D0E">→ プライベート IP を返す</text>
+
+            <!-- Step 2: Private IP returned -->
+            <g>
+              <circle cx="370" cy="80" r="18" fill="#3B82F6"/>
+              <text x="370" y="86" text-anchor="middle" font-size="16" font-weight="700" fill="white">2</text>
+              <text x="400" y="86" font-size="16" fill="#1E293B" font-weight="600">プライベート IP 返却</text>
+            </g>
+
+            <!-- Arrow: Resolver → ENI (diagonal up-right) -->
+            <line x1="290" y1="320" x2="410" y2="195" stroke="#10B981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+            <text x="340" y="240" font-size="14" fill="#10B981">10.0.1.x</text>
+
+            <!-- ENI node: cx=520, cy=175 -->
+            <rect x="410" y="130" width="220" height="100" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="520" y="165" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">ENI（専用通路入口）</text>
+            <text x="520" y="190" text-anchor="middle" font-size="15" fill="#475569">プライベート IP: 10.0.1.x</text>
+            <text x="520" y="215" text-anchor="middle" font-size="14" fill="#94A3B8">SG でアクセス制御</text>
+
+            <!-- Step 3: HTTPS via PrivateLink -->
+            <g>
+              <circle cx="700" cy="80" r="18" fill="#3B82F6"/>
+              <text x="700" y="86" text-anchor="middle" font-size="16" font-weight="700" fill="white">3</text>
+              <text x="730" y="86" font-size="16" fill="#1E293B" font-weight="600">PrivateLink 経由で通信</text>
+            </g>
+
+            <!-- Arrow: ENI → AWS Service -->
+            <line x1="630" y1="175" x2="770" y2="175" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="700" y="162" text-anchor="middle" font-size="14" fill="#10B981" font-weight="600">HTTPS/443</text>
+
+            <!-- AWS Service: cx=870, cy=175 -->
+            <rect x="775" y="130" width="240" height="100" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="895" y="165" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">☁️ CloudWatch</text>
+            <text x="895" y="190" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">Logs / Metrics</text>
+            <text x="895" y="218" text-anchor="middle" font-size="14" fill="#94A3B8">（本社の受付窓口）</text>
+
+            <!-- Summary -->
+            <rect x="350" y="350" width="680" height="60" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+            <text x="690" y="376" text-anchor="middle" font-size="16" fill="#065F46" font-weight="600">🔑 ポイント：エージェントの設定変更は不要。DNS が自動的に VPC EP の IP を返すため、</text>
+            <text x="690" y="398" text-anchor="middle" font-size="16" fill="#065F46">アプリケーションは通常と同じ FQDN で通信でき、経路だけがプライベートに変わる</text>
+          </svg>
+          <p class="diagram-caption">図3: プライベート DNS が有効な場合、名前解決から通信まですべてがプライベート経路になる</p>
+        </div>
+      </section>
+
+      <!-- Section 5: Private DNS -->
+      <section id="dns" class="section">
+        <h2 class="section-title">🔍 プライベート DNS と VPC の DNS 設定</h2>
+
+        <p>VPC エンドポイントのプライベート DNS 機能を使うと、通常の AWS エンドポイント名（例：<code>logs.us-west-2.amazonaws.com</code>）がそのまま VPC エンドポイントのプライベート IP に解決されます。つまり、エージェント側の設定変更が不要です。</p>
+
+        <h3 id="required-dns-settings" class="section-subtitle">必須の VPC DNS 設定（2つとも true にする）</h3>
+
+        <div class="cards-grid">
+          <div class="card" style="border-top: 4px solid #FACC15;">
+            <div class="card-icon">📖</div>
+            <h3>enableDnsSupport = true</h3>
+            <p><strong>たとえ：</strong>社内電話帳サービスを「有効」にする設定</p>
+            <p>VPC 内の Amazon 提供 DNS サーバー（AmazonProvidedDNS）を使った名前解決を有効にする。これが false だとそもそも DNS クエリが動かない。</p>
+          </div>
+          <div class="card" style="border-top: 4px solid #FACC15;">
+            <div class="card-icon">🏷️</div>
+            <h3>enableDnsHostnames = true</h3>
+            <p><strong>たとえ：</strong>各部署のオフィスに「名札」を貼る設定</p>
+            <p>VPC 内のインスタンスにパブリック DNS ホスト名を割り当てる。プライベート DNS 機能はこの設定も有効であることを前提とする。</p>
+          </div>
+        </div>
+
+        <div class="diagram-container">
+          <!-- SVG: DNS resolution flow -->
+          <svg viewBox="0 0 1100 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DNS設定の有効・無効による名前解決の違い">
+            <rect x="0" y="0" width="1100" height="320" rx="18" fill="#F8FAFC"/>
+            <text x="550" y="38" text-anchor="middle" font-size="20" font-weight="700" fill="#0F172A">DNS 設定による名前解決先の違い</text>
+
+            <!-- OK case (left) -->
+            <rect x="30" y="60" width="500" height="230" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="280" y="90" text-anchor="middle" font-size="18" font-weight="700" fill="#065F46">✅ 両方 true（推奨）</text>
+
+            <text x="60" y="125" font-size="16" fill="#1E293B">logs.ap-northeast-1.amazonaws.com</text>
+            <line x1="60" y1="140" x2="480" y2="140" stroke="#34D399" stroke-width="1"/>
+            <text x="80" y="170" font-size="20" fill="#065F46" font-weight="600">→ 10.0.1.55（VPC EP のプライベート IP）</text>
+            <text x="80" y="200" font-size="16" fill="#475569">通信経路：EC2 → ENI → PrivateLink → CloudWatch</text>
+
+            <rect x="60" y="220" width="440" height="50" rx="8" fill="white" stroke="#34D399" stroke-width="1"/>
+            <text x="280" y="250" text-anchor="middle" font-size="16" fill="#065F46">🎉 インターネット不要。完全プライベート通信！</text>
+
+            <!-- NG case (right) -->
+            <rect x="570" y="60" width="500" height="230" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="820" y="90" text-anchor="middle" font-size="18" font-weight="700" fill="#991B1B">❌ どちらか false</text>
+
+            <text x="600" y="125" font-size="16" fill="#1E293B">logs.ap-northeast-1.amazonaws.com</text>
+            <line x1="600" y1="140" x2="1020" y2="140" stroke="#F87171" stroke-width="1"/>
+            <text x="620" y="170" font-size="20" fill="#991B1B" font-weight="600">→ 52.xx.xx.xx（パブリック IP）</text>
+            <text x="620" y="200" font-size="16" fill="#475569">通信経路：EC2 → IGW → インターネット → CloudWatch</text>
+
+            <rect x="600" y="220" width="440" height="50" rx="8" fill="white" stroke="#F87171" stroke-width="1"/>
+            <text x="820" y="250" text-anchor="middle" font-size="16" fill="#991B1B">⚠️ VPC EP が存在しても使われない！</text>
+          </svg>
+          <p class="diagram-caption">図4: DNS 設定が正しくないと VPC エンドポイントが機能しない</p>
+        </div>
+
+        <div class="info-box">
+          <p>ℹ️ <strong>たとえで理解：</strong>社内電話帳が無効（enableDnsSupport=false）だと、事務員は本社の番号がわからず公道経由で行くしかない。電話帳があっても名札がない（enableDnsHostnames=false）と、専用通路が正しく案内されない。両方揃って初めて「社内専用通路」が使える。</p>
+        </div>
+      </section>
+
+      <!-- Section 6: Security Groups -->
+      <section id="sg" class="section">
+        <h2 class="section-title">🛡️ セキュリティグループの設定</h2>
+
+        <p>VPC エンドポイントの ENI にはセキュリティグループ（SG）を関連付けます。これは「専用通路の入口にいる警備員」で、許可された人（通信）だけを通します。</p>
+
+        <h3 id="sg-example" class="section-subtitle">VPC Endpoint 用セキュリティグループの設定例</h3>
+
+        <div class="analogy-table-wrap">
+          <table class="analogy-table">
+            <thead>
+              <tr>
+                <th>方向</th>
+                <th>プロトコル</th>
+                <th>ポート</th>
+                <th>ソース / 宛先</th>
+                <th>説明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>インバウンド</strong></td>
+                <td>TCP</td>
+                <td>443</td>
+                <td>VPC CIDR（例: 10.0.0.0/16）</td>
+                <td>VPC 内からの HTTPS 通信を許可</td>
+              </tr>
+              <tr>
+                <td><strong>アウトバウンド</strong></td>
+                <td>全トラフィック</td>
+                <td>全て</td>
+                <td>0.0.0.0/0</td>
+                <td>デフォルトで全送信許可</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="diagram-container">
+          <!-- SVG: SG flow -->
+          <svg viewBox="0 0 1100 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="セキュリティグループによるアクセス制御の図">
+            <rect x="0" y="0" width="1100" height="280" rx="18" fill="#F8FAFC"/>
+            <text x="550" y="38" text-anchor="middle" font-size="20" font-weight="700" fill="#0F172A">SG によるアクセス制御（警備員のチェック）</text>
+
+            <!-- EC2 -->
+            <rect x="50" y="80" width="200" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="150" y="115" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">EC2 (10.0.1.10)</text>
+            <text x="150" y="140" text-anchor="middle" font-size="14" fill="#475569">CW エージェント</text>
+
+            <!-- SG wall -->
+            <rect x="370" y="60" width="160" height="200" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2.5"/>
+            <text x="450" y="95" text-anchor="middle" font-size="16" font-weight="700" fill="#991B1B">🛡️ SG</text>
+            <text x="450" y="118" text-anchor="middle" font-size="14" fill="#991B1B">（警備員）</text>
+            <line x1="385" y1="130" x2="515" y2="130" stroke="#F87171" stroke-width="1"/>
+            <text x="450" y="155" text-anchor="middle" font-size="14" fill="#065F46">✅ TCP 443</text>
+            <text x="450" y="175" text-anchor="middle" font-size="14" fill="#065F46">from 10.0.0.0/16</text>
+            <line x1="385" y1="190" x2="515" y2="190" stroke="#F87171" stroke-width="1"/>
+            <text x="450" y="215" text-anchor="middle" font-size="14" fill="#991B1B">❌ TCP 22</text>
+            <text x="450" y="235" text-anchor="middle" font-size="14" fill="#991B1B">❌ その他</text>
+
+            <!-- VPCE ENI -->
+            <rect x="650" y="80" width="200" height="80" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="750" y="115" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">VPC Endpoint</text>
+            <text x="750" y="140" text-anchor="middle" font-size="14" fill="#475569">ENI (10.0.1.55)</text>
+
+            <!-- CW -->
+            <rect x="920" y="80" width="150" height="80" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="995" y="115" text-anchor="middle" font-size="17" font-weight="600" fill="#1E293B">CloudWatch</text>
+            <text x="995" y="140" text-anchor="middle" font-size="14" fill="#475569">Logs / Metrics</text>
+
+            <!-- Arrows -->
+            <line x1="250" y1="120" x2="365" y2="120" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue2)"/>
+            <text x="308" y="108" text-anchor="middle" font-size="14" fill="#3B82F6">HTTPS</text>
+
+            <line x1="530" y1="120" x2="645" y2="120" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="588" y="108" text-anchor="middle" font-size="14" fill="#10B981">許可</text>
+
+            <line x1="850" y1="120" x2="915" y2="120" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+          </svg>
+          <p class="diagram-caption">図5: セキュリティグループは VPC Endpoint の ENI に関連付けて通信を制御</p>
+        </div>
+
+        <div class="highlight-box">
+          <p>💡 <strong>ポイント：</strong>SG のソースに VPC の CIDR を指定するのが一般的ですが、よりセキュアにしたい場合は EC2 の SG ID をソースとして指定することもできます（SG 参照）。</p>
+        </div>
+      </section>
+
+      <!-- Section 7: Setup Steps -->
+      <section id="setup-steps" class="section">
+        <h2 class="section-title">📋 構築手順（ステップバイステップ）</h2>
+        <p>以下の手順で、プライベートサブネットの EC2 から VPC エンドポイント経由で CloudWatch にログ・メトリクスを送信できるようになります。</p>
+
+        <div class="step-flow">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <h3>VPC の DNS 設定を確認・有効化</h3>
+              <p><code>enableDnsSupport</code> と <code>enableDnsHostnames</code> が両方 <code>true</code> であることを確認。AWS コンソールで VPC → 「DNS 設定の編集」から変更可能。</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <h3>VPC Endpoint 用セキュリティグループを作成</h3>
+              <p>インバウンドに TCP/443（ソース: VPC CIDR）を許可する SG を作成。</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <h3>Interface VPC Endpoint を 2 つ作成</h3>
+              <p><code>com.amazonaws.{region}.logs</code> と <code>com.amazonaws.{region}.monitoring</code> を作成。プライベート DNS を有効にし、作成した SG を関連付ける。</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <h3>EC2 に CW エージェントをインストール・設定</h3>
+              <p>SSM パラメータストアや設定ファイルで収集対象を定義。エンドポイント URL の変更は不要（プライベート DNS が自動解決）。</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <h3>動作確認</h3>
+              <p>EC2 から <code>nslookup logs.{region}.amazonaws.com</code> でプライベート IP が返ることを確認。CW エージェントのログでエラーが出ないことを確認。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 8: Code Examples -->
+      <section id="code" class="section">
+        <h2 class="section-title">💻 設定例</h2>
+
+        <h3 id="create-vpce-code" class="section-subtitle">VPC エンドポイントの作成</h3>
+        <div class="code-tabs">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="cli1" type="button">AWS CLI</button>
+            <button class="tab-btn" data-tab="cfn1" type="button">CloudFormation</button>
+            <button class="tab-btn" data-tab="tf1" type="button">Terraform</button>
+          </div>
+          <div id="cli1" class="tab-content active">
+<pre><span class="comment"># 1. VPC Endpoint 用 SG を作成</span>
+<span class="cmd">aws ec2 create-security-group</span> \\
+  --group-name <span class="value">"vpce-cw-sg"</span> \\
+  --description <span class="value">"SG for CW VPC Endpoints"</span> \\
+  --vpc-id <span class="value">vpc-0123456789abcdef0</span>
+
+<span class="comment"># 2. SG にインバウンドルール追加（TCP 443）</span>
+<span class="cmd">aws ec2 authorize-security-group-ingress</span> \\
+  --group-id <span class="value">sg-xxxxxxxxxx</span> \\
+  --protocol <span class="value">tcp</span> \\
+  --port <span class="value">443</span> \\
+  --cidr <span class="value">10.0.0.0/16</span>
+
+<span class="comment"># 3. Logs 用 VPC Endpoint を作成</span>
+<span class="cmd">aws ec2 create-vpc-endpoint</span> \\
+  --vpc-id <span class="value">vpc-0123456789abcdef0</span> \\
+  --service-name <span class="value">com.amazonaws.ap-northeast-1.logs</span> \\
+  --vpc-endpoint-type <span class="value">Interface</span> \\
+  --subnet-ids <span class="value">subnet-aaa subnet-bbb</span> \\
+  --security-group-ids <span class="value">sg-xxxxxxxxxx</span> \\
+  --private-dns-enabled
+
+<span class="comment"># 4. Monitoring 用 VPC Endpoint を作成</span>
+<span class="cmd">aws ec2 create-vpc-endpoint</span> \\
+  --vpc-id <span class="value">vpc-0123456789abcdef0</span> \\
+  --service-name <span class="value">com.amazonaws.ap-northeast-1.monitoring</span> \\
+  --vpc-endpoint-type <span class="value">Interface</span> \\
+  --subnet-ids <span class="value">subnet-aaa subnet-bbb</span> \\
+  --security-group-ids <span class="value">sg-xxxxxxxxxx</span> \\
+  --private-dns-enabled</pre>
+          </div>
+          <div id="cfn1" class="tab-content">
+<pre><span class="key">AWSTemplateFormatVersion:</span> <span class="value">"2010-09-09"</span>
+<span class="key">Resources:</span>
+  <span class="comment"># VPC Endpoint 用セキュリティグループ</span>
+  <span class="key">VPCEndpointSG:</span>
+    <span class="key">Type:</span> <span class="value">AWS::EC2::SecurityGroup</span>
+    <span class="key">Properties:</span>
+      <span class="key">GroupDescription:</span> <span class="value">SG for CW VPC Endpoints</span>
+      <span class="key">VpcId:</span> <span class="value">!Ref VPC</span>
+      <span class="key">SecurityGroupIngress:</span>
+        - <span class="key">IpProtocol:</span> <span class="value">tcp</span>
+          <span class="key">FromPort:</span> <span class="value">443</span>
+          <span class="key">ToPort:</span> <span class="value">443</span>
+          <span class="key">CidrIp:</span> <span class="value">10.0.0.0/16</span>
+
+  <span class="comment"># CloudWatch Logs 用 VPC Endpoint</span>
+  <span class="key">LogsEndpoint:</span>
+    <span class="key">Type:</span> <span class="value">AWS::EC2::VPCEndpoint</span>
+    <span class="key">Properties:</span>
+      <span class="key">VpcId:</span> <span class="value">!Ref VPC</span>
+      <span class="key">ServiceName:</span> <span class="value">!Sub com.amazonaws.\${AWS::Region}.logs</span>
+      <span class="key">VpcEndpointType:</span> <span class="value">Interface</span>
+      <span class="key">SubnetIds:</span>
+        - <span class="value">!Ref PrivateSubnetA</span>
+        - <span class="value">!Ref PrivateSubnetB</span>
+      <span class="key">SecurityGroupIds:</span>
+        - <span class="value">!Ref VPCEndpointSG</span>
+      <span class="key">PrivateDnsEnabled:</span> <span class="value">true</span>
+
+  <span class="comment"># CloudWatch Metrics 用 VPC Endpoint</span>
+  <span class="key">MonitoringEndpoint:</span>
+    <span class="key">Type:</span> <span class="value">AWS::EC2::VPCEndpoint</span>
+    <span class="key">Properties:</span>
+      <span class="key">VpcId:</span> <span class="value">!Ref VPC</span>
+      <span class="key">ServiceName:</span> <span class="value">!Sub com.amazonaws.\${AWS::Region}.monitoring</span>
+      <span class="key">VpcEndpointType:</span> <span class="value">Interface</span>
+      <span class="key">SubnetIds:</span>
+        - <span class="value">!Ref PrivateSubnetA</span>
+        - <span class="value">!Ref PrivateSubnetB</span>
+      <span class="key">SecurityGroupIds:</span>
+        - <span class="value">!Ref VPCEndpointSG</span>
+      <span class="key">PrivateDnsEnabled:</span> <span class="value">true</span></pre>
+          </div>
+          <div id="tf1" class="tab-content">
+<pre><span class="comment"># VPC Endpoint 用セキュリティグループ</span>
+<span class="key">resource</span> <span class="value">"aws_security_group"</span> <span class="value">"vpce_cw"</span> {
+  <span class="key">name</span>        = <span class="value">"vpce-cw-sg"</span>
+  <span class="key">description</span> = <span class="value">"SG for CW VPC Endpoints"</span>
+  <span class="key">vpc_id</span>      = <span class="value">aws_vpc.main.id</span>
+
+  <span class="key">ingress</span> {
+    <span class="key">from_port</span>   = <span class="value">443</span>
+    <span class="key">to_port</span>     = <span class="value">443</span>
+    <span class="key">protocol</span>    = <span class="value">"tcp"</span>
+    <span class="key">cidr_blocks</span> = [<span class="value">"10.0.0.0/16"</span>]
+  }
+}
+
+<span class="comment"># CloudWatch Logs 用 VPC Endpoint</span>
+<span class="key">resource</span> <span class="value">"aws_vpc_endpoint"</span> <span class="value">"cw_logs"</span> {
+  <span class="key">vpc_id</span>             = <span class="value">aws_vpc.main.id</span>
+  <span class="key">service_name</span>       = <span class="value">"com.amazonaws.ap-northeast-1.logs"</span>
+  <span class="key">vpc_endpoint_type</span>  = <span class="value">"Interface"</span>
+  <span class="key">subnet_ids</span>         = [
+    <span class="value">aws_subnet.private_a.id</span>,
+    <span class="value">aws_subnet.private_b.id</span>
+  ]
+  <span class="key">security_group_ids</span>  = [<span class="value">aws_security_group.vpce_cw.id</span>]
+  <span class="key">private_dns_enabled</span> = <span class="value">true</span>
+}
+
+<span class="comment"># CloudWatch Metrics 用 VPC Endpoint</span>
+<span class="key">resource</span> <span class="value">"aws_vpc_endpoint"</span> <span class="value">"cw_monitoring"</span> {
+  <span class="key">vpc_id</span>             = <span class="value">aws_vpc.main.id</span>
+  <span class="key">service_name</span>       = <span class="value">"com.amazonaws.ap-northeast-1.monitoring"</span>
+  <span class="key">vpc_endpoint_type</span>  = <span class="value">"Interface"</span>
+  <span class="key">subnet_ids</span>         = [
+    <span class="value">aws_subnet.private_a.id</span>,
+    <span class="value">aws_subnet.private_b.id</span>
+  ]
+  <span class="key">security_group_ids</span>  = [<span class="value">aws_security_group.vpce_cw.id</span>]
+  <span class="key">private_dns_enabled</span> = <span class="value">true</span>
+}</pre>
+          </div>
+        </div>
+
+        <h3 id="dns-verify-code" class="section-subtitle">DNS 解決の確認コマンド</h3>
+        <div class="code-tabs">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="verify1" type="button">nslookup</button>
+            <button class="tab-btn" data-tab="verify2" type="button">dig</button>
+          </div>
+          <div id="verify1" class="tab-content active">
+<pre><span class="comment"># プライベート IP が返ればOK</span>
+<span class="cmd">nslookup</span> logs.ap-northeast-1.amazonaws.com
+<span class="comment"># 期待結果: 10.0.x.x のようなプライベート IP</span>
+
+<span class="cmd">nslookup</span> monitoring.ap-northeast-1.amazonaws.com
+<span class="comment"># 期待結果: 10.0.x.x のようなプライベート IP</span></pre>
+          </div>
+          <div id="verify2" class="tab-content">
+<pre><span class="cmd">dig</span> logs.ap-northeast-1.amazonaws.com +short
+<span class="comment"># 期待結果: 10.0.1.55 など VPC 内のプライベート IP</span>
+
+<span class="cmd">dig</span> monitoring.ap-northeast-1.amazonaws.com +short
+<span class="comment"># 期待結果: 10.0.2.88 など VPC 内のプライベート IP</span></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 9: Best Practice vs Anti-pattern -->
+      <section id="bestpractice" class="section">
+        <h2 class="section-title">✅ ベストプラクティス vs ❌ アンチパターン</h2>
+        <div class="comparison-grid">
+          <div class="best-card">
+            <h3>✅ ベストプラクティス</h3>
+            <ul>
+              <li>Logs と Monitoring の <strong>両方</strong>の VPC Endpoint を作成する</li>
+              <li>プライベート DNS を有効にして設定変更を最小化する</li>
+              <li>SG のソースに VPC CIDR または EC2 の SG ID を指定する</li>
+              <li>複数 AZ にサブネットを指定して高可用性を確保する</li>
+              <li>VPC Endpoint ポリシーで必要最小限のアクションのみ許可する</li>
+              <li>CloudTrail で VPC Endpoint 経由のアクセスを記録する</li>
+            </ul>
+          </div>
+          <div class="anti-card">
+            <h3>❌ アンチパターン</h3>
+            <ul>
+              <li>Logs だけ作って Monitoring を忘れる（またはその逆）</li>
+              <li>SG のインバウンドに 0.0.0.0/0 を指定する（広すぎる）</li>
+              <li>enableDnsSupport / enableDnsHostnames を無効のまま放置する</li>
+              <li>単一 AZ のサブネットだけに Endpoint を配置する</li>
+              <li>Endpoint ポリシーを設定せずフルアクセスのまま運用する</li>
+              <li>NAT Gateway と VPC Endpoint を併用して二重コストを発生させる</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 10: Troubleshooting -->
+      <section id="troubleshoot" class="section">
+        <h2 class="section-title">🔧 トラブルシューティング</h2>
+
+        <div class="trouble-card">
+          <h3>⚠️ CW エージェントが「RequestError: send request failed」を出す</h3>
+          <p class="cause"><strong>原因：</strong>VPC Endpoint が作成されていない、または SG の TCP/443 が許可されていない</p>
+          <p class="solution">✅ <strong>対策：</strong>logs / monitoring 両方の Endpoint 存在確認、SG のインバウンド 443 ルールを確認</p>
+        </div>
+
+        <div class="trouble-card">
+          <h3>⚠️ nslookup でパブリック IP が返る</h3>
+          <p class="cause"><strong>原因：</strong>enableDnsSupport / enableDnsHostnames が false、またはプライベート DNS が無効</p>
+          <p class="solution">✅ <strong>対策：</strong>VPC の DNS 設定を両方 true にし、Endpoint の「プライベート DNS 名を有効にする」を ON にする</p>
+        </div>
+
+        <div class="trouble-card">
+          <h3>⚠️ メトリクスは送れるがログが送れない（またはその逆）</h3>
+          <p class="cause"><strong>原因：</strong>片方の VPC Endpoint しか作成していない</p>
+          <p class="solution">✅ <strong>対策：</strong><code>com.amazonaws.{region}.logs</code> と <code>com.amazonaws.{region}.monitoring</code> の<strong>両方</strong>が存在するか確認</p>
+        </div>
+
+        <div class="trouble-card">
+          <h3>⚠️ Endpoint 作成時に「PrivateDnsOnlyForInboundResolverEndpoint」エラー</h3>
+          <p class="cause"><strong>原因：</strong>VPC の enableDnsHostnames が false のとき、プライベート DNS を有効にできない</p>
+          <p class="solution">✅ <strong>対策：</strong>先に VPC の enableDnsHostnames を true にしてから Endpoint を作成する</p>
+        </div>
+      </section>
+
+      <!-- Section 11: Exam Tips -->
+      <section id="exam" class="exam-tips">
+        <h2>📝 試験対策（ANS-C01 / SAP-C02）</h2>
+
+        <div class="exam-tip-item">
+          <h3>🎯 出題パターン 1：プライベートサブネットから CloudWatch にログを送信したい</h3>
+          <p>「インターネットアクセスなしで CW にデータ送信」→ <strong>Interface VPC Endpoint</strong> が正解。Gateway Endpoint（S3/DynamoDB 用）とは異なるタイプであることに注意。</p>
+        </div>
+
+        <div class="exam-tip-item">
+          <h3>🎯 出題パターン 2：VPC Endpoint を作成したのに通信できない</h3>
+          <p>DNS 設定の確認がポイント。<strong>enableDnsSupport</strong> と <strong>enableDnsHostnames</strong> の両方が true でないとプライベート DNS が機能しない。また SG の TCP/443 許可忘れもよく出る。</p>
+        </div>
+
+        <div class="exam-tip-item">
+          <h3>🎯 出題パターン 3：コスト最適化</h3>
+          <p>NAT Gateway（$0.045/GB + 時間課金）vs VPC Endpoint（時間課金 + $0.01/GB）のコスト比較。大量のログ転送がある場合、VPC Endpoint のほうがコスト効率が良い場合がある。</p>
+        </div>
+
+        <div class="exam-tip-item">
+          <h3>🎯 出題パターン 4：Interface vs Gateway Endpoint</h3>
+          <p>CloudWatch Logs / Metrics は <strong>Interface Endpoint</strong>（PrivateLink ベース）。Gateway Endpoint は <strong>S3</strong> と <strong>DynamoDB</strong> のみ。この違いは頻出。</p>
+        </div>
+      </section>
+
+      <!-- Section 12: FAQ -->
+      <section id="faq" class="section">
+        <h2 class="section-title">❓ FAQ（よくある質問）</h2>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false">
+            <span>CW エージェントの設定ファイルで VPC Endpoint の URL を指定する必要がありますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>いいえ、プライベート DNS を有効にしている場合は不要です。エージェントは通常の AWS エンドポイント名（logs.region.amazonaws.com）を使い、DNS が自動的に VPC Endpoint のプライベート IP を返します。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false">
+            <span>VPC Endpoint は AZ ごとに料金がかかりますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>はい。Interface VPC Endpoint は、指定した各サブネット（各 AZ）ごとに ENI が作成され、ENI ごとに時間課金が発生します。コストと可用性のバランスを考慮してサブネット数を決めてください。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false">
+            <span>オンプレミスから VPC Endpoint 経由で CloudWatch にアクセスできますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>はい、Direct Connect または VPN で VPC に接続し、VPC Endpoint のプライベート IP にルーティングすることで可能です。ただし、オンプレミスの DNS をプライベート DNS に向ける設定（Route 53 Resolver Inbound Endpoint など）が追加で必要になります。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false">
+            <span>Gateway Endpoint と Interface Endpoint の違いは何ですか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Gateway Endpoint はルートテーブルにエントリを追加する方式で、S3 と DynamoDB のみ対応。無料です。Interface Endpoint は ENI を作成して PrivateLink を使う方式で、CloudWatch を含む多数のサービスに対応しますが、時間課金とデータ処理料が発生します。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false">
+            <span>SSM エージェント経由で CW エージェントをインストールする場合、追加の Endpoint が必要ですか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>はい。SSM を使う場合は <code>com.amazonaws.{region}.ssm</code>、<code>com.amazonaws.{region}.ssmmessages</code>、<code>com.amazonaws.{region}.ec2messages</code> の VPC Endpoint も必要です。さらに S3 への Gateway Endpoint も推奨されます。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 13: Cheat Sheet -->
+      <section id="cheat" class="cheat-sheet">
+        <h2>📋 チートシート</h2>
+        <div class="cheat-grid">
+          <div class="cheat-item">
+            <h3>📌 必要な VPC Endpoint</h3>
+            <p><code>com.amazonaws.{region}.logs</code></p>
+            <p><code>com.amazonaws.{region}.monitoring</code></p>
+          </div>
+          <div class="cheat-item">
+            <h3>📌 VPC DNS 設定</h3>
+            <p><code>enableDnsSupport: true</code></p>
+            <p><code>enableDnsHostnames: true</code></p>
+          </div>
+          <div class="cheat-item">
+            <h3>📌 SG インバウンド</h3>
+            <p>TCP 443 from VPC CIDR</p>
+          </div>
+          <div class="cheat-item">
+            <h3>📌 エンドポイントタイプ</h3>
+            <p>Interface（PrivateLink ベース）</p>
+            <p>※ Gateway ではない</p>
+          </div>
+          <div class="cheat-item">
+            <h3>📌 確認コマンド</h3>
+            <p><code>nslookup logs.{region}.amazonaws.com</code></p>
+            <p>→ プライベート IP が返れば OK</p>
+          </div>
+          <div class="cheat-item">
+            <h3>📌 エージェント設定</h3>
+            <p>プライベート DNS 有効時は変更不要</p>
+            <p>通常の FQDN がそのまま使える</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 14: Glossary -->
+      <section id="glossary" class="section">
+        <h2 class="section-title">📖 用語集</h2>
+        <dl class="glossary-grid">
+          <div class="glossary-item">
+            <dt>CloudWatch エージェント</dt>
+            <dd>EC2 やオンプレミスからログ・メトリクスを CloudWatch に送信するソフトウェア</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>Interface VPC Endpoint</dt>
+            <dd>VPC 内に ENI を作成して AWS サービスにプライベート接続する仕組み（PrivateLink ベース）</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>AWS PrivateLink</dt>
+            <dd>AWS 内部ネットワークを経由してサービスに接続する技術。インターネットを使わない</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>ENI（Elastic Network Interface）</dt>
+            <dd>VPC 内の仮想ネットワークカード。VPC Endpoint はこれを使ってプライベート IP を持つ</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>プライベート DNS</dt>
+            <dd>VPC 内で AWS サービスの標準 FQDN を VPC Endpoint のプライベート IP に解決する機能</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>enableDnsSupport</dt>
+            <dd>VPC で Amazon 提供 DNS（AmazonProvidedDNS）を使った名前解決を有効にする設定</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>enableDnsHostnames</dt>
+            <dd>VPC 内のインスタンスにパブリック DNS ホスト名を割り当てる設定</dd>
+          </div>
+          <div class="glossary-item">
+            <dt>Gateway Endpoint</dt>
+            <dd>ルートテーブルにエントリを追加する方式の VPC Endpoint。S3 と DynamoDB のみ対応（無料）</dd>
+          </div>
+        </dl>
+      </section>
+
+    </div><!-- /.container -->
+  </main>
+
+  <!-- Scroll to Top -->
+  <button class="scroll-to-top" aria-label="ページ上部に戻る" type="button">↑</button>
+
+  <!-- Footer -->
+  <footer style="text-align: center; padding: 30px; color: #6B7280; font-size: 16px;">
+    <p>AWS 学習ガイド — CloudWatch エージェント × VPC エンドポイント</p>
+  </footer>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

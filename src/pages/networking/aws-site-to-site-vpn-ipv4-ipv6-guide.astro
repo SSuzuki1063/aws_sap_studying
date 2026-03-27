@@ -1,0 +1,1022 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'AWS Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド',
+  pageTitle: 'AWS Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'VPC & ネットワーク基礎',
+  slug: 'aws-site-to-site-vpn-ipv4-ipv6-guide',
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 1,
+  pageTotal: 1,
+  tocItems: [
+    { level: 'h2', id: 'analogy', text: 'たとえ話：貨物列車とトンネルの関係' },
+    { level: 'h2', id: 'architecture', text: 'VPN トンネルの外側と内側の構造' },
+    { level: 'h2', id: 'ip-configs', text: '4つの IP 構成パターン' },
+    { level: 'h2', id: 'rules', text: '重要な制約ルール' },
+    { level: 'h2', id: 'comparison', text: 'ゲートウェイタイプ別 対応比較表' },
+    { level: 'h2', id: 'dualstack', text: 'デュアルスタック VPN 構成' },
+    { level: 'h2', id: 'code', text: '設定例（IPv6 VPN 作成）' },
+    { level: 'h2', id: 'bestpractice', text: 'ベストプラクティス vs アンチパターン' },
+    { level: 'h2', id: 'troubleshoot', text: 'トラブルシューティング' },
+    { level: 'h2', id: 'exam', text: 'AWS 認定試験対策（ANS-C01 / SAP-C02）' },
+    { level: 'h2', id: 'faq', text: 'よくある質問' },
+    { level: 'h2', id: 'glossary', text: '用語集' },
+    { level: 'h2', id: 'cheatsheet', text: 'チートシート' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/aws-site-to-site-vpn-ipv4-ipv6-guide.css',
+};
+
+const rawContent = `
+<!-- ===== Fixed Header ===== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <span class="header-badge">VPN</span>
+      <span class="header-title">Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド</span>
+    </div>
+  </header>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <!-- ===== TOC Navigation ===== -->
+  <nav class="toc-nav" aria-label="目次ナビゲーション">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#analogy">たとえ話</a></li>
+      <li><a href="#architecture">構成図</a></li>
+      <li><a href="#ip-configs">4つの構成</a></li>
+      <li><a href="#rules">制約ルール</a></li>
+      <li><a href="#comparison">対応比較</a></li>
+      <li><a href="#dualstack">デュアルスタック</a></li>
+      <li><a href="#code">設定例</a></li>
+      <li><a href="#bestpractice">ベストプラクティス</a></li>
+      <li><a href="#troubleshoot">トラブルシュート</a></li>
+      <li><a href="#exam">試験対策</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+      <li><a href="#cheatsheet">まとめ</a></li>
+    </ul>
+  </nav>
+
+  <!-- ===== Main Content ===== -->
+  <main class="content-main">
+
+    <!-- ===== Hero Section ===== -->
+    <section class="hero-section" id="overview">
+      <h1 class="hero-title">🔐 AWS Site-to-Site VPN<br>IPv4 / IPv6 トラフィック完全ガイド</h1>
+      <p class="hero-subtitle">VPN トンネルの「外側」と「内側」で IPv4 / IPv6 を自在に組み合わせる仕組みを図解</p>
+      <div class="takeaway-grid">
+        <div class="takeaway-card">
+          <div class="takeaway-num">1</div>
+          <p class="takeaway-text">VPN トンネルは「外側の道路」と「中身の荷物」で、それぞれ IPv4 / IPv6 を選べる</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">2</div>
+          <p class="takeaway-text">1本の VPN 接続で IPv4 と IPv6 の両方を同時に運ぶことはできない（別々に接続が必要）</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">3</div>
+          <p class="takeaway-text">外部トンネル IPv6 は Transit Gateway / Cloud WAN のみ対応（VGW は非対応）</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">4</div>
+          <p class="takeaway-text">既存 VPN に後から IPv6 を追加できない → 削除して新規作成が必要</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Analogy Section ===== -->
+    <section class="section" id="analogy">
+      <span class="section-label">ANALOGY</span>
+      <h2 class="section-title">🚂 たとえ話：貨物列車とトンネルの関係</h2>
+      <p class="section-desc">VPN の IPv4/IPv6 の仕組みを「鉄道」にたとえて理解しましょう</p>
+
+      <div class="analogy-box">
+        <div class="analogy-header">
+          <span class="analogy-icon">🚂</span>
+          <span>VPN は「鉄道トンネル」と「貨物コンテナ」の関係</span>
+        </div>
+        <div class="analogy-body">
+          <p>AWS Site-to-Site VPN を「鉄道システム」にたとえてみましょう。</p>
+          <p style="margin-top:12px;"><strong>外部トンネル IP（IPv4 / IPv6）</strong>は、列車が走る<strong>「線路・トンネルの規格」</strong>です。従来の狭軌線路（IPv4）と、新型の広軌線路（IPv6）があります。</p>
+          <p style="margin-top:12px;"><strong>内部パケット（IPv4 / IPv6）</strong>は、列車に積む<strong>「貨物コンテナの種類」</strong>です。従来型コンテナ（IPv4 パケット）と、新型コンテナ（IPv6 パケット）があります。</p>
+          <p style="margin-top:12px;">重要なルール：<strong>1本の列車（VPN 接続）には1種類のコンテナしか積めません。</strong>従来型と新型を混載することはできないため、両方を運びたい場合は<strong>2本の列車を手配</strong>する必要があります。</p>
+        </div>
+      </div>
+
+      <!-- Mapping Table -->
+      <div class="mapping-table-wrap">
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th>鉄道のたとえ 🚂</th>
+              <th>AWS VPN の実体</th>
+              <th>ポイント</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>線路・トンネルの規格</td>
+              <td>外部トンネル IP アドレス</td>
+              <td>IPv4（従来）または IPv6（新型）を選択</td>
+            </tr>
+            <tr>
+              <td>貨物コンテナの種類</td>
+              <td>内部パケットの IP バージョン</td>
+              <td>IPv4 または IPv6 のいずれか1種類のみ</td>
+            </tr>
+            <tr>
+              <td>1本の列車 = 1種類のコンテナのみ</td>
+              <td>1本の VPN 接続 = 1つの IP バージョンのみ</td>
+              <td>IPv4 と IPv6 の混載は不可</td>
+            </tr>
+            <tr>
+              <td>2本の列車を手配</td>
+              <td>2本の VPN 接続を作成</td>
+              <td>デュアルスタックには2本必要</td>
+            </tr>
+            <tr>
+              <td>新型線路は最新の駅でのみ利用可能</td>
+              <td>外部 IPv6 は TGW / Cloud WAN のみ</td>
+              <td>VGW（旧型駅）は非対応</td>
+            </tr>
+            <tr>
+              <td>線路を走行中に規格変更は不可</td>
+              <td>既存 VPN に後から IPv6 追加は不可</td>
+              <td>削除 → 新規作成が必要</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Architecture Diagram ===== -->
+    <section class="section" id="architecture">
+      <span class="section-label">ARCHITECTURE</span>
+      <h2 class="section-title">📐 VPN トンネルの外側と内側の構造</h2>
+      <p class="section-desc">「トンネルの外側の IP」と「中を流れるパケットの IP」は独立して選択できます</p>
+
+      <div class="svg-container">
+        <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VPN トンネル外側・内側 IP の構造図">
+          <defs>
+            <marker id="arr-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arr-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+            </marker>
+            <filter id="sh1" x="-10%" y="-10%" width="120%" height="130%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+            </filter>
+            <style>
+              .svg-title { font-family: sans-serif; font-size: 22px; font-weight: 700; fill: #0F172A; }
+              .svg-sub { font-family: sans-serif; font-size: 14px; fill: #475569; }
+              .svg-node-title { font-family: sans-serif; font-size: 16px; font-weight: 700; fill: #1E293B; }
+              .svg-node-sub { font-family: sans-serif; font-size: 13px; fill: #475569; }
+              .svg-label { font-family: sans-serif; font-size: 13px; font-weight: 600; fill: #3B82F6; }
+              .svg-label-g { font-family: sans-serif; font-size: 13px; font-weight: 600; fill: #059669; }
+              .svg-zone { font-family: sans-serif; font-size: 14px; font-weight: 700; }
+            </style>
+          </defs>
+
+          <!-- Background -->
+          <rect width="1200" height="700" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="652" rx="22" fill="#FFFFFF" filter="url(#sh1)"/>
+
+          <!-- Title -->
+          <text x="600" y="68" text-anchor="middle" class="svg-title">VPN トンネルの外側 IP と内側パケット IP の関係</text>
+          <text x="600" y="92" text-anchor="middle" class="svg-sub">外側（Outer）= トンネル自体のアドレス ／ 内側（Inner）= 中を流れるデータのアドレス</text>
+
+          <!-- Inner Panel -->
+          <rect x="40" y="110" width="1120" height="540" rx="18" fill="#F8FAFC"/>
+
+          <!-- On-premises zone: cx=190 -->
+          <rect x="50" y="120" width="300" height="520" rx="14" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="200" y="150" text-anchor="middle" class="svg-zone" fill="#475569">🏢 オンプレミス</text>
+
+          <!-- CGW Node: cx=200, cy=260 -->
+          <g>
+            <rect x="90" y="210" width="220" height="96" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="200" y="248" text-anchor="middle" class="svg-node-title">Customer Gateway</text>
+            <text x="200" y="272" text-anchor="middle" class="svg-node-sub">カスタマーゲートウェイ</text>
+          </g>
+
+          <!-- On-prem Network: cx=200, cy=440 -->
+          <g>
+            <rect x="90" y="390" width="220" height="96" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="200" y="428" text-anchor="middle" class="svg-node-title">オンプレミス</text>
+            <text x="200" y="452" text-anchor="middle" class="svg-node-sub">ネットワーク</text>
+          </g>
+
+          <!-- Arrow CGW → On-prem -->
+          <line x1="200" y1="306" x2="200" y2="384" stroke="#94A3B8" stroke-width="2" stroke-dasharray="5,3"/>
+
+          <!-- VPN Tunnel zone -->
+          <rect x="370" y="170" width="460" height="210" rx="18" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+          <text x="600" y="200" text-anchor="middle" class="svg-zone" fill="#4338CA">🔐 VPN トンネル（IPsec）</text>
+
+          <!-- Outer Tunnel label -->
+          <rect x="400" y="220" width="400" height="60" rx="10" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+          <text x="600" y="245" text-anchor="middle" class="svg-node-sub" fill="#1D4ED8" font-weight="700" font-size="14px">外側トンネル IP（Outer）: IPv4 または IPv6</text>
+          <text x="600" y="268" text-anchor="middle" class="svg-node-sub" fill="#1D4ED8" font-size="12px">トンネルエンドポイントのアドレス空間</text>
+
+          <!-- Inner Packets label -->
+          <rect x="430" y="298" width="340" height="60" rx="10" fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/>
+          <text x="600" y="323" text-anchor="middle" class="svg-node-sub" fill="#065F46" font-weight="700" font-size="14px">内側パケット（Inner）: IPv4 または IPv6</text>
+          <text x="600" y="346" text-anchor="middle" class="svg-node-sub" fill="#065F46" font-size="12px">実際のアプリケーションデータ</text>
+
+          <!-- AWS side zone: cx=1010 -->
+          <rect x="850" y="120" width="300" height="520" rx="14" fill="none" stroke="#FDBA74" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="1000" y="150" text-anchor="middle" class="svg-zone" fill="#D97706">☁️ AWS クラウド</text>
+
+          <!-- TGW Node: cx=1000, cy=260 -->
+          <g>
+            <rect x="890" y="210" width="220" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="1000" y="242" text-anchor="middle" class="svg-node-title">Transit Gateway</text>
+            <text x="1000" y="266" text-anchor="middle" class="svg-node-sub">
+              <tspan x="1000" dy="0">/ VGW / Cloud WAN</tspan>
+            </text>
+          </g>
+
+          <!-- VPC Node: cx=1000, cy=440 -->
+          <g>
+            <rect x="890" y="390" width="220" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="1000" y="428" text-anchor="middle" class="svg-node-title">VPC</text>
+            <text x="1000" y="452" text-anchor="middle" class="svg-node-sub">IPv4/IPv6 サブネット</text>
+          </g>
+
+          <!-- Arrow TGW → VPC -->
+          <line x1="1000" y1="306" x2="1000" y2="384" stroke="#94A3B8" stroke-width="2" stroke-dasharray="5,3"/>
+
+          <!-- Arrow CGW → Tunnel -->
+          <line x1="310" y1="258" x2="370" y2="275" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+
+          <!-- Arrow Tunnel → TGW -->
+          <line x1="830" y1="275" x2="888" y2="258" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+
+          <!-- Key constraint box -->
+          <rect x="370" y="430" width="460" height="110" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+          <text x="600" y="462" text-anchor="middle" class="svg-zone" fill="#DC2626">⚠️ 重要な制約</text>
+          <text x="600" y="490" text-anchor="middle" class="svg-node-sub" fill="#991B1B" font-size="14px">1本の VPN 接続 = IPv4 か IPv6 どちらか一方のみ</text>
+          <text x="600" y="514" text-anchor="middle" class="svg-node-sub" fill="#991B1B" font-size="14px">デュアルスタック（IPv4+IPv6）には2本の VPN 接続が必要</text>
+
+          <!-- Legend -->
+          <rect x="50" y="570" width="20" height="14" rx="3" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+          <text x="78" y="583" class="svg-node-sub" font-size="13px">外側トンネル IP</text>
+          <rect x="210" y="570" width="20" height="14" rx="3" fill="#D1FAE5" stroke="#10B981" stroke-width="1"/>
+          <text x="238" y="583" class="svg-node-sub" font-size="13px">内側パケット IP</text>
+          <rect x="380" y="570" width="20" height="14" rx="3" fill="#FEF2F2" stroke="#F87171" stroke-width="1"/>
+          <text x="408" y="583" class="svg-node-sub" font-size="13px">制約・注意事項</text>
+
+          <!-- Analogy overlay -->
+          <rect x="50" y="600" width="1100" height="44" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1"/>
+          <text x="600" y="628" text-anchor="middle" class="svg-node-sub" fill="#92400E" font-size="14px">🚂 たとえ：「線路の規格」=外側IP ／「コンテナの種類」=内側IP ／ 1列車=1種類のコンテナのみ ／ 混載するなら2列車必要</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ===== 4 IP Configurations ===== -->
+    <section class="section" id="ip-configs">
+      <span class="section-label">CONFIGURATIONS</span>
+      <h2 class="section-title">📦 4つの IP 構成パターン</h2>
+      <p class="section-desc">外側トンネルと内側パケットの IPv4/IPv6 の組み合わせは4パターンあります</p>
+
+      <!-- SVG: 4 patterns visualization -->
+      <div class="svg-container">
+        <svg viewBox="0 0 1200 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="4つのIP構成パターンの図解">
+          <defs>
+            <filter id="sh2" x="-5%" y="-5%" width="110%" height="120%">
+              <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/>
+            </filter>
+            <style>
+              .pat-title { font-family: sans-serif; font-size: 15px; font-weight: 700; fill: #FFFFFF; }
+              .pat-label { font-family: sans-serif; font-size: 13px; font-weight: 600; }
+              .pat-sub { font-family: sans-serif; font-size: 12px; fill: #475569; }
+              .pat-badge { font-family: sans-serif; font-size: 11px; font-weight: 700; fill: #FFFFFF; }
+            </style>
+          </defs>
+
+          <rect width="1200" height="580" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="532" rx="22" fill="#FFFFFF" filter="url(#sh2)"/>
+          <text x="600" y="64" text-anchor="middle" font-family="sans-serif" font-size="20px" font-weight="700" fill="#0F172A">4つの IP 構成パターン（外側トンネル × 内側パケット）</text>
+
+          <!-- Pattern 1: IPv4 Outer + IPv4 Inner (x=50) -->
+          <g>
+            <rect x="50" y="90" width="260" height="200" rx="14" fill="#FFFFFF" stroke="#3B82F6" stroke-width="2" filter="url(#sh2)"/>
+            <rect x="50" y="90" width="260" height="40" rx="14" fill="#2563EB"/>
+            <rect x="50" y="116" width="260" height="14" fill="#2563EB"/>
+            <text x="180" y="117" text-anchor="middle" class="pat-title">① IPv4 外 + IPv4 内</text>
+            <!-- Outer box -->
+            <rect x="70" y="145" width="220" height="50" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+            <text x="180" y="168" text-anchor="middle" class="pat-label" fill="#1D4ED8">外側: IPv4 トンネル</text>
+            <text x="180" y="185" text-anchor="middle" class="pat-sub">パブリック IPv4 エンドポイント</text>
+            <!-- Inner box -->
+            <rect x="90" y="208" width="180" height="40" rx="8" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+            <text x="180" y="233" text-anchor="middle" class="pat-label" fill="#1D4ED8">内側: IPv4 パケット</text>
+            <!-- Support -->
+            <text x="180" y="270" text-anchor="middle" class="pat-sub">🚂 旧型線路 + 旧型コンテナ</text>
+            <rect x="72" y="278" width="44" height="18" rx="4" fill="#059669"/>
+            <text x="94" y="291" text-anchor="middle" class="pat-badge">VGW</text>
+            <rect x="122" y="278" width="44" height="18" rx="4" fill="#059669"/>
+            <text x="144" y="291" text-anchor="middle" class="pat-badge">TGW</text>
+            <rect x="172" y="278" width="78" height="18" rx="4" fill="#059669"/>
+            <text x="211" y="291" text-anchor="middle" class="pat-badge">Cloud WAN</text>
+          </g>
+
+          <!-- Pattern 2: IPv4 Outer + IPv6 Inner (x=330) -->
+          <g>
+            <rect x="330" y="90" width="260" height="200" rx="14" fill="#FFFFFF" stroke="#10B981" stroke-width="2" filter="url(#sh2)"/>
+            <rect x="330" y="90" width="260" height="40" rx="14" fill="#059669"/>
+            <rect x="330" y="116" width="260" height="14" fill="#059669"/>
+            <text x="460" y="117" text-anchor="middle" class="pat-title">② IPv4 外 + IPv6 内</text>
+            <rect x="350" y="145" width="220" height="50" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+            <text x="460" y="168" text-anchor="middle" class="pat-label" fill="#1D4ED8">外側: IPv4 トンネル</text>
+            <text x="460" y="185" text-anchor="middle" class="pat-sub">パブリック IPv4 エンドポイント</text>
+            <rect x="370" y="208" width="180" height="40" rx="8" fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/>
+            <text x="460" y="233" text-anchor="middle" class="pat-label" fill="#065F46">内側: IPv6 パケット</text>
+            <text x="460" y="270" text-anchor="middle" class="pat-sub">🚂 旧型線路 + 新型コンテナ</text>
+            <rect x="372" y="278" width="44" height="18" rx="4" fill="#DC2626"/>
+            <text x="394" y="291" text-anchor="middle" class="pat-badge">VGW</text>
+            <line x1="378" y1="280" x2="410" y2="294" stroke="#FFFFFF" stroke-width="2"/>
+            <rect x="422" y="278" width="44" height="18" rx="4" fill="#059669"/>
+            <text x="444" y="291" text-anchor="middle" class="pat-badge">TGW</text>
+            <rect x="472" y="278" width="78" height="18" rx="4" fill="#059669"/>
+            <text x="511" y="291" text-anchor="middle" class="pat-badge">Cloud WAN</text>
+          </g>
+
+          <!-- Pattern 3: IPv6 Outer + IPv6 Inner (x=610) -->
+          <g>
+            <rect x="610" y="90" width="260" height="200" rx="14" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="2" filter="url(#sh2)"/>
+            <rect x="610" y="90" width="260" height="40" rx="14" fill="#7C3AED"/>
+            <rect x="610" y="116" width="260" height="14" fill="#7C3AED"/>
+            <text x="740" y="117" text-anchor="middle" class="pat-title">③ IPv6 外 + IPv6 内</text>
+            <rect x="630" y="145" width="220" height="50" rx="8" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5"/>
+            <text x="740" y="168" text-anchor="middle" class="pat-label" fill="#5B21B6">外側: IPv6 トンネル</text>
+            <text x="740" y="185" text-anchor="middle" class="pat-sub">パブリック IPv6 エンドポイント</text>
+            <rect x="650" y="208" width="180" height="40" rx="8" fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/>
+            <text x="740" y="233" text-anchor="middle" class="pat-label" fill="#065F46">内側: IPv6 パケット</text>
+            <text x="740" y="270" text-anchor="middle" class="pat-sub">🚂 新型線路 + 新型コンテナ</text>
+            <rect x="652" y="278" width="44" height="18" rx="4" fill="#DC2626"/>
+            <text x="674" y="291" text-anchor="middle" class="pat-badge">VGW</text>
+            <line x1="658" y1="280" x2="690" y2="294" stroke="#FFFFFF" stroke-width="2"/>
+            <rect x="702" y="278" width="44" height="18" rx="4" fill="#059669"/>
+            <text x="724" y="291" text-anchor="middle" class="pat-badge">TGW</text>
+            <rect x="752" y="278" width="78" height="18" rx="4" fill="#059669"/>
+            <text x="791" y="291" text-anchor="middle" class="pat-badge">Cloud WAN</text>
+          </g>
+
+          <!-- Pattern 4: IPv6 Outer + IPv4 Inner (x=890) -->
+          <g>
+            <rect x="890" y="90" width="260" height="200" rx="14" fill="#FFFFFF" stroke="#F59E0B" stroke-width="2" filter="url(#sh2)"/>
+            <rect x="890" y="90" width="260" height="40" rx="14" fill="#D97706"/>
+            <rect x="890" y="116" width="260" height="14" fill="#D97706"/>
+            <text x="1020" y="117" text-anchor="middle" class="pat-title">④ IPv6 外 + IPv4 内</text>
+            <rect x="910" y="145" width="220" height="50" rx="8" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5"/>
+            <text x="1020" y="168" text-anchor="middle" class="pat-label" fill="#5B21B6">外側: IPv6 トンネル</text>
+            <text x="1020" y="185" text-anchor="middle" class="pat-sub">パブリック IPv6 エンドポイント</text>
+            <rect x="930" y="208" width="180" height="40" rx="8" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+            <text x="1020" y="233" text-anchor="middle" class="pat-label" fill="#1D4ED8">内側: IPv4 パケット</text>
+            <text x="1020" y="270" text-anchor="middle" class="pat-sub">🚂 新型線路 + 旧型コンテナ</text>
+            <rect x="932" y="278" width="44" height="18" rx="4" fill="#DC2626"/>
+            <text x="954" y="291" text-anchor="middle" class="pat-badge">VGW</text>
+            <line x1="938" y1="280" x2="970" y2="294" stroke="#FFFFFF" stroke-width="2"/>
+            <rect x="982" y="278" width="44" height="18" rx="4" fill="#059669"/>
+            <text x="1004" y="291" text-anchor="middle" class="pat-badge">TGW</text>
+            <rect x="1032" y="278" width="78" height="18" rx="4" fill="#059669"/>
+            <text x="1071" y="291" text-anchor="middle" class="pat-badge">Cloud WAN</text>
+          </g>
+
+          <!-- Bottom note -->
+          <rect x="50" y="320" width="1100" height="44" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="1"/>
+          <text x="600" y="348" text-anchor="middle" font-family="sans-serif" font-size="14px" font-weight="600" fill="#991B1B">⚠️ VGW（仮想プライベートゲートウェイ）は ① のみ対応 ／ 外側 IPv6 は TGW・Cloud WAN のみ対応</text>
+
+          <!-- Dual Stack diagram -->
+          <text x="600" y="400" text-anchor="middle" font-family="sans-serif" font-size="18px" font-weight="700" fill="#0F172A">デュアルスタック構成：2本の VPN 接続が必要</text>
+
+          <!-- VPN1 -->
+          <rect x="130" y="420" width="420" height="60" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+          <text x="340" y="446" text-anchor="middle" font-family="sans-serif" font-size="15px" font-weight="700" fill="#1D4ED8">VPN 接続 ① ─ IPv4 トラフィック用</text>
+          <text x="340" y="468" text-anchor="middle" font-family="sans-serif" font-size="12px" fill="#3B82F6">各トンネル: /30 IPv4 CIDR（169.254.0.0/16）</text>
+
+          <!-- VPN2 -->
+          <rect x="650" y="420" width="420" height="60" rx="12" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
+          <text x="860" y="446" text-anchor="middle" font-family="sans-serif" font-size="15px" font-weight="700" fill="#065F46">VPN 接続 ② ─ IPv6 トラフィック用</text>
+          <text x="860" y="468" text-anchor="middle" font-family="sans-serif" font-size="12px" fill="#059669">各トンネル: /30 IPv4 + /126 IPv6 CIDR（fd00::/8）</text>
+
+          <!-- Arrow -->
+          <text x="600" y="510" text-anchor="middle" font-family="sans-serif" font-size="14px" fill="#475569">↕ 両方を Transit Gateway に接続して統合管理</text>
+
+          <!-- Legend -->
+          <rect x="200" y="530" width="14" height="14" rx="3" fill="#059669"/>
+          <text x="222" y="543" font-family="sans-serif" font-size="13px" fill="#475569">対応</text>
+          <rect x="300" y="530" width="14" height="14" rx="3" fill="#DC2626"/>
+          <text x="322" y="543" font-family="sans-serif" font-size="13px" fill="#475569">非対応</text>
+        </svg>
+      </div>
+
+      <!-- IP Config Detail Cards -->
+      <div class="ip-config-grid">
+        <div class="ip-config-card">
+          <div class="ip-config-header header-blue">① IPv4 外部 + IPv4 内部</div>
+          <div class="ip-config-body">
+            <div class="ip-config-row">
+              <span class="ip-label label-v4">Outer</span>
+              <span>パブリック IPv4 アドレス</span>
+            </div>
+            <div class="ip-config-row">
+              <span class="ip-label label-v4">Inner</span>
+              <span>IPv4 パケット（/30 CIDR）</span>
+            </div>
+            <div class="ip-config-support">
+              🚂 旧型線路 + 旧型コンテナ ─ 最も基本的な構成<br>
+              <span class="support-badge badge-ok">VGW ✓</span>
+              <span class="support-badge badge-ok">TGW ✓</span>
+              <span class="support-badge badge-ok">Cloud WAN ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ip-config-card">
+          <div class="ip-config-header header-green">② IPv4 外部 + IPv6 内部</div>
+          <div class="ip-config-body">
+            <div class="ip-config-row">
+              <span class="ip-label label-v4">Outer</span>
+              <span>パブリック IPv4 アドレス</span>
+            </div>
+            <div class="ip-config-row">
+              <span class="ip-label label-v6">Inner</span>
+              <span>IPv6 パケット（/126 CIDR）</span>
+            </div>
+            <div class="ip-config-support">
+              🚂 旧型線路 + 新型コンテナ ─ IPv6 移行の第一歩<br>
+              <span class="support-badge badge-ng">VGW ✗</span>
+              <span class="support-badge badge-ok">TGW ✓</span>
+              <span class="support-badge badge-ok">Cloud WAN ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ip-config-card">
+          <div class="ip-config-header header-purple">③ IPv6 外部 + IPv6 内部</div>
+          <div class="ip-config-body">
+            <div class="ip-config-row">
+              <span class="ip-label label-v6">Outer</span>
+              <span>パブリック IPv6 アドレス</span>
+            </div>
+            <div class="ip-config-row">
+              <span class="ip-label label-v6">Inner</span>
+              <span>IPv6 パケット（/126 CIDR）</span>
+            </div>
+            <div class="ip-config-support">
+              🚂 新型線路 + 新型コンテナ ─ 完全 IPv6 移行<br>
+              <span class="support-badge badge-ng">VGW ✗</span>
+              <span class="support-badge badge-ok">TGW ✓</span>
+              <span class="support-badge badge-ok">Cloud WAN ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ip-config-card">
+          <div class="ip-config-header header-orange">④ IPv6 外部 + IPv4 内部</div>
+          <div class="ip-config-body">
+            <div class="ip-config-row">
+              <span class="ip-label label-v6">Outer</span>
+              <span>パブリック IPv6 アドレス</span>
+            </div>
+            <div class="ip-config-row">
+              <span class="ip-label label-v4">Inner</span>
+              <span>IPv4 パケット（/30 CIDR）</span>
+            </div>
+            <div class="ip-config-support">
+              🚂 新型線路 + 旧型コンテナ ─ レガシー対応<br>
+              <span class="support-badge badge-ng">VGW ✗</span>
+              <span class="support-badge badge-ok">TGW ✓</span>
+              <span class="support-badge badge-ok">Cloud WAN ✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Rules & Constraints ===== -->
+    <section class="section" id="rules">
+      <span class="section-label">RULES</span>
+      <h2 class="section-title">⚠️ 重要な制約ルール</h2>
+      <p class="section-desc">IPv4/IPv6 VPN で覚えておくべき6つの制約</p>
+
+      <div class="rule-grid">
+        <div class="rule-card rule-critical">
+          <div class="rule-title">🚫 IPv4/IPv6 混載禁止</div>
+          <p class="rule-body">1本の VPN 接続で IPv4 と IPv6 のトラフィックを<strong>同時に</strong>流すことはできません。デュアルスタックには2本の VPN 接続が必要です。</p>
+        </div>
+        <div class="rule-card rule-critical">
+          <div class="rule-title">🚫 既存 VPN の IPv6 後付け不可</div>
+          <p class="rule-body">既存の Site-to-Site VPN 接続に対して IPv6 サポートを追加することはできません。既存接続を<strong>削除</strong>して<strong>新規作成</strong>する必要があります。</p>
+        </div>
+        <div class="rule-card rule-important">
+          <div class="rule-title">⚡ VGW は外部 IPv6 非対応</div>
+          <p class="rule-body">外部トンネル IP に IPv6 を使えるのは <strong>Transit Gateway</strong> または <strong>Cloud WAN</strong> で終端する VPN のみ。VGW では使えません。</p>
+        </div>
+        <div class="rule-card rule-important">
+          <div class="rule-title">⚡ 外部 IPv6 は両端に必要</div>
+          <p class="rule-body">外部トンネル IP に IPv6 を使う場合、AWS 側と Customer Gateway 側の<strong>両方</strong>に IPv6 アドレスを割り当てる必要があります。</p>
+        </div>
+        <div class="rule-card rule-info">
+          <div class="rule-title">📌 Private IP VPN は IPv6 非対応</div>
+          <p class="rule-body">プライベート IP VPN は外部トンネル IP に IPv6 をサポートしません。RFC 1918 または CGNAT アドレスのみ使用可能です。</p>
+        </div>
+        <div class="rule-card rule-success">
+          <div class="rule-title">✅ スループット・MTU は同一</div>
+          <p class="rule-body">IPv6 VPN は IPv4 VPN と同じスループット（Gbps / PPS）、MTU、ルート制限をサポートします。暗号化方式も同一です。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Comparison Table ===== -->
+    <section class="section" id="comparison">
+      <span class="section-label">COMPARISON</span>
+      <h2 class="section-title">📊 ゲートウェイタイプ別 対応比較表</h2>
+      <p class="section-desc">どのゲートウェイでどの構成が使えるかを一覧で確認</p>
+
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>構成パターン</th>
+              <th>VGW<br>(仮想プライベートGW)</th>
+              <th>Transit Gateway</th>
+              <th>Cloud WAN</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>① IPv4 外部 + IPv4 内部</td>
+              <td><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>② IPv4 外部 + IPv6 内部</td>
+              <td><span class="cross">✗</span></td>
+              <td><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>③ IPv6 外部 + IPv6 内部</td>
+              <td><span class="cross">✗</span></td>
+              <td><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>④ IPv6 外部 + IPv4 内部</td>
+              <td><span class="cross">✗</span></td>
+              <td><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>プライベート IP VPN</td>
+              <td><span class="cross">✗</span></td>
+              <td><span class="check">✓</span> (IPv4のみ)</td>
+              <td><span class="cross">✗</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Dual Stack Section ===== -->
+    <section class="section" id="dualstack">
+      <span class="section-label">DUAL STACK</span>
+      <h2 class="section-title">🔄 デュアルスタック VPN 構成</h2>
+      <p class="section-desc">IPv4 と IPv6 の両方をハイブリッド接続するための構成</p>
+
+      <div class="svg-container">
+        <svg viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="デュアルスタック VPN 構成図">
+          <defs>
+            <marker id="arr-b2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arr-g2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+            </marker>
+            <filter id="sh3" x="-5%" y="-5%" width="110%" height="120%">
+              <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.06"/>
+            </filter>
+          </defs>
+
+          <rect width="1200" height="500" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="452" rx="22" fill="#FFFFFF" filter="url(#sh3)"/>
+          <text x="600" y="62" text-anchor="middle" font-family="sans-serif" font-size="20px" font-weight="700" fill="#0F172A">デュアルスタック構成 ─ Transit Gateway で2本の VPN を統合</text>
+
+          <!-- On-prem box -->
+          <rect x="50" y="90" width="260" height="370" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+          <text x="180" y="118" text-anchor="middle" font-family="sans-serif" font-size="16px" font-weight="700" fill="#475569">🏢 オンプレミス</text>
+          <!-- CGW -->
+          <rect x="70" y="140" width="220" height="70" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+          <text x="180" y="172" text-anchor="middle" font-family="sans-serif" font-size="15px" font-weight="700" fill="#1E293B">Customer Gateway</text>
+          <text x="180" y="194" text-anchor="middle" font-family="sans-serif" font-size="12px" fill="#475569">パブリック IPv4 アドレス</text>
+          <!-- On-prem network -->
+          <rect x="70" y="360" width="220" height="80" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+          <text x="180" y="392" text-anchor="middle" font-family="sans-serif" font-size="15px" font-weight="700" fill="#1E293B">デュアルスタック</text>
+          <text x="180" y="415" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#475569">IPv4 + IPv6 ネットワーク</text>
+
+          <line x1="180" y1="210" x2="180" y2="360" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+          <!-- VPN1: IPv4 -->
+          <rect x="370" y="100" width="460" height="80" rx="14" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+          <text x="600" y="132" text-anchor="middle" font-family="sans-serif" font-size="16px" font-weight="700" fill="#1D4ED8">VPN 接続 ① ─ IPv4 トラフィック用</text>
+          <text x="600" y="158" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#3B82F6">外側: IPv4 ／ 内側: IPv4 ／ 各トンネル /30 CIDR（169.254.0.0/16）</text>
+
+          <!-- VPN2: IPv6 -->
+          <rect x="370" y="200" width="460" height="80" rx="14" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
+          <text x="600" y="232" text-anchor="middle" font-family="sans-serif" font-size="16px" font-weight="700" fill="#065F46">VPN 接続 ② ─ IPv6 トラフィック用</text>
+          <text x="600" y="258" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#059669">外側: IPv4 ／ 内側: IPv6 ／ 各トンネル /30 IPv4 + /126 IPv6 CIDR</text>
+
+          <!-- Arrows to VPN -->
+          <line x1="290" y1="160" x2="368" y2="140" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-b2)"/>
+          <line x1="290" y1="185" x2="368" y2="240" stroke="#10B981" stroke-width="2.5" marker-end="url(#arr-g2)"/>
+
+          <!-- TGW -->
+          <rect x="890" y="90" width="260" height="370" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+          <text x="1020" y="118" text-anchor="middle" font-family="sans-serif" font-size="16px" font-weight="700" fill="#D97706">☁️ AWS クラウド</text>
+
+          <rect x="910" y="140" width="220" height="70" rx="12" fill="#FFFFFF" stroke="#FDBA74" stroke-width="2"/>
+          <text x="1020" y="172" text-anchor="middle" font-family="sans-serif" font-size="15px" font-weight="700" fill="#1E293B">Transit Gateway</text>
+          <text x="1020" y="194" text-anchor="middle" font-family="sans-serif" font-size="12px" fill="#475569">VPN アタッチメント ×2</text>
+
+          <!-- VPC -->
+          <rect x="910" y="360" width="220" height="80" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="1020" y="392" text-anchor="middle" font-family="sans-serif" font-size="15px" font-weight="700" fill="#1E293B">デュアルスタック VPC</text>
+          <text x="1020" y="415" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#475569">IPv4 + IPv6 サブネット</text>
+
+          <line x1="1020" y1="210" x2="1020" y2="360" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+          <!-- Arrows from VPN to TGW -->
+          <line x1="830" y1="140" x2="908" y2="160" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arr-b2)"/>
+          <line x1="830" y1="240" x2="908" y2="185" stroke="#10B981" stroke-width="2.5" marker-end="url(#arr-g2)"/>
+
+          <!-- CIDR note -->
+          <rect x="370" y="310" width="460" height="80" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="1.5"/>
+          <text x="600" y="338" text-anchor="middle" font-family="sans-serif" font-size="14px" font-weight="700" fill="#92400E">📌 CIDR ブロックの割り当て</text>
+          <text x="600" y="360" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#78350F">IPv4 用 VPN: 各トンネルに /30 IPv4 CIDR（169.254.0.0/16 範囲）</text>
+          <text x="600" y="380" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#78350F">IPv6 用 VPN: 各トンネルに /30 IPv4 CIDR + /126 IPv6 CIDR（fd00::/8 範囲）</text>
+
+          <!-- Analogy footer -->
+          <rect x="370" y="420" width="460" height="40" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1"/>
+          <text x="600" y="446" text-anchor="middle" font-family="sans-serif" font-size="13px" fill="#92400E">🚂 旧型コンテナ用の列車と新型コンテナ用の列車を、同じ駅（TGW）に発着させる構成</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ===== Code Examples ===== -->
+    <section class="section" id="code">
+      <span class="section-label">CODE</span>
+      <h2 class="section-title">💻 設定例（IPv6 VPN 作成）</h2>
+      <p class="section-desc">AWS CLI / CloudFormation / Terraform による IPv6 対応 VPN の設定例</p>
+
+      <div class="code-tabs">
+        <div class="tab-buttons">
+          <button class="tab-btn active" data-tab="cli">AWS CLI</button>
+          <button class="tab-btn" data-tab="cfn">CloudFormation</button>
+          <button class="tab-btn" data-tab="tf">Terraform</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-cli">
+          <pre class="code-block"><span class="code-comment"># 1. Customer Gateway 作成（IPv4 パブリック IP を指定）</span>
+aws ec2 create-customer-gateway \\
+  --type ipsec.1 \\
+  --bgp-asn 65000 \\
+  --ip-address <span class="code-str">203.0.113.1</span>
+
+<span class="code-comment"># 2. IPv6 内部パケット対応の VPN 接続を作成</span>
+<span class="code-comment">#    TunnelInsideIpVersion を ipv6 に設定</span>
+aws ec2 create-vpn-connection \\
+  --type ipsec.1 \\
+  --customer-gateway-id <span class="code-str">cgw-0abc123def456</span> \\
+  --transit-gateway-id <span class="code-str">tgw-0xyz789ghi012</span> \\
+  --options '<span class="code-val">{"TunnelInsideIpVersion":"ipv6"}</span>'
+
+<span class="code-comment"># 3. VPN 接続の状態を確認</span>
+aws ec2 describe-vpn-connections \\
+  --vpn-connection-ids <span class="code-str">vpn-0abc123456</span> \\
+  --query '<span class="code-val">VpnConnections[0].State</span>'</pre>
+        </div>
+
+        <div class="tab-panel" id="tab-cfn">
+          <pre class="code-block"><span class="code-key">AWSTemplateFormatVersion</span>: <span class="code-str">'2010-09-09'</span>
+<span class="code-key">Description</span>: <span class="code-str">IPv6 Site-to-Site VPN with TGW</span>
+
+<span class="code-key">Resources</span>:
+  <span class="code-key">CustomerGateway</span>:
+    <span class="code-key">Type</span>: AWS::EC2::CustomerGateway
+    <span class="code-key">Properties</span>:
+      <span class="code-key">Type</span>: ipsec.1
+      <span class="code-key">BgpAsn</span>: <span class="code-val">65000</span>
+      <span class="code-key">IpAddress</span>: <span class="code-str">203.0.113.1</span>
+
+  <span class="code-key">VpnConnectionIPv6</span>:
+    <span class="code-key">Type</span>: AWS::EC2::VPNConnection
+    <span class="code-key">Properties</span>:
+      <span class="code-key">Type</span>: ipsec.1
+      <span class="code-key">CustomerGatewayId</span>: !Ref CustomerGateway
+      <span class="code-key">TransitGatewayId</span>: !Ref TransitGateway
+      <span class="code-comment"># IPv6 内部パケットを有効化</span>
+      <span class="code-key">VpnTunnelOptionsSpecifications</span>:
+        - <span class="code-key">TunnelInsideIpVersion</span>: <span class="code-str">ipv6</span>
+        - <span class="code-key">TunnelInsideIpVersion</span>: <span class="code-str">ipv6</span></pre>
+        </div>
+
+        <div class="tab-panel" id="tab-tf">
+          <pre class="code-block"><span class="code-comment"># Customer Gateway</span>
+<span class="code-key">resource</span> <span class="code-str">"aws_customer_gateway"</span> <span class="code-str">"main"</span> {
+  <span class="code-key">bgp_asn</span>    = <span class="code-val">65000</span>
+  <span class="code-key">ip_address</span> = <span class="code-str">"203.0.113.1"</span>
+  <span class="code-key">type</span>       = <span class="code-str">"ipsec.1"</span>
+}
+
+<span class="code-comment"># IPv6 VPN Connection (TGW に接続)</span>
+<span class="code-key">resource</span> <span class="code-str">"aws_vpn_connection"</span> <span class="code-str">"ipv6"</span> {
+  <span class="code-key">customer_gateway_id</span> = aws_customer_gateway.main.id
+  <span class="code-key">transit_gateway_id</span>  = aws_ec2_transit_gateway.main.id
+  <span class="code-key">type</span>                = <span class="code-str">"ipsec.1"</span>
+
+  <span class="code-comment"># IPv6 内部パケットを有効化</span>
+  <span class="code-key">tunnel_inside_ip_version</span> = <span class="code-str">"ipv6"</span>
+
+  <span class="code-key">tunnel1_inside_ipv6_cidr</span> = <span class="code-str">"fd00::/126"</span>
+  <span class="code-key">tunnel2_inside_ipv6_cidr</span> = <span class="code-str">"fd00::4/126"</span>
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Best Practices ===== -->
+    <section class="section" id="bestpractice">
+      <span class="section-label">BEST PRACTICE</span>
+      <h2 class="section-title">✅ ベストプラクティス vs ❌ アンチパターン</h2>
+
+      <div class="bp-grid">
+        <div class="bp-card">
+          <div class="bp-header bp-do">✅ ベストプラクティス</div>
+          <ul class="bp-list">
+            <li><span class="bp-icon">✅</span><span>Transit Gateway を使ってデュアルスタック VPN を構成する</span></li>
+            <li><span class="bp-icon">✅</span><span>IPv6 移行は段階的に ─ まず ② の構成（IPv4 外 + IPv6 内）から開始</span></li>
+            <li><span class="bp-icon">✅</span><span>BGP を使用して IPv6 ルートを動的に交換する</span></li>
+            <li><span class="bp-icon">✅</span><span>VPC とオンプレミスの両方で IPv6 CIDR を事前に設計する</span></li>
+            <li><span class="bp-icon">✅</span><span>2本の VPN 接続を独立して監視し、個別にフェイルオーバーを設計する</span></li>
+          </ul>
+        </div>
+        <div class="bp-card">
+          <div class="bp-header bp-dont">❌ アンチパターン</div>
+          <ul class="bp-list">
+            <li><span class="bp-icon">❌</span><span>VGW で IPv6 VPN を使おうとする（非対応で失敗する）</span></li>
+            <li><span class="bp-icon">❌</span><span>既存 VPN に IPv6 を「後から追加」できると思い込む</span></li>
+            <li><span class="bp-icon">❌</span><span>1本の VPN で IPv4 + IPv6 トラフィックを混載しようとする</span></li>
+            <li><span class="bp-icon">❌</span><span>プライベート IP VPN で外部 IPv6 アドレスを使おうとする</span></li>
+            <li><span class="bp-icon">❌</span><span>CGW 側に IPv6 アドレスを割り当てずに IPv6 外部トンネルを作成する</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Troubleshooting ===== -->
+    <section class="section" id="troubleshoot">
+      <span class="section-label">TROUBLESHOOT</span>
+      <h2 class="section-title">🔧 トラブルシューティング</h2>
+
+      <div class="ts-grid">
+        <div class="ts-card">
+          <div class="ts-symptom">⚡ VPN 作成時に IPv6 オプションが表示されない</div>
+          <p class="ts-cause"><strong>原因:</strong> VGW（仮想プライベートゲートウェイ）を選択している可能性</p>
+          <div class="ts-fix"><strong>対処:</strong> ターゲットを Transit Gateway または Cloud WAN に変更してください</div>
+        </div>
+        <div class="ts-card">
+          <div class="ts-symptom">⚡ IPv6 トンネルが確立されない</div>
+          <p class="ts-cause"><strong>原因:</strong> CGW 側に IPv6 アドレスが設定されていない</p>
+          <div class="ts-fix"><strong>対処:</strong> CGW デバイスと AWS 側の両方に IPv6 アドレスを設定してください</div>
+        </div>
+        <div class="ts-card">
+          <div class="ts-symptom">⚡ IPv6 トラフィックが流れない</div>
+          <p class="ts-cause"><strong>原因:</strong> VPC サブネットに IPv6 CIDR が関連付けられていない</p>
+          <div class="ts-fix"><strong>対処:</strong> VPC・サブネットに IPv6 CIDR を追加し、ルートテーブルを更新してください</div>
+        </div>
+        <div class="ts-card">
+          <div class="ts-symptom">⚡ 既存 VPN に IPv6 を追加できない</div>
+          <p class="ts-cause"><strong>原因:</strong> 仕様上、既存 VPN への IPv6 後付けは不可</p>
+          <div class="ts-fix"><strong>対処:</strong> 既存 VPN を削除し、IPv6 オプションを有効にした新規 VPN を作成してください</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Exam Tips ===== -->
+    <section class="section" id="exam">
+      <span class="section-label">EXAM</span>
+      <h2 class="section-title">📝 AWS 認定試験対策（ANS-C01 / SAP-C02）</h2>
+
+      <div class="exam-box">
+        <div class="exam-title">🎯 試験で狙われるポイント</div>
+        <ul class="exam-list">
+          <li>
+            <span class="exam-num">1</span>
+            <span>「1本の VPN で IPv4 と IPv6 を同時に」→ <strong>不可</strong>。デュアルスタックには2本の VPN 接続が必要</span>
+          </li>
+          <li>
+            <span class="exam-num">2</span>
+            <span>「VGW で IPv6 VPN」→ <strong>非対応</strong>。IPv6 は TGW / Cloud WAN でのみ使用可能</span>
+          </li>
+          <li>
+            <span class="exam-num">3</span>
+            <span>「既存 VPN への IPv6 追加」→ <strong>不可</strong>。削除 → 新規作成が必要</span>
+          </li>
+          <li>
+            <span class="exam-num">4</span>
+            <span>IPv6 VPN トンネルの CIDR: /30 IPv4 + /126 IPv6（fd00::/8 範囲）</span>
+          </li>
+          <li>
+            <span class="exam-num">5</span>
+            <span>外部 IPv6 を使う場合: AWS 側 + CGW 側の<strong>両方</strong>に IPv6 アドレスが必要</span>
+          </li>
+          <li>
+            <span class="exam-num">6</span>
+            <span>Private IP VPN は外部 IPv6 アドレスを<strong>サポートしない</strong>（RFC 1918 / CGNAT のみ）</span>
+          </li>
+          <li>
+            <span class="exam-num">7</span>
+            <span>問題文で「デュアルスタック」「IPv6 移行」が出たら → TGW + 2本の VPN 接続を想起する</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section class="section" id="faq">
+      <span class="section-label">FAQ</span>
+      <h2 class="section-title">❓ よくある質問</h2>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">
+            <span>1本の VPN 接続で IPv4 と IPv6 の両方を送れますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">いいえ、できません。1本の VPN 接続は IPv4 トラフィックまたは IPv6 トラフィックのいずれか一方のみをサポートします。両方を送る場合は、2本の VPN 接続を作成してください。</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">
+            <span>既存の IPv4 VPN に IPv6 サポートを追加できますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">いいえ、できません。既存の VPN 接続を削除して、IPv6 サポートを有効にした新しい VPN 接続を作成する必要があります。</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">
+            <span>VGW（仮想プライベートゲートウェイ）で IPv6 VPN を使えますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">VGW は「IPv4 外部 + IPv4 内部」の構成（パターン①）のみ対応しています。IPv6 を使う場合は Transit Gateway または Cloud WAN で VPN を終端させてください。</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">
+            <span>IPv6 VPN トンネルにはどのような CIDR が割り当てられますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">IPv6 VPN を有効にすると、各トンネルに2つの CIDR が割り当てられます。1つは /30 の IPv4 CIDR（169.254.0.0/16 範囲）、もう1つは /126 の IPv6 CIDR（fd00::/8 範囲）です。IPv6 CIDR は自分で指定することも、AWS に自動生成させることもできます。</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">
+            <span>IPv6 VPN のスループットや MTU は IPv4 と違いますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">いいえ、IPv6 VPN は IPv4 VPN と同じスループット（Gbps/PPS）、MTU、ルート制限をサポートします。IPsec 暗号化とキー交換の仕組みも同一です。</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">
+            <span>プライベート IP VPN で IPv6 は使えますか？</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">プライベート IP VPN は外部トンネル IP の IPv6 アドレスをサポートしていません。プライベート IP VPN では RFC 1918 アドレスまたは CGNAT アドレスのみ使用可能です。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Glossary ===== -->
+    <section class="section" id="glossary">
+      <span class="section-label">GLOSSARY</span>
+      <h2 class="section-title">📖 用語集</h2>
+
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">外部トンネル IP（Outer Tunnel IP）</div>
+          <div class="glossary-def">VPN トンネル自体のエンドポイントアドレス。インターネット上でトンネルの両端を識別する IP アドレス。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">内部パケット IP（Inner Packet IP）</div>
+          <div class="glossary-def">VPN トンネル内をカプセル化されて流れる実際のアプリケーションデータの IP バージョン。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">デュアルスタック</div>
+          <div class="glossary-def">IPv4 と IPv6 の両方を同時に使用する構成。VPN では2本の接続を用いて実現する。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Transit Gateway（TGW）</div>
+          <div class="glossary-def">複数の VPC や VPN 接続を一元的に接続するハブ。IPv6 VPN の終端先として推奨。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">VGW（仮想プライベートゲートウェイ）</div>
+          <div class="glossary-def">VPC 単位の VPN 接続ポイント。IPv4 のみ対応で、IPv6 VPN は非対応。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">fd00::/8</div>
+          <div class="glossary-def">IPv6 のユニークローカルアドレス（ULA）範囲。VPN トンネル内部の IPv6 CIDR として使用される。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Customer Gateway（CGW）</div>
+          <div class="glossary-def">オンプレミス側の VPN エンドポイントを論理的に表す AWS リソース。</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Private IP VPN</div>
+          <div class="glossary-def">パブリック IP ではなく RFC 1918 / CGNAT アドレスを使う VPN。外部 IPv6 は非対応。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cheatsheet ===== -->
+    <section class="section" id="cheatsheet">
+      <span class="section-label">SUMMARY</span>
+      <h2 class="section-title">📋 チートシート</h2>
+
+      <div class="cheatsheet">
+        <div class="cheatsheet-title">🚂 Site-to-Site VPN IPv4/IPv6 早見表</div>
+        <div class="cs-grid">
+          <div class="cs-item">
+            <div class="cs-label">構成パターン数</div>
+            <div class="cs-value">4種類（外側 IPv4/IPv6 × 内側 IPv4/IPv6）</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">デフォルト</div>
+            <div class="cs-value">IPv4 外部 + IPv4 内部</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">VGW 対応</div>
+            <div class="cs-value">IPv4 外部 + IPv4 内部のみ（① のみ）</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">TGW / Cloud WAN</div>
+            <div class="cs-value">全4パターン対応</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">デュアルスタック</div>
+            <div class="cs-value">2本の VPN 接続が必要（混載不可）</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">IPv6 トンネル CIDR</div>
+            <div class="cs-value">/30 IPv4 + /126 IPv6（fd00::/8 範囲）</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">Private IP VPN</div>
+            <div class="cs-value">外部 IPv6 非対応（RFC 1918 / CGNAT のみ）</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">既存 VPN 移行</div>
+            <div class="cs-value">IPv6 後付け不可 → 削除して新規作成</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Scroll to Top ===== -->
+  <button class="scroll-top" id="scrollTop" aria-label="ページトップへ戻る">↑</button>
+
+  <!-- ===== Footer ===== -->
+  <footer style="background:var(--color-aws-dark);color:rgba(255,255,255,0.6);text-align:center;padding:24px;font-size:14px;">
+    <p>AWS Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド</p>
+    <p style="margin-top:8px;">出典: AWS 公式ドキュメント ─ 学習目的で作成</p>
+  </footer>
+
+  <!-- ===== JavaScript ===== -->
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

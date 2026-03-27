@@ -59,7 +59,7 @@ npm run preview   # production preview (requires prior build)
 
 > **These rules prevent the most common mistakes. Violating them breaks the site.**
 
-1. **Always Use Skills for Resource Integration** — `/skill resource` (unified entry point) or `/ship` (full pipeline). Never manually copy HTML files into `src/pages/`.
+1. **Always Use Skills for Resource Integration** — `/skill resource` (unified entry point) or `/ship` (autonomous pipeline with self-correcting Build/W3C/E2E gates, max 5 retries each). Never manually copy HTML files into `src/pages/`.
 2. **Registry-Driven Data** — When adding resources, update `src/data/resource-registry.json` + `src/data/update-history.json`, then run `node scripts/generate-data.mjs`. Details: `.claude/rules/data-navigation.md`
 3. **GitHub Pages Path Prefix** — All paths MUST include `/aws_sap_studying/`. Configured in `astro.config.mjs` as `base`.
 4. **W3C Validation Required** — All HTML must pass validation before commit.
