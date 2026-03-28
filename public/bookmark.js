@@ -169,6 +169,30 @@ function initializeBookmarkIcons() {
 }
 
 /**
+ * イベント委譲によるブックマークボタンのクリック処理
+ * Astroビルド時レンダリングのボタン（onclick属性なし）にも対応
+ */
+document.addEventListener('click', function(event) {
+    const button = event.target.closest('.bookmark-icon');
+    if (!button) return;
+    const href = button.getAttribute('data-href');
+    if (!href) return;
+    // onclick属性が設定されている場合はそちらに任せる
+    if (button.hasAttribute('onclick')) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const isBookmarked = BookmarkManager.toggle(href);
+    updateBookmarkIcon(href, isBookmarked);
+
+    button.classList.add('bookmark-animate');
+    setTimeout(function() {
+        button.classList.remove('bookmark-animate');
+    }, 300);
+});
+
+/**
  * ヘッダーのブックマーク数バッジを更新
  */
 function updateBookmarkBadge() {
