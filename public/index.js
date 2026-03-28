@@ -203,6 +203,7 @@ const searchData = [
   { title: 'AWS Cloud WAN ポリシールールと評価順序・タグベースセグメントマッピング完全ガイド', category: 'ネットワーキング', file: 'networking/cloud-wan-policy-rules.html', service: 'Cloud WAN', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド', category: 'ネットワーキング', file: 'networking/dx-bgp-routing-2vifs.html', service: '', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', category: 'ネットワーキング', file: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Direct Connect VIF 設定パラメータ完全ガイド', category: 'ネットワーキング', file: 'networking/dx-vif-parameters.html', service: '', tags: 'comparison deep-dive', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Direct Connect ゲートウェイ 許可プレフィックスリスト完全ガイド - Transit Gateway構成', category: 'ネットワーキング', file: 'networking/dx-gw-allowed-prefix.html', service: '', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
@@ -310,6 +311,15 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
+
+
+
+
 
 
 

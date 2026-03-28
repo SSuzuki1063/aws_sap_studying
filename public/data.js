@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 89,
+    count: 90,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
-        count: 18,
-        lastUpdated: '2026-03-27',
+        count: 19,
+        lastUpdated: '2026-03-28',
         resources: [
           {
             title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう',
@@ -198,6 +198,21 @@ const categoriesData = [
             summary: 'DXルーティングポリシーとBGPコミュニティ値を体系的に整理'
           },
           {
+            title: 'AWS Direct Connect VIF 設定パラメータ完全ガイド',
+            href: 'networking/dx-vif-parameters.html',
+            priority: 'high',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 25,
+            tags: [
+              'comparison',
+              'deep-dive'
+            ]
+          },
+          {
             title: 'LAG × ハイブリッドBGP - 階層的冗長性システム完全ガイド',
             href: 'networking/lag_hybrid_bgp_relationship.html',
             exam_domains: [
@@ -267,7 +282,7 @@ const categoriesData = [
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
         count: 50,
-        lastUpdated: '2026-03-27',
+        lastUpdated: '2026-03-28',
         resources: [
           {
             title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD',
@@ -949,7 +964,7 @@ const categoriesData = [
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
         count: 19,
-        lastUpdated: '2026-03-27',
+        lastUpdated: '2026-03-28',
         resources: [
           {
             title: 'AWSネットワークゲートウェイの比較',
@@ -1183,7 +1198,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-27',
+        lastUpdated: '2026-03-28',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html', service: 'EC2' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' }
@@ -3886,7 +3901,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 89
+    count: 90
   },
   {
     id: 'security-governance',
@@ -3936,7 +3951,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '316+',
+  totalResources: '317+',
   offlineSupport: '100%',
   lastUpdated: '2026/03/27'
 };
@@ -4511,7 +4526,7 @@ const serviceIndex = [
 const domainIndex = [
   {
     domainId: 1,
-    count: 142,
+    count: 143,
     categories: [
       'networking',
       'security-governance',
@@ -4522,7 +4537,7 @@ const domainIndex = [
   },
   {
     domainId: 2,
-    count: 242,
+    count: 243,
     categories: [
       'networking',
       'security-governance',
@@ -4679,6 +4694,21 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-28',
+    type: 'content',
+    title: '新規リソース追加: Direct Connect VIF 設定パラメータ完全ガイド',
+    description: 'AWS Direct Connect Virtual Interface（VIF）の全設定パラメータを、Private/Public/Transit VIFの違いとともにホテル予約のたとえ話で図解。CLI設定例・試験対策も網羅。',
+    categories: [
+      'networking'
+    ],
+    tags: [
+      'Direct Connect',
+      'VIF',
+      'BGP',
+      'パラメータ'
+    ]
+  },
   {
     date: '2026-03-27',
     type: 'content',

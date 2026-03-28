@@ -77,13 +77,13 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 89,
+    "count": 90,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
-        "count": 18,
-        "lastUpdated": "2026-03-27",
+        "count": 19,
+        "lastUpdated": "2026-03-28",
         "resources": [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
@@ -268,6 +268,21 @@ export const categoriesData: Category[] = [
             "summary": "DXルーティングポリシーとBGPコミュニティ値を体系的に整理"
           },
           {
+            "title": "AWS Direct Connect VIF 設定パラメータ完全ガイド",
+            "href": "networking/dx-vif-parameters.html",
+            "priority": "high",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "comparison",
+              "deep-dive"
+            ]
+          },
+          {
             "title": "LAG × ハイブリッドBGP - 階層的冗長性システム完全ガイド",
             "href": "networking/lag_hybrid_bgp_relationship.html",
             "exam_domains": [
@@ -337,7 +352,7 @@ export const categoriesData: Category[] = [
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
         "count": 50,
-        "lastUpdated": "2026-03-27",
+        "lastUpdated": "2026-03-28",
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
@@ -1019,7 +1034,7 @@ export const categoriesData: Category[] = [
         "title": "Transit Gateway & ゲートウェイ",
         "icon": "🚪",
         "count": 19,
-        "lastUpdated": "2026-03-27",
+        "lastUpdated": "2026-03-28",
         "resources": [
           {
             "title": "AWSネットワークゲートウェイの比較",
@@ -1253,7 +1268,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-27",
+        "lastUpdated": "2026-03-28",
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
@@ -4486,7 +4501,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 89
+    "count": 90
   },
   {
     "id": "security-governance",
@@ -5218,7 +5233,7 @@ export const learningModes: LearningMode[] = [
 export const domainIndex: DomainIndexItem[] = [
   {
     "domainId": 1,
-    "count": 142,
+    "count": 143,
     "categories": [
       "networking",
       "security-governance",
@@ -5229,7 +5244,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 242,
+    "count": 243,
     "categories": [
       "networking",
       "security-governance",
@@ -5266,7 +5281,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "316+",
+  "totalResources": "317+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/03/27"
+  "lastUpdated": "2026/03/28"
 };

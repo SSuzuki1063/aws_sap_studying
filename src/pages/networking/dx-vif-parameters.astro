@@ -1,0 +1,1171 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Direct Connect VIF 設定パラメータ',
+  pageTitle: 'AWS Direct Connect VIF 設定パラメータ完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Direct Connect & ハイブリッドネットワーク',
+  slug: 'dx-vif-parameters',
+  pageCss: '/aws_sap_studying/css/pages/dx-vif-parameters.css',
+  tocItems: [
+    { level: 'h2', id: 'key-takeaways', text: '最初に押さえる3つのポイント' },
+    { level: 'h2', id: 'analogy', text: 'たとえ話：VIF作成 ＝ ホテルの予約申込書' },
+    { level: 'h2', id: 'vif-types', text: 'VIFの3種類と設定パラメータの違い' },
+    { level: 'h2', id: 'diagram', text: 'VIFパラメータの全体像：何がどこに効くのか' },
+    { level: 'h2', id: 'params', text: 'VIFタイプ別パラメータ対応表' },
+    { level: 'h2', id: 'route-filter-prefixes', text: 'なぜ routeFilterPrefixes は Public VIF だけなのか？' },
+    { level: 'h3', id: 'private-transit-routing', text: 'Private / Transit VIF ＝ ホテル館内の内線通話' },
+    { level: 'h3', id: 'public-routing', text: 'Public VIF ＝ 外部への公衆電話回線' },
+    { level: 'h2', id: 'param-details', text: '各パラメータの詳細解説' },
+    { level: 'h3', id: 'required-params', text: '必須パラメータ（2つ）' },
+    { level: 'h3', id: 'bgp-params', text: 'BGPピアリング関連パラメータ' },
+    { level: 'h3', id: 'extension-params', text: '拡張設定パラメータ（Private / Transit VIF のみ）' },
+    { level: 'h3', id: 'destination-params', text: '接続先指定パラメータ（VIFタイプごとに異なる）' },
+    { level: 'h2', id: 'vif-type-comparison', text: 'VIFタイプ別：パラメータの有無を視覚化' },
+    { level: 'h2', id: 'cli-examples', text: 'VIF作成の設定例（AWS CLI）' },
+    { level: 'h3', id: 'cli-private', text: 'Private VIF の作成' },
+    { level: 'h3', id: 'cli-public', text: 'Public VIF の作成' },
+    { level: 'h3', id: 'cli-transit', text: 'Transit VIF の作成' },
+    { level: 'h2', id: 'best-practices', text: 'ベストプラクティス vs アンチパターン' },
+    { level: 'h2', id: 'troubleshooting', text: 'よくあるエラーと対処法' },
+    { level: 'h2', id: 'exam-tips', text: 'VIFパラメータに関する頻出ポイント' },
+    { level: 'h2', id: 'faq', text: 'よくある質問（FAQ）' },
+    { level: 'h2', id: 'cheatsheet', text: 'VIF パラメータ チートシート' },
+    { level: 'h2', id: 'glossary', text: '用語集' },
+  ],
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 19,
+  pageTotal: 19,
+};
+
+const rawContent = `
+      <!-- ==================== HERO ==================== -->
+      <section class="hero" aria-label="ページ概要">
+        <div class="hero-badge">AWS Direct Connect × VIF Parameters</div>
+        <h1>Direct Connect VIF 設定パラメータ<br>全項目を完全図解</h1>
+        <p class="hero-subtitle">
+          「VIFを作るとき、何を設定するの？」<br>
+          ホテルの予約申込書のたとえ話で、VIFの全パラメータを直感的に理解しましょう
+        </p>
+      </section>
+
+      <!-- ==================== KEY TAKEAWAYS ==================== -->
+      <section class="section" aria-label="重要ポイント">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#127919;</span>
+          <h2 id="key-takeaways">最初に押さえる3つのポイント</h2>
+        </div>
+        <div class="takeaway-grid">
+          <div class="takeaway-card">
+            <div class="takeaway-num">1</div>
+            <div class="takeaway-text"><strong>VIFは3種類</strong>で、それぞれ設定できるパラメータが微妙に異なる。共通パラメータ＋種類別の専用パラメータを理解しよう</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="takeaway-num">2</div>
+            <div class="takeaway-text"><strong>必須パラメータは2つだけ</strong>：virtualInterfaceName（VIF名）と vlan（VLAN ID）。他はオプションだが実運用ではASN・IPアドレスも重要</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="takeaway-num">3</div>
+            <div class="takeaway-text"><strong>接続先の指定方法</strong>が種類で異なる：Private VIFは VGW or DXGW、Transit VIFは DXGWのみ、Public VIFは routeFilterPrefixes で経路指定</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="takeaway-num">4</div>
+            <div class="takeaway-text"><strong>MTU・SiteLink</strong>はPrivateとTransitのみ対応。Public VIFではジャンボフレームもSiteLinkも使えない点に注意</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== ANALOGY ==================== -->
+      <section class="section" aria-label="たとえ話">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#127976;</span>
+          <h2 id="analogy">たとえ話：VIF作成 ＝ ホテルの予約申込書</h2>
+        </div>
+        <p>VIFの作成は、<strong>高級ホテルに宿泊予約するための申込書</strong>を書くようなものです。部屋の種類（Private / Public / Transit）によって記入項目が少し変わりますが、基本的な書式は同じです。</p>
+
+        <table class="analogy-table">
+          <thead>
+            <tr>
+              <th>VIFパラメータ</th>
+              <th>ホテル予約のたとえ</th>
+              <th>実際の役割</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>virtualInterfaceName</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128221;</span> 予約者名</td>
+              <td>VIFの識別名。人間が見て区別するためのラベル</td>
+            </tr>
+            <tr>
+              <td><strong>vlan</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128274;</span> 部屋番号</td>
+              <td>物理回線上で通信を分離するためのVLAN ID</td>
+            </tr>
+            <tr>
+              <td><strong>asn / asnLong</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#127380;</span> 会員番号</td>
+              <td>BGPピアリングで使う自律システム番号（お客様側）</td>
+            </tr>
+            <tr>
+              <td><strong>amazonAddress</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128222;</span> フロントの内線番号</td>
+              <td>AWS側のBGPピアリング用IPアドレス</td>
+            </tr>
+            <tr>
+              <td><strong>customerAddress</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128241;</span> お客様の内線番号</td>
+              <td>お客様側のBGPピアリング用IPアドレス</td>
+            </tr>
+            <tr>
+              <td><strong>authKey</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128272;</span> セキュリティコード</td>
+              <td>BGP MD5認証キー（6〜80文字）</td>
+            </tr>
+            <tr>
+              <td><strong>addressFamily</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#127968;</span> 和室 or 洋室</td>
+              <td>IPv4 か IPv6 か（BGPピアのアドレスファミリー）</td>
+            </tr>
+            <tr>
+              <td><strong>mtu</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128682;</span> ドアの大きさ</td>
+              <td>1回に送れるパケットの最大サイズ（1500 or 8500）</td>
+            </tr>
+            <tr>
+              <td><strong>enableSiteLink</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128652;</span> 系列ホテル間の無料シャトルバス</td>
+              <td>DXロケーション間のAWSバックボーン直接接続</td>
+            </tr>
+            <tr>
+              <td><strong>virtualGatewayId</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128205;</span> 宿泊フロアの指定（低層階）</td>
+              <td>Private VIF の接続先 VGW（1つのVPCに対応）</td>
+            </tr>
+            <tr>
+              <td><strong>directConnectGatewayId</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128205;</span> 宿泊フロアの指定（全フロア対応ロビー）</td>
+              <td>DXGWのID（複数VPC/TGWへの接続に対応）</td>
+            </tr>
+            <tr>
+              <td><strong>routeFilterPrefixes</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#128220;</span> 利用可能な施設リスト</td>
+              <td>Public VIF で広告するCIDRプレフィックスの一覧</td>
+            </tr>
+            <tr>
+              <td><strong>tags</strong></td>
+              <td><span class="analogy-emoji" aria-hidden="true">&#127991;</span> スーツケースの名札</td>
+              <td>AWS リソースのタグ（Key-Value ペア）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>&#128161; ポイント：</strong>VIF作成で必ず記入するのは「予約者名」（virtualInterfaceName）と「部屋番号」（vlan）だけ。他の項目は省略可能ですが、BGP接続を確立するには「会員番号」（ASN）と「内線番号」（IP アドレス）も事実上必須です。
+        </div>
+      </section>
+
+      <!-- ==================== VIF TYPES ==================== -->
+      <section class="section" aria-label="VIFの種類">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128194;</span>
+          <h2 id="vif-types">VIFの3種類と設定パラメータの違い</h2>
+        </div>
+        <div class="vif-type-grid">
+          <div class="vif-type-card private">
+            <span class="vif-icon" aria-hidden="true">&#128274;</span>
+            <h3>Private VIF</h3>
+            <p>VPC内のプライベートリソースにアクセス</p>
+            <span class="vif-dest">VGW / DXGW 経由で VPC へ</span>
+          </div>
+          <div class="vif-type-card public">
+            <span class="vif-icon" aria-hidden="true">&#127760;</span>
+            <h3>Public VIF</h3>
+            <p>AWSのパブリックサービス（S3、DynamoDB等）にアクセス</p>
+            <span class="vif-dest">routeFilterPrefixes で経路指定</span>
+          </div>
+          <div class="vif-type-card transit">
+            <span class="vif-icon" aria-hidden="true">&#128652;</span>
+            <h3>Transit VIF</h3>
+            <p>Transit Gateway 経由で複数VPCにアクセス</p>
+            <span class="vif-dest">DXGW 経由で TGW へ</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SVG: VIF Parameter Architecture ==================== -->
+      <section class="section" aria-label="構成図">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128506;</span>
+          <h2 id="diagram">VIFパラメータの全体像：何がどこに効くのか</h2>
+        </div>
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VIFパラメータがどの部分に対応するかを示す構成図">
+            <rect x="0" y="0" width="1200" height="580" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">VIF パラメータの対応箇所マップ</text>
+
+            <!-- Customer Router -->
+            <rect x="60" y="80" width="220" height="96" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2.5"/>
+            <text x="170" y="118" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">カスタマー</text>
+            <text x="170" y="148" text-anchor="middle" font-size="20" fill="#475569">ルーター</text>
+
+            <!-- DX Connection -->
+            <rect x="340" y="80" width="220" height="96" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="450" y="118" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">DX接続</text>
+            <text x="450" y="148" text-anchor="middle" font-size="20" fill="#92400E">(connectionId)</text>
+
+            <!-- VIF (center) -->
+            <rect x="620" y="72" width="220" height="112" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="3"/>
+            <text x="730" y="108" text-anchor="middle" font-size="20" font-weight="700" fill="#3730A3">&#9733; VIF</text>
+            <text x="730" y="136" text-anchor="middle" font-size="20" fill="#4338CA">virtualInterface</text>
+            <text x="730" y="162" text-anchor="middle" font-size="20" fill="#4338CA">Name + vlan</text>
+
+            <!-- Gateway / Destination -->
+            <rect x="900" y="80" width="240" height="96" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+            <text x="1020" y="118" text-anchor="middle" font-size="20" font-weight="600" fill="#065F46">接続先</text>
+            <text x="1020" y="148" text-anchor="middle" font-size="20" fill="#065F46">VGW / DXGW / TGW</text>
+
+            <!-- Arrows: Router → DX → VIF → Gateway -->
+            <defs>
+              <marker id="arr-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10" fill="#3B82F6"/></marker>
+              <marker id="arr-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10" fill="#10B981"/></marker>
+            </defs>
+
+            <line x1="280" y1="128" x2="336" y2="128" stroke="#3B82F6" stroke-width="3" marker-end="url(#arr-blue)"/>
+            <line x1="560" y1="128" x2="616" y2="128" stroke="#3B82F6" stroke-width="3" marker-end="url(#arr-blue)"/>
+            <line x1="840" y1="128" x2="896" y2="128" stroke="#10B981" stroke-width="3" marker-end="url(#arr-green)"/>
+
+            <!-- BGP Peering zone -->
+            <rect x="200" y="200" width="780" height="90" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="2" stroke-dasharray="6,3"/>
+            <text x="590" y="228" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">BGPピアリング設定ゾーン</text>
+            <text x="590" y="256" text-anchor="middle" font-size="20" fill="#92400E">asn / amazonAddress / customerAddress</text>
+            <text x="590" y="280" text-anchor="middle" font-size="20" fill="#92400E">/ authKey / addressFamily</text>
+
+            <!-- Destination Params zone -->
+            <rect x="60" y="300" width="540" height="90" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2" stroke-dasharray="6,3"/>
+            <text x="330" y="326" text-anchor="middle" font-size="20" font-weight="600" fill="#065F46">接続先指定（VIFの種類で異なる）</text>
+            <text x="330" y="352" text-anchor="middle" font-size="20" fill="#065F46">virtualGatewayId / directConnectGatewayId</text>
+            <text x="330" y="376" text-anchor="middle" font-size="20" fill="#065F46">/ routeFilterPrefixes</text>
+
+            <!-- MTU + SiteLink zone -->
+            <rect x="620" y="300" width="320" height="90" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="2" stroke-dasharray="6,3"/>
+            <text x="780" y="338" text-anchor="middle" font-size="20" font-weight="600" fill="#DC2626">拡張設定</text>
+            <text x="780" y="366" text-anchor="middle" font-size="20" fill="#DC2626">mtu / enableSiteLink</text>
+
+            <!-- Tags zone -->
+            <rect x="60" y="416" width="880" height="56" rx="12" fill="#F3F4F6" stroke="#CBD5E1" stroke-width="1.5"/>
+            <text x="500" y="450" text-anchor="middle" font-size="20" fill="#475569">&#127991; tags ― 全VIFタイプ共通のメタデータ（Key-Value ペア）</text>
+
+            <!-- Legend -->
+            <rect x="60" y="500" width="20" height="20" rx="4" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="90" y="516" font-size="20" fill="#475569">必須</text>
+            <rect x="170" y="500" width="20" height="20" rx="4" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+            <text x="200" y="516" font-size="20" fill="#475569">BGP関連</text>
+            <rect x="310" y="500" width="20" height="20" rx="4" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="340" y="516" font-size="20" fill="#475569">接続先</text>
+            <rect x="430" y="500" width="20" height="20" rx="4" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="460" y="516" font-size="20" fill="#475569">拡張（Private/Transitのみ）</text>
+          </svg>
+          <p class="svg-caption">図1: VIFパラメータがDirect Connect構成のどの部分に対応するかのマップ</p>
+        </div>
+      </section>
+
+      <!-- ==================== PARAMETER COMPARISON TABLE ==================== -->
+      <section class="section" aria-label="パラメータ一覧">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128203;</span>
+          <h2 id="params">VIFタイプ別パラメータ対応表</h2>
+        </div>
+
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>パラメータ名</th>
+                <th>Private VIF</th>
+                <th>Public VIF</th>
+                <th>Transit VIF</th>
+                <th>必須？</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>virtualInterfaceName</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req yes">必須</span></td>
+              </tr>
+              <tr>
+                <td>vlan</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req yes">必須</span></td>
+              </tr>
+              <tr>
+                <td>asn</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>asnLong</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>addressFamily</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>amazonAddress</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>customerAddress</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>authKey</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>mtu</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>enableSiteLink</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>virtualGatewayId</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>directConnectGatewayId</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>routeFilterPrefixes</td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-cross" role="img" aria-label="非対応">&#10005;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+              <tr>
+                <td>tags</td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-check" role="img" aria-label="対応">&#10003;</span></td>
+                <td><span class="badge-req no">任意</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note-box">
+          <strong>&#128161; 覚え方：</strong>Public VIF だけが「仲間はずれ」。MTU変更（ジャンボフレーム）、SiteLink、そしてGatewayへの直接接続がいずれもできません。代わりに<strong>routeFilterPrefixes</strong>（広告するプレフィックスリスト）が Public VIF だけの専用パラメータです。
+        </div>
+      </section>
+
+      <!-- ==================== WHY routeFilterPrefixes IS PUBLIC VIF ONLY ==================== -->
+      <section class="section" aria-label="routeFilterPrefixesが Public VIF 専用の理由">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128161;</span>
+          <h2 id="route-filter-prefixes">なぜ routeFilterPrefixes は Public VIF だけなのか？</h2>
+        </div>
+
+        <p>VIF のパラメータ一覧を見ると、<strong>routeFilterPrefixes</strong> だけが Public VIF 専用であることに気づきます。これは3種類のVIFが<strong>「どの世界のIPアドレスを扱うか」</strong>という根本的な違いから来ています。</p>
+
+        <h3 id="private-transit-routing">&#128274; Private / Transit VIF ＝ ホテル館内の内線通話</h3>
+        <p>Private VIF と Transit VIF は、閉じたプライベート空間での経路交換です。VGW や DXGW・TGW という<strong>「受け皿」のゲートウェイ</strong>に接続すると、VPC の CIDR（例: 10.0.0.0/16）を AWS が自動で BGP 広告してくれます。お客様側のオンプレミス経路も BGP で自動交換されます。</p>
+        <p>ホテルのたとえでいえば、<strong>内線システム（VGW/DXGW）がどの部屋と通話できるか自動で管理してくれる</strong>ので、お客様が「利用可能な施設リスト」を手書きする必要はありません。</p>
+
+        <h3 id="public-routing">&#127760; Public VIF ＝ 外部への公衆電話回線</h3>
+        <p>一方、Public VIF は S3 や DynamoDB など<strong>AWS パブリックサービスのパブリック IP アドレス</strong>にアクセスするためのもので、VGW にも DXGW にも接続しません。ここが根本的に異なります。</p>
+
+        <div class="detail-grid">
+          <div class="detail-card accent">
+            <h3>&#9312; お客様が自分のパブリック IP を AWS に教える必要がある</h3>
+            <p class="param-desc">AWS のパブリックサービスからの<strong>戻りトラフィック</strong>をお客様に届けるには、お客様が所有するパブリック IP レンジ（例: 203.0.113.0/24）を AWS に BGP で広告する必要があります。<code>routeFilterPrefixes</code> はまさにこの「AWS に広告したいパブリック IP プレフィックスのリスト」を指定するパラメータです。</p>
+          </div>
+          <div class="detail-card accent">
+            <h3>&#9313; ゲートウェイという「受け皿」が存在しない</h3>
+            <p class="param-desc">Private VIF には VGW/DXGW、Transit VIF には DXGW という仲介ゲートウェイがありますが、Public VIF にはそれがありません。代わりに AWS のパブリック IP レンジが直接 BGP 広告されてきて、お客様側も自分のパブリック IP を <code>routeFilterPrefixes</code> で広告するという<strong>対等な BGP ピアリング</strong>の形になります。</p>
+          </div>
+        </div>
+
+        <!-- SVG: Private/Transit vs Public VIF routing model comparison -->
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 650" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Private/Transit VIFとPublic VIFの経路交換モデルの違いを比較する図。Private/Transit VIFではゲートウェイが経路を自動管理し、Public VIFではrouteFilterPrefixesでお客様が明示的にプレフィックスを広告する必要があることを示す">
+            <rect x="0" y="0" width="1200" height="650" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="36" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">なぜ routeFilterPrefixes は Public VIF だけなのか？</text>
+
+            <!-- ===== Upper: Private/Transit VIF model ===== -->
+            <rect x="30" y="56" width="1140" height="230" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="600" y="82" text-anchor="middle" font-size="20" font-weight="700" fill="#065F46">&#128274; Private / Transit VIF — ゲートウェイが経路を自動管理</text>
+
+            <!-- On-prem node -->
+            <rect x="50" y="110" width="200" height="80" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="150" y="145" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">オンプレミス</text>
+            <text x="150" y="172" text-anchor="middle" font-size="20" fill="#475569">10.1.0.0/16</text>
+
+            <!-- VIF node -->
+            <rect x="330" y="110" width="200" height="80" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="430" y="145" text-anchor="middle" font-size="20" font-weight="600" fill="#3730A3">Private VIF</text>
+            <text x="430" y="172" text-anchor="middle" font-size="20" fill="#3730A3">/ Transit VIF</text>
+
+            <!-- Gateway node -->
+            <rect x="610" y="110" width="200" height="80" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2.5"/>
+            <text x="710" y="145" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">VGW / DXGW</text>
+            <text x="710" y="172" text-anchor="middle" font-size="20" fill="#92400E">&#128260; 経路自動交換</text>
+
+            <!-- VPC node -->
+            <rect x="890" y="110" width="200" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="990" y="145" text-anchor="middle" font-size="20" font-weight="600" fill="#065F46">VPC</text>
+            <text x="990" y="172" text-anchor="middle" font-size="20" fill="#065F46">10.0.0.0/16</text>
+
+            <!-- Arrows -->
+            <defs>
+              <marker id="a-b" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#3B82F6"><polygon points="0 0,10 3.5,0 7"/></marker>
+              <marker id="a-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#10B981"><polygon points="0 0,10 3.5,0 7"/></marker>
+              <marker id="a-o" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#F97316"><polygon points="0 0,10 3.5,0 7"/></marker>
+              <marker id="a-bl" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto" fill="#3B82F6"><polygon points="10 0,0 3.5,10 7"/></marker>
+            </defs>
+            <line x1="250" y1="140" x2="326" y2="140" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#a-b)"/>
+            <line x1="530" y1="140" x2="606" y2="140" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#a-b)"/>
+            <line x1="810" y1="140" x2="886" y2="140" stroke="#10B981" stroke-width="2.5" marker-end="url(#a-g)"/>
+
+            <!-- Auto exchange label -->
+            <rect x="200" y="210" width="700" height="54" rx="10" fill="#D1FAE5" stroke="#34D399" stroke-width="1.5"/>
+            <text x="550" y="234" text-anchor="middle" font-size="20" fill="#065F46">&#9989; ゲートウェイ（VGW/DXGW）が VPC の CIDR を自動で BGP 広告</text>
+            <text x="550" y="256" text-anchor="middle" font-size="20" fill="#065F46">→ <tspan font-weight="700">routeFilterPrefixes は不要</tspan></text>
+
+            <!-- ===== Lower: Public VIF model ===== -->
+            <rect x="30" y="306" width="1140" height="310" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="600" y="334" text-anchor="middle" font-size="20" font-weight="700" fill="#3730A3">&#127760; Public VIF — ゲートウェイなし、お客様が明示的にプレフィックスを広告</text>
+
+            <!-- On-prem node -->
+            <rect x="50" y="360" width="220" height="80" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="160" y="393" text-anchor="middle" font-size="20" font-weight="600" fill="#1E293B">オンプレミス</text>
+            <text x="160" y="418" text-anchor="middle" font-size="20" fill="#475569">203.0.113.0/24</text>
+
+            <!-- VIF node -->
+            <rect x="380" y="360" width="200" height="80" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <text x="480" y="393" text-anchor="middle" font-size="20" font-weight="700" fill="#3730A3">Public VIF</text>
+            <text x="480" y="418" text-anchor="middle" font-size="20" fill="#3730A3">対等なBGPピア</text>
+
+            <!-- AWS Public Services node -->
+            <rect x="720" y="352" width="280" height="96" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="860" y="386" text-anchor="middle" font-size="20" font-weight="700" fill="#92400E">AWS パブリック</text>
+            <text x="860" y="412" text-anchor="middle" font-size="20" fill="#92400E">サービス</text>
+            <text x="860" y="436" text-anchor="middle" font-size="20" fill="#92400E">S3 / DynamoDB 等</text>
+
+            <!-- No Gateway label -->
+            <rect x="618" y="372" width="84" height="36" rx="8" fill="#FEE2E2" stroke="#F87171" stroke-width="1.5"/>
+            <text x="660" y="397" text-anchor="middle" font-size="20" font-weight="700" fill="#DC2626">&#10005; GW無</text>
+
+            <!-- Arrows: bidirectional -->
+            <line x1="270" y1="385" x2="376" y2="385" stroke="#F97316" stroke-width="2.5" marker-end="url(#a-o)"/>
+            <line x1="580" y1="385" x2="614" y2="385" stroke="#F97316" stroke-width="2.5" marker-end="url(#a-o)"/>
+
+            <!-- routeFilterPrefixes callout -->
+            <rect x="50" y="468" width="520" height="60" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="310" y="492" text-anchor="middle" font-size="20" font-weight="600" fill="#DC2626">&#9888; routeFilterPrefixes で</text>
+            <text x="310" y="516" text-anchor="middle" font-size="20" font-weight="600" fill="#DC2626">お客様のパブリック IP を明示的に広告</text>
+
+            <!-- AWS auto-advertise -->
+            <rect x="620" y="468" width="520" height="60" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="880" y="492" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">AWS 側は</text>
+            <text x="880" y="516" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">全パブリック IP レンジを自動広告</text>
+
+            <!-- Arrow from callout to VIF -->
+            <line x1="310" y1="468" x2="400" y2="444" stroke="#F87171" stroke-width="2" stroke-dasharray="5,3"/>
+            <line x1="880" y1="468" x2="800" y2="444" stroke="#FDBA74" stroke-width="2" stroke-dasharray="5,3"/>
+
+            <!-- Summary -->
+            <rect x="80" y="550" width="1040" height="52" rx="10" fill="#E0E7FF" stroke="#818CF8" stroke-width="1.5"/>
+            <text x="600" y="572" text-anchor="middle" font-size="20" font-weight="600" fill="#3730A3">結論：ゲートウェイのない Public VIF だけが、</text>
+            <text x="600" y="596" text-anchor="middle" font-size="20" font-weight="600" fill="#3730A3">お客様側の経路を明示指定（routeFilterPrefixes）する必要がある</text>
+          </svg>
+          <p class="svg-caption">図2: Private/Transit VIF（ゲートウェイが経路自動管理）vs Public VIF（routeFilterPrefixes で明示広告）の対比</p>
+        </div>
+      </section>
+      <section class="section" aria-label="パラメータ詳細">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128269;</span>
+          <h2 id="param-details">各パラメータの詳細解説</h2>
+        </div>
+
+        <h3 id="required-params">&#9989; 必須パラメータ（2つ）</h3>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3><span class="param-name">virtualInterfaceName</span></h3>
+            <p class="param-desc">VIFの表示名。AWSコンソールやCLIで人間が識別するために使います。ホテルの「予約者名」のようなもの。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>最大長:</dt><dd>100文字</dd>
+              <dt>使用可能:</dt><dd>a-z, 0-9, ハイフン(-)</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">vlan</span></h3>
+            <p class="param-desc">VLAN ID。1本の物理回線上で複数のVIFを論理的に分離するための番号。ホテルの「部屋番号」に相当します。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Integer</dd>
+              <dt>範囲:</dt><dd>1〜4094</dd>
+              <dt>注意:</dt><dd>同一接続内で一意</dd>
+            </dl>
+          </div>
+        </div>
+
+        <h3 id="bgp-params">&#128279; BGPピアリング関連パラメータ</h3>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3><span class="param-name">asn</span></h3>
+            <p class="param-desc">お客様側のBGP AS番号（2バイトASN）。ホテルの「会員番号」のようなもので、BGPでの身元確認に使います。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Integer</dd>
+              <dt>範囲:</dt><dd>1〜2,147,483,646</dd>
+              <dt>推奨:</dt><dd>asnLong の使用を推奨</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">asnLong</span></h3>
+            <p class="param-desc">4バイトASN対応版。asnと同時指定した場合はasnLongが優先されます。より広い番号プールが使えます。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Long</dd>
+              <dt>範囲:</dt><dd>1〜4,294,967,294</dd>
+              <dt>注意:</dt><dd>asn と排他。両方指定時は asnLong が優先</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">addressFamily</span></h3>
+            <p class="param-desc">BGPピアのアドレスファミリー。「和室か洋室か」の選択のように、IPv4かIPv6かを指定します。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>有効値:</dt><dd>ipv4 | ipv6</dd>
+              <dt>IPv6の場合:</dt><dd>amazonAddress/customerAddress は自動割当</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">amazonAddress</span></h3>
+            <p class="param-desc">AWS側のBGPピアリング用IPアドレス。フロントデスクの内線番号のようなもの。省略時はAWSが自動割当します。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>形式:</dt><dd>CIDR表記（例: 169.254.100.1/30）</dd>
+              <dt>範囲:</dt><dd>169.254.0.0/16 のリンクローカル</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">customerAddress</span></h3>
+            <p class="param-desc">お客様側のBGPピアリング用IPアドレス。お客様の部屋の内線番号。amazonAddressと同じサブネットから選びます。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>形式:</dt><dd>CIDR表記（例: 169.254.100.2/30）</dd>
+              <dt>注意:</dt><dd>amazonAddress と /30 で対になる</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">authKey</span></h3>
+            <p class="param-desc">BGP MD5認証キー。セキュリティコードのようなもので、BGPセッションの不正接続を防ぎます。省略時はAWSが自動生成。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>長さ:</dt><dd>6〜80文字</dd>
+              <dt>推奨:</dt><dd>本番環境では必ず設定</dd>
+            </dl>
+          </div>
+        </div>
+
+        <h3 id="extension-params">&#128295; 拡張設定パラメータ（Private / Transit VIF のみ）</h3>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3><span class="param-name">mtu</span></h3>
+            <p class="param-desc">最大転送単位（バイト）。ドアの大きさのようなもので、大きくするとより大きな荷物（パケット）を一度に運べます。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Integer</dd>
+              <dt>有効値:</dt><dd>1500（デフォルト）/ 8500（ジャンボフレーム）</dd>
+              <dt>注意:</dt><dd>物理接続がジャンボフレーム対応であること</dd>
+              <dt>対応:</dt><dd><span class="highlight-private">Private</span> <span class="highlight-transit">Transit</span></dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">enableSiteLink</span></h3>
+            <p class="param-desc">SiteLinkの有効化。系列ホテル間の無料シャトルバスのように、DXロケーション間をAWSバックボーン経由で直接接続できます。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Boolean</dd>
+              <dt>デフォルト:</dt><dd>false（無効）</dd>
+              <dt>注意:</dt><dd>追加料金が発生。GovCloud/中国では不可</dd>
+              <dt>対応:</dt><dd><span class="highlight-private">Private</span> <span class="highlight-transit">Transit</span></dd>
+            </dl>
+          </div>
+        </div>
+
+        <h3 id="destination-params">&#128205; 接続先指定パラメータ（VIFタイプごとに異なる）</h3>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3><span class="param-name">virtualGatewayId</span></h3>
+            <p class="param-desc">接続先のVirtual Private Gateway（VGW）のID。低層階フロアの指定のように、特定の1つのVPCに直接接続します。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>形式:</dt><dd>vgw-xxxxxxxxxxxxxxxxx</dd>
+              <dt>対応:</dt><dd><span class="highlight-private">Private VIF のみ</span></dd>
+              <dt>排他:</dt><dd>directConnectGatewayId と同時指定不可</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">directConnectGatewayId</span></h3>
+            <p class="param-desc">Direct Connect GatewayのID。全フロア対応ロビーのように、複数リージョンのVPCやTGWに接続できます。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>String</dd>
+              <dt>形式:</dt><dd>UUIDフォーマット</dd>
+              <dt>対応:</dt><dd><span class="highlight-private">Private</span> <span class="highlight-transit">Transit</span></dd>
+              <dt>注意:</dt><dd>Transit VIFではDXGW必須</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">routeFilterPrefixes</span></h3>
+            <p class="param-desc">広告するルートプレフィックスのリスト。利用可能な施設リストのように、どのAWSパブリックIPレンジにアクセスするかを指定します。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Array of { cidr: String }</dd>
+              <dt>形式:</dt><dd>CIDR表記の配列</dd>
+              <dt>対応:</dt><dd><span class="highlight-public">Public VIF のみ</span></dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3><span class="param-name">tags</span></h3>
+            <p class="param-desc">AWSリソースのタグ（Key-Valueペア）。スーツケースの名札のように、リソース管理やコスト配分に使います。</p>
+            <dl class="param-meta">
+              <dt>型:</dt><dd>Array of { key, value }</dd>
+              <dt>最低数:</dt><dd>1個</dd>
+              <dt>対応:</dt><dd>全VIFタイプ</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SVG: VIF Type Comparison ==================== -->
+      <section class="section" aria-label="VIFタイプ比較図">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128202;</span>
+          <h2 id="vif-type-comparison">VIFタイプ別：パラメータの有無を視覚化</h2>
+        </div>
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Private/Public/Transit VIFのパラメータ対応状況を比較する図">
+            <rect x="0" y="0" width="1200" height="680" rx="22" fill="#F8FAFC"/>
+            <text x="600" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">VIFタイプ別パラメータ比較マップ</text>
+
+            <!-- Column Headers -->
+            <rect x="60" y="60" width="340" height="56" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2.5"/>
+            <text x="230" y="94" text-anchor="middle" font-size="22" font-weight="700" fill="#065F46">&#128274; Private VIF</text>
+
+            <rect x="430" y="60" width="340" height="56" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <text x="600" y="94" text-anchor="middle" font-size="22" font-weight="700" fill="#3730A3">&#127760; Public VIF</text>
+
+            <rect x="800" y="60" width="340" height="56" rx="12" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+            <text x="970" y="94" text-anchor="middle" font-size="22" font-weight="700" fill="#92400E">&#128652; Transit VIF</text>
+
+            <!-- Common row label -->
+            <rect x="60" y="140" width="1080" height="36" rx="8" fill="#F3F4F6"/>
+            <text x="600" y="164" text-anchor="middle" font-size="20" font-weight="600" fill="#475569">共通パラメータ（全VIFタイプ）</text>
+
+            <!-- Common params row -->
+            <rect x="60" y="186" width="340" height="76" rx="10" fill="white" stroke="#D1D5DB" stroke-width="1.5"/>
+            <text x="230" y="216" text-anchor="middle" font-size="20" fill="#1E293B">name / vlan / asn</text>
+            <text x="230" y="244" text-anchor="middle" font-size="20" fill="#1E293B">address / authKey / tags</text>
+
+            <rect x="430" y="186" width="340" height="76" rx="10" fill="white" stroke="#D1D5DB" stroke-width="1.5"/>
+            <text x="600" y="216" text-anchor="middle" font-size="20" fill="#1E293B">name / vlan / asn</text>
+            <text x="600" y="244" text-anchor="middle" font-size="20" fill="#1E293B">address / authKey / tags</text>
+
+            <rect x="800" y="186" width="340" height="76" rx="10" fill="white" stroke="#D1D5DB" stroke-width="1.5"/>
+            <text x="970" y="216" text-anchor="middle" font-size="20" fill="#1E293B">name / vlan / asn</text>
+            <text x="970" y="244" text-anchor="middle" font-size="20" fill="#1E293B">address / authKey / tags</text>
+
+            <!-- Destination row label -->
+            <rect x="60" y="282" width="1080" height="36" rx="8" fill="#F3F4F6"/>
+            <text x="600" y="306" text-anchor="middle" font-size="20" font-weight="600" fill="#475569">接続先パラメータ（VIFタイプで異なる）</text>
+
+            <rect x="60" y="328" width="340" height="76" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="230" y="358" text-anchor="middle" font-size="20" font-weight="600" fill="#065F46">virtualGatewayId</text>
+            <text x="230" y="386" text-anchor="middle" font-size="20" fill="#065F46">directConnectGatewayId</text>
+
+            <rect x="430" y="328" width="340" height="76" rx="10" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="600" y="365" text-anchor="middle" font-size="20" font-weight="600" fill="#3730A3">routeFilterPrefixes</text>
+
+            <rect x="800" y="328" width="340" height="76" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="970" y="365" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">directConnectGatewayId</text>
+
+            <!-- Extension row label -->
+            <rect x="60" y="424" width="1080" height="36" rx="8" fill="#F3F4F6"/>
+            <text x="600" y="448" text-anchor="middle" font-size="20" font-weight="600" fill="#475569">拡張パラメータ</text>
+
+            <rect x="60" y="470" width="340" height="76" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="230" y="500" text-anchor="middle" font-size="20" font-weight="600" fill="#065F46">mtu（8500対応）</text>
+            <text x="230" y="528" text-anchor="middle" font-size="20" fill="#065F46">enableSiteLink</text>
+
+            <rect x="430" y="470" width="340" height="76" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="2" stroke-dasharray="6,3"/>
+            <text x="600" y="500" text-anchor="middle" font-size="20" fill="#DC2626">mtu &#10005; 非対応</text>
+            <text x="600" y="528" text-anchor="middle" font-size="20" fill="#DC2626">SiteLink &#10005; 非対応</text>
+
+            <rect x="800" y="470" width="340" height="76" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="970" y="500" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">mtu（8500対応）</text>
+            <text x="970" y="528" text-anchor="middle" font-size="20" fill="#92400E">enableSiteLink</text>
+
+            <!-- Summary -->
+            <rect x="60" y="570" width="340" height="56" rx="10" fill="#D1FAE5"/>
+            <text x="230" y="604" text-anchor="middle" font-size="20" font-weight="600" fill="#065F46">全13パラメータ対応</text>
+
+            <rect x="430" y="570" width="340" height="56" rx="10" fill="#E0E7FF"/>
+            <text x="600" y="604" text-anchor="middle" font-size="20" font-weight="600" fill="#3730A3">10パラメータ対応</text>
+
+            <rect x="800" y="570" width="340" height="56" rx="10" fill="#FED7AA"/>
+            <text x="970" y="604" text-anchor="middle" font-size="20" font-weight="600" fill="#92400E">12パラメータ対応</text>
+
+            <!-- Footer note -->
+            <text x="600" y="656" text-anchor="middle" font-size="20" fill="#94A3B8">※ asn / asnLong は排他のため実質1パラメータとしてカウント可</text>
+          </svg>
+          <p class="svg-caption">図3: VIFタイプごとのパラメータ対応状況の比較</p>
+        </div>
+      </section>
+
+      <!-- ==================== CODE EXAMPLES ==================== -->
+      <section class="section" aria-label="設定例">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128187;</span>
+          <h2 id="cli-examples">VIF作成の設定例（AWS CLI）</h2>
+        </div>
+
+        <h3 id="cli-private">Private VIF の作成</h3>
+        <div class="code-tabs">
+          <div class="code-tab-buttons" role="tablist">
+            <button class="code-tab-btn active" role="tab" aria-selected="true" data-tab="cli-priv" aria-controls="panel-cli-priv">AWS CLI</button>
+            <button class="code-tab-btn" role="tab" aria-selected="false" data-tab="cfn-priv" aria-controls="panel-cfn-priv">CloudFormation</button>
+          </div>
+          <div class="code-panel active" id="panel-cli-priv" role="tabpanel">
+<pre><span class="code-comment"># Private VIF の作成（VGW接続）</span>
+aws directconnect create-private-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-private-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"MyPrivateVIF"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">100</span>,\\
+    <span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">amazonAddress</span>=<span class="code-string">"169.254.100.1/30"</span>,\\
+    <span class="code-keyword">customerAddress</span>=<span class="code-string">"169.254.100.2/30"</span>,\\
+    <span class="code-keyword">authKey</span>=<span class="code-string">"MyBGPAuthKey123"</span>,\\
+    <span class="code-keyword">addressFamily</span>=<span class="code-string">"ipv4"</span>,\\
+    <span class="code-keyword">mtu</span>=<span class="code-value">8500</span>,\\
+    <span class="code-keyword">enableSiteLink</span>=<span class="code-value">true</span>,\\
+    <span class="code-keyword">virtualGatewayId</span>=<span class="code-string">"vgw-0123456789abcdef"</span>
+
+<span class="code-comment"># Private VIF の作成（DXGW接続）</span>
+aws directconnect create-private-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-private-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"MyPrivateVIF-DXGW"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">200</span>,\\
+    <span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">directConnectGatewayId</span>=<span class="code-string">"abcd1234-ef56-7890-abcd-1234567890ab"</span></pre>
+          </div>
+          <div class="code-panel" id="panel-cfn-priv" role="tabpanel">
+<pre><span class="code-keyword">AWSTemplateFormatVersion</span>: <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Resources</span>:
+  <span class="code-keyword">MyPrivateVIF</span>:
+    <span class="code-keyword">Type</span>: AWS::DirectConnect::VirtualInterface
+    <span class="code-keyword">Properties</span>:
+      <span class="code-keyword">ConnectionId</span>: <span class="code-string">dxcon-abc12345</span>
+      <span class="code-keyword">VirtualInterfaceName</span>: <span class="code-string">MyPrivateVIF</span>
+      <span class="code-keyword">Type</span>: <span class="code-string">private</span>
+      <span class="code-keyword">Vlan</span>: <span class="code-value">100</span>
+      <span class="code-keyword">Asn</span>: <span class="code-value">65000</span>
+      <span class="code-keyword">AddressFamily</span>: <span class="code-string">ipv4</span>
+      <span class="code-keyword">AmazonAddress</span>: <span class="code-string">169.254.100.1/30</span>
+      <span class="code-keyword">CustomerAddress</span>: <span class="code-string">169.254.100.2/30</span>
+      <span class="code-keyword">VirtualGatewayId</span>: <span class="code-string">vgw-0123456789abcdef</span></pre>
+          </div>
+        </div>
+
+        <h3 id="cli-public">Public VIF の作成</h3>
+        <div class="code-tabs">
+          <div class="code-tab-buttons" role="tablist">
+            <button class="code-tab-btn active" role="tab" aria-selected="true" data-tab="cli-pub" aria-controls="panel-cli-pub">AWS CLI</button>
+            <button class="code-tab-btn" role="tab" aria-selected="false" data-tab="cfn-pub" aria-controls="panel-cfn-pub">CloudFormation</button>
+          </div>
+          <div class="code-panel active" id="panel-cli-pub" role="tabpanel">
+<pre><span class="code-comment"># Public VIF の作成</span>
+<span class="code-comment"># ※ mtu, enableSiteLink, Gateway系パラメータは使えない</span>
+aws directconnect create-public-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-public-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"MyPublicVIF"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">300</span>,\\
+    <span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">amazonAddress</span>=<span class="code-string">"203.0.113.1/30"</span>,\\
+    <span class="code-keyword">customerAddress</span>=<span class="code-string">"203.0.113.2/30"</span>,\\
+    <span class="code-keyword">routeFilterPrefixes</span>=<span class="code-string">"cidr=203.0.113.0/24"</span>
+
+<span class="code-comment"># IPv6の場合（アドレスは自動割当）</span>
+aws directconnect create-public-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-public-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"MyPublicVIF-v6"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">301</span>,\\
+    <span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">addressFamily</span>=<span class="code-string">"ipv6"</span></pre>
+          </div>
+          <div class="code-panel" id="panel-cfn-pub" role="tabpanel">
+<pre><span class="code-keyword">AWSTemplateFormatVersion</span>: <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Resources</span>:
+  <span class="code-keyword">MyPublicVIF</span>:
+    <span class="code-keyword">Type</span>: AWS::DirectConnect::VirtualInterface
+    <span class="code-keyword">Properties</span>:
+      <span class="code-keyword">ConnectionId</span>: <span class="code-string">dxcon-abc12345</span>
+      <span class="code-keyword">VirtualInterfaceName</span>: <span class="code-string">MyPublicVIF</span>
+      <span class="code-keyword">Type</span>: <span class="code-string">public</span>
+      <span class="code-keyword">Vlan</span>: <span class="code-value">300</span>
+      <span class="code-keyword">Asn</span>: <span class="code-value">65000</span>
+      <span class="code-keyword">AddressFamily</span>: <span class="code-string">ipv4</span>
+      <span class="code-keyword">AmazonAddress</span>: <span class="code-string">203.0.113.1/30</span>
+      <span class="code-keyword">CustomerAddress</span>: <span class="code-string">203.0.113.2/30</span></pre>
+          </div>
+        </div>
+
+        <h3 id="cli-transit">Transit VIF の作成</h3>
+        <div class="code-tabs">
+          <div class="code-tab-buttons" role="tablist">
+            <button class="code-tab-btn active" role="tab" aria-selected="true" data-tab="cli-tgw" aria-controls="panel-cli-tgw">AWS CLI</button>
+            <button class="code-tab-btn" role="tab" aria-selected="false" data-tab="cfn-tgw" aria-controls="panel-cfn-tgw">CloudFormation</button>
+          </div>
+          <div class="code-panel active" id="panel-cli-tgw" role="tabpanel">
+<pre><span class="code-comment"># Transit VIF の作成</span>
+<span class="code-comment"># ※ directConnectGatewayId が実質必須</span>
+<span class="code-comment"># ※ TGWとDXGWのASNは異なる値にすること</span>
+aws directconnect create-transit-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-transit-virtual-interface \\
+    <span class="code-keyword">virtualInterfaceName</span>=<span class="code-string">"MyTransitVIF"</span>,\\
+    <span class="code-keyword">vlan</span>=<span class="code-value">400</span>,\\
+    <span class="code-keyword">asn</span>=<span class="code-value">65000</span>,\\
+    <span class="code-keyword">amazonAddress</span>=<span class="code-string">"169.254.200.1/30"</span>,\\
+    <span class="code-keyword">customerAddress</span>=<span class="code-string">"169.254.200.2/30"</span>,\\
+    <span class="code-keyword">mtu</span>=<span class="code-value">8500</span>,\\
+    <span class="code-keyword">enableSiteLink</span>=<span class="code-value">true</span>,\\
+    <span class="code-keyword">directConnectGatewayId</span>=<span class="code-string">"abcd1234-ef56-7890-abcd-1234567890ab"</span></pre>
+          </div>
+          <div class="code-panel" id="panel-cfn-tgw" role="tabpanel">
+<pre><span class="code-keyword">AWSTemplateFormatVersion</span>: <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Resources</span>:
+  <span class="code-keyword">DXGateway</span>:
+    <span class="code-keyword">Type</span>: AWS::DirectConnect::DirectConnectGateway
+    <span class="code-keyword">Properties</span>:
+      <span class="code-keyword">Name</span>: <span class="code-string">MyDXGateway</span>
+      <span class="code-keyword">AmazonSideAsn</span>: <span class="code-value">64512</span>
+
+  <span class="code-keyword">MyTransitVIF</span>:
+    <span class="code-keyword">Type</span>: AWS::DirectConnect::VirtualInterface
+    <span class="code-keyword">Properties</span>:
+      <span class="code-keyword">ConnectionId</span>: <span class="code-string">dxcon-abc12345</span>
+      <span class="code-keyword">VirtualInterfaceName</span>: <span class="code-string">MyTransitVIF</span>
+      <span class="code-keyword">Type</span>: <span class="code-string">transit</span>
+      <span class="code-keyword">Vlan</span>: <span class="code-value">400</span>
+      <span class="code-keyword">Asn</span>: <span class="code-value">65000</span>
+      <span class="code-keyword">DirectConnectGatewayId</span>: !Ref DXGateway</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== BEST PRACTICES ==================== -->
+      <section class="section" aria-label="ベストプラクティス">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#9989;</span>
+          <h2 id="best-practices">ベストプラクティス vs アンチパターン</h2>
+        </div>
+        <div class="practice-grid">
+          <div class="practice-card good">
+            <h3><span aria-hidden="true">&#9989;</span> ベストプラクティス</h3>
+            <ul>
+              <li><strong>VIF名</strong>は「環境-用途-番号」形式（例: prod-private-01）で命名規則を統一</li>
+              <li><strong>authKey</strong>は必ず設定し、BGPセッションを保護する</li>
+              <li><strong>VLAN ID</strong>は管理表で一元管理し、重複を防止</li>
+              <li><strong>asnLong</strong>を使用して4バイトASNに対応（将来性確保）</li>
+              <li>ジャンボフレーム（MTU=8500）は<strong>物理接続の対応確認後</strong>に設定</li>
+              <li>マルチリージョン接続には<strong>DXGW</strong>を使用（VGWは単一VPCのみ）</li>
+            </ul>
+          </div>
+          <div class="practice-card bad">
+            <h3><span aria-hidden="true">&#10060;</span> アンチパターン</h3>
+            <ul>
+              <li>VIF名を「test」「vif1」のような曖昧な名前にする → 運用時に混乱</li>
+              <li>authKeyを省略してBGPセッションを無防備にする</li>
+              <li>Transit VIFでDXGWとTGWに<strong>同じASN</strong>を設定 → 関連付けが失敗</li>
+              <li>Public VIFで<strong>mtuを8500</strong>に設定しようとする → そもそも非対応</li>
+              <li>IPv6 Public VIFでカスタムIPアドレスを指定 → 非サポート</li>
+              <li>物理接続未対応のまま<strong>ジャンボフレーム有効化</strong> → 最大30秒の断絶</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TROUBLESHOOTING ==================== -->
+      <section class="section" aria-label="トラブルシューティング">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128295;</span>
+          <h2 id="troubleshooting">よくあるエラーと対処法</h2>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3>&#9888; VIF作成時に「InvalidParameter」エラー</h3>
+            <p class="param-desc">VLAN IDが既に使用されている、またはVIF名に無効な文字（大文字・特殊文字）が含まれている可能性があります。</p>
+            <dl class="param-meta">
+              <dt>対処:</dt><dd>使用可能文字（a-z, 0-9, -）を確認。VLANの重複を確認。</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3>&#9888; Transit VIFの関連付けが失敗する</h3>
+            <p class="param-desc">DXGWとTGWのASNが同じ値（例: 両方とも64512）になっていると関連付けが失敗します。</p>
+            <dl class="param-meta">
+              <dt>対処:</dt><dd>DXGWのASNとTGWのASNを異なる値に設定。</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3>&#9888; MTU=8500設定後にネットワーク断絶</h3>
+            <p class="param-desc">物理接続がジャンボフレーム未対応の場合、自動アップデートが発生し最大30秒の断絶が生じます。</p>
+            <dl class="param-meta">
+              <dt>対処:</dt><dd>事前にDescribeConnectionsで対応確認。メンテナンスウィンドウ内で実施。</dd>
+            </dl>
+          </div>
+          <div class="detail-card">
+            <h3>&#9888; Public VIFでIPv6カスタムアドレスが設定できない</h3>
+            <p class="param-desc">Public VIFのIPv6はAmazon管理の自動割当のみ対応。カスタムIPv6アドレスはサポートされません。</p>
+            <dl class="param-meta">
+              <dt>対処:</dt><dd>addressFamily=ipv6指定時はamazonAddress/customerAddressを空にする。</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== EXAM TIPS ==================== -->
+      <section class="exam-section" aria-label="試験対策">
+        <div class="exam-badge">ANS-C01 / SAP-C02 試験対策</div>
+        <h2 id="exam-tips">VIFパラメータに関する頻出ポイント</h2>
+        <div class="exam-pattern-grid">
+          <div class="exam-card">
+            <h3>&#128218; Public VIFの特殊性</h3>
+            <p>「ジャンボフレーム（MTU=8500）を使ってS3へのデータ転送を高速化したい」→ Public VIFはMTU変更不可</p>
+            <div class="exam-answer">&#9733; Public VIFはMTU=1500固定。S3へのジャンボフレーム転送にはVPCエンドポイント+Private VIFが必要</div>
+          </div>
+          <div class="exam-card">
+            <h3>&#128218; virtualGatewayId vs directConnectGatewayId</h3>
+            <p>「複数リージョンのVPCに1つのDX接続で接続したい」→ VGWでは不可能</p>
+            <div class="exam-answer">&#9733; VGWは単一VPC。マルチリージョンにはDXGW（directConnectGatewayId）が必要</div>
+          </div>
+          <div class="exam-card">
+            <h3>&#128218; SiteLinkの制約</h3>
+            <p>「DXロケーション間をAWSバックボーンで直結したい」→ enableSiteLink=true</p>
+            <div class="exam-answer">&#9733; SiteLinkはPrivate/Transit VIFのみ対応。GovCloud/中国リージョンでは使用不可。追加料金あり</div>
+          </div>
+          <div class="exam-card">
+            <h3>&#128218; ASN関連の出題</h3>
+            <p>「4バイトASN（65536以上）を使用したい」→ asn パラメータでは不可</p>
+            <div class="exam-answer">&#9733; 4バイトASNには asnLong パラメータを使用。asn は2バイト（1〜2,147,483,646）まで</div>
+          </div>
+          <div class="exam-card">
+            <h3>&#128218; Transit VIFの前提条件</h3>
+            <p>「Transit Gateway経由で100個のVPCに接続したい」→ Transit VIF + DXGW</p>
+            <div class="exam-answer">&#9733; Transit VIFは必ずDXGW経由。TGWとDXGWのASNは異なる値が必須</div>
+          </div>
+          <div class="exam-card">
+            <h3>&#128218; BGP認証キー</h3>
+            <p>「セキュリティ要件でBGPセッションのMD5認証が必要」→ authKey</p>
+            <div class="exam-answer">&#9733; authKey は6〜80文字。省略するとAWSが自動生成。本番では明示的に設定を推奨</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== FAQ ==================== -->
+      <section class="section" aria-label="FAQ">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#10067;</span>
+          <h2 id="faq">よくある質問（FAQ）</h2>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>asn と asnLong の違いは何ですか？どちらを使うべきですか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            asnは2バイトASN（1〜2,147,483,646）、asnLongは4バイトASN（1〜4,294,967,294）に対応しています。AWSはasnLongの使用を推奨しています。両方を同時に指定した場合、asnLongが優先されます。プライベートASN範囲（64512〜65534 または 4200000000〜4294967294）を使用するのが一般的です。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>amazonAddress と customerAddress は省略しても大丈夫ですか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            省略するとAWSが169.254.0.0/16の範囲から自動割り当てします。ただし、自社ルーター側の設定と合わせる必要があるため、本番環境では明示的に指定することを推奨します。IPv6の場合はPublic VIFで自動割当のみ対応（カスタム指定不可）です。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>Private VIFで virtualGatewayId と directConnectGatewayId を両方指定できますか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            いいえ、排他的です。virtualGatewayId（VGW）は1つのVPCへの直接接続に使い、directConnectGatewayId（DXGW）は複数リージョン/複数VPCへの接続に使います。どちらか一方のみを指定できます。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>Public VIF にジャンボフレーム（MTU=8500）は使えますか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            いいえ。Public VIFはMTU=1500固定です。ジャンボフレームが必要な場合は、Private VIFまたはTransit VIFを使用し、VPCゲートウェイエンドポイントやPrivateLinkを経由してAWSサービスにアクセスする構成を検討してください。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>VIF名に使える文字は何ですか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            小文字の英字（a-z）、数字（0-9）、ハイフン（-）のみが使用可能です。最大100文字まで。大文字やアンダースコアは使えないので注意してください。命名規則の例：prod-private-tokyo-01
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>SiteLinkを有効にするとどうなりますか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            SiteLinkを有効にすると、異なるDXロケーション間をAWSのバックボーンネットワーク経由で直接通信できます。通常はリージョンを経由する必要がありますが、SiteLinkにより最短経路で接続できます。ただし追加料金が発生し、GovCloudと中国リージョンでは利用不可です。
+          </div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span>routeFilterPrefixes は何のために使いますか？</span>
+            <span class="faq-icon" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">
+            Public VIF専用のパラメータで、お客様がAWSに広告するパブリックIPプレフィックスを指定します。例えばお客様が所有するパブリックIPレンジ（203.0.113.0/24等）をAWSに通知するために使用します。作成後にプレフィックスを追加する場合はAWSサポートへの連絡が必要です。
+          </div></div>
+        </div>
+      </section>
+
+      <!-- ==================== CHEAT SHEET ==================== -->
+      <section class="cheatsheet" aria-label="チートシート">
+        <h2 id="cheatsheet"><span aria-hidden="true">&#128640;</span> VIF パラメータ チートシート</h2>
+        <div class="cheatsheet-grid">
+          <div class="cheatsheet-item">
+            <h3>必須パラメータ（全VIF共通）</h3>
+            <p>virtualInterfaceName（VIF名・最大100文字・a-z/0-9/-のみ）と vlan（VLAN ID・1〜4094）の2つだけ</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h3>ASN の選択</h3>
+            <p>2バイト: asn（1〜2,147,483,646）。4バイト: asnLong（1〜4,294,967,294）。推奨はasnLong。両方指定時はasnLongが優先</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h3>Public VIF の制約</h3>
+            <p>MTU変更不可・SiteLink不可・Gateway接続不可。専用パラメータ: routeFilterPrefixes。IPv6はカスタムアドレス不可</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h3>Private VIF の接続先</h3>
+            <p>VGW（virtualGatewayId）= 単一VPC。DXGW（directConnectGatewayId）= マルチリージョン/マルチVPC。排他的に指定</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h3>Transit VIF のルール</h3>
+            <p>DXGW必須（directConnectGatewayId）。TGWとDXGWのASNは異なる値が必須。MTU=8500対応・SiteLink対応</p>
+          </div>
+          <div class="cheatsheet-item">
+            <h3>MTU の注意点</h3>
+            <p>有効値: 1500（デフォルト）/ 8500（ジャンボ）。Private/Transit VIFのみ。物理接続がジャンボ未対応だと自動更新で最大30秒断絶</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== GLOSSARY ==================== -->
+      <section class="section" aria-label="用語集">
+        <div class="section-header">
+          <span class="section-icon" aria-hidden="true">&#128214;</span>
+          <h2 id="glossary">用語集</h2>
+        </div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">VIF（Virtual Interface）</div>
+            <div class="glossary-def">DX接続上の仮想インターフェース。Private / Public / Transit の3種類</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">VLAN</div>
+            <div class="glossary-def">仮想LAN。物理回線を論理的に分離する技術。802.1Q規格</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">ASN</div>
+            <div class="glossary-def">自律システム番号。BGPルーティングでネットワークを一意に識別</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">BGP MD5認証</div>
+            <div class="glossary-def">BGPセッションにMD5ハッシュで認証をかけ、不正接続を防止</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">VGW（Virtual Private Gateway）</div>
+            <div class="glossary-def">VPC側のDX接続ポイント。1つのVPCに対応</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">DXGW（Direct Connect Gateway）</div>
+            <div class="glossary-def">複数リージョンのVPC/TGWへの接続ハブ。グローバルリソース</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">SiteLink</div>
+            <div class="glossary-def">DXロケーション間をAWSバックボーンで直接接続する機能。追加料金あり</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">MTU（Maximum Transmission Unit）</div>
+            <div class="glossary-def">1回で転送可能な最大パケットサイズ。1500（標準）or 8500（ジャンボ）</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">routeFilterPrefixes</div>
+            <div class="glossary-def">Public VIF専用。AWSに広告するパブリックIPプレフィックスの一覧</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">リンクローカルアドレス</div>
+            <div class="glossary-def">169.254.0.0/16 の範囲。BGPピアリング用のポイントツーポイントIP</div>
+          </div>
+        </div>
+      </section>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
