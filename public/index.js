@@ -204,6 +204,7 @@ const searchData = [
   { title: 'AWS Direct Connect BGPルーティング（2つのVIF構成）完全ガイド', category: 'ネットワーキング', file: 'networking/dx-bgp-routing-2vifs.html', service: '', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect SiteLink 完全ガイド | データセンター間接続', category: 'ネットワーキング', file: 'networking/direct-connect-sitelink-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Direct Connect VIF 設定パラメータ完全ガイド', category: 'ネットワーキング', file: 'networking/dx-vif-parameters.html', service: '', tags: 'comparison deep-dive', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Direct Connect アクティブ/パッシブBGP設定 完全ガイド', category: 'ネットワーキング', file: 'networking/dx-active-passive-bgp.html', service: '', tags: 'BGP ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ゲートウェイ 許可プレフィックスリスト完全ガイド - Transit Gateway構成', category: 'ネットワーキング', file: 'networking/dx-gw-allowed-prefix.html', service: '', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルーティングポリシーと BGP コミュニティ完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-bgp-routing-guide.html', service: 'Direct Connect', tags: 'networking ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Direct Connect ルート制限とルート集約（サマライゼーション）完全ガイド', category: 'ネットワーキング', file: 'networking/direct-connect-route-summarization-guide.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'advanced' },
@@ -211,6 +212,7 @@ const searchData = [
   { title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう', category: 'ネットワーキング', file: 'networking/aws-direct-connect-guide.html', service: 'Direct Connect', tags: 'comparison', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Direct Connect仮想ゲートウェイ解説', category: 'ネットワーキング', file: 'new-solutions/aws-direct-connect-vgw.html', service: 'Direct Connect', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD', category: 'ネットワーキング', file: 'networking/aws-directory-service-guide.html', service: 'Directory Service', tags: '', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS Egress-Only Internet Gateway 完全ガイド | IPv6出口専用ゲートウェイ', category: 'ネットワーキング', file: 'networking/aws-eigw-guide.html', service: '', tags: 'IPv6 comparison', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS EIP &amp; NATゲートウェイ 超初心者ガイド', category: 'ネットワーキング', file: 'new-solutions/aws_eip_nat_infographic.html', service: 'NAT Gateway', tags: '', domains: [1,2], difficulty: 'beginner' },
   { title: 'AWS ENI（Elastic Network Interface）初心者向け図解', category: 'ネットワーキング', file: 'networking/aws-eni-infographic.html', service: 'ENI', tags: '', domains: [1,2], difficulty: 'beginner' },
   { title: 'AWS Global Accelerator × VPN パフォーマンス向上ガイド', category: 'ネットワーキング', file: 'networking/global-accelerator-vpn-performance-guide.html', service: 'VPN', tags: '', domains: [1,2], difficulty: 'advanced' },
@@ -311,6 +313,13 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
+
+
 
 
 

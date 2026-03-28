@@ -77,12 +77,12 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 90,
+    "count": 92,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
-        "count": 19,
+        "count": 20,
         "lastUpdated": "2026-03-28",
         "resources": [
           {
@@ -212,6 +212,21 @@ export const categoriesData: Category[] = [
             "estimated_minutes": 20,
             "tags": [
               "security"
+            ]
+          },
+          {
+            "title": "AWS Direct Connect アクティブ/パッシブBGP設定 完全ガイド",
+            "href": "networking/dx-active-passive-bgp.html",
+            "priority": "high",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 25,
+            "tags": [
+              "BGP",
+              "ha"
             ]
           },
           {
@@ -351,7 +366,7 @@ export const categoriesData: Category[] = [
       {
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
-        "count": 50,
+        "count": 51,
         "lastUpdated": "2026-03-28",
         "resources": [
           {
@@ -364,6 +379,21 @@ export const categoriesData: Category[] = [
             ],
             "difficulty": "intermediate",
             "estimated_minutes": 25
+          },
+          {
+            "title": "AWS Egress-Only Internet Gateway 完全ガイド | IPv6出口専用ゲートウェイ",
+            "href": "networking/aws-eigw-guide.html",
+            "priority": "medium",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 15,
+            "tags": [
+              "IPv6",
+              "comparison"
+            ]
           },
           {
             "title": "AWS ENI（Elastic Network Interface）初心者向け図解",
@@ -4501,7 +4531,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 90
+    "count": 92
   },
   {
     "id": "security-governance",
@@ -5233,7 +5263,7 @@ export const learningModes: LearningMode[] = [
 export const domainIndex: DomainIndexItem[] = [
   {
     "domainId": 1,
-    "count": 143,
+    "count": 145,
     "categories": [
       "networking",
       "security-governance",
@@ -5244,7 +5274,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 243,
+    "count": 245,
     "categories": [
       "networking",
       "security-governance",
@@ -5281,7 +5311,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "317+",
+  "totalResources": "319+",
   "offlineSupport": "100%",
   "lastUpdated": "2026/03/28"
 };

@@ -1,0 +1,878 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'AWS Egress-Only Internet Gateway 完全ガイド',
+  pageTitle: 'AWS Egress-Only Internet Gateway 完全ガイド | IPv6出口専用ゲートウェイ',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'VPC & ネットワーク基礎',
+  slug: 'aws-eigw-guide',
+  pageCss: '/aws_sap_studying/css/pages/aws-eigw-guide.css',
+  tocItems: [
+    { level: 'h2', id: 'overview', text: 'Egress-Only Internet Gateway（EIGW）とは？' },
+    { level: 'h2', id: 'analogy', text: 'たとえ話：「出口専用の回転ドア」' },
+    { level: 'h2', id: 'architecture', text: 'アーキテクチャ図' },
+    { level: 'h2', id: 'features', text: 'EIGWの主要特徴' },
+    { level: 'h2', id: 'comparison', text: 'EIGW vs NAT Gateway vs Internet Gateway 比較' },
+    { level: 'h2', id: 'code', text: '構成コード例' },
+    { level: 'h2', id: 'bestpractice', text: 'ベストプラクティス vs アンチパターン' },
+    { level: 'h2', id: 'troubleshoot', text: 'トラブルシューティング' },
+    { level: 'h2', id: 'exam', text: '試験対策ポイント' },
+    { level: 'h2', id: 'faq', text: 'よくある質問（FAQ）' },
+  ],
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 81,
+  pageTotal: 82,
+};
+
+const rawContent = `
+<!-- Progress Bar -->
+  <div class="progress-bar" id="progressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <h1><span>&#9656;</span> Egress-Only Internet Gateway 完全ガイド</h1>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="toc-nav" aria-label="目次ナビゲーション">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#analogy">たとえ話</a></li>
+      <li><a href="#architecture">構成図</a></li>
+      <li><a href="#features">特徴</a></li>
+      <li><a href="#comparison">比較</a></li>
+      <li><a href="#code">コード例</a></li>
+      <li><a href="#bestpractice">ベストプラクティス</a></li>
+      <li><a href="#troubleshoot">トラブルシュート</a></li>
+      <li><a href="#exam">試験対策</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+    <!-- ==============================
+         Section 1: Hero / Key Takeaways
+         ============================== -->
+    <section class="hero">
+      <div class="hero-badge">AWS VPC Networking &#8212; IPv6</div>
+      <h2 id="overview">Egress-Only Internet Gateway（EIGW）とは？</h2>
+      <p>IPv6のプライベートサブネットから「外に出る」通信だけを許可し、インターネットからの「入ってくる」通信をブロックするVPCコンポーネントです。IPv4のNAT Gatewayに相当する役割を、IPv6の世界で無料で提供します。</p>
+
+      <div class="takeaways">
+        <div class="takeaway-card">
+          <div class="takeaway-num">1</div>
+          <h3>IPv6専用の出口ゲート</h3>
+          <p>IPv6トラフィックのみ対象。IPv4はNAT Gatewayを使う</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">2</div>
+          <h3>ステートフルに応答を返す</h3>
+          <p>内部からのリクエストの応答は自動で通過させる</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">3</div>
+          <h3>利用料金は無料</h3>
+          <p>EIGW自体の料金は不要。データ転送料のみ発生</p>
+        </div>
+        <div class="takeaway-card">
+          <div class="takeaway-num">4</div>
+          <h3>高可用性を標準装備</h3>
+          <p>水平スケーリング・冗長化済み。AZ障害にも耐える</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 2: Analogy
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#FFF7ED;">&#128682;</div>
+        <div>
+          <h2 id="analogy">たとえ話：「出口専用の回転ドア」</h2>
+          <p>マンションのセキュリティシステムでEIGWを理解する</p>
+        </div>
+      </div>
+
+      <div class="analogy-banner">
+        <h3>&#127970; マンションの「出口専用回転ドア」</h3>
+        <p>あなたの住むマンションには、正面玄関（Internet Gateway）のほかに<strong>「出口専用の回転ドア」</strong>が設置されています。住人は外出できますが、外部の人はこのドアからは入れません。しかも、住人が出かけて帰ってくる（応答トラフィック）ときは、同じドアを通って戻れます。このドアは常に管理人が見張っていて（ステートフル）、「この人はさっき出て行った住人だな」と判断して通してくれるのです。</p>
+      </div>
+
+      <table class="analogy-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>マンションのたとえ</th>
+            <th>AWS の実態</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="emoji-col">&#127970;</td>
+            <td>マンション全体</td>
+            <td>VPC（IPv6 CIDRブロック付き）</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128694;</td>
+            <td>住人（外に出たい）</td>
+            <td>プライベートサブネット内のEC2インスタンス</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128682;</td>
+            <td>出口専用の回転ドア</td>
+            <td>Egress-Only Internet Gateway</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128374;</td>
+            <td>正面玄関（出入り自由）</td>
+            <td>Internet Gateway（双方向）</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128101;</td>
+            <td>外部の訪問者</td>
+            <td>インターネット上のホスト</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128221;</td>
+            <td>管理人の外出記録帳</td>
+            <td>ステートフル接続追跡</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128270;</td>
+            <td>フロアごとの入退室ルール</td>
+            <td>ネットワークACL</td>
+          </tr>
+          <tr>
+            <td class="emoji-col">&#128209;</td>
+            <td>住人名簿の掲示板</td>
+            <td>ルートテーブル（::/0 → eigw-id）</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ==============================
+         Section 3: Architecture Diagram
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#EEF2FF;">&#128421;</div>
+        <div>
+          <h2 id="architecture">アーキテクチャ図</h2>
+          <p>EIGW を使ったデュアルスタック VPC の通信フロー</p>
+        </div>
+      </div>
+
+      <!-- SVG Diagram 1: Overall Architecture -->
+      <!--
+        ノード配置表（EC2を縦積みにして矢印の交差・テキスト重なりを解消）
+        ノード名                    | x      | y      | w    | h    | cx   | cy
+        EC2 インスタンス A          | 100    | 175    | 270  | 80   | 235  | 215
+        EC2 インスタンス B          | 100    | 275    | 270  | 80   | 235  | 315
+        ルートテーブル              | 80     | 430    | 450  | 80   | 305  | 470
+        NAT Gateway                 | 120    | 560    | 230  | 75   | 235  | 598
+        Egress-Only IGW             | 750    | 160    | 230  | 120  | 865  | 220
+        Internet Gateway            | 750    | 440    | 230  | 90   | 865  | 485
+        Internet                    | 1080   | 340    | rx80 | ry50 | 1080 | 340
+      -->
+      <div class="diagram-container">
+        <svg width="1340" height="720" viewBox="0 0 1340 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Egress-Only Internet Gatewayのアーキテクチャ図。VPC内のプライベートサブネットからEIGWを経由してインターネットへの一方向通信フローを示す。">
+          <defs>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+            </marker>
+            <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#EF4444"/>
+            </marker>
+            <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+            </marker>
+            <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.08"/>
+            </filter>
+            <style>
+              .svg-title { font-family: Inter, Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0F172A; }
+              .node-title { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #1E293B; }
+              .node-sub { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 500; fill: #475569; }
+              .label-text { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #3B82F6; }
+              .label-green { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #10B981; }
+              .label-red { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #EF4444; }
+              .zone-label { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #64748B; letter-spacing: 0.05em; }
+            </style>
+          </defs>
+
+          <!-- Background -->
+          <rect x="0" y="0" width="1340" height="720" fill="#F3F4F6"/>
+          <!-- Outer Card -->
+          <rect x="24" y="24" width="1292" height="672" rx="22" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+          <!-- Title -->
+          <text x="670" y="66" text-anchor="middle" class="svg-title">EIGW を使ったデュアルスタック VPC 通信フロー</text>
+
+          <!-- VPC boundary -->
+          <rect x="50" y="88" width="660" height="580" rx="18" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="8,4"/>
+          <text x="70" y="116" class="zone-label">VPC（10.0.0.0/16 + 2001:db8::/56）</text>
+
+          <!-- Private Subnet (EC2を縦積み) -->
+          <rect x="80" y="135" width="320" height="260" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="100" y="163" class="zone-label">プライベートサブネット</text>
+          <text x="100" y="180" class="node-sub">10.0.1.0/24 + 2001:db8:1a00::/64</text>
+
+          <!-- EC2 Instance A - cx=235, cy=215 -->
+          <g>
+            <rect x="100" y="195" width="270" height="70" rx="14" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="235" y="224" text-anchor="middle" dominant-baseline="middle" class="node-title">EC2 インスタンス A</text>
+            <text x="235" y="248" text-anchor="middle" dominant-baseline="middle" class="node-sub">IPv4 + IPv6 アドレス</text>
+          </g>
+
+          <!-- EC2 Instance B - cx=235, cy=315 -->
+          <g>
+            <rect x="100" y="285" width="270" height="70" rx="14" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="235" y="314" text-anchor="middle" dominant-baseline="middle" class="node-title">EC2 インスタンス B</text>
+            <text x="235" y="338" text-anchor="middle" dominant-baseline="middle" class="node-sub">IPv6-only</text>
+          </g>
+
+          <!-- Route Table - cx=305, cy=470 -->
+          <g>
+            <rect x="80" y="430" width="450" height="80" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+            <text x="305" y="462" text-anchor="middle" dominant-baseline="middle" class="node-title">ルートテーブル</text>
+            <text x="305" y="488" text-anchor="middle" dominant-baseline="middle" class="node-sub">::/0 → eigw-id ｜ 0.0.0.0/0 → nat-gw-id</text>
+          </g>
+
+          <!-- NAT Gateway - cx=235, cy=598 -->
+          <g>
+            <rect x="120" y="560" width="230" height="75" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="235" y="590" text-anchor="middle" dominant-baseline="middle" class="node-title">NAT Gateway</text>
+            <text x="235" y="614" text-anchor="middle" dominant-baseline="middle" class="node-sub">IPv4 出口用</text>
+          </g>
+
+          <!-- ===================== 右側：ゲートウェイ群 ===================== -->
+
+          <!-- EIGW - cx=865, cy=220 -->
+          <g>
+            <rect x="750" y="160" width="230" height="120" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+            <text x="865" y="200" text-anchor="middle" dominant-baseline="middle" class="node-title">Egress-Only</text>
+            <text x="865" y="222" text-anchor="middle" dominant-baseline="middle" class="node-title">Internet Gateway</text>
+            <text x="865" y="258" text-anchor="middle" dominant-baseline="middle" class="node-sub">IPv6 出口専用 &#x1F512;</text>
+          </g>
+
+          <!-- IGW - cx=865, cy=485 -->
+          <g>
+            <rect x="750" y="440" width="230" height="90" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+            <text x="865" y="478" text-anchor="middle" dominant-baseline="middle" class="node-title">Internet Gateway</text>
+            <text x="865" y="504" text-anchor="middle" dominant-baseline="middle" class="node-sub">IPv4/IPv6 双方向</text>
+          </g>
+
+          <!-- Internet Cloud - cx=1200, cy=340 (右に120px移動して矢印間隔を確保) -->
+          <g>
+            <ellipse cx="1200" cy="340" rx="80" ry="55" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="1200" y="335" text-anchor="middle" dominant-baseline="middle" class="node-title">Internet</text>
+            <text x="1200" y="360" text-anchor="middle" dominant-baseline="middle" class="node-sub">&#127760;</text>
+          </g>
+
+          <!-- ===================== 矢印（通信フロー） ===================== -->
+
+          <!-- ① EC2 A → EIGW (IPv6 outbound) : 水平に右へ -->
+          <path d="M370,225 L748,205" stroke="#3B82F6" stroke-width="2.5" fill="none" marker-end="url(#arrow-blue)"/>
+          <text x="540" y="198" text-anchor="middle" class="label-text">&#9312; IPv6 送信リクエスト</text>
+
+          <!-- ② EIGW → Internet (outbound) : 上段の経路 y=190 -->
+          <path d="M980,190 L1118,300" stroke="#3B82F6" stroke-width="2.5" fill="none" marker-end="url(#arrow-blue)"/>
+          <text x="1030" y="218" text-anchor="start" class="label-text">&#9313; 転送</text>
+
+          <!-- 応答OK Internet → EIGW (response) : 中段の経路 y=250 -->
+          <path d="M1120,330 L982,255" stroke="#10B981" stroke-width="2" fill="none" marker-end="url(#arrow-green)" stroke-dasharray="6,3"/>
+          <text x="1030" y="270" text-anchor="start" class="label-green">応答OK</text>
+
+          <!-- ③ EIGW → EC2 B (response return) : ノードを横断しない経路 -->
+          <path d="M750,250 L372,318" stroke="#10B981" stroke-width="2" fill="none" marker-end="url(#arrow-green)" stroke-dasharray="6,3"/>
+          <text x="555" y="268" text-anchor="middle" class="label-green">&#9314; 応答を返送</text>
+
+          <!-- ✕ 外部起点 → EIGW (blocked inbound) : 下段の経路 y=370 -->
+          <path d="M1120,365 L985,275" stroke="#EF4444" stroke-width="2.5" fill="none" stroke-dasharray="4,4"/>
+          <text x="1050" y="340" text-anchor="start" class="label-red" style="font-size:20px;">&#128683;</text>
+          <text x="1120" y="430" text-anchor="middle" class="label-red">&#10060; 外部起点はブロック</text>
+
+          <!-- ===================== 経路線（グレー） ===================== -->
+
+          <!-- Route Table → EIGW (IPv6 経路) -->
+          <path d="M530,460 L748,240" stroke="#94A3B8" stroke-width="1.5" fill="none" marker-end="url(#arrow-gray)"/>
+          <text x="660" y="370" text-anchor="middle" class="node-sub">IPv6</text>
+
+          <!-- Route Table → NAT GW (IPv4 経路) -->
+          <line x1="260" y1="510" x2="245" y2="558" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+          <text x="210" y="540" text-anchor="middle" class="node-sub">IPv4</text>
+
+          <!-- NAT GW → IGW -->
+          <path d="M350,598 L748,500" stroke="#94A3B8" stroke-width="1.5" fill="none" marker-end="url(#arrow-gray)" stroke-dasharray="6,3"/>
+
+          <!-- IGW → Internet -->
+          <line x1="980" y1="480" x2="1125" y2="380" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+
+          <!-- ===================== 凡例 ===================== -->
+          <rect x="50" y="680" width="420" height="28" rx="6" fill="#F8FAFC"/>
+          <line x1="70" y1="694" x2="100" y2="694" stroke="#3B82F6" stroke-width="2.5"/>
+          <text x="108" y="699" class="node-sub" fill="#3B82F6">送信</text>
+          <line x1="155" y1="694" x2="185" y2="694" stroke="#10B981" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="193" y="699" class="node-sub" fill="#10B981">応答</text>
+          <line x1="240" y1="694" x2="270" y2="694" stroke="#EF4444" stroke-width="2.5" stroke-dasharray="4,4"/>
+          <text x="278" y="699" class="node-sub" fill="#EF4444">ブロック</text>
+          <line x1="340" y1="694" x2="370" y2="694" stroke="#94A3B8" stroke-width="1.5"/>
+          <text x="378" y="699" class="node-sub" fill="#94A3B8">経路</text>
+        </svg>
+      </div>
+
+      <!-- SVG Diagram 2: Stateful Flow -->
+      <!--
+        ノード配置表（左右パネル共通で、ノード間を十分に空けてラベル重なりを解消）
+        【左パネル(許可)】 パネル: x=50, w=560
+          EC2:      x=80,  y=175, w=120, h=70, cx=140, cy=210
+          EIGW:     x=270, y=175, w=140, h=70, cx=340, cy=210
+          Internet: x=480, y=175, w=80,  h=70, cx=520, cy=210
+          リクエスト矢印: y=195 (ノード中央上寄り)
+          応答矢印:       y=225 (ノード中央下寄り)
+          ラベル「リクエスト→」: y=170 (ノード上端より5px上)
+          ラベル「←応答」:      y=260 (ノード下端より15px下)
+        【右パネル(ブロック)】 パネル: x=640, w=540
+          Internet: x=670, y=175, w=80,  h=70, cx=710, cy=210
+          EIGW:     x=830, y=175, w=140, h=70, cx=900, cy=210
+          EC2:      x=1050,y=175, w=120, h=70, cx=1110,cy=210
+      -->
+      <div class="diagram-container">
+        <svg width="1200" height="480" viewBox="0 0 1200 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EIGWのステートフル動作を示す図。内部からの通信とその応答が許可され、外部からの通信開始はブロックされる様子を示す。">
+          <defs>
+            <style>
+              .flow-title { font-family: Inter, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #0F172A; }
+              .flow-label { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 600; }
+              .flow-sub { font-family: Inter, Arial, sans-serif; font-size: 13px; fill: #64748B; }
+            </style>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="480" fill="#F3F4F6"/>
+          <rect x="24" y="24" width="1152" height="432" rx="22" fill="#FFFFFF" filter="url(#shadow-soft)"/>
+
+          <text x="600" y="66" text-anchor="middle" class="svg-title">ステートフル動作：「出たら帰れる、でも外からは入れない」</text>
+
+          <!-- ==================== 左パネル：許可パターン ==================== -->
+          <rect x="50" y="90" width="560" height="280" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="1.5"/>
+          <text x="330" y="120" text-anchor="middle" class="flow-title" fill="#065F46">&#9989; 許可パターン：内部起点の通信</text>
+
+          <!-- EC2 - cx=140, cy=210 -->
+          <rect x="80" y="175" width="120" height="70" rx="12" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+          <text x="140" y="205" text-anchor="middle" dominant-baseline="middle" class="node-title" style="font-size:14px;">EC2</text>
+          <text x="140" y="228" text-anchor="middle" dominant-baseline="middle" class="node-sub" style="font-size:11px;">IPv6</text>
+
+          <!-- EIGW - cx=340, cy=210 -->
+          <rect x="270" y="175" width="140" height="70" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+          <text x="340" y="205" text-anchor="middle" dominant-baseline="middle" class="node-title" style="font-size:14px;">EIGW</text>
+          <text x="340" y="228" text-anchor="middle" dominant-baseline="middle" class="node-sub" style="font-size:11px;">&#x1F512; 出口専用</text>
+
+          <!-- Internet - cx=520, cy=210 -->
+          <rect x="480" y="175" width="80" height="70" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+          <text x="520" y="212" text-anchor="middle" dominant-baseline="middle" class="node-title" style="font-size:14px;">&#127760;</text>
+
+          <!-- 送信矢印（上段 y=195）-->
+          <line x1="200" y1="195" x2="268" y2="195" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+          <line x1="410" y1="195" x2="478" y2="195" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+          <!-- ラベルはノード上端(175)より上に配置 -->
+          <text x="330" y="162" text-anchor="middle" class="flow-label" fill="#3B82F6">リクエスト →</text>
+
+          <!-- 応答矢印（下段 y=230）-->
+          <line x1="478" y1="230" x2="412" y2="230" stroke="#10B981" stroke-width="2" marker-end="url(#arrow-green)" stroke-dasharray="6,3"/>
+          <line x1="270" y1="230" x2="202" y2="230" stroke="#10B981" stroke-width="2" marker-end="url(#arrow-green)" stroke-dasharray="6,3"/>
+          <!-- ラベルはノード下端(245)より下に配置 -->
+          <text x="330" y="268" text-anchor="middle" class="flow-label" fill="#10B981">← 応答（自動許可）</text>
+
+          <text x="330" y="316" text-anchor="middle" class="flow-sub">内部から出発した通信の応答は</text>
+          <text x="330" y="336" text-anchor="middle" class="flow-sub">ステートフルに追跡され自動的に許可</text>
+
+          <!-- ==================== 右パネル：ブロックパターン ==================== -->
+          <rect x="640" y="90" width="530" height="280" rx="14" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+          <text x="905" y="120" text-anchor="middle" class="flow-title" fill="#991B1B">&#10060; ブロックパターン：外部起点の通信</text>
+
+          <!-- Internet - cx=710, cy=210 -->
+          <rect x="670" y="175" width="80" height="70" rx="12" fill="#FEF2F2" stroke="#F87171" stroke-width="1.5"/>
+          <text x="710" y="212" text-anchor="middle" dominant-baseline="middle" class="node-title" style="font-size:14px;">&#127760;</text>
+
+          <!-- EIGW - cx=900, cy=210 -->
+          <rect x="830" y="175" width="140" height="70" rx="12" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+          <text x="900" y="205" text-anchor="middle" dominant-baseline="middle" class="node-title" style="font-size:14px;">EIGW</text>
+          <text x="900" y="228" text-anchor="middle" dominant-baseline="middle" class="node-sub" style="font-size:11px;">&#x1F512; 出口専用</text>
+
+          <!-- EC2 - cx=1110, cy=210 -->
+          <rect x="1050" y="175" width="100" height="70" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="1100" y="212" text-anchor="middle" dominant-baseline="middle" class="node-title" style="font-size:14px;">EC2</text>
+
+          <!-- ブロック矢印 -->
+          <line x1="750" y1="210" x2="818" y2="210" stroke="#EF4444" stroke-width="2.5" stroke-dasharray="4,4"/>
+          <!-- 🚫アイコンを矢印先端のEIGW手前に配置 -->
+          <text x="800" y="165" text-anchor="middle" class="flow-label" fill="#EF4444" style="font-size:26px;">&#128683;</text>
+
+          <text x="905" y="316" text-anchor="middle" class="flow-sub">インターネットから開始された</text>
+          <text x="905" y="336" text-anchor="middle" class="flow-sub">新規接続はEIGWで完全ブロック</text>
+
+          <!-- ==================== 下部注釈 ==================== -->
+          <text x="600" y="435" text-anchor="middle" class="flow-sub" style="font-size:14px;">&#128161; たとえ話：住人が出て帰ってくる ＝ OK ｜ 外部の人が勝手に入ろうとする ＝ NG（回転ドアがロック）</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 4: Features
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#ECFDF5;">&#9889;</div>
+        <div>
+          <h2 id="features">EIGWの主要特徴</h2>
+          <p>NAT Gatewayの IPv6 版として理解するのが最短ルート</p>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="feature-card">
+          <div class="card-icon">&#128274;</div>
+          <h3>一方向通信のみ許可</h3>
+          <p>VPC 内部 → インターネットのアウトバウンド通信だけ許可。外部からの接続開始（インバウンド）は自動的にブロックされます。</p>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">&#128260;</div>
+          <h3>ステートフル動作</h3>
+          <p>内部から開始した通信に対する応答パケットは自動的に許可。管理人が「この人はさっき出た住人だ」と記録しているイメージです。</p>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">&#128176;</div>
+          <h3>完全無料（EIGW自体）</h3>
+          <p>NAT Gateway のように時間課金やデータ処理料金は不要。発生するのは EC2 のデータ転送料のみです。</p>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">&#128736;</div>
+          <h3>マネージドで高可用性</h3>
+          <p>AWSが自動で水平スケーリング・冗長構成を管理。NAT Gatewayのように AZ ごとの配置を考える必要がありません。</p>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">&#128295;</div>
+          <h3>セキュリティグループ非対応</h3>
+          <p>EIGW にはセキュリティグループを関連付けられません。トラフィック制御にはネットワーク ACL を使用します。</p>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">&#127760;</div>
+          <h3>IPv6 専用コンポーネント</h3>
+          <p>IPv6 トラフィックのみ対象。IPv4 の一方向通信が必要な場合は NAT Gateway を別途構成します。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 5: Comparison Table
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#FEFCE8;">&#128200;</div>
+        <div>
+          <h2 id="comparison">EIGW vs NAT Gateway vs Internet Gateway 比較</h2>
+          <p>3つのゲートウェイの役割と違いを一目で把握</p>
+        </div>
+      </div>
+
+      <div class="comparison-wrapper">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>比較項目</th>
+              <th>Egress-Only IGW</th>
+              <th>NAT Gateway</th>
+              <th>Internet Gateway</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>対象プロトコル</td>
+              <td><span class="badge-neutral">IPv6 のみ</span></td>
+              <td><span class="badge-neutral">IPv4 のみ</span></td>
+              <td><span class="badge-neutral">IPv4 / IPv6</span></td>
+            </tr>
+            <tr>
+              <td>通信方向</td>
+              <td><span class="badge-yes">アウトバウンドのみ</span></td>
+              <td><span class="badge-yes">アウトバウンドのみ</span></td>
+              <td><span class="badge-neutral">双方向</span></td>
+            </tr>
+            <tr>
+              <td>インバウンド接続</td>
+              <td><span class="badge-no">ブロック</span></td>
+              <td><span class="badge-no">ブロック</span></td>
+              <td><span class="badge-yes">許可</span></td>
+            </tr>
+            <tr>
+              <td>ステートフル</td>
+              <td><span class="badge-yes">はい</span></td>
+              <td><span class="badge-yes">はい</span></td>
+              <td><span class="badge-no">いいえ</span></td>
+            </tr>
+            <tr>
+              <td>アドレス変換（NAT）</td>
+              <td><span class="badge-no">なし</span></td>
+              <td><span class="badge-yes">あり</span></td>
+              <td><span class="badge-no">なし</span></td>
+            </tr>
+            <tr>
+              <td>利用料金</td>
+              <td><span class="badge-yes">無料</span></td>
+              <td><span class="badge-no">有料（時間+GB）</span></td>
+              <td><span class="badge-yes">無料</span></td>
+            </tr>
+            <tr>
+              <td>SG 関連付け</td>
+              <td><span class="badge-no">不可</span></td>
+              <td><span class="badge-no">不可</span></td>
+              <td><span class="badge-no">不可</span></td>
+            </tr>
+            <tr>
+              <td>サブネット配置</td>
+              <td><span class="badge-neutral">VPC レベル</span></td>
+              <td><span class="badge-neutral">サブネットレベル</span></td>
+              <td><span class="badge-neutral">VPC レベル</span></td>
+            </tr>
+            <tr>
+              <td>たとえ話</td>
+              <td>&#128682; 出口専用回転ドア</td>
+              <td>&#128230; 代理発送の受付窓口</td>
+              <td>&#128374; 正面玄関（出入り自由）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 6: Code Examples
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#F0FDF4;">&#128187;</div>
+        <div>
+          <h2 id="code">構成コード例</h2>
+          <p>AWS CLI / CloudFormation / Terraform による EIGW 作成手順</p>
+        </div>
+      </div>
+
+      <div class="code-section">
+        <div class="code-tabs" role="tablist">
+          <button class="code-tab active" role="tab" aria-selected="true" aria-controls="panel-cli" data-tab="cli">AWS CLI</button>
+          <button class="code-tab" role="tab" aria-selected="false" aria-controls="panel-cfn" data-tab="cfn">CloudFormation</button>
+          <button class="code-tab" role="tab" aria-selected="false" aria-controls="panel-tf" data-tab="tf">Terraform</button>
+        </div>
+
+        <div class="code-panel active" role="tabpanel" id="panel-cli">
+          <pre><span class="comment"># 1. Egress-Only Internet Gateway を作成</span>
+aws ec2 create-egress-only-internet-gateway \\
+  <span class="param">--vpc-id</span> <span class="string">vpc-0abc123def456</span>
+
+<span class="comment"># 出力例: eigw-015e0e244e24dfe8a</span>
+
+<span class="comment"># 2. ルートテーブルに IPv6 デフォルトルートを追加</span>
+aws ec2 create-route \\
+  <span class="param">--route-table-id</span> <span class="string">rtb-0abc123def456</span> \\
+  <span class="param">--destination-ipv6-cidr-block</span> <span class="string">::/0</span> \\
+  <span class="param">--egress-only-internet-gateway-id</span> <span class="string">eigw-015e0e244e24dfe8a</span>
+
+<span class="comment"># 3. 確認</span>
+aws ec2 describe-egress-only-internet-gateways \\
+  <span class="param">--egress-only-internet-gateway-ids</span> <span class="string">eigw-015e0e244e24dfe8a</span></pre>
+        </div>
+
+        <div class="code-panel" role="tabpanel" id="panel-cfn">
+          <pre><span class="keyword">AWSTemplateFormatVersion:</span> <span class="string">'2010-09-09'</span>
+<span class="keyword">Description:</span> <span class="string">Egress-Only Internet Gateway for IPv6</span>
+
+<span class="keyword">Resources:</span>
+  <span class="comment"># EIGW の作成</span>
+  <span class="param">EgressOnlyIGW:</span>
+    <span class="keyword">Type:</span> AWS::EC2::EgressOnlyInternetGateway
+    <span class="keyword">Properties:</span>
+      <span class="param">VpcId:</span> <span class="string">!Ref MyVPC</span>
+
+  <span class="comment"># プライベートサブネット用ルートテーブルにルート追加</span>
+  <span class="param">IPv6DefaultRoute:</span>
+    <span class="keyword">Type:</span> AWS::EC2::Route
+    <span class="keyword">Properties:</span>
+      <span class="param">RouteTableId:</span> <span class="string">!Ref PrivateRouteTable</span>
+      <span class="param">DestinationIpv6CidrBlock:</span> <span class="string">::/0</span>
+      <span class="param">EgressOnlyInternetGatewayId:</span> <span class="string">!Ref EgressOnlyIGW</span></pre>
+        </div>
+
+        <div class="code-panel" role="tabpanel" id="panel-tf">
+          <pre><span class="comment"># Egress-Only Internet Gateway</span>
+<span class="keyword">resource</span> <span class="string">"aws_egress_only_internet_gateway"</span> <span class="string">"eigw"</span> {
+  <span class="param">vpc_id</span> = aws_vpc.main.id
+
+  <span class="param">tags</span> = {
+    Name = <span class="string">"eigw-private-ipv6"</span>
+  }
+}
+
+<span class="comment"># ルートテーブルに IPv6 デフォルトルート追加</span>
+<span class="keyword">resource</span> <span class="string">"aws_route"</span> <span class="string">"ipv6_default"</span> {
+  <span class="param">route_table_id</span>              = aws_route_table.private.id
+  <span class="param">destination_ipv6_cidr_block</span> = <span class="string">"::/0"</span>
+  <span class="param">egress_only_gateway_id</span>      = aws_egress_only_internet_gateway.eigw.id
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 7: Best Practices / Anti-Patterns
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#F0FDF4;">&#9989;</div>
+        <div>
+          <h2 id="bestpractice">ベストプラクティス vs アンチパターン</h2>
+          <p>正しい使い方と避けるべき構成</p>
+        </div>
+      </div>
+
+      <div class="practice-grid">
+        <div class="practice-col good">
+          <h3>&#9989; ベストプラクティス</h3>
+          <div class="practice-item">IPv6 プライベートサブネットのデフォルトルート ::/0 を EIGW に向ける</div>
+          <div class="practice-item">デュアルスタック環境では EIGW（IPv6）と NAT GW（IPv4）を併用する</div>
+          <div class="practice-item">ネットワーク ACL でサブネット単位のトラフィック制御を補完する</div>
+          <div class="practice-item">VPC Flow Logs を有効化し、EIGW 経由のトラフィックを監視する</div>
+          <div class="practice-item">NAT64/DNS64 と組み合わせて IPv6-only サブネットから IPv4 サービスにもアクセスさせる</div>
+        </div>
+        <div class="practice-col bad">
+          <h3>&#10060; アンチパターン</h3>
+          <div class="practice-item">IPv4 トラフィックに EIGW を使おうとする（IPv6 専用のため動作しない）</div>
+          <div class="practice-item">EIGW にセキュリティグループを設定しようとする（非対応）</div>
+          <div class="practice-item">同じルートテーブルの ::/0 を IGW と EIGW 両方に向ける（競合エラーになる）</div>
+          <div class="practice-item">パブリックサブネットで EIGW を使う（IGW で双方向通信が可能なため不要）</div>
+          <div class="practice-item">EIGW だけでインバウンド通信も期待する（あくまで一方向のみ）</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 8: Troubleshooting
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#FEF2F2;">&#128295;</div>
+        <div>
+          <h2 id="troubleshoot">トラブルシューティング</h2>
+          <p>よくあるエラーと解決方法</p>
+        </div>
+      </div>
+
+      <div class="trouble-card">
+        <h3>&#9888; IPv6 でインターネットに接続できない</h3>
+        <p class="cause">原因：ルートテーブルに ::/0 → eigw-id のルートが未設定</p>
+        <p class="fix">&#10004; 解決策：プライベートサブネットのルートテーブルに ::/0 → EIGW のルートを追加</p>
+      </div>
+
+      <div class="trouble-card">
+        <h3>&#9888; 「There are existing ipv6 routes with next hop as IGW」エラー</h3>
+        <p class="cause">原因：同一ルートテーブルの ::/0 がすでに IGW に設定されている</p>
+        <p class="fix">&#10004; 解決策：既存の IGW への ::/0 ルートを削除してから EIGW ルートを追加</p>
+      </div>
+
+      <div class="trouble-card">
+        <h3>&#9888; EIGW 削除後に通信が止まった</h3>
+        <p class="cause">原因：ルートテーブルのルートが blackhole 状態になっている</p>
+        <p class="fix">&#10004; 解決策：blackhole ルートを手動で削除するか、新しい EIGW を作成してルートを更新</p>
+      </div>
+
+      <div class="trouble-card">
+        <h3>&#9888; IPv4 通信が EIGW を通過しない</h3>
+        <p class="cause">原因：EIGW は IPv6 専用。IPv4 には対応していない</p>
+        <p class="fix">&#10004; 解決策：IPv4 の一方向通信には NAT Gateway を使用する</p>
+      </div>
+
+      <div class="trouble-card">
+        <h3>&#9888; インターネットから EC2 に IPv6 で接続したい</h3>
+        <p class="cause">原因：EIGW は出口専用であり、インバウンドは不可</p>
+        <p class="fix">&#10004; 解決策：パブリックサブネットに配置し、Internet Gateway を使用する</p>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 9: Exam Tips
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#EEF2FF;">&#127891;</div>
+        <div>
+          <h2 id="exam">試験対策ポイント</h2>
+          <p>ANS-C01 / SAP-C02 で問われるEIGWの頻出論点</p>
+        </div>
+      </div>
+
+      <div class="exam-box">
+        <h3>&#128218; 試験で狙われるポイント</h3>
+
+        <div class="exam-tip">
+          <strong>Q: IPv6 プライベートサブネットから外に出たいが、外からの接続は拒否したい</strong> → Egress-Only Internet Gateway を使う。NAT Gateway は IPv4 専用なので不正解。
+        </div>
+
+        <div class="exam-tip">
+          <strong>Q: EIGW と NAT Gateway の違いは？</strong> → EIGW = IPv6 専用・無料・NAT なし。NAT GW = IPv4 専用・有料・アドレス変換あり。
+        </div>
+
+        <div class="exam-tip">
+          <strong>Q: EIGW はステートフルか？</strong> → はい。内部から開始した通信の応答は自動的に通過する。外部からの新規接続はブロック。
+        </div>
+
+        <div class="exam-tip">
+          <strong>Q: EIGW にセキュリティグループは設定できるか？</strong> → いいえ。トラフィック制御にはネットワーク ACL を使う。
+        </div>
+
+        <div class="exam-tip">
+          <strong>Q: デュアルスタック VPC でプライベートサブネットのルーティングは？</strong> → 0.0.0.0/0 → NAT Gateway、::/0 → EIGW の2つのルートを設定する。
+        </div>
+
+        <div class="exam-tip">
+          <strong>Q: EIGW の料金は？</strong> → EIGW 自体は無料。データ転送料はかかる。コスト最適化の文脈で出題されることがある。
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 10: FAQ
+         ============================== -->
+    <section>
+      <div class="section-header">
+        <div class="section-icon" style="background:#FFF7ED;">&#128172;</div>
+        <div>
+          <h2 id="faq">よくある質問（FAQ）</h2>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          EIGW は VPC に何個まで作成できますか？
+          <span class="toggle-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">デフォルトでは VPC あたり 5 つまでです。上限緩和リクエストにより増やすことも可能です。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          EIGW は AZ を指定して配置しますか？
+          <span class="toggle-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">いいえ。EIGW は VPC レベルのリソースで、特定の AZ には紐づきません。AWS が自動的に冗長構成を管理するため、NAT Gateway のように AZ ごとに配置する必要はありません。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          IPv6-only サブネットでも使えますか？
+          <span class="toggle-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">はい。IPv6-only サブネットでもデュアルスタックサブネットでも利用できます。IPv6-only の場合、IPv4 サービスにアクセスするには DNS64/NAT64 を別途構成する必要があります。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          EIGW 経由のトラフィックを AWS Network Firewall で検査できますか？
+          <span class="toggle-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">EIGW はインバウンドルーティング（Ingress Routing）をサポートしていないため、EIGW 経由のプライベートサブネットのトラフィックをネットワークファイアウォールで対称的に検査することは困難です。IPv6 トラフィックの検査が必要な場合は、パブリックサブネット + IGW + Network Firewall の構成を検討してください。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          EIGW と IGW を同じ VPC に共存できますか？
+          <span class="toggle-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">はい、共存可能です。ただし同じルートテーブルの ::/0 を IGW と EIGW の両方に向けることはできません。パブリックサブネットのルートテーブルでは ::/0 → IGW、プライベートサブネットのルートテーブルでは ::/0 → EIGW と分けるのが一般的です。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          EIGW を削除するとどうなりますか？
+          <span class="toggle-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">ルートテーブル内の EIGW を指すルートは blackhole 状態になり、IPv6 インターネット通信が停止します。ルートの手動削除または新しい EIGW への付け替えが必要です。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================
+         Section 11: Cheat Sheet
+         ============================== -->
+    <section>
+      <div class="cheatsheet">
+        <h3>&#128203; Egress-Only Internet Gateway チートシート</h3>
+        <dl class="cheat-grid">
+          <div class="cheat-item">
+            <dt>正式名称</dt>
+            <dd>Egress-Only Internet Gateway（EIGW）</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>対象プロトコル</dt>
+            <dd>IPv6 のみ（IPv4 は NAT Gateway）</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>通信方向</dt>
+            <dd>アウトバウンドのみ（ステートフル応答は許可）</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>料金</dt>
+            <dd>EIGW 自体は無料（データ転送料のみ）</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>配置レベル</dt>
+            <dd>VPC レベル（AZ 指定不要）</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>セキュリティ制御</dt>
+            <dd>ネットワーク ACL（SG は非対応）</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>ルート設定</dt>
+            <dd>::/0 → eigw-id</dd>
+          </div>
+          <div class="cheat-item">
+            <dt>たとえ話</dt>
+            <dd>&#128682; マンションの出口専用回転ドア</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scroll to Top -->
+  <button class="scroll-top" id="scrollTop" aria-label="ページ上部へ戻る">&#8593;</button>
+
+  <!-- Footer -->
+  <footer style="text-align:center;padding:30px 20px 40px;color:#6B7280;font-size:14px;">
+    <p>AWS Egress-Only Internet Gateway 完全ガイド</p>
+  </footer>
+
+  <!-- JavaScript -->
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>

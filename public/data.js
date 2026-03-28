@@ -7,12 +7,12 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 90,
+    count: 92,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
-        count: 19,
+        count: 20,
         lastUpdated: '2026-03-28',
         resources: [
           {
@@ -142,6 +142,21 @@ const categoriesData = [
             estimated_minutes: 20,
             tags: [
               'security'
+            ]
+          },
+          {
+            title: 'AWS Direct Connect アクティブ/パッシブBGP設定 完全ガイド',
+            href: 'networking/dx-active-passive-bgp.html',
+            priority: 'high',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'advanced',
+            estimated_minutes: 25,
+            tags: [
+              'BGP',
+              'ha'
             ]
           },
           {
@@ -281,7 +296,7 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 50,
+        count: 51,
         lastUpdated: '2026-03-28',
         resources: [
           {
@@ -294,6 +309,21 @@ const categoriesData = [
             ],
             difficulty: 'intermediate',
             estimated_minutes: 25
+          },
+          {
+            title: 'AWS Egress-Only Internet Gateway 完全ガイド | IPv6出口専用ゲートウェイ',
+            href: 'networking/aws-eigw-guide.html',
+            priority: 'medium',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 15,
+            tags: [
+              'IPv6',
+              'comparison'
+            ]
           },
           {
             title: 'AWS ENI（Elastic Network Interface）初心者向け図解',
@@ -3901,7 +3931,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 90
+    count: 92
   },
   {
     id: 'security-governance',
@@ -3951,7 +3981,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '317+',
+  totalResources: '319+',
   offlineSupport: '100%',
   lastUpdated: '2026/03/28'
 };
@@ -4526,7 +4556,7 @@ const serviceIndex = [
 const domainIndex = [
   {
     domainId: 1,
-    count: 143,
+    count: 145,
     categories: [
       'networking',
       'security-governance',
@@ -4537,7 +4567,7 @@ const domainIndex = [
   },
   {
     domainId: 2,
-    count: 243,
+    count: 245,
     categories: [
       'networking',
       'security-governance',
@@ -4694,6 +4724,22 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-03-28',
+    type: 'content',
+    title: '新規リソース追加: EIGW完全ガイド, DX Active/Passive BGP設定ガイド',
+    description: 'Egress-Only Internet Gateway（IPv6出口専用ゲートウェイ）の仕組み・NAT Gatewayとの比較ガイドと、Direct ConnectにおけるActive/Passive BGP接続設定の完全ガイドを追加。',
+    categories: [
+      'networking'
+    ],
+    tags: [
+      'EIGW',
+      'IPv6',
+      'Direct Connect',
+      'BGP',
+      'Active/Passive'
+    ]
+  },
   {
     date: '2026-03-28',
     type: 'content',

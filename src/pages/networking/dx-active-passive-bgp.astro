@@ -1,0 +1,1200 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'AWS Direct Connect アクティブ/パッシブBGP設定 完全ガイド',
+  pageTitle: 'AWS Direct Connect アクティブ/パッシブBGP設定 完全ガイド',
+  category: 'networking',
+  categoryLabel: 'ネットワーキング',
+  subcategory: 'Direct Connect & ハイブリッドネットワーク',
+  slug: 'dx-active-passive-bgp',
+  pageCss: '/aws_sap_studying/css/pages/dx-active-passive-bgp.css',
+  tocItems: [
+    { level: 'h2', id: 'analogy', text: '物流ネットワークのたとえ' },
+    { level: 'h2', id: 'concept', text: 'Active/Passiveの基本概念' },
+    { level: 'h2', id: 'architecture', text: '全体アーキテクチャ図' },
+    { level: 'h2', id: 'bgp-attrs', text: '3つのBGPパス属性' },
+    { level: 'h2', id: 'eval-order', text: 'BGP経路選択の評価順序' },
+    { level: 'h2', id: 'outbound', text: 'Outbound制御（オンプレミス → AWS）' },
+    { level: 'h2', id: 'inbound', text: 'Inbound制御（AWS → オンプレミス）' },
+    { level: 'h2', id: 'community', text: 'BGP Communityタグ 詳細' },
+    { level: 'h2', id: 'config', text: '設定例' },
+    { level: 'h2', id: 'best-practice', text: 'ベストプラクティス vs アンチパターン' },
+    { level: 'h2', id: 'troubleshoot', text: 'トラブルシューティング' },
+    { level: 'h2', id: 'exam', text: 'ANS-C01 試験対策ポイント' },
+    { level: 'h2', id: 'faq', text: 'よくある質問（FAQ）' },
+    { level: 'h2', id: 'cheatsheet', text: 'DX Active/Passive BGP チートシート' },
+    { level: 'h2', id: 'glossary', text: '用語集' },
+  ],
+  prevPage: undefined,
+  nextPage: undefined,
+  pageNum: 82,
+  pageTotal: 82,
+};
+
+const rawContent = `
+<a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+
+  <!-- Fixed Navigation -->
+  <header class="fixed-nav-header" role="banner">
+    <nav class="fixed-nav-container" aria-label="メインナビゲーション">
+      <a href="#" class="fixed-nav-logo">&#9729; DX Active/Passive BGP</a>
+      <div class="fixed-nav-links">
+        <a href="#concept">概念</a>
+        <a href="#outbound">Outbound</a>
+        <a href="#inbound">Inbound</a>
+        <a href="#config">設定例</a>
+        <a href="#exam">試験対策</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Reading Progress -->
+  <div class="reading-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+    <div class="reading-progress-bar"></div>
+  </div>
+
+  <!-- Main Content -->
+  <main id="main-content">
+    <div class="container">
+
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+        <a href="#" class="breadcrumb-home">&#127968; AWS学習ガイド</a>
+        <span class="breadcrumb-separator">&#9654;</span>
+        <span>Direct Connect</span>
+        <span class="breadcrumb-separator">&#9654;</span>
+        <span class="breadcrumb-current">Active/Passive BGP設定</span>
+      </nav>
+
+      <!-- Hero Section -->
+      <section class="hero">
+        <span class="hero-badge">&#128268; AWS Direct Connect &#215; BGP</span>
+        <h1>アクティブ/パッシブ BGP接続<br>完全ガイド</h1>
+        <p class="hero-subtitle">「メイン道路」と「バックアップ道路」で安全な高速道路ネットワークを構築しよう &#8212; 物流ネットワークのたとえで理解するDirect Connect冗長化設計</p>
+      </section>
+
+      <!-- Key Takeaways -->
+      <section class="key-takeaways" aria-label="重要ポイント">
+        <h2>&#127919; 最初に押さえる4つのポイント</h2>
+        <div class="takeaway-grid">
+          <div class="takeaway-card">
+            <div class="tk-icon">&#128739;</div>
+            <div class="tk-title">Active/Passiveとは？</div>
+            <div class="tk-desc">2本のDX接続を「メインルート」と「予備ルート」に分け、障害時だけ予備に切り替える冗長構成。物流の「主要高速道路」と「迂回路」の関係と同じ。</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="tk-icon">&#128295;</div>
+            <div class="tk-title">3つのBGP属性で制御</div>
+            <div class="tk-desc">Local Preference・AS_Path・MEDの3つのBGPパス属性を使って、トラフィックの「行き」と「帰り」の両方向を制御できる。</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="tk-icon">&#127991;</div>
+            <div class="tk-title">BGP Communityで帰り道を指定</div>
+            <div class="tk-desc">AWS側の帰りのルートは、BGP Communityタグ（7224:7100/7200/7300）で優先度を指定してコントロールする。</div>
+          </div>
+          <div class="takeaway-card">
+            <div class="tk-icon">&#128737;</div>
+            <div class="tk-title">評価順序が最重要</div>
+            <div class="tk-desc">AWSのルート選択順は「プレフィックス長 → Local Pref → AS_Path → MED」。この評価順序を理解すればルーティング設計が自在になる。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table of Contents -->
+      <nav class="toc" aria-label="目次">
+        <h2>&#128214; 目次</h2>
+        <ol class="toc-list">
+          <li><a href="#analogy">&#128666; 物流ネットワークのたとえ</a></li>
+          <li><a href="#concept">&#127793; Active/Passiveの基本概念</a></li>
+          <li><a href="#architecture">&#128736; 全体アーキテクチャ図</a></li>
+          <li><a href="#bgp-attrs">&#128295; 3つのBGPパス属性</a></li>
+          <li><a href="#eval-order">&#128218; BGP経路選択の評価順序</a></li>
+          <li><a href="#outbound">&#10145; Outbound制御（行きの道）</a></li>
+          <li><a href="#inbound">&#11013; Inbound制御（帰りの道）</a></li>
+          <li><a href="#community">&#127991; BGP Communityタグ</a></li>
+          <li><a href="#config">&#128187; 設定例</a></li>
+          <li><a href="#best-practice">&#9989; ベストプラクティス</a></li>
+          <li><a href="#troubleshoot">&#128679; トラブルシューティング</a></li>
+          <li><a href="#exam">&#128218; ANS-C01 試験対策</a></li>
+          <li><a href="#faq">&#10067; FAQ</a></li>
+          <li><a href="#cheatsheet">&#128221; チートシート</a></li>
+        </ol>
+      </nav>
+
+      <!-- Section 1: Analogy -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128666;</span>
+          <h2 id="analogy">物流ネットワークのたとえ</h2>
+        </div>
+        <p>Direct ConnectのActive/Passive BGP設定を、身近な<strong>「物流ネットワーク」</strong>にたとえて理解しましょう。あなたは全国展開する物流会社の配送設計担当者です。</p>
+
+        <table class="analogy-table">
+          <thead>
+            <tr>
+              <th style="width:20%">&#128666; 物流のたとえ</th>
+              <th style="width:20%">&#9729; AWS用語</th>
+              <th>解説</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>東京配送センター</strong></td>
+              <td>データセンター1（DC1）</td>
+              <td>オンプレミスの主要拠点。本番系ネットワークの起点。</td>
+            </tr>
+            <tr>
+              <td><strong>大阪配送センター</strong></td>
+              <td>データセンター2（DC2）</td>
+              <td>オンプレミスの副次拠点。開発系ネットワークの起点。</td>
+            </tr>
+            <tr>
+              <td><strong>高速道路ルートA</strong></td>
+              <td>DX接続1（Active）</td>
+              <td>本番系トラフィックのメインルート。常に使用される道。</td>
+            </tr>
+            <tr>
+              <td><strong>高速道路ルートB</strong></td>
+              <td>DX接続2（Passive）</td>
+              <td>障害時のバックアップルート。普段は待機状態。</td>
+            </tr>
+            <tr>
+              <td><strong>中央配送ハブ</strong></td>
+              <td>Direct Connect Gateway</td>
+              <td>すべてのDX接続を束ねる中継ハブ。BGPリフレクタとして機能。</td>
+            </tr>
+            <tr>
+              <td><strong>配送先の倉庫群</strong></td>
+              <td>VPC（本番/開発）</td>
+              <td>AWS側のネットワーク。VGWまたはTGW経由で接続。</td>
+            </tr>
+            <tr>
+              <td><strong>配送指示書の優先度</strong></td>
+              <td>BGP Local Preference</td>
+              <td>社内で「どの道を優先するか」を指定するルール。値が大きいほど優先。</td>
+            </tr>
+            <tr>
+              <td><strong>経由地の数</strong></td>
+              <td>BGP AS_Path</td>
+              <td>目的地までの経由AS数。少ないほど「近い」と判断される。</td>
+            </tr>
+            <tr>
+              <td><strong>受入口の優先表示</strong></td>
+              <td>BGP MED</td>
+              <td>外部に「この入口から入ってほしい」と伝える指標。値が小さいほど優先。</td>
+            </tr>
+            <tr>
+              <td><strong>相手先への配送希望書</strong></td>
+              <td>BGP Community</td>
+              <td>AWS側に「こちらのルートを優先してほしい」と伝える仕組み。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box tip">
+          <div class="info-box-title">&#128161; たとえのポイント</div>
+          物流ネットワークでは「東京経由で本番貨物を運び、大阪経由で開発貨物を運ぶ」と役割分担します。DXでも同様に、BGP属性を使って「どのDX接続でどのトラフィックを流すか」を明確に設計できます。障害時にはバックアップルートに自動切り替えされます。
+        </div>
+      </section>
+
+      <!-- Section 2: Basic Concept -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#127793;</span>
+          <h2 id="concept">Active/Passiveの基本概念</h2>
+        </div>
+        <p>Active/Passive構成とは、2本以上のDirect Connect接続を用意し、通常時は1本（Active）を使い、障害時にもう1本（Passive）に自動フェイルオーバーする冗長化パターンです。</p>
+
+        <div class="direction-grid">
+          <div class="direction-card outbound">
+            <div class="dir-icon">&#128994;</div>
+            <div class="dir-title">Active（メインルート）</div>
+            <div class="dir-sub">通常時に使用されるプライマリ接続</div>
+            <div class="dir-method">高い優先度を設定</div>
+          </div>
+          <div class="direction-card inbound">
+            <div class="dir-icon">&#128308;</div>
+            <div class="dir-title">Passive（バックアップ）</div>
+            <div class="dir-sub">障害時にのみ使用されるセカンダリ接続</div>
+            <div class="dir-method">低い優先度を設定</div>
+          </div>
+        </div>
+
+        <h3>Active/Active vs Active/Passive</h3>
+        <div class="vs-panel">
+          <div class="vs-side left">
+            <h3>&#128994; Active/Active</h3>
+            <ul>
+              <li>両方のDX接続を同時に使用</li>
+              <li>ECMP（等コストマルチパス）でロードバランシング</li>
+              <li>帯域幅を最大活用できる</li>
+              <li>同じCommunityタグ（例: 7224:7200）を両方に設定</li>
+            </ul>
+          </div>
+          <div class="vs-divider">VS</div>
+          <div class="vs-side right">
+            <h3>&#128308; Active/Passive</h3>
+            <ul>
+              <li>通常時は1本だけ使用</li>
+              <li>障害時にPassiveへフェイルオーバー</li>
+              <li>非対称ルーティングを回避しやすい</li>
+              <li>異なるCommunityタグ（7224:7300と7224:7100）で優先度差を設定</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-box note">
+          <div class="info-box-title">&#128205; 使い分けの判断基準</div>
+          「帯域が足りない → Active/Active」「セキュリティ装置の都合で非対称ルーティングを避けたい → Active/Passive」が一般的な判断基準です。ファイアウォール等のステートフルデバイスがある場合は、Active/Passiveが推奨されます。
+        </div>
+      </section>
+
+      <!-- Section 3: Architecture Diagram -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128736;</span>
+          <h2 id="architecture">全体アーキテクチャ図</h2>
+        </div>
+        <p>以下は、2つのDXロケーションを使ったActive/Passive構成の全体像です。DC1からのDX接続をActive（本番系）、DC2からのDX接続をPassive（バックアップ）として構成しています。</p>
+
+        <div class="svg-container">
+          <!-- SVG: Active/Passive Architecture Overview -->
+          <!-- ノード配置表:
+               Row1: DC1(cx=170,cy=160) - DXロケーション1(cx=460,cy=160) - DXGW(cx=720,cy=260) - VPC(cx=1010,cy=260)
+               Row2: DC2(cx=170,cy=360) - DXロケーション2(cx=460,cy=360)
+               Inter-DC Link: DC1-DC2
+          -->
+          <svg viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Active/Passive Direct Connect構成の全体アーキテクチャ図">
+            <!-- Background -->
+            <rect x="20" y="20" width="1160" height="460" rx="20" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+
+            <!-- Title -->
+            <text x="600" y="60" text-anchor="middle" font-size="22" font-weight="bold" fill="#0F172A">Active/Passive DX構成 全体アーキテクチャ</text>
+
+            <!-- On-Prem Zone -->
+            <rect x="50" y="90" width="300" height="340" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="200" y="118" text-anchor="middle" font-size="20" font-weight="bold" fill="#475569">オンプレミス（AS 65000）</text>
+
+            <!-- DC1 Node -->
+            <g>
+              <rect x="80" y="140" width="240" height="80" rx="14" fill="#F8FAFC" stroke="#3B82F6" stroke-width="2.5"/>
+              <text x="200" y="172" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">&#128739; DC1（東京）</text>
+              <text x="200" y="200" text-anchor="middle" font-size="20" fill="#475569">本番系: 172.16.1.0/24</text>
+            </g>
+
+            <!-- DC2 Node -->
+            <g>
+              <rect x="80" y="300" width="240" height="80" rx="14" fill="#F8FAFC" stroke="#94A3B8" stroke-width="2.5"/>
+              <text x="200" y="332" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">&#128739; DC2（大阪）</text>
+              <text x="200" y="360" text-anchor="middle" font-size="20" fill="#475569">開発系: 172.16.2.0/24</text>
+            </g>
+
+            <!-- Inter-DC Link -->
+            <line x1="200" y1="220" x2="200" y2="300" stroke="#94A3B8" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="220" y="264" font-size="18" fill="#94A3B8" font-style="italic">iBGP</text>
+
+            <!-- DX Location 1 -->
+            <g>
+              <rect x="390" y="140" width="200" height="80" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+              <text x="490" y="172" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">DXロケーション1</text>
+              <text x="490" y="200" text-anchor="middle" font-size="20" fill="#475569">PrivateVIF / TransitVIF</text>
+            </g>
+
+            <!-- DX Location 2 -->
+            <g>
+              <rect x="390" y="300" width="200" height="80" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="2.5"/>
+              <text x="490" y="332" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">DXロケーション2</text>
+              <text x="490" y="360" text-anchor="middle" font-size="20" fill="#475569">PrivateVIF / TransitVIF</text>
+            </g>
+
+            <!-- DXGW -->
+            <g>
+              <rect x="650" y="215" width="200" height="90" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+              <text x="750" y="250" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">Direct Connect</text>
+              <text x="750" y="278" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">Gateway</text>
+            </g>
+
+            <!-- AWS Zone -->
+            <rect x="900" y="130" width="250" height="290" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="1025" y="158" text-anchor="middle" font-size="20" font-weight="bold" fill="#475569">AWS（AS 65001）</text>
+
+            <!-- VPC Prod -->
+            <g>
+              <rect x="930" y="175" width="190" height="65" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="1025" y="202" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">&#128230; 本番VPC</text>
+              <text x="1025" y="226" text-anchor="middle" font-size="18" fill="#475569">10.0.1.0/24</text>
+            </g>
+
+            <!-- VPC Dev -->
+            <g>
+              <rect x="930" y="260" width="190" height="65" rx="12" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="1025" y="287" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">&#128230; 開発VPC</text>
+              <text x="1025" y="311" text-anchor="middle" font-size="18" fill="#475569">10.0.2.0/24</text>
+            </g>
+
+            <!-- VPC to TGW -->
+            <g>
+              <rect x="930" y="345" width="190" height="55" rx="12" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+              <text x="1025" y="378" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">VGW / TGW</text>
+            </g>
+
+            <!-- Active Arrow: DC1 → DXLoc1 -->
+            <line x1="320" y1="180" x2="390" y2="180" stroke="#3B82F6" stroke-width="3" marker-end="url(#arrowBlue)"/>
+            <rect x="330" y="148" width="80" height="24" rx="12" fill="#3B82F6"/>
+            <text x="370" y="165" text-anchor="middle" font-size="16" fill="white" font-weight="bold">Active</text>
+
+            <!-- Passive Arrow: DC2 → DXLoc2 -->
+            <line x1="320" y1="340" x2="390" y2="340" stroke="#94A3B8" stroke-width="3" stroke-dasharray="8,4" marker-end="url(#arrowGray)"/>
+            <rect x="325" y="308" width="88" height="24" rx="12" fill="#94A3B8"/>
+            <text x="369" y="325" text-anchor="middle" font-size="16" fill="white" font-weight="bold">Passive</text>
+
+            <!-- DXLoc1 → DXGW -->
+            <line x1="590" y1="180" x2="650" y2="240" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+
+            <!-- DXLoc2 → DXGW -->
+            <line x1="590" y1="340" x2="650" y2="280" stroke="#94A3B8" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowGray)"/>
+
+            <!-- DXGW → VGW/TGW -->
+            <line x1="850" y1="260" x2="930" y2="372" stroke="#10B981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+            <line x1="850" y1="260" x2="930" y2="207" stroke="#10B981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+            <line x1="850" y1="260" x2="930" y2="292" stroke="#10B981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+
+            <!-- Arrow Markers -->
+            <defs>
+              <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6"/>
+              </marker>
+              <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981"/>
+              </marker>
+              <marker id="arrowGray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#94A3B8"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="svg-caption">図1: Active/Passive DX構成 &#8212; 実線がActive（メインルート）、破線がPassive（バックアップ）</p>
+        </div>
+      </section>
+
+      <!-- Section 4: BGP Path Attributes -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128295;</span>
+          <h2 id="bgp-attrs">3つのBGPパス属性</h2>
+        </div>
+        <p>Active/Passive制御に使う3つのBGPパス属性を、物流ネットワークのたとえで理解しましょう。</p>
+
+        <div class="attr-grid">
+          <div class="attr-card lp">
+            <div class="attr-icon">&#128203;</div>
+            <div class="attr-name">Local Preference</div>
+            <div class="attr-analogy">&#128666; 社内配送ルールの優先度</div>
+            <div class="attr-rule">値が大きい ＝ 優先</div>
+            <p style="font-size:20px; margin:10px 0 0; color:#475569; text-align:left;">
+              iBGPピア間（同一AS内）でのみ使用。社内で「この道を優先しなさい」と指示する仕組み。最も効果的な制御手段。
+            </p>
+          </div>
+          <div class="attr-card asp">
+            <div class="attr-icon">&#128738;</div>
+            <div class="attr-name">AS_Path</div>
+            <div class="attr-analogy">&#128666; 経由する中継地点の数</div>
+            <div class="attr-rule">経路が短い ＝ 優先</div>
+            <p style="font-size:20px; margin:10px 0 0; color:#475569; text-align:left;">
+              AS番号の連結リスト。Prependingで意図的に経路を長くして、特定パスを非優先にできる。eBGP/iBGP両方で有効。
+            </p>
+          </div>
+          <div class="attr-card med">
+            <div class="attr-icon">&#128681;</div>
+            <div class="attr-name">MED</div>
+            <div class="attr-analogy">&#128666; 受入口の優先表示看板</div>
+            <div class="attr-rule">値が小さい ＝ 優先</div>
+            <p style="font-size:20px; margin:10px 0 0; color:#475569; text-align:left;">
+              マルチホーム環境で外部ASに「この入口を使って」と伝える指標。評価順位が低いため補助的な使用が推奨される。
+            </p>
+          </div>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title">&#9888; Local PrefとAS_Pathの関係に注意</div>
+          Local Preferenceは AS_Path よりも先に評価されます。そのため、AS_Path Prependingで制御しようとしても、Local Prefが設定されていると上書きされてしまいます。両方を組み合わせる場合は、Local Prefが最優先であることを常に意識してください。
+        </div>
+      </section>
+
+      <!-- Section 5: Evaluation Order -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128218;</span>
+          <h2 id="eval-order">BGP経路選択の評価順序</h2>
+        </div>
+        <p>AWSがDirect Connect経由でルーティングを決定する際の評価順序です。上位の条件が優先されます。</p>
+
+        <div class="eval-flow">
+          <div class="eval-step s1">&#9312; 最長プレフィックス一致</div>
+          <span class="eval-arrow">&#10148;</span>
+          <div class="eval-step s1">&#9313; Local Preference</div>
+          <span class="eval-arrow">&#10148;</span>
+          <div class="eval-step s2">&#9314; AS_Path長</div>
+          <span class="eval-arrow">&#10148;</span>
+          <div class="eval-step s3">&#9315; MED</div>
+          <span class="eval-arrow">&#10148;</span>
+          <div class="eval-step s4">&#9316; ECMP</div>
+        </div>
+
+        <div class="info-box danger">
+          <div class="info-box-title">&#128680; 最重要ルール：プレフィックス長が最優先！</div>
+          どんなにBGP属性を調整しても、より具体的なプレフィックス（例: /25 vs /24）が広告されていれば、そちらが必ず優先されます。Active/Passive設計では、両方のDX接続で同じプレフィックス長を広告することが前提条件です。
+        </div>
+
+        <!-- SVG: Evaluation Order Flow -->
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BGP経路選択の評価順序フロー図">
+            <rect x="20" y="20" width="1160" height="400" rx="18" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="600" y="58" text-anchor="middle" font-size="22" font-weight="bold" fill="#0F172A">BGP Best Path 評価フロー（物流のたとえ）</text>
+
+            <!-- Step 1 -->
+            <g>
+              <rect x="50" y="90" width="240" height="130" rx="14" fill="#EEF2FF" stroke="#3B82F6" stroke-width="2.5"/>
+              <text x="170" y="120" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D4ED8">&#9312; プレフィックス長</text>
+              <text x="170" y="150" text-anchor="middle" font-size="20" fill="#475569">「住所が詳しい方を</text>
+              <text x="170" y="175" text-anchor="middle" font-size="20" fill="#475569">優先配送する」</text>
+              <text x="170" y="205" text-anchor="middle" font-size="20" font-weight="bold" fill="#3B82F6">/25 &gt; /24 &gt; /16</text>
+            </g>
+
+            <!-- Arrow 1→2 -->
+            <line x1="290" y1="155" x2="340" y2="155" stroke="#3B82F6" stroke-width="2.5" marker-end="url(#arrowBlue2)"/>
+            <text x="315" y="145" text-anchor="middle" font-size="16" fill="#94A3B8">同じなら</text>
+
+            <!-- Step 2 -->
+            <g>
+              <rect x="340" y="90" width="240" height="130" rx="14" fill="#EEF2FF" stroke="#3B82F6" stroke-width="2.5"/>
+              <text x="460" y="120" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D4ED8">&#9313; Local Preference</text>
+              <text x="460" y="150" text-anchor="middle" font-size="20" fill="#475569">「社内で決めた</text>
+              <text x="460" y="175" text-anchor="middle" font-size="20" fill="#475569">優先ルートに従う」</text>
+              <text x="460" y="205" text-anchor="middle" font-size="20" font-weight="bold" fill="#3B82F6">値が大きい = 優先</text>
+            </g>
+
+            <!-- Arrow 2→3 -->
+            <line x1="580" y1="155" x2="630" y2="155" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen2)"/>
+            <text x="605" y="145" text-anchor="middle" font-size="16" fill="#94A3B8">同じなら</text>
+
+            <!-- Step 3 -->
+            <g>
+              <rect x="630" y="90" width="240" height="130" rx="14" fill="#ECFDF5" stroke="#10B981" stroke-width="2.5"/>
+              <text x="750" y="120" text-anchor="middle" font-size="20" font-weight="bold" fill="#047857">&#9314; AS_Path長</text>
+              <text x="750" y="150" text-anchor="middle" font-size="20" fill="#475569">「中継地点が少ない</text>
+              <text x="750" y="175" text-anchor="middle" font-size="20" fill="#475569">ルートを選ぶ」</text>
+              <text x="750" y="205" text-anchor="middle" font-size="20" font-weight="bold" fill="#10B981">短い方 = 優先</text>
+            </g>
+
+            <!-- Arrow 3→4 -->
+            <line x1="870" y1="155" x2="920" y2="155" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrowOrange)"/>
+            <text x="895" y="145" text-anchor="middle" font-size="16" fill="#94A3B8">同じなら</text>
+
+            <!-- Step 4 -->
+            <g>
+              <rect x="920" y="90" width="240" height="130" rx="14" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2.5"/>
+              <text x="1040" y="120" text-anchor="middle" font-size="20" font-weight="bold" fill="#92400E">&#9315; MED</text>
+              <text x="1040" y="150" text-anchor="middle" font-size="20" fill="#475569">「受入口の案内に</text>
+              <text x="1040" y="175" text-anchor="middle" font-size="20" fill="#475569">従う」</text>
+              <text x="1040" y="205" text-anchor="middle" font-size="20" font-weight="bold" fill="#F59E0B">値が小さい = 優先</text>
+            </g>
+
+            <!-- Bottom: Result -->
+            <g>
+              <rect x="300" y="280" width="600" height="110" rx="16" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+              <text x="600" y="315" text-anchor="middle" font-size="22" font-weight="bold" fill="#0F172A">&#128161; すべて同じ場合</text>
+              <text x="600" y="348" text-anchor="middle" font-size="20" fill="#475569">ECMP（等コストマルチパス）で複数経路に</text>
+              <text x="600" y="375" text-anchor="middle" font-size="20" fill="#475569">ロードバランシングされる（Active/Active状態）</text>
+            </g>
+
+            <!-- Arrows to bottom -->
+            <line x1="600" y1="220" x2="600" y2="280" stroke="#FDBA74" stroke-width="2" marker-end="url(#arrowOrangeB)"/>
+
+            <defs>
+              <marker id="arrowBlue2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6"/>
+              </marker>
+              <marker id="arrowGreen2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981"/>
+              </marker>
+              <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#F59E0B"/>
+              </marker>
+              <marker id="arrowOrangeB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#FDBA74"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="svg-caption">図2: BGP Best Path評価フロー &#8212; 上位条件から順に評価、同条件ならECMP</p>
+        </div>
+      </section>
+
+      <!-- Section 6: Outbound Control -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#10145;</span>
+          <h2 id="outbound">Outbound制御（オンプレミス → AWS）</h2>
+        </div>
+        <p>Outbound制御は「物流でいえば、配送センターからどの高速道路を使って荷物を出すか」を決めることです。自社のルーター（DC1/DC2）で設定します。</p>
+
+        <h3>方法1: Local Preferenceで制御（推奨）</h3>
+        <p>社内（iBGPピア間）で「本番系は東京ルートを優先、開発系は大阪ルートを優先」と指示する方法です。最も直感的で効果的な手法です。</p>
+
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Local Preferenceによるアウトバウンド制御の仕組み図">
+            <rect x="20" y="20" width="1160" height="440" rx="18" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="600" y="58" text-anchor="middle" font-size="22" font-weight="bold" fill="#0F172A">Local Preferenceによるアウトバウンド制御</text>
+
+            <!-- DC1 -->
+            <g>
+              <rect x="60" y="100" width="260" height="140" rx="14" fill="#F8FAFC" stroke="#3B82F6" stroke-width="2.5"/>
+              <text x="190" y="130" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D4ED8">&#128739; DC1（東京）</text>
+              <text x="190" y="158" text-anchor="middle" font-size="20" fill="#475569">本番 → LP 200 &#128994;</text>
+              <text x="190" y="183" text-anchor="middle" font-size="20" fill="#475569">開発 → LP 100</text>
+              <text x="190" y="218" text-anchor="middle" font-size="20" font-weight="bold" fill="#3B82F6">eBGP経由で本番を送出</text>
+            </g>
+
+            <!-- DC2 -->
+            <g>
+              <rect x="60" y="290" width="260" height="140" rx="14" fill="#F8FAFC" stroke="#94A3B8" stroke-width="2.5"/>
+              <text x="190" y="320" text-anchor="middle" font-size="20" font-weight="bold" fill="#475569">&#128739; DC2（大阪）</text>
+              <text x="190" y="348" text-anchor="middle" font-size="20" fill="#475569">本番 → LP 100</text>
+              <text x="190" y="373" text-anchor="middle" font-size="20" fill="#475569">開発 → LP 200 &#128994;</text>
+              <text x="190" y="408" text-anchor="middle" font-size="20" font-weight="bold" fill="#94A3B8">eBGP経由で開発を送出</text>
+            </g>
+
+            <!-- iBGP Link -->
+            <line x1="190" y1="240" x2="190" y2="290" stroke="#94A3B8" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="220" y="270" font-size="18" fill="#94A3B8">iBGP</text>
+
+            <!-- AWS Side -->
+            <rect x="750" y="100" width="380" height="330" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="940" y="128" text-anchor="middle" font-size="20" font-weight="bold" fill="#475569">AWS</text>
+
+            <g>
+              <rect x="790" y="155" width="300" height="55" rx="12" fill="white" stroke="#3B82F6" stroke-width="2"/>
+              <text x="940" y="188" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">&#128230; 本番VPC 10.0.1.0/24</text>
+            </g>
+            <g>
+              <rect x="790" y="240" width="300" height="55" rx="12" fill="white" stroke="#94A3B8" stroke-width="2"/>
+              <text x="940" y="273" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">&#128230; 開発VPC 10.0.2.0/24</text>
+            </g>
+
+            <!-- DXGW -->
+            <g>
+              <rect x="500" y="200" width="180" height="70" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+              <text x="590" y="242" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">DXGW</text>
+            </g>
+
+            <!-- Active Arrow DC1 → DXGW (prod) -->
+            <path d="M 320 170 Q 400 170 500 220" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrowBlue2)"/>
+            <text x="410" y="180" text-anchor="middle" font-size="18" font-weight="bold" fill="#3B82F6">本番 &#128994;</text>
+
+            <!-- Passive Arrow DC2 → DXGW (dev) -->
+            <path d="M 320 360 Q 400 360 500 250" stroke="#94A3B8" stroke-width="2.5" fill="none" stroke-dasharray="8,4" marker-end="url(#arrowGray)"/>
+            <text x="410" y="340" text-anchor="middle" font-size="18" fill="#94A3B8">開発</text>
+
+            <!-- DXGW → VPCs -->
+            <line x1="680" y1="225" x2="790" y2="182" stroke="#10B981" stroke-width="2" marker-end="url(#arrowGreen2)"/>
+            <line x1="680" y1="245" x2="790" y2="267" stroke="#10B981" stroke-width="2" marker-end="url(#arrowGreen2)"/>
+
+            <!-- Legend -->
+            <rect x="790" y="320" width="300" height="90" rx="10" fill="white" stroke="#CBD5E1" stroke-width="1"/>
+            <text x="810" y="348" font-size="20" fill="#475569">&#128308; LP 200 = 優先する道</text>
+            <text x="810" y="378" font-size="20" fill="#475569">&#9898; LP 100 = 非優先の道</text>
+            <text x="810" y="400" font-size="18" fill="#94A3B8" font-style="italic">LP = Local Preference</text>
+          </svg>
+          <p class="svg-caption">図3: Local Preferenceで本番/開発のOutboundを分離</p>
+        </div>
+
+        <h3>方法2: AS_Path Prependingで制御</h3>
+        <p>AWS側から受信したルートのAS_Pathを意図的に長くすることで、「この道は遠い」とルーターに認識させます。</p>
+
+        <div class="step-flow">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-title">ルートマップ作成</div>
+            <div class="step-desc">非優先にしたいプレフィックスにマッチするルートマップを定義</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-title">AS_Path Prepend</div>
+            <div class="step-desc">受信方向（in）でAS番号を追加し、パスを長くする</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-title">ルーター適用</div>
+            <div class="step-desc">eBGPネイバーにルートマップを適用して経路を制御</div>
+          </div>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title">&#128161; Local Pref vs AS_Path、どちらを使う？</div>
+          Local Preferenceが推奨です。理由は「BGP Best Path評価でAS_Pathより先に評価される」ため、より確実に制御できるからです。AS_Path Prependingは、Local Prefが使えない場面（eBGPピア間のみの制御など）で使うのが効果的です。
+        </div>
+      </section>
+
+      <!-- Section 7: Inbound Control -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#11013;</span>
+          <h2 id="inbound">Inbound制御（AWS → オンプレミス）</h2>
+        </div>
+        <p>Inbound制御は「AWS側から戻ってくるトラフィックがどのDX接続を通るか」を決めることです。物流にたとえると「倉庫から配送センターへの返品ルートを指定する」ようなものです。</p>
+
+        <div class="info-box note">
+          <div class="info-box-title">&#128205; Inbound制御の特殊性</div>
+          Local Preferenceは通常iBGPピア間でしか使えません。しかし、AWSはBGP Communityタグ（7224:7100/7200/7300）を受け付けることで、AWS内部のLocal Preference値を間接的に設定できる仕組みを提供しています。
+        </div>
+
+        <h3>BGP Communityタグによるインバウンド制御</h3>
+        <div class="community-grid">
+          <div class="community-card low">
+            <div class="comm-tag">7224:7100</div>
+            <div class="comm-label">Low Preference</div>
+            <div class="comm-desc">Passive（バックアップ）接続に設定。障害時のみ使われる。</div>
+          </div>
+          <div class="community-card mid">
+            <div class="comm-tag">7224:7200</div>
+            <div class="comm-label">Medium Preference</div>
+            <div class="comm-desc">Active/Active構成でロードバランシングしたい場合に両方に設定。</div>
+          </div>
+          <div class="community-card high">
+            <div class="comm-tag">7224:7300</div>
+            <div class="comm-label">High Preference</div>
+            <div class="comm-desc">Active（メイン）接続に設定。最優先で使用される。</div>
+          </div>
+        </div>
+
+        <div class="svg-container">
+          <svg viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BGP CommunityによるInbound制御の仕組み図">
+            <rect x="20" y="20" width="1160" height="420" rx="18" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+            <text x="600" y="58" text-anchor="middle" font-size="22" font-weight="bold" fill="#0F172A">BGP CommunityによるInbound制御</text>
+
+            <!-- On-Prem -->
+            <rect x="50" y="85" width="330" height="330" rx="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="8,4"/>
+            <text x="215" y="112" text-anchor="middle" font-size="20" font-weight="bold" fill="#475569">オンプレミス</text>
+
+            <!-- DC1 sends High -->
+            <g>
+              <rect x="80" y="130" width="270" height="100" rx="14" fill="white" stroke="#3B82F6" stroke-width="2.5"/>
+              <text x="215" y="160" text-anchor="middle" font-size="20" font-weight="bold" fill="#1D4ED8">&#128739; DC1 &#10145; Active</text>
+              <text x="215" y="188" text-anchor="middle" font-size="20" fill="#475569">広告時に Community</text>
+              <text x="215" y="214" text-anchor="middle" font-size="20" font-weight="bold" fill="#059669">7224:7300（High）を付与</text>
+            </g>
+
+            <!-- DC2 sends Low -->
+            <g>
+              <rect x="80" y="280" width="270" height="100" rx="14" fill="white" stroke="#94A3B8" stroke-width="2.5"/>
+              <text x="215" y="310" text-anchor="middle" font-size="20" font-weight="bold" fill="#475569">&#128739; DC2 &#10145; Passive</text>
+              <text x="215" y="338" text-anchor="middle" font-size="20" fill="#475569">広告時に Community</text>
+              <text x="215" y="364" text-anchor="middle" font-size="20" font-weight="bold" fill="#DC2626">7224:7100（Low）を付与</text>
+            </g>
+
+            <!-- DXGW -->
+            <g>
+              <rect x="500" y="200" width="200" height="90" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2.5"/>
+              <text x="600" y="235" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">DXGW</text>
+              <text x="600" y="262" text-anchor="middle" font-size="20" fill="#475569">Communityを評価</text>
+            </g>
+
+            <!-- AWS VPC -->
+            <g>
+              <rect x="830" y="180" width="310" height="130" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+              <text x="985" y="215" text-anchor="middle" font-size="20" font-weight="bold" fill="#047857">AWS VPC</text>
+              <text x="985" y="245" text-anchor="middle" font-size="20" fill="#475569">戻りトラフィックは</text>
+              <text x="985" y="270" text-anchor="middle" font-size="20" font-weight="bold" fill="#3B82F6">DC1（High）を優先&#128994;</text>
+              <text x="985" y="295" text-anchor="middle" font-size="20" fill="#94A3B8">DC2は障害時のみ利用</text>
+            </g>
+
+            <!-- Arrows -->
+            <path d="M 350 180 L 500 230" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrowBlue2)"/>
+            <text x="430" y="188" text-anchor="middle" font-size="18" font-weight="bold" fill="#059669">7300</text>
+
+            <path d="M 350 330 L 500 260" stroke="#94A3B8" stroke-width="2" fill="none" stroke-dasharray="8,4" marker-end="url(#arrowGray)"/>
+            <text x="430" y="315" text-anchor="middle" font-size="18" fill="#DC2626">7100</text>
+
+            <line x1="700" y1="245" x2="830" y2="245" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowGreen2)"/>
+
+            <!-- Return traffic arrow -->
+            <path d="M 830 260 Q 720 340 350 200" stroke="#3B82F6" stroke-width="3" fill="none" stroke-dasharray="0" marker-end="url(#arrowBlue2)"/>
+            <text x="590" y="340" text-anchor="middle" font-size="18" font-weight="bold" fill="#3B82F6">&#11013; 戻りは DC1 優先</text>
+          </svg>
+          <p class="svg-caption">図4: BGP Communityタグで戻りトラフィックのDX接続を制御</p>
+        </div>
+
+        <h3>AS_Path Prependingによるインバウンド制御</h3>
+        <p>Community以外に、自社のプレフィックスをAWSに広告する際にAS_Pathを長くすることでも制御できます。Passive側のルーターで、AWS向け広告にAS番号をPrependします。</p>
+
+        <div class="info-box tip">
+          <div class="info-box-title">&#128161; 推奨：Communityタグ方式</div>
+          AWS公式ドキュメントでは、BGP Communityタグ（7224:7100/7200/7300）を使う方法が最も推奨されています。Local Preferenceベースの制御を直接的に行えるため、AS_Path PrependingやMEDよりも確実に動作します。
+        </div>
+      </section>
+
+      <!-- Section 8: BGP Community Detail -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#127991;</span>
+          <h2 id="community">BGP Communityタグ 詳細</h2>
+        </div>
+
+        <h3>Private/Transit VIF用 ローカルプリファレンスCommunity</h3>
+        <table class="analogy-table">
+          <thead>
+            <tr>
+              <th>Communityタグ</th>
+              <th>優先度</th>
+              <th>用途</th>
+              <th>物流のたとえ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>7224:7100</strong></td>
+              <td>Low</td>
+              <td>Passive（バックアップ）VIF</td>
+              <td>&#128308; 「この入口は緊急時だけ使ってください」</td>
+            </tr>
+            <tr>
+              <td><strong>7224:7200</strong></td>
+              <td>Medium</td>
+              <td>Active/Active構成の両方、またはデフォルト</td>
+              <td>&#128993; 「通常の受入口です」</td>
+            </tr>
+            <tr>
+              <td><strong>7224:7300</strong></td>
+              <td>High</td>
+              <td>Active（メイン）VIF</td>
+              <td>&#128994; 「最優先の受入口です」</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Active/Passive設定パターン</h3>
+        <div class="direction-grid">
+          <div class="direction-card outbound">
+            <div class="dir-icon">&#128994;</div>
+            <div class="dir-title">Active/Passive</div>
+            <div class="dir-sub">メインに7300、バックアップに7100</div>
+            <div class="dir-method">7224:7300 + 7224:7100</div>
+          </div>
+          <div class="direction-card inbound">
+            <div class="dir-icon">&#128993;</div>
+            <div class="dir-title">Active/Active</div>
+            <div class="dir-sub">両方に同じCommunityを設定</div>
+            <div class="dir-method">7224:7200 + 7224:7200</div>
+          </div>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title">&#9888; Communityタグ未設定時の動作</div>
+          Communityタグを設定しない場合、AWS側はDXロケーションの関連リージョンに基づいてデフォルトのLocal Preference値を割り当てます。同一リージョン内のDXロケーションはMedium（7224:7200相当）が適用されます。意図しないルーティングを避けるため、明示的にCommunityタグを設定することを推奨します。
+        </div>
+      </section>
+
+      <!-- Section 9: Configuration Examples -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128187;</span>
+          <h2 id="config">設定例</h2>
+        </div>
+
+        <h3>Outbound制御: Local Preference（Cisco IOS）</h3>
+        <div class="code-tabs" data-group="outbound-lp">
+          <div class="code-tab-buttons">
+            <button class="code-tab-btn active" data-tab="cisco-lp">Cisco IOS (DC1)</button>
+            <button class="code-tab-btn" data-tab="cisco-lp-dc2">Cisco IOS (DC2)</button>
+          </div>
+          <div class="code-panel active" id="cisco-lp">
+<pre><span class="code-comment">! DC1: 本番系を優先（LP 200）、開発系を非優先（LP 100）</span>
+<span class="code-keyword">ip prefix-list</span> PROD_NETS <span class="code-keyword">permit</span> <span class="code-value">10.0.1.0/24</span>
+<span class="code-keyword">ip prefix-list</span> DEV_NETS <span class="code-keyword">permit</span> <span class="code-value">10.0.2.0/24</span>
+
+<span class="code-keyword">route-map</span> SET-LP-IBGP-DC1 <span class="code-keyword">permit</span> <span class="code-value">10</span>
+ <span class="code-keyword">match ip address prefix-list</span> PROD_NETS
+ <span class="code-keyword">set local-preference</span> <span class="code-value">200</span>
+
+<span class="code-keyword">route-map</span> SET-LP-IBGP-DC1 <span class="code-keyword">permit</span> <span class="code-value">20</span>
+ <span class="code-keyword">match ip address prefix-list</span> DEV_NETS
+ <span class="code-keyword">set local-preference</span> <span class="code-value">100</span>
+
+<span class="code-keyword">router bgp</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">192.168.1.2</span> <span class="code-keyword">remote-as</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">192.168.1.2</span> <span class="code-keyword">route-map</span> SET-LP-IBGP-DC1 <span class="code-keyword">out</span></pre>
+          </div>
+          <div class="code-panel" id="cisco-lp-dc2">
+<pre><span class="code-comment">! DC2: 開発系を優先（LP 200）、本番系を非優先（LP 100）</span>
+<span class="code-keyword">route-map</span> SET-LP-IBGP-DC2 <span class="code-keyword">permit</span> <span class="code-value">10</span>
+ <span class="code-keyword">match ip address prefix-list</span> PROD_NETS
+ <span class="code-keyword">set local-preference</span> <span class="code-value">100</span>
+
+<span class="code-keyword">route-map</span> SET-LP-IBGP-DC2 <span class="code-keyword">permit</span> <span class="code-value">20</span>
+ <span class="code-keyword">match ip address prefix-list</span> DEV_NETS
+ <span class="code-keyword">set local-preference</span> <span class="code-value">200</span>
+
+<span class="code-keyword">router bgp</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">192.168.1.1</span> <span class="code-keyword">remote-as</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">192.168.1.1</span> <span class="code-keyword">route-map</span> SET-LP-IBGP-DC2 <span class="code-keyword">out</span></pre>
+          </div>
+        </div>
+
+        <h3>Inbound制御: BGP Community（Cisco IOS）</h3>
+        <div class="code-tabs" data-group="inbound-comm">
+          <div class="code-tab-buttons">
+            <button class="code-tab-btn active" data-tab="cisco-comm-active">Active側 (DC1)</button>
+            <button class="code-tab-btn" data-tab="cisco-comm-passive">Passive側 (DC2)</button>
+          </div>
+          <div class="code-panel active" id="cisco-comm-active">
+<pre><span class="code-comment">! DC1 (Active): 高優先度 Community 7224:7300 を付与して広告</span>
+<span class="code-keyword">ip prefix-list</span> MY_NETS <span class="code-keyword">permit</span> <span class="code-value">172.16.1.0/24</span>
+<span class="code-keyword">ip prefix-list</span> MY_NETS <span class="code-keyword">permit</span> <span class="code-value">172.16.2.0/24</span>
+
+<span class="code-keyword">route-map</span> SET-COMM-HIGH <span class="code-keyword">permit</span> <span class="code-value">10</span>
+ <span class="code-keyword">match ip address prefix-list</span> MY_NETS
+ <span class="code-keyword">set community</span> <span class="code-value">7224:7300</span>
+
+<span class="code-keyword">router bgp</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">169.254.254.41</span> <span class="code-keyword">remote-as</span> <span class="code-value">65001</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">169.254.254.41</span> <span class="code-keyword">route-map</span> SET-COMM-HIGH <span class="code-keyword">out</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">169.254.254.41</span> <span class="code-keyword">send-community</span></pre>
+          </div>
+          <div class="code-panel" id="cisco-comm-passive">
+<pre><span class="code-comment">! DC2 (Passive): 低優先度 Community 7224:7100 を付与して広告</span>
+<span class="code-keyword">route-map</span> SET-COMM-LOW <span class="code-keyword">permit</span> <span class="code-value">10</span>
+ <span class="code-keyword">match ip address prefix-list</span> MY_NETS
+ <span class="code-keyword">set community</span> <span class="code-value">7224:7100</span>
+
+<span class="code-keyword">router bgp</span> <span class="code-value">65000</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">169.254.254.33</span> <span class="code-keyword">remote-as</span> <span class="code-value">65001</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">169.254.254.33</span> <span class="code-keyword">route-map</span> SET-COMM-LOW <span class="code-keyword">out</span>
+ <span class="code-keyword">neighbor</span> <span class="code-value">169.254.254.33</span> <span class="code-keyword">send-community</span></pre>
+          </div>
+        </div>
+
+        <h3>AWS CLI: VIF作成時のBGP設定</h3>
+        <div class="code-tabs" data-group="aws-cli">
+          <div class="code-tab-buttons">
+            <button class="code-tab-btn active" data-tab="cli-create">AWS CLI</button>
+            <button class="code-tab-btn" data-tab="cfn-vif">CloudFormation</button>
+          </div>
+          <div class="code-panel active" id="cli-create">
+<pre><span class="code-comment"># Private VIF（Active側）の作成</span>
+<span class="code-keyword">aws</span> directconnect create-private-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-abc12345</span> \\
+  --new-private-virtual-interface \\
+    <span class="code-string">virtualInterfaceName=prod-active-vif</span>,\\
+    <span class="code-string">vlan=100</span>,\\
+    <span class="code-string">asn=65000</span>,\\
+    <span class="code-string">authKey=my-bgp-key</span>,\\
+    <span class="code-string">amazonAddress=169.254.254.41/30</span>,\\
+    <span class="code-string">customerAddress=169.254.254.42/30</span>,\\
+    <span class="code-string">directConnectGatewayId=dxgw-abc12345</span>
+
+<span class="code-comment"># Private VIF（Passive側）の作成</span>
+<span class="code-keyword">aws</span> directconnect create-private-virtual-interface \\
+  --connection-id <span class="code-string">dxcon-def67890</span> \\
+  --new-private-virtual-interface \\
+    <span class="code-string">virtualInterfaceName=prod-passive-vif</span>,\\
+    <span class="code-string">vlan=200</span>,\\
+    <span class="code-string">asn=65000</span>,\\
+    <span class="code-string">authKey=my-bgp-key-2</span>,\\
+    <span class="code-string">amazonAddress=169.254.254.33/30</span>,\\
+    <span class="code-string">customerAddress=169.254.254.34/30</span>,\\
+    <span class="code-string">directConnectGatewayId=dxgw-abc12345</span></pre>
+          </div>
+          <div class="code-panel" id="cfn-vif">
+<pre><span class="code-comment"># CloudFormation: Active/Passive VIF構成</span>
+<span class="code-keyword">AWSTemplateFormatVersion:</span> <span class="code-string">'2010-09-09'</span>
+<span class="code-keyword">Resources:</span>
+  <span class="code-keyword">ActiveVIF:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::DirectConnect::VirtualInterface</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">ConnectionId:</span> <span class="code-string">dxcon-abc12345</span>
+      <span class="code-keyword">VirtualInterfaceName:</span> <span class="code-string">prod-active-vif</span>
+      <span class="code-keyword">Type:</span> <span class="code-string">private</span>
+      <span class="code-keyword">Vlan:</span> <span class="code-value">100</span>
+      <span class="code-keyword">Asn:</span> <span class="code-value">65000</span>
+      <span class="code-keyword">DirectConnectGatewayId:</span> <span class="code-string">dxgw-abc12345</span>
+
+  <span class="code-keyword">PassiveVIF:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::DirectConnect::VirtualInterface</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">ConnectionId:</span> <span class="code-string">dxcon-def67890</span>
+      <span class="code-keyword">VirtualInterfaceName:</span> <span class="code-string">prod-passive-vif</span>
+      <span class="code-keyword">Type:</span> <span class="code-string">private</span>
+      <span class="code-keyword">Vlan:</span> <span class="code-value">200</span>
+      <span class="code-keyword">Asn:</span> <span class="code-value">65000</span>
+      <span class="code-keyword">DirectConnectGatewayId:</span> <span class="code-string">dxgw-abc12345</span></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 10: Best Practices -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#9989;</span>
+          <h2 id="best-practice">ベストプラクティス vs アンチパターン</h2>
+        </div>
+
+        <div class="practice-grid">
+          <div class="practice-card good">
+            <h3>&#9989; ベストプラクティス</h3>
+            <ul>
+              <li><strong>異なるDXロケーション</strong>を使って冗長性を確保する</li>
+              <li>Active/Passiveには<strong>BGP Communityタグ</strong>（7224:7300/7100）を使う</li>
+              <li><strong>同じプレフィックス長</strong>で広告し、BGP属性で制御する</li>
+              <li>OutboundはLocal Pref、InboundはCommunityと<strong>方向別に制御手段を分ける</strong></li>
+              <li>定期的に<strong>フェイルオーバーテスト</strong>を実施する</li>
+              <li>ステートフルFWがある場合は<strong>Active/Passive</strong>を選択する</li>
+            </ul>
+          </div>
+          <div class="practice-card bad">
+            <h3>&#10060; アンチパターン</h3>
+            <ul>
+              <li>同じDXロケーションに2本のDXを集約する（単一障害点）</li>
+              <li>Communityタグを設定せずにActive/Passiveを期待する</li>
+              <li>Active側だけ/24、Passive側は/25で広告する（プレフィックス長の不一致）</li>
+              <li>Local PrefとAS_Path Prependingを矛盾する設定で併用する</li>
+              <li>フェイルオーバーのテストを一度もしない</li>
+              <li>MEDだけでActive/Passiveを制御しようとする（不安定）</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 11: Troubleshooting -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128679;</span>
+          <h2 id="troubleshoot">トラブルシューティング</h2>
+        </div>
+
+        <div class="ts-grid">
+          <div class="ts-card">
+            <div class="ts-symptom">&#128308; Passive側にトラフィックが流れる</div>
+            <div class="ts-cause">原因: Communityタグの設定漏れ、またはプレフィックス長の不一致</div>
+            <div class="ts-fix">&#128994; 対処: Communityタグ（7224:7300/7100）が正しく設定されているか確認。両方のVIFで同じプレフィックス長を広告しているか確認。</div>
+          </div>
+          <div class="ts-card">
+            <div class="ts-symptom">&#128308; フェイルオーバーしない</div>
+            <div class="ts-cause">原因: BGPセッションがDown検知されていない。BFDが未設定。</div>
+            <div class="ts-fix">&#128994; 対処: BFD（Bidirectional Forwarding Detection）を有効化し、障害検知を高速化する。BGP Keepalive/Holdタイマーを確認。</div>
+          </div>
+          <div class="ts-card">
+            <div class="ts-symptom">&#128308; 非対称ルーティングが発生</div>
+            <div class="ts-cause">原因: Outbound/Inboundの制御が片方だけになっている</div>
+            <div class="ts-fix">&#128994; 対処: Outbound（Local Pref）とInbound（Community）の両方を設定し、行き帰りのルートを一致させる。</div>
+          </div>
+          <div class="ts-card">
+            <div class="ts-symptom">&#128308; Communityタグが反映されない</div>
+            <div class="ts-cause">原因: send-community設定の欠落、または不正なCommunity値</div>
+            <div class="ts-fix">&#128994; 対処: neighbor設定に「send-community」を追加。Communityタグは7224:7100/7200/7300のみ有効。</div>
+          </div>
+        </div>
+
+        <h3>確認コマンド</h3>
+        <div class="code-tabs" data-group="debug">
+          <div class="code-tab-buttons">
+            <button class="code-tab-btn active" data-tab="verify-cisco">Cisco IOS</button>
+            <button class="code-tab-btn" data-tab="verify-aws">AWS CLI</button>
+          </div>
+          <div class="code-panel active" id="verify-cisco">
+<pre><span class="code-comment">! BGPテーブル確認</span>
+<span class="code-keyword">show ip bgp</span>
+<span class="code-keyword">show ip bgp</span> <span class="code-value">10.0.1.0/24</span>
+
+<span class="code-comment">! Local Preference確認</span>
+<span class="code-keyword">show ip bgp</span> <span class="code-value">10.0.1.0/24</span> | <span class="code-keyword">include</span> localpref
+
+<span class="code-comment">! Community確認</span>
+<span class="code-keyword">show ip bgp community</span>
+
+<span class="code-comment">! BGPネイバー状態</span>
+<span class="code-keyword">show ip bgp summary</span>
+<span class="code-keyword">show ip bgp neighbors</span> <span class="code-value">169.254.254.41</span> <span class="code-keyword">advertised-routes</span></pre>
+          </div>
+          <div class="code-panel" id="verify-aws">
+<pre><span class="code-comment"># VIFの状態確認</span>
+<span class="code-keyword">aws</span> directconnect describe-virtual-interfaces \\
+  --virtual-interface-id <span class="code-string">dxvif-abc12345</span>
+
+<span class="code-comment"># BGPピアの状態確認</span>
+<span class="code-keyword">aws</span> directconnect describe-virtual-interfaces \\
+  --query <span class="code-string">"virtualInterfaces[].bgpPeers"</span>
+
+<span class="code-comment"># DX接続の状態確認</span>
+<span class="code-keyword">aws</span> directconnect describe-connections</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 12: Exam Tips -->
+      <section class="exam-tips">
+        <h2 id="exam">&#128218; ANS-C01 試験対策ポイント</h2>
+
+        <div class="exam-tip-item">
+          <div class="exam-tip-q">Q: Active/Passiveを実現するために、AWS側にトラフィック優先度を伝える方法は？</div>
+          <div class="exam-tip-a">A: <strong>BGP Communityタグ</strong>（7224:7100/7200/7300）を使います。Active側のプレフィックスに7224:7300（High）、Passive側に7224:7100（Low）を設定します。これはPrivateVIFとTransitVIFの両方で使えます。</div>
+        </div>
+
+        <div class="exam-tip-item">
+          <div class="exam-tip-q">Q: Local PreferenceとAS_Pathの評価順序は？</div>
+          <div class="exam-tip-a">A: 評価順序は<strong>「プレフィックス長 → Local Preference → AS_Path → MED → ECMP」</strong>です。Local PrefはAS_Pathより先に評価されるため、より確実な制御が可能です。</div>
+        </div>
+
+        <div class="exam-tip-item">
+          <div class="exam-tip-q">Q: 同一プレフィックスを複数DX接続で広告した場合、デフォルトの動作は？</div>
+          <div class="exam-tip-a">A: Communityタグが未設定の場合、AWSは同一リージョン内のDXロケーションに対してデフォルトのMedium Local Preference（7224:7200相当）を適用し、<strong>ECMP（ロードバランシング）</strong>になります。</div>
+        </div>
+
+        <div class="exam-tip-item">
+          <div class="exam-tip-q">Q: ステートフルファイアウォールがある環境での推奨構成は？</div>
+          <div class="exam-tip-a">A: <strong>Active/Passive構成</strong>を推奨。Active/Activeだと非対称ルーティングが発生し、ファイアウォールのセッションテーブルと不整合が起きる可能性があります。</div>
+        </div>
+
+        <div class="exam-tip-item">
+          <div class="exam-tip-q">Q: Public VIFでAS_Path Prependingを使う場合の注意点は？</div>
+          <div class="exam-tip-a">A: Public VIFでAS_Path Prependingが有効なのは<strong>Public ASN使用時のみ</strong>です。Private ASNの場合、AWSがASNを7224に置き換えるため、Prependingは効果がありません。</div>
+        </div>
+      </section>
+
+      <!-- Section 13: FAQ -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#10067;</span>
+          <h2 id="faq">よくある質問（FAQ）</h2>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">Active/Passiveのフェイルオーバー時間はどれくらいですか？</button>
+          <div class="faq-answer">BGPのKeepalive/Holdタイマーに依存します。デフォルトではBGPのHoldタイマーは90秒ですが、BFD（Bidirectional Forwarding Detection）を有効にすると、数秒〜サブ秒で障害検知が可能になります。DXではBFDがサポートされているため、有効化を強く推奨します。</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">PrivateVIFとTransitVIF、どちらでもActive/Passiveは設定できますか？</button>
+          <div class="faq-answer">はい、どちらでも設定可能です。PrivateVIF（VGW経由）でもTransitVIF（TGW経由）でも、BGP Communityタグ、Local Preference、AS_Path Prependingによるルーティング制御が使えます。TransitVIFの場合はTGWのルーティングテーブルも合わせて設定する必要があります。</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">MEDだけでActive/Passiveは実現できますか？</button>
+          <div class="faq-answer">技術的には可能ですが、推奨されません。MEDはBGP評価順の中で優先度が低く（Local Pref、AS_Pathの後）、動作が不安定になる可能性があります。AWSの公式ドキュメントでもMEDよりCommunityタグの使用が推奨されています。</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">異なるリージョンのDXロケーションを使った場合はどうなりますか？</button>
+          <div class="faq-answer">異なるリージョンのDXロケーションを使う場合、AWSは「トラフィック送信元に近いリージョンのDXロケーション」をデフォルトで優先します。この動作はBGP Communityタグで上書きできます。</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">VPN接続をバックアップとして併用できますか？</button>
+          <div class="faq-answer">はい、DX接続がすべてダウンした場合のバックアップとしてVPN接続を併用できます。VPNはAS_Pathが長くなるため、DX接続が利用可能な間はDXが優先されます。ただし、VPN経由のスループットはDXよりも限定的である点に注意してください。</div>
+        </div>
+      </section>
+
+      <!-- Section 14: Cheat Sheet -->
+      <section class="cheat-sheet">
+        <h2 id="cheatsheet">&#128221; DX Active/Passive BGP チートシート</h2>
+        <div class="cheat-grid">
+          <div class="cheat-card">
+            <h3>&#10145; Outbound制御（行き）</h3>
+            <p>Local Preference: 社内ルーターで設定。値が大きい方が優先。iBGPピア間で共有。最推奨。</p>
+          </div>
+          <div class="cheat-card">
+            <h3>&#11013; Inbound制御（帰り）</h3>
+            <p>BGP Community: 7224:7300=High、7224:7200=Medium、7224:7100=Low。Active側にHigh、Passive側にLowを設定。</p>
+          </div>
+          <div class="cheat-card">
+            <h3>&#128218; 評価順序</h3>
+            <p>プレフィックス長 → Local Pref → AS_Path → MED → ECMP。プレフィックス長が最強。同長が前提条件。</p>
+          </div>
+          <div class="cheat-card">
+            <h3>&#9888; 最重要注意</h3>
+            <p>異なるプレフィックス長で広告すると、BGP属性の設定がすべて無効化される。必ず同じプレフィックス長で広告すること。</p>
+          </div>
+          <div class="cheat-card">
+            <h3>&#128737; Active/Passive設定</h3>
+            <p>Active: Community 7224:7300 + LP 200。Passive: Community 7224:7100 + LP 100。send-communityを忘れない。</p>
+          </div>
+          <div class="cheat-card">
+            <h3>&#128679; フェイルオーバー高速化</h3>
+            <p>BFD有効化でサブ秒検知。デフォルトBGPタイマー（Hold 90秒）は遅すぎる場合がある。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Glossary -->
+      <section class="section">
+        <div class="section-header">
+          <span class="section-icon">&#128214;</span>
+          <h2 id="glossary">用語集</h2>
+        </div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <span class="glossary-term">BGP</span>
+            <span class="glossary-def"> &#8212; Border Gateway Protocol。AS間のルーティングプロトコル。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">AS</span>
+            <span class="glossary-def"> &#8212; Autonomous System。独立管理されるネットワーク単位。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">Local Pref</span>
+            <span class="glossary-def"> &#8212; iBGP内での経路優先度。値が大きい方が優先。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">AS_Path</span>
+            <span class="glossary-def"> &#8212; 経由AS番号のリスト。短い方が優先。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">MED</span>
+            <span class="glossary-def"> &#8212; Multi-Exit Discriminator。外部ASへの入口優先度。値が小さい方が優先。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">Community</span>
+            <span class="glossary-def"> &#8212; BGPルート広告に付加する追加情報タグ。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">ECMP</span>
+            <span class="glossary-def"> &#8212; Equal Cost Multi-Path。等コストの複数経路でロードバランス。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">BFD</span>
+            <span class="glossary-def"> &#8212; Bidirectional Forwarding Detection。高速障害検知プロトコル。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">DXGW</span>
+            <span class="glossary-def"> &#8212; Direct Connect Gateway。複数VIFを束ねる中継ゲートウェイ。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">VGW</span>
+            <span class="glossary-def"> &#8212; Virtual Private Gateway。VPCのDX/VPN接続口。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">TGW</span>
+            <span class="glossary-def"> &#8212; Transit Gateway。複数VPC/VPN/DXを集約するハブ。</span>
+          </div>
+          <div class="glossary-item">
+            <span class="glossary-term">Prepending</span>
+            <span class="glossary-def"> &#8212; AS番号を意図的に追加してパスを長くする手法。</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="page-footer" role="contentinfo">
+        <p>&#9729; AWS Direct Connect Active/Passive BGP設定ガイド &#8212; AWS学習リソース</p>
+        <p>本資料はAWS公式ドキュメントおよびブログに基づき作成されています。最新情報は公式ドキュメントをご確認ください。</p>
+      </footer>
+
+    </div>
+  </main>
+
+  <!-- Scroll to top -->
+  <button class="scroll-to-top" aria-label="ページトップへ戻る">&#8593;</button>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
