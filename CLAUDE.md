@@ -10,7 +10,7 @@ AWS SAP (Solutions Architect Professional) exam study resource repository built 
 |------|-------|
 | **Live Site** | https://ssuzuki1063.github.io/aws_sap_studying/ |
 | **Architecture** | Astro 5.x SSG (`npm run build` → `dist/`) |
-| **Content** | 312+ resource pages (.astro), 8 display categories, 12 page directories |
+| **Content** | 307+ resource pages (.astro), 8 display categories, 12 page directories |
 | **Branches** | `master` (source), `gh-pages` (build output, CI-managed) |
 
 ## Quick Start
@@ -95,14 +95,14 @@ src/data/resource-summaries.json ─┘
                                       └─ src/data/resources.ts (build-time: typed TS module)
 ```
 
-`generate-data.mjs` auto-assigns new resources to categories/sections via keyword matching from `category-meta.json`. The 8 display categories render in this order: `networking`, `security-governance`, `compute-applications`, `content-delivery-dns`, `development-deployment`, `storage-database`, `migration`, `analytics-operations`.
+`generate-data.mjs` auto-assigns new resources to categories/sections via keyword matching from `category-meta.json`. It parses two frontmatter formats: YAML (`key: value`) and JS object literal (`const frontmatter = { key: 'value' }`). Warnings are emitted for unknown displayCategories and orphaned registry entries. The 8 display categories render in this order: `networking`, `security-governance`, `compute-applications`, `content-delivery-dns`, `development-deployment`, `storage-database`, `migration`, `analytics-operations`.
 
 ### Layout System
 
 | Layout | Used By | Features |
 |--------|---------|----------|
 | `BaseLayout.astro` | Special pages (index, quiz, roadmap, profile, glossary) | Minimal HTML shell; page injects CSS/JS via `<Fragment slot="head">` |
-| `ResourceLayout.astro` | 258+ content pages | SidebarTOC, Breadcrumb, FixedNavHeader, PageBottomNav, reading progress bar |
+| `ResourceLayout.astro` | 300+ content pages | SidebarTOC, Breadcrumb, FixedNavHeader, PageBottomNav, reading progress bar |
 | `LearningResourcesLayout.astro` | Hub page (`learning-resources/[category].astro`) | Build-time TOC, search/bookmark scripts |
 
 ### Asset Sync
@@ -122,16 +122,18 @@ Static assets live at repository root (`css/`, `js/`, `concepts/`, `BlackBelt/`)
 
 ## Pre-Commit Hooks
 
-Three auto-checks run on every `git commit`:
+Four auto-checks run on every `git commit`:
 1. **Guard**: blocks staging `public/concepts/` (build-time generated)
 2. **Last modified date**: `update_last_modified.py` updates `data.js` via `// GIT_LAST_COMMIT_DATE` marker
 3. **WCAG contrast**: `check_contrast_ratio.py` — exit 1 if violations
+4. **Fixed headers**: `check_fixed_headers.py` — validates fixed header structure
 
 ## CI/CD
 
 - **deploy.yml** — push to master → `npm run build` → verify critical assets exist in `dist/` → deploy to gh-pages
 - **qa-unified.yml** — PR validation: W3C HTML + CSS validation (static), then Playwright + CSS runtime (runtime)
 - **playwright-e2e.yml** — full E2E across chromium/firefox/webkit/mobile-chrome
+- **pr-quality-check.yml** — PR-specific CSS validation + link checks
 
 ## Testing Architecture
 

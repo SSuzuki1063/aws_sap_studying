@@ -83,18 +83,52 @@ const DEFAULT_SECTION = 'その他';
 
 // ─── Parse .astro frontmatter ──────────────────────────────────────────────
 
+/** Track warnings to summarize at end */
+const warnings = [];
+
+function warn(msg) {
+  warnings.push(msg);
+  console.warn(`  ⚠ ${msg}`);
+}
+
 function parseFrontmatter(filePath) {
-  const content = readFileSync(filePath, 'utf-8');
+  let content;
+  try {
+    content = readFileSync(filePath, 'utf-8');
+  } catch (err) {
+    warn(`Cannot read file: ${relative(ROOT, filePath)} — ${err.message}`);
+    return null;
+  }
+
   const m = content.match(/^---\n([\s\S]*?)\n---/);
   if (!m) return null;
 
   const fm = m[1];
   const result = {};
 
-  // Extract simple string fields
-  for (const key of ['title', 'pageTitle', 'category', 'categoryLabel', 'subcategory', 'slug']) {
-    const km = fm.match(new RegExp(`${key}:\\s*["'\`](.*)["'\`]`));
-    if (km) result[key] = km[1];
+  // Detect format: YAML (key: value) vs JS object literal (const frontmatter = { ... })
+  const isJsObject = fm.includes('const frontmatter');
+
+  if (isJsObject) {
+    // Parse JS object literal: key: 'value' or key: "value" (inside { ... })
+    for (const key of ['title', 'pageTitle', 'category', 'categoryLabel', 'subcategory', 'slug']) {
+      const km = fm.match(new RegExp(`${key}:\\s*'([^']*?)'|${key}:\\s*"([^"]*?)"`));
+      if (km) result[key] = km[1] ?? km[2];
+    }
+  } else {
+    // Parse YAML frontmatter
+    // Supports: key: "value", key: 'value', key: `value`, key: value (unquoted)
+    for (const key of ['title', 'pageTitle', 'category', 'categoryLabel', 'subcategory', 'slug']) {
+      const quoted = fm.match(new RegExp(`^${key}:\\s*(?:"([^"]*?)"|'([^']*?)'|\`([^\`]*?)\`)`, 'm'));
+      if (quoted) {
+        result[key] = quoted[1] ?? quoted[2] ?? quoted[3];
+        continue;
+      }
+      const unquoted = fm.match(new RegExp(`^${key}:\\s*(.+?)\\s*$`, 'm'));
+      if (unquoted) {
+        result[key] = unquoted[1];
+      }
+    }
   }
 
   return result;
@@ -115,7 +149,8 @@ function collectContentPages() {
 
     const files = readdirSync(dirPath).filter(f => f.endsWith('.astro'));
     for (const file of files) {
-      const fm = parseFrontmatter(join(dirPath, file));
+      const filePath = join(dirPath, file);
+      const fm = parseFrontmatter(filePath);
       if (!fm || !fm.pageTitle) continue;
 
       const slug = fm.slug || basename(file, '.astro');
@@ -190,8 +225,11 @@ function buildCategoriesData(pages) {
     const reg = resourceRegistry[page.href];
     const displayCat = reg?.displayCategory || page.fileDir;
 
-    // Skip if not a display category
-    if (!catMap.has(displayCat)) continue;
+    // Validate displayCategory exists
+    if (!catMap.has(displayCat)) {
+      warn(`Resource "${page.pageTitle}" (${page.href}) maps to unknown displayCategory "${displayCat}" — skipped`);
+      continue;
+    }
 
     const section = determineSection(page.href, page.fileDir, page.slug, page.subcategory);
     const sectionMap = catMap.get(displayCat);
@@ -661,6 +699,27 @@ console.log(`  ${domainIndex.length} domains with resources`);
 console.log('Building searchData...');
 const searchData = buildSearchData(pages);
 console.log(`  ${searchData.length} searchable entries`);
+
+// Detect orphaned registry entries (registry references non-existent .astro files)
+console.log('Checking for orphaned registry entries...');
+const pageHrefs = new Set(pages.map(p => p.href));
+let orphanCount = 0;
+for (const [href, reg] of Object.entries(resourceRegistry)) {
+  // Skip PDFs and non-.html entries — they are managed differently
+  if (!href.endsWith('.html')) continue;
+  // Skip root-level pages (no directory prefix) — these are special pages (quiz, glossary, etc.)
+  if (!href.includes('/')) continue;
+  if (!pageHrefs.has(href)) {
+    warn(`Registry entry "${href}" has no matching .astro file — orphaned?`);
+    orphanCount++;
+  }
+}
+if (orphanCount === 0) console.log('  No orphaned entries found');
+
+// Print warning summary
+if (warnings.length > 0) {
+  console.warn(`\n⚠ ${warnings.length} warning(s) during generation (see above)`);
+}
 
 if (dryRun) {
   console.log('\n[DRY RUN] Would write:');
