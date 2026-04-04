@@ -4,133 +4,92 @@
 
 ### Add New HTML Learning Resource
 
-**Use the skill** (handles categorization, breadcrumbs, TOC, and data updates):
+**Use the skill** (recommended — handles HTML→Astro conversion, registry, data generation, validation):
 ```bash
-/skill integrate
+/skill integrate    # or /skill resource (auto-routes)
+/ship               # full autonomous pipeline with self-correcting gates
 ```
 
-Or manually:
-
+Manual steps (if not using skills):
 1. Place HTML files in `new_html/`
-2. Run: `python3 scripts/html_management/integrate_resource_complete.py`
-   - Auto-runs: categorize → breadcrumbs → sidebar TOC → home button → prev/next nav → **W3C validation** → **`git add`** (aborts before staging if W3C fails)
-3. Update `data.js` AND `index.js` (see Two-Place Update Rule in CLAUDE.md)
-4. Test: `python3 server.py`
-5. Deploy: `git add data.js index.js && git commit -m "feat: ..." && git push origin gh-pages`
+2. Convert HTML → `.astro` using rawContent + `set:html` pattern
+3. Place in `src/pages/<category>/`
+4. Update `src/data/resource-registry.json` + `src/data/update-history.json`
+5. Run `node scripts/generate-data.mjs`
+6. Run `npm run build` (validates data integrity)
+7. Run `python3 scripts/ci/validate_html_w3c.py --pr-mode` (W3C validation)
+8. Deploy with `/deploy`
 
 ### Replace/Update an Existing Resource
 
-Place the replacement file in `replace_html/` (same filename as the target), then run the integration script. No `data.js`/`index.js` update needed (file path doesn't change).
+```bash
+/skill replace   # place updated file in replace_html/ first
+```
+
+### Delete a Resource
+
+```bash
+/skill delete
+```
 
 ### Add Quiz Question
 
-Edit `quiz-data-extended.js`. The top-level structure is `quizData['category-key'].questions[]`:
+Edit `js/quiz-data-extended.js`. Structure: `quizData['category-key'].questions[]`:
 
 ```javascript
-const quizData = {
-  'category-key': {
-    title: 'カテゴリ名',
-    icon: '🔒',
-    questions: [
-      {
-        id: 'unique-id',         // Must be globally unique
-        question: '質問文',
-        options: ['選択肢1', '選択肢2', '選択肢3', '選択肢4'],
-        correct: 0,              // Index 0-3 of correct option
-        explanation: '詳細な解説'
-      }
-    ]
-  }
+{
+  id: 'unique-id',
+  question: '質問文',
+  options: ['選択肢1', '選択肢2', '選択肢3', '選択肢4'],
+  correct: 0,              // Index 0-3
+  explanation: '詳細な解説'
 }
 ```
 
-Helper functions at the bottom of `quiz-data-extended.js`:
-- `getTotalQuestions(categoryKey)` — returns question count for a category
-- `getAllQuestions(categoryKey)` — returns a copy of all questions for a category
+Validate: `node -c js/quiz-data-extended.js`
 
-Validate: `node -c quiz-data-extended.js`
+### Deploy
+
+```bash
+/deploy   # commit → merge to master → push → GitHub Actions builds → gh-pages
+```
 
 ## File Placement
 
-HTML resources go in **root-level category directories** (NOT in `scripts/`):
+Resource pages: `src/pages/<category>/*.astro` (13 page directories, 8 display categories).
 
-| Directory | data.js Category |
-|-----------|------------------|
-| `networking/` | `networking` |
-| `security-governance/` | `security-governance` |
-| `compute-applications/` | `compute-applications` |
-| `storage-database/` | `storage-database` |
-| `migration/` | `migration` |
-| `analytics-bigdata/` | `analytics-operations` |
-| `development-deployment/` | `development-deployment` |
-| `content-delivery-dns/` | `content-delivery-dns` |
-| `new-solutions/` | *(various — cross-cutting resources)* |
-| `organizational-complexity/` | *(mapped into other categories)* |
-| `continuous-improvement/` | *(mapped into other categories)* |
-| `cost-control/` | *(mapped into other categories)* |
-
-**Staging directories** (processed by integrate script, not committed directly):
+**Staging directories** (not committed):
 - `new_html/` — New HTML files waiting for integration
-- `replace_html/` — Updated versions of existing HTML files
+- `replace_html/` — Updated versions of existing files
 
-### HTML File Naming Conventions
+### File Naming
 
 | Pattern | Example |
 |---------|---------|
-| `aws-[service]-[topic].html` (preferred) | `aws-lambda-metrics.html` |
-| `[service]_[topic]_infographic.html` (legacy) | `ecs_infographic.html` |
+| `aws-[service]-[topic].astro` (preferred) | `aws-lambda-metrics.astro` |
+| `[service]_[topic]_infographic.astro` (legacy) | `ecs_infographic.astro` |
 
-Use lowercase. New files must follow the hyphenated `aws-` prefix pattern.
-
-## HTML Authoring Requirements
-
-All new HTML resource files must include:
-
-```html
-<!DOCTYPE html>
-<html lang="ja">
-```
-
-SVG diagrams must be **inline** (not external files) — required for offline capability.
-Every SVG must have `role="img"` and `aria-label`.
-
-## Branch Sync Workflow
-
-After direct commits to `gh-pages` (hotfixes), sync back to `master`:
-
-```bash
-git checkout master && git merge gh-pages && git push origin master
-```
-
-After merging a PR into `master`, deploy to production:
-
-```bash
-git checkout gh-pages && git merge master && git push origin gh-pages
-```
-
-Feature branch naming: `feature/[service-name]`, `fix/[issue]`, `refactor/[component]`.
+Lowercase with hyphens. `build.format: 'file'` → output is `category/filename.html`.
 
 ## Bulk File Operations
 
-When modifying 100+ HTML files, use **Python scripts** (not shell regex). Validate file counts before and after.
+When modifying 100+ files, use Python scripts (not shell regex). Validate file counts before and after.
 
 ## Key Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/html_management/integrate_resource_complete.py` | Full integration workflow (use `--skip-validation` to bypass W3C) |
-| `scripts/html_management/integrate_new_html.py` | Categorize and move HTML files |
-| `scripts/html_management/add_breadcrumbs.py` | Add breadcrumb navigation |
-| `scripts/html_management/add_sidebar_toc.py` | Add left sidebar TOC (requires 2+ `<h2>`/`<h3>` tags) |
-| `scripts/html_management/add_home_button.py` | Add 「リソース集に戻る」button |
-| `scripts/html_management/add_prev_next_nav.py --bottom-nav-only` | Add page bottom navigation |
-| `scripts/html_management/fix_html_issues.py` | Fix HTML entity escaping & sidebar TOC positioning |
-| `scripts/ci/check_data_integrity.py` | Verify data.js ⟷ index.js sync |
-| `scripts/ci/validate_html_w3c.py` | W3C validation (`--pr-mode` for changed files, `--files` for specific files) |
-| `scripts/ci/post_integration_check.py` | Verify integrated files have all required components |
+| `scripts/generate-data.mjs` | Generate `public/data.js`, `public/index.js`, `src/data/resources.ts` |
+| `scripts/ci/validate_html_w3c.py` | W3C validation (`--pr-mode` / `--files`) |
+| `scripts/ci/check_data_integrity.py` | `public/data.js` ⟷ `public/index.js` sync check |
+| `scripts/ci/check_css_quality.py` | CSS quality (`--pr-mode`) |
 | `scripts/ci/check_internal_links.py` | Broken link checker |
 | `scripts/ci/check_file_naming.py` | Naming convention check |
-| `scripts/accessibility/check_contrast_ratio.py` | WCAG 2.1 color contrast check |
-| `scripts/accessibility/suggest_color_fixes.py` | Suggest accessible alternative colors |
-| `scripts/accessibility/check_heading_hierarchy.py` | Heading hierarchy (h1→h2→h3) check |
+| `scripts/ci/post_integration_check.py` | Verify integrated files have required components |
+| `scripts/check_fixed_headers.py` | Fixed header presence check |
+| `scripts/accessibility/check_contrast_ratio.py` | WCAG color contrast |
+| `scripts/accessibility/check_heading_hierarchy.py` | Heading hierarchy (h1→h2→h3) |
 | `scripts/accessibility/fix_heading_hierarchy.py` | Auto-fix heading hierarchy skips |
+| `scripts/accessibility/suggest_color_fixes.py` | Suggest accessible alternative colors |
+| `scripts/git_hooks/update_last_modified.py` | Auto-update `public/data.js` lastUpdated date |
+| `scripts/concept_management/generate_concept_index.py` | Regenerate concept map indexes |

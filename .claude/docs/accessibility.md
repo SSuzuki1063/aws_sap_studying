@@ -36,15 +36,14 @@ Full details: `.claude/skills/wcag-accessibility/SKILL.md`
 
 ## CI/CD Pipeline
 
-GitHub Actions runs on PRs to `gh-pages` and `master` (`.github/workflows/pr-quality-check.yml`).
-Triggered by changes to `*.html`, `data.js`, `index.js`, `quiz-data-extended.js`, `*.css`, `*.py`.
+GitHub Actions runs on PRs to `master` (`.github/workflows/pr-quality-check.yml`).
 
 | Check | Blocking | Command |
 |-------|----------|---------|
 | Data Integrity | ✅ Yes | `python3 scripts/ci/check_data_integrity.py` |
 | W3C HTML Validation | ✅ Yes | `python3 scripts/ci/validate_html_w3c.py --pr-mode` |
 | Color Contrast | ✅ Yes | `python3 scripts/accessibility/check_contrast_ratio.py` |
-| JavaScript Syntax | ✅ Yes | `node -c quiz-data-extended.js data.js render.js index.js quiz-app.js` |
+| JavaScript Syntax | ✅ Yes | `node -c js/quiz-data-extended.js public/data.js public/render.js public/index.js js/quiz-app.js` |
 | Heading Hierarchy | ⚠️ Warning | `python3 scripts/accessibility/check_heading_hierarchy.py` |
 | Internal Links | ⚠️ Warning | `python3 scripts/ci/check_internal_links.py` |
 | File Naming | ⚠️ Warning | `python3 scripts/ci/check_file_naming.py` |

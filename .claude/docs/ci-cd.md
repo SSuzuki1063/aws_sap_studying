@@ -4,10 +4,10 @@
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `deploy.yml` | Push to master | `npm run build` → verify critical assets → deploy `dist/` to gh-pages |
-| `playwright-e2e.yml` | Push/PR to master | Run concept-map, navigation, links, interaction E2E tests |
-| `qa-unified.yml` | Manual / scheduled | 4-job pipeline: static-validation → runtime-validation → visual-regression → publish-report |
-| `pr-quality-check.yml` | PR to master | Pre-merge quality checks |
+| `deploy.yml` | Push to master / manual | `npm run build` → verify critical assets → deploy `dist/` to gh-pages |
+| `playwright-e2e.yml` | Push to master / PR (src/public/tests changes) | Full E2E across chromium/firefox/webkit/mobile-chrome |
+| `qa-unified.yml` | PR to master/gh-pages (CSS/src/public/tests changes) | W3C HTML + CSS validation, then Playwright + CSS runtime |
+| `pr-quality-check.yml` | PR to master/gh-pages (src/public/scripts changes) | CSS validation + link checks |
 
 ## Pre-Commit Hooks
 
