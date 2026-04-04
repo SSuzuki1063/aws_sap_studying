@@ -627,6 +627,11 @@
       panel.appendChild(_makeDetailToggle('🧠', '設計視点', concept.explanation_arch, concept.id + '-arch'));
     }
 
+    /* SVG概念図（D2生成） */
+    if (concept.svg_diagram) {
+      panel.appendChild(_makeSvgDiagramToggle(concept.svg_diagram, concept.id + '-svgdiag'));
+    }
+
     /* 🏷️ 設計軸チップ（Visual Language） */
     if (concept.axis_tags && concept.axis_tags.length) {
       panel.appendChild(_makeVisToggle('🏷️', '設計軸', _makeAxisChipsContent(concept.axis_tags), concept.id + '-axis'));
@@ -931,6 +936,44 @@
     return wrapper;
   }
 
+  /** 外部SVG図トグルパネル（D2生成SVG用） */
+  function _makeSvgDiagramToggle(svgDiagram, uid) {
+    var wrapper = _el('div', { cls: 'detail-toggle' });
+    var btnId = 'svgbtn-' + uid;
+    var panId = 'svgpan-' + uid;
+
+    var btn = _el('button', { cls: 'detail-toggle-btn' });
+    btn.type = 'button';
+    btn.id = btnId;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', panId);
+    btn.textContent = '\uD83D\uDDBC\uFE0F \u6982\u5FF5\u56F3 (SVG) \u25BC';
+
+    var panel = _el('div', { cls: 'detail-toggle-panel svg-diagram-panel' });
+    panel.id = panId;
+    panel.hidden = true;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-labelledby', btnId);
+
+    var img = document.createElement('img');
+    img.src = '/aws_sap_studying/' + svgDiagram.src;
+    img.alt = svgDiagram.alt || '';
+    img.classList.add('svg-diagram-img');
+    img.loading = 'lazy';
+    panel.appendChild(img);
+
+    btn.addEventListener('click', function () {
+      var nowOpen = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(nowOpen));
+      btn.textContent = '\uD83D\uDDBC\uFE0F \u6982\u5FF5\u56F3 (SVG) ' + (nowOpen ? '\u25B2' : '\u25BC');
+      panel.hidden = !nowOpen;
+    });
+
+    wrapper.appendChild(btn);
+    wrapper.appendChild(panel);
+    return wrapper;
+  }
+
   /** DiagramRenderer.js 動的遅延ロード */
   function _lazyLoadDiagramRenderer(cb) {
     if (_diagLoaded || (window.ConceptEngine && window.ConceptEngine.diagram)) {
@@ -947,7 +990,7 @@
 
   /** L4 キーワードアイテム */
   function _makeKeywordItem(kw) {
-    var hasExtended = kw.explanation_basic || kw.explanation_arch || kw.concept_diagram;
+    var hasExtended = kw.explanation_basic || kw.explanation_arch || kw.concept_diagram || kw.svg_diagram;
     var item = _el('div', { cls: 'tree-item keyword-item layer4-item' });
     item.dataset.id = kw.id;
     item.setAttribute('role', 'treeitem');
@@ -978,6 +1021,9 @@
       }
       if (kw.concept_diagram) {
         children.appendChild(_makeDiagramToggle(kw.concept_diagram, kw.id));
+      }
+      if (kw.svg_diagram) {
+        children.appendChild(_makeSvgDiagramToggle(kw.svg_diagram, kw.id + '-svgdiag'));
       }
 
       header.addEventListener('click', function () {

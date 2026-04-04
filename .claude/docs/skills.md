@@ -13,6 +13,7 @@
 | `wcag-accessibility` | `/skill wcag-accessibility` | WCAG 2.1 AA verification (contrast, headings, SVG, semantic HTML) |
 | `aws-knowledge-organizer` | `/skill aws-knowledge-organizer` | Organize AWS study resources: bulk operations, TOC generation, quiz management |
 | `concept-map-manager` | `/skill concept-map-manager` | AWS概念マップ JSONデータ管理: L2サービス追加・L3/L4編集・クロスリンク設定・インデックス再生成 |
+| `d2-diagram` | `/skill d2-diagram` | D2 diagram language でSVG図版を生成（AWS構成図・ネットワーク図など。SVG直書き禁止） |
 
 ## Speckit Feature Development Commands
 

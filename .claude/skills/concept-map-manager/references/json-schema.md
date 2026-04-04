@@ -81,6 +81,10 @@
       "href": "compute-applications/auto_scaling_infographic.html" // [必須] data.js の href と同じ相対パス
     }
   ],
+  "svg_diagram": {                     // [任意] D2生成SVG図（/skill concept-diagram で追加）
+    "src": "images/concepts/con-example-concept.svg", // [必須] public/ からの相対パス（/aws_sap_studying/ プレフィックスなし）
+    "alt": "コンセプトの概念図"         // [必須] WCAG 1.1.1 準拠のalt属性
+  },
   "keywords": [                        // [必須] L4キーワード配列（1個以上）
     // → L4 Keyword スキーマ参照
   ]
@@ -102,7 +106,11 @@
   "name_en": "Keyword Name",           // [必須]
   "description_ja": "キーワードの詳細説明。", // [必須]
   "axis_tags": ["axis-availability"],  // [任意]
-  "sap_tip": ""                        // [任意] 省略可
+  "sap_tip": "",                       // [任意] 省略可
+  "svg_diagram": {                     // [任意] D2生成SVG図（/skill concept-diagram で追加）
+    "src": "images/concepts/kw-example-concept-keyword.svg", // [必須] public/ からの相対パス
+    "alt": "キーワードの概念図"         // [必須] WCAG 1.1.1 準拠のalt属性
+  }
 }
 ```
 
