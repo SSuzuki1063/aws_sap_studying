@@ -304,7 +304,9 @@ const searchData = [
   { title: 'CloudWatch Logs ログ保持期間 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/cloudwatch-logs-retention-guide.html', service: 'CloudWatch', tags: 'monitoring', domains: [3], difficulty: 'advanced' },
   { title: 'CodePipeline &amp; タスク概要 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/codepipeline_infographic_v2.html', service: 'CodePipeline', tags: 'deployment', domains: [2,3], difficulty: 'beginner' },
   { title: 'CodePipeline アクションタイプ図解ガイド', category: '開発・デプロイメント', file: 'development-deployment/codepipeline-actions-guide.html', service: 'CodePipeline', tags: 'deployment', domains: [2,3], difficulty: 'intermediate' },
+  { title: 'Amazon BedrockのRAG機能はどちらが最適？ Kendra vs Bedrock Knowledge Bases 完全比較ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/bedrock-rag-comparison.html', service: '', tags: 'Bedrock Knowledge Bases Kendra RAG comparison', domains: [2,3], difficulty: 'intermediate' },
   { title: 'Amazon Kinesis Data Streamsをベルトコンベアで理解しよう', category: '分析・運用・クイズ', file: 'analytics-bigdata/kinesis-infographic.html', service: 'Kinesis', tags: '', domains: [3], difficulty: 'beginner' },
+  { title: 'Amazon SageMaker AI × DJL Serving 完全ガイド｜深層学習モデルのデプロイを図解で理解', category: '分析・運用・クイズ', file: 'analytics-bigdata/sagemaker-djl-serving-guide.html', service: '', tags: 'SageMaker DJL Serving ML Inference Container LMI', domains: [2,3], difficulty: 'advanced' },
   { title: 'AWS EC2ディスクメトリクスの違い', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-disk-metrics.html', service: '', tags: 'monitoring', domains: [3], difficulty: 'advanced' },
   { title: 'AWS コスト管理ツール比較', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-cost-tools.html', service: 'Cost Explorer', tags: '', domains: [1,3], difficulty: 'intermediate' },
   { title: 'AWSエラー比較: InstanceLimitExceeded vs Insufficient Instance Capacity', category: '分析・運用・クイズ', file: 'analytics-bigdata/aws-errors-infographic.html', service: '', tags: '', domains: [3], difficulty: 'beginner' },
@@ -314,7 +316,13 @@ const searchData = [
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
   { title: 'SageMaker AI 推論エンドポイント 4種類 完全図解ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/sagemaker-endpoints.html', service: '', tags: 'SageMaker ML Inference Endpoint Serverless', domains: [2,3], difficulty: 'intermediate' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
+  { title: '複雑になってきたBedrockの「モデル」を整理する｜AWS Bedrock完全ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/bedrock-models-guide.html', service: '', tags: 'Bedrock Generative AI Foundation Models Cross-region Inference', domains: [2,3], difficulty: 'intermediate' },
 ];
+
+
+
+
+
 
 
 

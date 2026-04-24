@@ -4338,12 +4338,12 @@ export const categoriesData: Category[] = [
     "id": "analytics-operations",
     "title": "分析・運用・クイズ",
     "icon": "📊",
-    "count": 17,
+    "count": 20,
     "sections": [
       {
         "title": "分析・運用",
         "icon": "📉",
-        "count": 7,
+        "count": 10,
         "lastUpdated": "2026-04-24",
         "resources": [
           {
@@ -4393,6 +4393,41 @@ export const categoriesData: Category[] = [
             "summary": "MTTD/MTTR/MTBF可用性3指標の計算式と実装パターンを図解"
           },
           {
+            "title": "複雑になってきたBedrockの「モデル」を整理する｜AWS Bedrock完全ガイド",
+            "href": "analytics-bigdata/bedrock-models-guide.html",
+            "priority": "high",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "Bedrock",
+              "Generative AI",
+              "Foundation Models",
+              "Cross-region Inference"
+            ]
+          },
+          {
+            "title": "Amazon BedrockのRAG機能はどちらが最適？ Kendra vs Bedrock Knowledge Bases 完全比較ガイド",
+            "href": "analytics-bigdata/bedrock-rag-comparison.html",
+            "priority": "high",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "Bedrock",
+              "Knowledge Bases",
+              "Kendra",
+              "RAG",
+              "comparison"
+            ]
+          },
+          {
             "title": "CloudWatch エージェント × VPC エンドポイント 完全ガイド",
             "href": "analytics-bigdata/cw-agent-vpc-endpoint.html",
             "service": "VPC PrivateLink",
@@ -4414,6 +4449,24 @@ export const categoriesData: Category[] = [
             "difficulty": "beginner",
             "estimated_minutes": 15,
             "summary": "Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解"
+          },
+          {
+            "title": "Amazon SageMaker AI × DJL Serving 完全ガイド｜深層学習モデルのデプロイを図解で理解",
+            "href": "analytics-bigdata/sagemaker-djl-serving-guide.html",
+            "priority": "medium",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 30,
+            "tags": [
+              "SageMaker",
+              "DJL Serving",
+              "ML Inference",
+              "Container",
+              "LMI"
+            ]
           },
           {
             "title": "SageMaker AI 推論エンドポイント 4種類 完全図解ガイド",
@@ -4606,7 +4659,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "analytics-operations",
     "icon": "📊",
     "text": "分析・運用・クイズ",
-    "count": 17
+    "count": 20
   }
 ];
 
@@ -5307,7 +5360,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 247,
+    "count": 250,
     "categories": [
       "networking",
       "security-governance",
@@ -5321,7 +5374,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 3,
-    "count": 161,
+    "count": 164,
     "categories": [
       "networking",
       "security-governance",
@@ -5345,7 +5398,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "321+",
+  "totalResources": "324+",
   "offlineSupport": "100%",
   "lastUpdated": "2026/04/24"
 };

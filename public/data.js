@@ -3881,20 +3881,23 @@ const categoriesData = [
     id: 'analytics-operations',
     title: '分析・運用・クイズ',
     icon: '📊',
-    count: 17,
+    count: 20,
     sections: [
       {
         title: '分析・運用',
         icon: '📉',
-        count: 7,
+        count: 10,
         lastUpdated: '2026-04-24',
         resources: [
           { title: 'AWS コスト管理ツール比較', href: 'analytics-bigdata/aws-cost-tools.html', priority: 'high', service: 'Cost Explorer', exam_domains: [1, 3], difficulty: 'intermediate', estimated_minutes: 20, summary: 'Cost Explorer/Budgets/CUR等コスト管理ツールの使い分けを比較' },
           { title: 'AWS EC2ディスクメトリクスの違い', href: 'analytics-bigdata/aws-disk-metrics.html', priority: 'low', exam_domains: [3], difficulty: 'advanced', estimated_minutes: 20, tags: ['monitoring'] },
           { title: 'AWSエラー比較: InstanceLimitExceeded vs Insufficient Instance Capacity', href: 'analytics-bigdata/aws-errors-infographic.html', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15 },
           { title: 'AWS可用性指標：MTTD・MTTR・MTBF完全ガイド', href: 'analytics-bigdata/aws_availability_infographic.html', priority: 'high', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'MTTD/MTTR/MTBF可用性3指標の計算式と実装パターンを図解' },
+          { title: '複雑になってきたBedrockの「モデル」を整理する｜AWS Bedrock完全ガイド', href: 'analytics-bigdata/bedrock-models-guide.html', priority: 'high', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['Bedrock', 'Generative AI', 'Foundation Models', 'Cross-region Inference'] },
+          { title: 'Amazon BedrockのRAG機能はどちらが最適？ Kendra vs Bedrock Knowledge Bases 完全比較ガイド', href: 'analytics-bigdata/bedrock-rag-comparison.html', priority: 'high', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['Bedrock', 'Knowledge Bases', 'Kendra', 'RAG', 'comparison'] },
           { title: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド', href: 'analytics-bigdata/cw-agent-vpc-endpoint.html', service: 'VPC PrivateLink', exam_domains: [1, 4], difficulty: 'intermediate', estimated_minutes: 20 },
           { title: 'Amazon Kinesis Data Streamsをベルトコンベアで理解しよう', href: 'analytics-bigdata/kinesis-infographic.html', priority: 'high', service: 'Kinesis', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解' },
+          { title: 'Amazon SageMaker AI × DJL Serving 完全ガイド｜深層学習モデルのデプロイを図解で理解', href: 'analytics-bigdata/sagemaker-djl-serving-guide.html', priority: 'medium', exam_domains: [2, 3], difficulty: 'advanced', estimated_minutes: 30, tags: ['SageMaker', 'DJL Serving', 'ML Inference', 'Container', 'LMI'] },
           { title: 'SageMaker AI 推論エンドポイント 4種類 完全図解ガイド', href: 'analytics-bigdata/sagemaker-endpoints.html', priority: 'high', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['SageMaker', 'ML Inference', 'Endpoint', 'Serverless'] }
         ]
       },
@@ -3975,7 +3978,7 @@ const categoryQuickNav = [
     id: 'analytics-operations',
     icon: '📊',
     text: '分析・運用・クイズ',
-    count: 17
+    count: 20
   }
 ];
 
@@ -3983,9 +3986,9 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '321+',
+  totalResources: '324+',
   offlineSupport: '100%',
-  lastUpdated: '2026/04/19'
+  lastUpdated: '2026/04/24'
 };
 
 // サービスインデックス（自動生成）
@@ -4569,7 +4572,7 @@ const domainIndex = [
   },
   {
     domainId: 2,
-    count: 247,
+    count: 250,
     categories: [
       'networking',
       'security-governance',
@@ -4583,7 +4586,7 @@ const domainIndex = [
   },
   {
     domainId: 3,
-    count: 161,
+    count: 164,
     categories: [
       'networking',
       'security-governance',
@@ -4727,6 +4730,26 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-04-24',
+    type: 'content',
+    title: '新規リソース追加: Bedrock モデル整理ガイド, Bedrock RAG 比較 (Kendra vs KB), SageMaker × DJL Serving ガイド',
+    description: 'Bedrockの7種類のモデル概念（ベース/クロスリージョン/グローバル/アプリケーション推論プロファイル/プロンプト/プロビジョンドスループット/カスタム/インポート）をピザチェーン店のたとえ話で整理。Bedrock Knowledge Bases vs Amazon Kendra vs Kendra GenAI IndexのRAG機能比較。SageMaker AI で深層学習モデルをデプロイするDJL Serving（serving.properties / Dynamic Batching / LMI コンテナ）の完全図解を追加。',
+    categories: [
+      'analytics-operations'
+    ],
+    tags: [
+      'Bedrock',
+      'Generative AI',
+      'Foundation Models',
+      'RAG',
+      'Kendra',
+      'Knowledge Bases',
+      'SageMaker',
+      'DJL Serving',
+      'LMI'
+    ]
+  },
   {
     date: '2026-04-24',
     type: 'content',
