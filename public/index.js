@@ -290,6 +290,7 @@ const searchData = [
   { title: 'AWS災害復旧戦略をレストランで理解しよう', category: '移行・転送', file: 'migration/aws-dr-infographic.html', service: 'Disaster Recovery', tags: 'ha', domains: [2,4], difficulty: 'beginner' },
   { title: 'ブルー/グリーン vs イミュータブル - 完全図解ガイド', category: '移行・転送', file: 'migration/blue-green-vs-immutable-visual-guide.html', service: 'CodeDeploy', tags: 'comparison', domains: [2,4], difficulty: 'intermediate' },
   { title: 'Amazon Inspector ECRスキャン完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/amazon-inspector-ecr-scanning-guide.html', service: 'Amazon Inspector', tags: '', domains: [3], difficulty: 'advanced' },
+  { title: 'Amazon Q Developer 完全ガイド｜初心者向けインフォグラフィック図解', category: '開発・デプロイメント', file: 'development-deployment/amazon-q-developer-guide.html', service: '', tags: 'Amazon Q Generative AI Developer Productivity', domains: [2,3], difficulty: 'beginner' },
   { title: 'AWS API Gateway をレストランで理解しよう', category: '開発・デプロイメント', file: 'development-deployment/api_gateway_infographic.html', service: 'API Gateway', tags: '', domains: [2,3], difficulty: 'beginner' },
   { title: 'AWS AppSync - 初心者向けガイド', category: '開発・デプロイメント', file: 'development-deployment/aws_appsync_infographic.html', service: 'AppSync', tags: '', domains: [2,3], difficulty: 'beginner' },
   { title: 'AWS CDKを家づくり設計で理解しよう', category: '開発・デプロイメント', file: 'development-deployment/cdk_infographic.html', service: 'CDK', tags: '', domains: [2,3], difficulty: 'beginner' },
@@ -311,8 +312,15 @@ const searchData = [
   { title: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/cw-agent-vpc-endpoint.html', service: 'VPC PrivateLink', tags: '', domains: [1,4], difficulty: 'intermediate' },
   { title: 'Kinesis Data Firehose 高度機能完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/kinesis_firehose_infographic.html', service: 'Kinesis', tags: '', domains: [3], difficulty: 'beginner' },
   { title: 'Redshift スケーリング手段完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', tags: 'scaling', domains: [3], difficulty: 'beginner' },
+  { title: 'SageMaker AI 推論エンドポイント 4種類 完全図解ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/sagemaker-endpoints.html', service: '', tags: 'SageMaker ML Inference Endpoint Serverless', domains: [2,3], difficulty: 'intermediate' },
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
 ];
+
+
+
+
+
+
 
 
 

@@ -3607,13 +3607,13 @@ export const categoriesData: Category[] = [
     "id": "development-deployment",
     "title": "開発・デプロイメント",
     "icon": "🚀",
-    "count": 22,
+    "count": 23,
     "sections": [
       {
         "title": "CI/CD & デプロイ",
         "icon": "📄",
         "count": 6,
-        "lastUpdated": "2026-02-19",
+        "lastUpdated": "2026-04-24",
         "resources": [
           {
             "title": "AWS CI/CDパイプライン - レシピ開発から出版まで",
@@ -3695,7 +3695,7 @@ export const categoriesData: Category[] = [
         "title": "IaC & CloudFormation",
         "icon": "📜",
         "count": 12,
-        "lastUpdated": "2026-02-19",
+        "lastUpdated": "2026-04-24",
         "resources": [
           {
             "title": "AWS CloudFormation変更セットを建築業界で理解しよう",
@@ -3853,10 +3853,48 @@ export const categoriesData: Category[] = [
         ]
       },
       {
+        "title": "CI/CD & デプロイメント",
+        "icon": "🔄",
+        "count": 2,
+        "lastUpdated": "2026-04-24",
+        "resources": [
+          {
+            "title": "Amazon Q Developer 完全ガイド｜初心者向けインフォグラフィック図解",
+            "href": "development-deployment/amazon-q-developer-guide.html",
+            "priority": "medium",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "beginner",
+            "estimated_minutes": 20,
+            "tags": [
+              "Amazon Q",
+              "Generative AI",
+              "Developer Productivity"
+            ]
+          },
+          {
+            "title": "CodePipeline アクションタイプ図解ガイド",
+            "href": "development-deployment/codepipeline-actions-guide.html",
+            "service": "CodePipeline",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "deployment"
+            ]
+          }
+        ]
+      },
+      {
         "title": "API & イベント駆動",
         "icon": "⚡",
         "count": 3,
-        "lastUpdated": "2026-02-19",
+        "lastUpdated": "2026-04-24",
         "resources": [
           {
             "title": "AWS API Gateway をレストランで理解しよう",
@@ -3894,28 +3932,6 @@ export const categoriesData: Category[] = [
             ],
             "difficulty": "beginner",
             "estimated_minutes": 15
-          }
-        ]
-      },
-      {
-        "title": "CI/CD & デプロイメント",
-        "icon": "🔄",
-        "count": 1,
-        "lastUpdated": "2026-02-19",
-        "resources": [
-          {
-            "title": "CodePipeline アクションタイプ図解ガイド",
-            "href": "development-deployment/codepipeline-actions-guide.html",
-            "service": "CodePipeline",
-            "exam_domains": [
-              2,
-              3
-            ],
-            "difficulty": "intermediate",
-            "estimated_minutes": 25,
-            "tags": [
-              "deployment"
-            ]
           }
         ]
       }
@@ -4322,13 +4338,13 @@ export const categoriesData: Category[] = [
     "id": "analytics-operations",
     "title": "分析・運用・クイズ",
     "icon": "📊",
-    "count": 16,
+    "count": 17,
     "sections": [
       {
         "title": "分析・運用",
         "icon": "📉",
-        "count": 6,
-        "lastUpdated": "2026-03-27",
+        "count": 7,
+        "lastUpdated": "2026-04-24",
         "resources": [
           {
             "title": "AWS コスト管理ツール比較",
@@ -4398,6 +4414,23 @@ export const categoriesData: Category[] = [
             "difficulty": "beginner",
             "estimated_minutes": 15,
             "summary": "Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解"
+          },
+          {
+            "title": "SageMaker AI 推論エンドポイント 4種類 完全図解ガイド",
+            "href": "analytics-bigdata/sagemaker-endpoints.html",
+            "priority": "high",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "SageMaker",
+              "ML Inference",
+              "Endpoint",
+              "Serverless"
+            ]
           }
         ]
       },
@@ -4405,7 +4438,7 @@ export const categoriesData: Category[] = [
         "title": "データ分析",
         "icon": "📈",
         "count": 3,
-        "lastUpdated": "2026-03-27",
+        "lastUpdated": "2026-04-24",
         "resources": [
           {
             "title": "Kinesis Data Firehose 高度機能完全図解",
@@ -4452,7 +4485,7 @@ export const categoriesData: Category[] = [
         "title": "理解度クイズ・用語集",
         "icon": "✏️",
         "count": 7,
-        "lastUpdated": "2026-03-27",
+        "lastUpdated": "2026-04-24",
         "resources": [
           {
             "title": "🗺️ 開発向けロードマップ",
@@ -4555,7 +4588,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "development-deployment",
     "icon": "🛠️",
     "text": "開発・デプロイメント",
-    "count": 22
+    "count": 23
   },
   {
     "id": "storage-database",
@@ -4573,7 +4606,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "analytics-operations",
     "icon": "📊",
     "text": "分析・運用・クイズ",
-    "count": 16
+    "count": 17
   }
 ];
 
@@ -5274,7 +5307,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 245,
+    "count": 247,
     "categories": [
       "networking",
       "security-governance",
@@ -5282,12 +5315,13 @@ export const domainIndex: DomainIndexItem[] = [
       "content-delivery-dns",
       "development-deployment",
       "storage-database",
-      "migration"
+      "migration",
+      "analytics-operations"
     ]
   },
   {
     "domainId": 3,
-    "count": 159,
+    "count": 161,
     "categories": [
       "networking",
       "security-governance",
@@ -5311,7 +5345,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "319+",
+  "totalResources": "321+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/04/15"
+  "lastUpdated": "2026/04/24"
 };

@@ -3325,13 +3325,13 @@ const categoriesData = [
     id: 'development-deployment',
     title: '開発・デプロイメント',
     icon: '🚀',
-    count: 22,
+    count: 23,
     sections: [
       {
         title: 'CI/CD & デプロイ',
         icon: '📄',
         count: 6,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-04-24',
         resources: [
           { title: 'AWS CI/CDパイプライン - レシピ開発から出版まで', href: 'continuous-improvement/aws_pipeline_infographic.html', service: 'CI/CD Pipeline', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, tags: ['deployment'] },
           { title: 'Elastic Beanstalk Blue/Green デプロイメント', href: 'continuous-improvement/beanstalk_blue_green_infographic.html', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15 },
@@ -3345,7 +3345,7 @@ const categoriesData = [
         title: 'IaC & CloudFormation',
         icon: '📜',
         count: 12,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-04-24',
         resources: [
           {
             title: 'AWS CloudFormation変更セットを建築業界で理解しよう',
@@ -3503,23 +3503,24 @@ const categoriesData = [
         ]
       },
       {
+        title: 'CI/CD & デプロイメント',
+        icon: '🔄',
+        count: 2,
+        lastUpdated: '2026-04-24',
+        resources: [
+          { title: 'Amazon Q Developer 完全ガイド｜初心者向けインフォグラフィック図解', href: 'development-deployment/amazon-q-developer-guide.html', priority: 'medium', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 20, tags: ['Amazon Q', 'Generative AI', 'Developer Productivity'] },
+          { title: 'CodePipeline アクションタイプ図解ガイド', href: 'development-deployment/codepipeline-actions-guide.html', service: 'CodePipeline', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['deployment'] }
+        ]
+      },
+      {
         title: 'API & イベント駆動',
         icon: '⚡',
         count: 3,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-04-24',
         resources: [
           { title: 'AWS API Gateway をレストランで理解しよう', href: 'development-deployment/api_gateway_infographic.html', priority: 'high', service: 'API Gateway', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, summary: 'REST/HTTP/WebSocket 3種APIタイプの特徴と料金をレストランで比較' },
           { title: 'AWS EventBridge API宛先と入力トランスフォーマー機能の解説', href: 'development-deployment/aws-eventbridge-infographic.html', priority: 'high', service: 'EventBridge', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, summary: 'EventBridge API宛先と入力トランスフォーマーの連携を図解' },
           { title: 'AWS AppSync - 初心者向けガイド', href: 'development-deployment/aws_appsync_infographic.html', service: 'AppSync', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15 }
-        ]
-      },
-      {
-        title: 'CI/CD & デプロイメント',
-        icon: '🔄',
-        count: 1,
-        lastUpdated: '2026-02-19',
-        resources: [
-          { title: 'CodePipeline アクションタイプ図解ガイド', href: 'development-deployment/codepipeline-actions-guide.html', service: 'CodePipeline', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['deployment'] }
         ]
       }
     ]
@@ -3880,27 +3881,28 @@ const categoriesData = [
     id: 'analytics-operations',
     title: '分析・運用・クイズ',
     icon: '📊',
-    count: 16,
+    count: 17,
     sections: [
       {
         title: '分析・運用',
         icon: '📉',
-        count: 6,
-        lastUpdated: '2026-03-27',
+        count: 7,
+        lastUpdated: '2026-04-24',
         resources: [
           { title: 'AWS コスト管理ツール比較', href: 'analytics-bigdata/aws-cost-tools.html', priority: 'high', service: 'Cost Explorer', exam_domains: [1, 3], difficulty: 'intermediate', estimated_minutes: 20, summary: 'Cost Explorer/Budgets/CUR等コスト管理ツールの使い分けを比較' },
           { title: 'AWS EC2ディスクメトリクスの違い', href: 'analytics-bigdata/aws-disk-metrics.html', priority: 'low', exam_domains: [3], difficulty: 'advanced', estimated_minutes: 20, tags: ['monitoring'] },
           { title: 'AWSエラー比較: InstanceLimitExceeded vs Insufficient Instance Capacity', href: 'analytics-bigdata/aws-errors-infographic.html', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15 },
           { title: 'AWS可用性指標：MTTD・MTTR・MTBF完全ガイド', href: 'analytics-bigdata/aws_availability_infographic.html', priority: 'high', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'MTTD/MTTR/MTBF可用性3指標の計算式と実装パターンを図解' },
           { title: 'CloudWatch エージェント × VPC エンドポイント 完全ガイド', href: 'analytics-bigdata/cw-agent-vpc-endpoint.html', service: 'VPC PrivateLink', exam_domains: [1, 4], difficulty: 'intermediate', estimated_minutes: 20 },
-          { title: 'Amazon Kinesis Data Streamsをベルトコンベアで理解しよう', href: 'analytics-bigdata/kinesis-infographic.html', priority: 'high', service: 'Kinesis', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解' }
+          { title: 'Amazon Kinesis Data Streamsをベルトコンベアで理解しよう', href: 'analytics-bigdata/kinesis-infographic.html', priority: 'high', service: 'Kinesis', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Kinesis Data Streamsのシャード・パーティションキーをベルトコンベアで図解' },
+          { title: 'SageMaker AI 推論エンドポイント 4種類 完全図解ガイド', href: 'analytics-bigdata/sagemaker-endpoints.html', priority: 'high', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['SageMaker', 'ML Inference', 'Endpoint', 'Serverless'] }
         ]
       },
       {
         title: 'データ分析',
         icon: '📈',
         count: 3,
-        lastUpdated: '2026-03-27',
+        lastUpdated: '2026-04-24',
         resources: [
           { title: 'Kinesis Data Firehose 高度機能完全図解', href: 'analytics-bigdata/kinesis_firehose_infographic.html', priority: 'high', service: 'Kinesis', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, summary: 'Firehoseの動的パーティショニングとParquet変換の高度機能を図解' },
           { title: 'Redshift スケーリング手段完全図解', href: 'analytics-bigdata/redshift_scaling_infographic.html', service: 'Redshift', exam_domains: [3], difficulty: 'beginner', estimated_minutes: 15, tags: ['scaling'] },
@@ -3911,7 +3913,7 @@ const categoriesData = [
         title: '理解度クイズ・用語集',
         icon: '✏️',
         count: 7,
-        lastUpdated: '2026-03-27',
+        lastUpdated: '2026-04-24',
         resources: [
           { title: '🗺️ 開発向けロードマップ', href: 'development-roadmap.html', exam_domains: [3], difficulty: 'intermediate', estimated_minutes: 20 },
           { title: '📊 開発フローチャート', href: 'development-flowchart.html', exam_domains: [3], difficulty: 'intermediate', estimated_minutes: 20, tags: ['ha'] },
@@ -3955,7 +3957,7 @@ const categoryQuickNav = [
     id: 'development-deployment',
     icon: '🛠️',
     text: '開発・デプロイメント',
-    count: 22
+    count: 23
   },
   {
     id: 'storage-database',
@@ -3973,7 +3975,7 @@ const categoryQuickNav = [
     id: 'analytics-operations',
     icon: '📊',
     text: '分析・運用・クイズ',
-    count: 16
+    count: 17
   }
 ];
 
@@ -3981,9 +3983,9 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '319+',
+  totalResources: '321+',
   offlineSupport: '100%',
-  lastUpdated: '2026/04/15'
+  lastUpdated: '2026/04/19'
 };
 
 // サービスインデックス（自動生成）
@@ -4567,7 +4569,7 @@ const domainIndex = [
   },
   {
     domainId: 2,
-    count: 245,
+    count: 247,
     categories: [
       'networking',
       'security-governance',
@@ -4575,12 +4577,13 @@ const domainIndex = [
       'content-delivery-dns',
       'development-deployment',
       'storage-database',
-      'migration'
+      'migration',
+      'analytics-operations'
     ]
   },
   {
     domainId: 3,
-    count: 159,
+    count: 161,
     categories: [
       'networking',
       'security-governance',
@@ -4724,6 +4727,23 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-04-24',
+    type: 'content',
+    title: '新規リソース追加: Amazon Q Developer 完全ガイド, SageMaker AI 推論エンドポイント 4種類完全図解',
+    description: 'Amazon Q Developerの5大エージェント機能（/dev・/doc・/review・/test・/transform）を「ペアプロ仲間」のたとえ話で解説した初心者向けインフォグラフィックと、SageMaker AI 推論オプション4種類（リアルタイム・サーバーレス・非同期・バッチ変換）をレストラン業態のたとえ話で図解した完全ガイドを追加。',
+    categories: [
+      'development-deployment',
+      'analytics-operations'
+    ],
+    tags: [
+      'Amazon Q',
+      'Generative AI',
+      'SageMaker',
+      'ML Inference',
+      'Endpoint'
+    ]
+  },
   {
     date: '2026-03-28',
     type: 'content',
