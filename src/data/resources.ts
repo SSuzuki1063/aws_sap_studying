@@ -77,13 +77,13 @@ export const categoriesData: Category[] = [
     "id": "networking",
     "title": "ネットワーキング",
     "icon": "🌐",
-    "count": 92,
+    "count": 93,
     "sections": [
       {
         "title": "Direct Connect & ハイブリッドネットワーク",
         "icon": "🔗",
         "count": 20,
-        "lastUpdated": "2026-03-28",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう",
@@ -366,8 +366,8 @@ export const categoriesData: Category[] = [
       {
         "title": "VPC & ネットワーク基礎",
         "icon": "🏗️",
-        "count": 51,
-        "lastUpdated": "2026-03-28",
+        "count": 52,
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD",
@@ -526,6 +526,24 @@ export const categoriesData: Category[] = [
             "tags": [
               "networking",
               "monitoring"
+            ]
+          },
+          {
+            "title": "AWS PrivateLink × Amazon Bedrock VPCエンドポイント構成ガイド",
+            "href": "networking/bedrock-privatelink-vpc-endpoint.html",
+            "priority": "high",
+            "service": "VPC PrivateLink",
+            "exam_domains": [
+              1,
+              2
+            ],
+            "difficulty": "intermediate",
+            "estimated_minutes": 25,
+            "tags": [
+              "Bedrock",
+              "PrivateLink",
+              "VPC Endpoint",
+              "セキュリティ"
             ]
           },
           {
@@ -1064,7 +1082,7 @@ export const categoriesData: Category[] = [
         "title": "Transit Gateway & ゲートウェイ",
         "icon": "🚪",
         "count": 19,
-        "lastUpdated": "2026-03-28",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWSネットワークゲートウェイの比較",
@@ -1298,7 +1316,7 @@ export const categoriesData: Category[] = [
         "title": "その他",
         "icon": "📄",
         "count": 2,
-        "lastUpdated": "2026-03-28",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド",
@@ -3607,13 +3625,13 @@ export const categoriesData: Category[] = [
     "id": "development-deployment",
     "title": "開発・デプロイメント",
     "icon": "🚀",
-    "count": 23,
+    "count": 24,
     "sections": [
       {
         "title": "CI/CD & デプロイ",
         "icon": "📄",
         "count": 6,
-        "lastUpdated": "2026-04-24",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWS CI/CDパイプライン - レシピ開発から出版まで",
@@ -3695,7 +3713,7 @@ export const categoriesData: Category[] = [
         "title": "IaC & CloudFormation",
         "icon": "📜",
         "count": 12,
-        "lastUpdated": "2026-04-24",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWS CloudFormation変更セットを建築業界で理解しよう",
@@ -3856,7 +3874,7 @@ export const categoriesData: Category[] = [
         "title": "CI/CD & デプロイメント",
         "icon": "🔄",
         "count": 2,
-        "lastUpdated": "2026-04-24",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "Amazon Q Developer 完全ガイド｜初心者向けインフォグラフィック図解",
@@ -3893,8 +3911,8 @@ export const categoriesData: Category[] = [
       {
         "title": "API & イベント駆動",
         "icon": "⚡",
-        "count": 3,
-        "lastUpdated": "2026-04-24",
+        "count": 4,
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWS API Gateway をレストランで理解しよう",
@@ -3932,6 +3950,24 @@ export const categoriesData: Category[] = [
             ],
             "difficulty": "beginner",
             "estimated_minutes": 15
+          },
+          {
+            "title": "Step Functions × SageMaker AI ジョブ管理 完全ガイド — レストランの厨房で理解する自動化ワークフロー",
+            "href": "development-deployment/stepfunctions-sagemaker-guide.html",
+            "priority": "high",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 35,
+            "tags": [
+              "Step Functions",
+              "SageMaker",
+              "MLOps",
+              ".sync",
+              "ワークフロー"
+            ]
           }
         ]
       }
@@ -3941,13 +3977,13 @@ export const categoriesData: Category[] = [
     "id": "storage-database",
     "title": "ストレージ・データベース",
     "icon": "💾",
-    "count": 14,
+    "count": 15,
     "sections": [
       {
         "title": "S3 & オブジェクトストレージ",
         "icon": "🪣",
-        "count": 6,
-        "lastUpdated": "2026-02-19",
+        "count": 7,
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "AWS S3 ストレージクラスを家の収納で理解しよう",
@@ -4024,6 +4060,25 @@ export const categoriesData: Category[] = [
             "summary": "S3バケットポリシー/ACL/暗号化等セキュリティ機能の使い分けを比較"
           },
           {
+            "title": "Amazon S3 Vectors 類似度検索 完全ガイド",
+            "href": "storage-database/s3-vectors-similarity-search-guide.html",
+            "priority": "high",
+            "service": "S3",
+            "exam_domains": [
+              2,
+              3
+            ],
+            "difficulty": "advanced",
+            "estimated_minutes": 30,
+            "tags": [
+              "S3 Vectors",
+              "類似度検索",
+              "Embedding",
+              "Bedrock",
+              "ベクトル検索"
+            ]
+          },
+          {
             "title": "AWS S3 ストレージクラスを家の収納で理解しよう",
             "href": "storage-database/s3_storage_classes_infographic.html",
             "priority": "high",
@@ -4045,7 +4100,7 @@ export const categoriesData: Category[] = [
         "title": "データベース & キャッシング",
         "icon": "🗄️",
         "count": 6,
-        "lastUpdated": "2026-02-19",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "Amazon MSK をレストランの注文システムで理解しよう",
@@ -4131,7 +4186,7 @@ export const categoriesData: Category[] = [
         "title": "ブロック & ファイルストレージ",
         "icon": "💿",
         "count": 2,
-        "lastUpdated": "2026-02-19",
+        "lastUpdated": "2026-04-25",
         "resources": [
           {
             "title": "Amazon EBS高速スナップショット復元(FSR)初心者ガイド",
@@ -4617,7 +4672,7 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "networking",
     "icon": "🌐",
     "text": "ネットワーキング",
-    "count": 92
+    "count": 93
   },
   {
     "id": "security-governance",
@@ -4641,13 +4696,13 @@ export const categoryQuickNav: QuickNavItem[] = [
     "id": "development-deployment",
     "icon": "🛠️",
     "text": "開発・デプロイメント",
-    "count": 23
+    "count": 24
   },
   {
     "id": "storage-database",
     "icon": "💾",
     "text": "ストレージ・データベース",
-    "count": 14
+    "count": 15
   },
   {
     "id": "migration",
@@ -5102,7 +5157,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "S3",
-    "count": 5,
+    "count": 6,
     "categories": [
       "networking",
       "storage-database"
@@ -5190,7 +5245,7 @@ export const serviceIndex: ServiceIndexItem[] = [
   },
   {
     "name": "VPC PrivateLink",
-    "count": 7,
+    "count": 8,
     "categories": [
       "networking",
       "compute-applications",
@@ -5349,7 +5404,7 @@ export const learningModes: LearningMode[] = [
 export const domainIndex: DomainIndexItem[] = [
   {
     "domainId": 1,
-    "count": 145,
+    "count": 146,
     "categories": [
       "networking",
       "security-governance",
@@ -5360,7 +5415,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 2,
-    "count": 250,
+    "count": 253,
     "categories": [
       "networking",
       "security-governance",
@@ -5374,7 +5429,7 @@ export const domainIndex: DomainIndexItem[] = [
   },
   {
     "domainId": 3,
-    "count": 164,
+    "count": 166,
     "categories": [
       "networking",
       "security-governance",
@@ -5398,7 +5453,7 @@ export const domainIndex: DomainIndexItem[] = [
 export const siteStats: SiteStats = {
   "majorCategories": 8,
   "minorCategories": 29,
-  "totalResources": "324+",
+  "totalResources": "327+",
   "offlineSupport": "100%",
-  "lastUpdated": "2026/04/24"
+  "lastUpdated": "2026/04/25"
 };

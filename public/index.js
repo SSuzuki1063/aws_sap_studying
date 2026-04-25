@@ -69,6 +69,7 @@ const searchData = [
   { title: 'Amazon MSK をレストランの注文システムで理解しよう', category: 'ストレージ・データベース', file: 'storage-database/amazon_msk_infographic.html', service: 'MSK', tags: '', domains: [2,3], difficulty: 'beginner' },
   { title: 'Amazon OpenSearch Service 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/opensearch-guide.html', service: 'OpenSearch', tags: '', domains: [2,3], difficulty: 'intermediate' },
   { title: 'Amazon Redshift Data Sharing 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/redshift-data-sharing-guide.html', service: 'Redshift', tags: 'ha', domains: [2,3], difficulty: 'intermediate' },
+  { title: 'Amazon S3 Vectors 類似度検索 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/s3-vectors-similarity-search-guide.html', service: 'S3', tags: 'S3 Vectors 類似度検索 Embedding Bedrock ベクトル検索', domains: [2,3], difficulty: 'advanced' },
   { title: 'Amazon S3 セキュリティ機能の違い', category: 'ストレージ・データベース', file: 'storage-database/s3-security-infographic.html', service: 'S3', tags: 'security storage', domains: [2,3], difficulty: 'beginner' },
   { title: 'Aurora Data API &amp; IAM認証 完全ガイド', category: 'ストレージ・データベース', file: 'storage-database/aurora_dataapi_iam_infographic.html', service: 'IAM', tags: 'security database', domains: [2,3], difficulty: 'beginner' },
   { title: 'AWS EFS マウントターゲットの説明', category: 'ストレージ・データベース', file: 'storage-database/aws-efs-mount-target-infographic.html', service: 'EFS', tags: 'storage', domains: [2,3], difficulty: 'beginner' },
@@ -221,6 +222,7 @@ const searchData = [
   { title: 'AWS Local Zones 完全ガイド - 都市のユーザーに最も近い場所でAWSを動かす', category: 'ネットワーキング', file: 'networking/aws-local-zones-guide.html', service: '', tags: '', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Network Firewall デプロイモデル完全ガイド - 分散型・集中型・複合型', category: 'ネットワーキング', file: 'networking/aws-network-firewall-deploy-models.html', service: '', tags: '', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS PrivateLink & VPC エンドポイントサービス 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-privatelink-vpc-endpoint-service-guide.html', service: 'VPC PrivateLink', tags: 'networking', domains: [1,2], difficulty: 'intermediate' },
+  { title: 'AWS PrivateLink × Amazon Bedrock VPCエンドポイント構成ガイド', category: 'ネットワーキング', file: 'networking/bedrock-privatelink-vpc-endpoint.html', service: 'VPC PrivateLink', tags: 'Bedrock PrivateLink VPC Endpoint セキュリティ', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN + Route 53 Resolver 完全ガイド', category: 'ネットワーキング', file: 'networking/site-to-site-vpn-route53-resolver-guide.html', service: 'VPN', tags: 'dns', domains: [1,2], difficulty: 'intermediate' },
   { title: 'AWS Site-to-Site VPN IKEセッション復旧ガイド', category: 'ネットワーキング', file: 'networking/vpn-ike-dpd-recovery-guide.html', service: 'VPN', tags: 'ha', domains: [1,2], difficulty: 'advanced' },
   { title: 'AWS Site-to-Site VPN IPv4/IPv6 トラフィック 完全ガイド', category: 'ネットワーキング', file: 'networking/aws-site-to-site-vpn-ipv4-ipv6-guide.html', service: 'VPN', tags: '', domains: [1,2], difficulty: 'intermediate' },
@@ -304,6 +306,7 @@ const searchData = [
   { title: 'CloudWatch Logs ログ保持期間 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/cloudwatch-logs-retention-guide.html', service: 'CloudWatch', tags: 'monitoring', domains: [3], difficulty: 'advanced' },
   { title: 'CodePipeline &amp; タスク概要 完全ガイド', category: '開発・デプロイメント', file: 'development-deployment/codepipeline_infographic_v2.html', service: 'CodePipeline', tags: 'deployment', domains: [2,3], difficulty: 'beginner' },
   { title: 'CodePipeline アクションタイプ図解ガイド', category: '開発・デプロイメント', file: 'development-deployment/codepipeline-actions-guide.html', service: 'CodePipeline', tags: 'deployment', domains: [2,3], difficulty: 'intermediate' },
+  { title: 'Step Functions × SageMaker AI ジョブ管理 完全ガイド — レストランの厨房で理解する自動化ワークフロー', category: '開発・デプロイメント', file: 'development-deployment/stepfunctions-sagemaker-guide.html', service: '', tags: 'Step Functions SageMaker MLOps .sync ワークフロー', domains: [2,3], difficulty: 'advanced' },
   { title: 'Amazon BedrockのRAG機能はどちらが最適？ Kendra vs Bedrock Knowledge Bases 完全比較ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/bedrock-rag-comparison.html', service: '', tags: 'Bedrock Knowledge Bases Kendra RAG comparison', domains: [2,3], difficulty: 'intermediate' },
   { title: 'Amazon Kinesis Data Streamsをベルトコンベアで理解しよう', category: '分析・運用・クイズ', file: 'analytics-bigdata/kinesis-infographic.html', service: 'Kinesis', tags: '', domains: [3], difficulty: 'beginner' },
   { title: 'Amazon SageMaker AI × DJL Serving 完全ガイド｜深層学習モデルのデプロイを図解で理解', category: '分析・運用・クイズ', file: 'analytics-bigdata/sagemaker-djl-serving-guide.html', service: '', tags: 'SageMaker DJL Serving ML Inference Container LMI', domains: [2,3], difficulty: 'advanced' },
@@ -318,6 +321,9 @@ const searchData = [
   { title: 'サーバーレスデータパイプライン完全図解', category: '分析・運用・クイズ', file: 'analytics-bigdata/serverless_data_pipeline_infographic.html', service: 'CI/CD Pipeline', tags: 'deployment serverless', domains: [3], difficulty: 'beginner' },
   { title: '複雑になってきたBedrockの「モデル」を整理する｜AWS Bedrock完全ガイド', category: '分析・運用・クイズ', file: 'analytics-bigdata/bedrock-models-guide.html', service: '', tags: 'Bedrock Generative AI Foundation Models Cross-region Inference', domains: [2,3], difficulty: 'intermediate' },
 ];
+
+
+
 
 
 

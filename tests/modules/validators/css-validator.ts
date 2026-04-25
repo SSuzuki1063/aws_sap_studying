@@ -200,6 +200,20 @@ async function validateCssFile(filePath: string): Promise<CssFileValidationResul
   try {
     parsed = JSON.parse(rawJson) as W3cCssApiResponse;
   } catch {
+    // Cloudflare bot challenge or HTML error page — API is unreachable, not a CSS error.
+    const looksLikeCloudflareChallenge =
+      rawJson.includes('Just a moment...') || rawJson.startsWith('<!DOCTYPE');
+    if (looksLikeCloudflareChallenge) {
+      console.warn(`${C.yellow}[SKIP]${C.reset} W3C CSS API unreachable (Cloudflare challenge) for ${filePath}`);
+      return {
+        filePath,
+        isValid: true,
+        errors: [],
+        warnings: [],
+        skipped: true,
+        validatedAt: now,
+      };
+    }
     console.error(`${C.red}[ERROR]${C.reset} Failed to parse W3C response for ${filePath}`);
     return {
       filePath,

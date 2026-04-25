@@ -7,13 +7,13 @@ const categoriesData = [
     id: 'networking',
     title: 'ネットワーキング',
     icon: '🌐',
-    count: 92,
+    count: 93,
     sections: [
       {
         title: 'Direct Connect & ハイブリッドネットワーク',
         icon: '🔗',
         count: 20,
-        lastUpdated: '2026-03-28',
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'AWS Direct Connect 専用接続 vs ホスト型接続を高速道路で理解しよう',
@@ -296,8 +296,8 @@ const categoriesData = [
       {
         title: 'VPC & ネットワーク基礎',
         icon: '🏗️',
-        count: 51,
-        lastUpdated: '2026-03-28',
+        count: 52,
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'AWS Directory Service 完全ガイド - AD/Managed AD/AD Connector/Simple AD',
@@ -456,6 +456,24 @@ const categoriesData = [
             tags: [
               'networking',
               'monitoring'
+            ]
+          },
+          {
+            title: 'AWS PrivateLink × Amazon Bedrock VPCエンドポイント構成ガイド',
+            href: 'networking/bedrock-privatelink-vpc-endpoint.html',
+            priority: 'high',
+            service: 'VPC PrivateLink',
+            exam_domains: [
+              1,
+              2
+            ],
+            difficulty: 'intermediate',
+            estimated_minutes: 25,
+            tags: [
+              'Bedrock',
+              'PrivateLink',
+              'VPC Endpoint',
+              'セキュリティ'
             ]
           },
           {
@@ -994,7 +1012,7 @@ const categoriesData = [
         title: 'Transit Gateway & ゲートウェイ',
         icon: '🚪',
         count: 19,
-        lastUpdated: '2026-03-28',
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'AWSネットワークゲートウェイの比較',
@@ -1228,7 +1246,7 @@ const categoriesData = [
         title: 'その他',
         icon: '📄',
         count: 2,
-        lastUpdated: '2026-03-28',
+        lastUpdated: '2026-04-25',
         resources: [
           { title: 'クロスリージョンEC2通信アーキテクチャ &amp; トラブルシューティング完全ガイド', href: 'networking/cross-region-ec2-communication.html', service: 'EC2' },
           { title: 'VPC Traffic Mirroring × UDP トラフィックキャプチャ完全ガイド', href: 'networking/traffic-mirroring-udp-guide.html', service: 'VPC Traffic Mirroring' }
@@ -3325,13 +3343,13 @@ const categoriesData = [
     id: 'development-deployment',
     title: '開発・デプロイメント',
     icon: '🚀',
-    count: 23,
+    count: 24,
     sections: [
       {
         title: 'CI/CD & デプロイ',
         icon: '📄',
         count: 6,
-        lastUpdated: '2026-04-24',
+        lastUpdated: '2026-04-25',
         resources: [
           { title: 'AWS CI/CDパイプライン - レシピ開発から出版まで', href: 'continuous-improvement/aws_pipeline_infographic.html', service: 'CI/CD Pipeline', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, tags: ['deployment'] },
           { title: 'Elastic Beanstalk Blue/Green デプロイメント', href: 'continuous-improvement/beanstalk_blue_green_infographic.html', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15 },
@@ -3345,7 +3363,7 @@ const categoriesData = [
         title: 'IaC & CloudFormation',
         icon: '📜',
         count: 12,
-        lastUpdated: '2026-04-24',
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'AWS CloudFormation変更セットを建築業界で理解しよう',
@@ -3506,7 +3524,7 @@ const categoriesData = [
         title: 'CI/CD & デプロイメント',
         icon: '🔄',
         count: 2,
-        lastUpdated: '2026-04-24',
+        lastUpdated: '2026-04-25',
         resources: [
           { title: 'Amazon Q Developer 完全ガイド｜初心者向けインフォグラフィック図解', href: 'development-deployment/amazon-q-developer-guide.html', priority: 'medium', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 20, tags: ['Amazon Q', 'Generative AI', 'Developer Productivity'] },
           { title: 'CodePipeline アクションタイプ図解ガイド', href: 'development-deployment/codepipeline-actions-guide.html', service: 'CodePipeline', exam_domains: [2, 3], difficulty: 'intermediate', estimated_minutes: 25, tags: ['deployment'] }
@@ -3515,12 +3533,13 @@ const categoriesData = [
       {
         title: 'API & イベント駆動',
         icon: '⚡',
-        count: 3,
-        lastUpdated: '2026-04-24',
+        count: 4,
+        lastUpdated: '2026-04-25',
         resources: [
           { title: 'AWS API Gateway をレストランで理解しよう', href: 'development-deployment/api_gateway_infographic.html', priority: 'high', service: 'API Gateway', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, summary: 'REST/HTTP/WebSocket 3種APIタイプの特徴と料金をレストランで比較' },
           { title: 'AWS EventBridge API宛先と入力トランスフォーマー機能の解説', href: 'development-deployment/aws-eventbridge-infographic.html', priority: 'high', service: 'EventBridge', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15, summary: 'EventBridge API宛先と入力トランスフォーマーの連携を図解' },
-          { title: 'AWS AppSync - 初心者向けガイド', href: 'development-deployment/aws_appsync_infographic.html', service: 'AppSync', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15 }
+          { title: 'AWS AppSync - 初心者向けガイド', href: 'development-deployment/aws_appsync_infographic.html', service: 'AppSync', exam_domains: [2, 3], difficulty: 'beginner', estimated_minutes: 15 },
+          { title: 'Step Functions × SageMaker AI ジョブ管理 完全ガイド — レストランの厨房で理解する自動化ワークフロー', href: 'development-deployment/stepfunctions-sagemaker-guide.html', priority: 'high', exam_domains: [2, 3], difficulty: 'advanced', estimated_minutes: 35, tags: ['Step Functions', 'SageMaker', 'MLOps', '.sync', 'ワークフロー'] }
         ]
       }
     ]
@@ -3529,13 +3548,13 @@ const categoriesData = [
     id: 'storage-database',
     title: 'ストレージ・データベース',
     icon: '💾',
-    count: 14,
+    count: 15,
     sections: [
       {
         title: 'S3 & オブジェクトストレージ',
         icon: '🪣',
-        count: 6,
-        lastUpdated: '2026-02-19',
+        count: 7,
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'AWS S3 ストレージクラスを家の収納で理解しよう',
@@ -3612,6 +3631,25 @@ const categoriesData = [
             summary: 'S3バケットポリシー/ACL/暗号化等セキュリティ機能の使い分けを比較'
           },
           {
+            title: 'Amazon S3 Vectors 類似度検索 完全ガイド',
+            href: 'storage-database/s3-vectors-similarity-search-guide.html',
+            priority: 'high',
+            service: 'S3',
+            exam_domains: [
+              2,
+              3
+            ],
+            difficulty: 'advanced',
+            estimated_minutes: 30,
+            tags: [
+              'S3 Vectors',
+              '類似度検索',
+              'Embedding',
+              'Bedrock',
+              'ベクトル検索'
+            ]
+          },
+          {
             title: 'AWS S3 ストレージクラスを家の収納で理解しよう',
             href: 'storage-database/s3_storage_classes_infographic.html',
             priority: 'high',
@@ -3633,7 +3671,7 @@ const categoriesData = [
         title: 'データベース & キャッシング',
         icon: '🗄️',
         count: 6,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'Amazon MSK をレストランの注文システムで理解しよう',
@@ -3719,7 +3757,7 @@ const categoriesData = [
         title: 'ブロック & ファイルストレージ',
         icon: '💿',
         count: 2,
-        lastUpdated: '2026-02-19',
+        lastUpdated: '2026-04-25',
         resources: [
           {
             title: 'Amazon EBS高速スナップショット復元(FSR)初心者ガイド',
@@ -3936,7 +3974,7 @@ const categoryQuickNav = [
     id: 'networking',
     icon: '🌐',
     text: 'ネットワーキング',
-    count: 92
+    count: 93
   },
   {
     id: 'security-governance',
@@ -3960,13 +3998,13 @@ const categoryQuickNav = [
     id: 'development-deployment',
     icon: '🛠️',
     text: '開発・デプロイメント',
-    count: 23
+    count: 24
   },
   {
     id: 'storage-database',
     icon: '💾',
     text: 'ストレージ・データベース',
-    count: 14
+    count: 15
   },
   {
     id: 'migration',
@@ -3986,7 +4024,7 @@ const categoryQuickNav = [
 const siteStats = {
   majorCategories: 8,
   minorCategories: 29,
-  totalResources: '324+',
+  totalResources: '327+',
   offlineSupport: '100%',
   lastUpdated: '2026/04/24'
 };
@@ -4431,7 +4469,7 @@ const serviceIndex = [
   },
   {
     name: 'S3',
-    count: 5,
+    count: 6,
     categories: [
       'networking',
       'storage-database'
@@ -4519,7 +4557,7 @@ const serviceIndex = [
   },
   {
     name: 'VPC PrivateLink',
-    count: 7,
+    count: 8,
     categories: [
       'networking',
       'compute-applications',
@@ -4561,7 +4599,7 @@ const serviceIndex = [
 const domainIndex = [
   {
     domainId: 1,
-    count: 145,
+    count: 146,
     categories: [
       'networking',
       'security-governance',
@@ -4572,7 +4610,7 @@ const domainIndex = [
   },
   {
     domainId: 2,
-    count: 250,
+    count: 253,
     categories: [
       'networking',
       'security-governance',
@@ -4586,7 +4624,7 @@ const domainIndex = [
   },
   {
     domainId: 3,
-    count: 164,
+    count: 166,
     categories: [
       'networking',
       'security-governance',
@@ -4730,6 +4768,29 @@ const learningModes = [
 // 更新履歴データ
 // type: 'content'(コンテンツ追加) | 'feature'(機能追加) | 'exam'(試験変更対応) | 'fix'(修正)
 const updateHistory = [
+  {
+    date: '2026-04-25',
+    type: 'content',
+    title: '新規リソース追加: Bedrock×PrivateLink VPCエンドポイント, S3 Vectors 類似度検索, Step Functions×SageMaker ジョブ管理',
+    description: 'Amazon Bedrock を AWS PrivateLink/VPCエンドポイント経由でプライベート接続する5種類のエンドポイント構成と4つの接続パターンをホテル比喩で図解。S3 Vectors のベクトル埋め込み・距離測定（Cosine/Euclidean）・メタデータ絞り込みを古本屋たとえ話で解説（CLI/CFn/Terraform/Python サンプル付き）。Step Functions × SageMaker AI のジョブオーケストレーション（.sync 統合パターン、Retry/Catch、IAM ポリシー設計、MLOps パイプライン）をレストラン厨房たとえ話で網羅。',
+    categories: [
+      'networking',
+      'storage-database',
+      'development-deployment'
+    ],
+    tags: [
+      'Bedrock',
+      'PrivateLink',
+      'VPC Endpoint',
+      'S3 Vectors',
+      '類似度検索',
+      'Embedding',
+      'Step Functions',
+      'SageMaker',
+      'MLOps',
+      '.sync'
+    ]
+  },
   {
     date: '2026-04-24',
     type: 'content',

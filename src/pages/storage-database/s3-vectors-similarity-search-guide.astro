@@ -1,0 +1,1922 @@
+---
+import ResourceLayout from '../../layouts/ResourceLayout.astro';
+
+const frontmatter = {
+  title: 'Amazon S3 Vectors 類似度検索 完全ガイド（たとえ話で理解する）',
+  pageTitle: 'Amazon S3 Vectors 類似度検索 完全ガイド',
+  category: 'storage-database',
+  categoryLabel: 'ストレージ・データベース',
+  subcategory: '',
+  slug: 's3-vectors-similarity-search-guide',
+  tocItems: [
+    { level: 'h2', id: 'takeaways-heading', text: '🎯 この記事の結論' },
+    { level: 'h2', id: 'toc-heading', text: '📖 目次' },
+    { level: 'h2', id: 'what-is-heading', text: 'S3 Vectors とは？（3行でわかる）' },
+    { level: 'h3', id: 'what-is', text: '🔍 従来のキーワード検索と、ここが違う' },
+    { level: 'h2', id: 'analogy-heading', text: 'たとえ話：古本屋の「目利き店主」' },
+    { level: 'h3', id: 'analogy', text: '🗺️ たとえ話と AWS 用語の対応表' },
+    { level: 'h2', id: 'embedding-heading', text: 'ベクトル埋め込み（Embedding）って何？' },
+    { level: 'h3', id: 'embedding', text: '🌐 意味空間で点として見てみる' },
+    { level: 'h2', id: 'how-heading', text: '類似度検索の全体フロー（4ステップ）' },
+    { level: 'h2', id: 'distance-heading', text: '距離の測り方 — Cosine と Euclidean' },
+    { level: 'h2', id: 'comp-heading', text: 'S3 Vectors の3つの構成要素' },
+    { level: 'h3', id: 'components', text: '📋 Vector Index の重要な設計項目（作成後変更不可）' },
+    { level: 'h2', id: 'meta-heading', text: 'メタデータによる絞り込み' },
+    { level: 'h3', id: 'metadata', text: '🏷️ 2種類のメタデータキー' },
+    { level: 'h2', id: 'usecase-heading', text: '代表的なユースケース' },
+    { level: 'h3', id: 'usecases', text: '🌟 最大の用途：RAG（検索拡張生成）' },
+    { level: 'h2', id: 'compare-heading', text: '他のベクトル検索サービスとの使い分け' },
+    { level: 'h2', id: 'code-heading', text: '💻 10. コード例（CLI / CloudFormation / Terraform / Python）' },
+    { level: 'h3', id: 'code', text: '図10: RAG（検索拡張生成）アーキテクチャの全体像' },
+    { level: 'h2', id: 'limits-heading', text: '⚠️ 11. 制限値とベストプラクティス' },
+    { level: 'h3', id: 'limits', text: '主な制限値（クォータ）' },
+    { level: 'h2', id: 'faq-heading', text: '❓ 12. よくある質問（FAQ）' },
+    { level: 'h2', id: 'cs-heading', text: '📝 13. チートシート' },
+  ],
+  pageCss: '/aws_sap_studying/css/pages/s3-vectors-similarity-search-guide.css',
+  pageNum: 1,
+  pageTotal: 1,
+};
+
+const rawContent = `
+<!-- Skip link for a11y -->
+  <a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+
+  <!-- Fixed Navigation Header -->
+  <header class="fixed-nav-header" role="banner">
+    <div class="fixed-nav-container">
+      <a href="#top" class="fixed-nav-logo" aria-label="AWS Guide Home">
+        <span aria-hidden="true">📚</span>
+        <span>AWS Learning Guide</span>
+      </a>
+      <nav class="fixed-nav-links" aria-label="ページ内ナビゲーション">
+        <a href="#what-is">概要</a>
+        <a href="#analogy">たとえ話</a>
+        <a href="#how-it-works">仕組み</a>
+        <a href="#code">コード</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+      <a href="#" class="breadcrumb-home">🏠 Home</a>
+      <span class="breadcrumb-separator" aria-hidden="true">›</span>
+      <span>AWS</span>
+      <span class="breadcrumb-separator" aria-hidden="true">›</span>
+      <span>ストレージ / AI</span>
+      <span class="breadcrumb-separator" aria-hidden="true">›</span>
+      <span class="breadcrumb-current">S3 Vectors 類似度検索</span>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" id="top" aria-labelledby="hero-heading">
+      <span class="hero-badge">☁️ Amazon S3 Vectors</span>
+      <h1 id="hero-heading">類似度検索って、<br>意味が似ているものを<br>見つける「古本屋の目利き」</h1>
+      <p class="hero-subtitle">
+        キーワードが一致しなくても<strong class="hero-accent">「意味」や「雰囲気」で似たデータを見つける</strong>——それが S3 Vectors の類似度検索。
+        本ガイドでは、古本屋の店主のたとえ話と<strong class="hero-accent">10枚以上の図解</strong>で、初心者でもスッと理解できるように解説します。
+      </p>
+    </section>
+
+    <!-- Key Takeaways -->
+    <section class="key-takeaways" aria-labelledby="takeaways-heading">
+      <h2 id="takeaways-heading">🎯 この記事の結論</h2>
+      <div class="takeaway-grid">
+        <article class="takeaway-card">
+          <div class="tk-icon" aria-hidden="true">🧠</div>
+          <div class="tk-title">意味で探す新しい検索</div>
+          <div class="tk-desc">完全一致ではなく「似た意味・似た雰囲気」で検索する。画像・文章・音声を数字の並び（ベクトル）に変換して距離を測る。</div>
+        </article>
+        <article class="takeaway-card">
+          <div class="tk-icon" aria-hidden="true">💰</div>
+          <div class="tk-title">最大90%のコスト削減</div>
+          <div class="tk-desc">S3 と同じ弾力性・耐久性で、ベクトルの保存・クエリ費用を大幅圧縮。サーバーレスでインフラ管理は不要。</div>
+        </article>
+        <article class="takeaway-card">
+          <div class="tk-icon" aria-hidden="true">⚡</div>
+          <div class="tk-title">秒未満のレスポンス</div>
+          <div class="tk-desc">頻度が低いクエリは秒未満、頻繁なクエリは最短100ms。数百万〜数十億ベクトルまでスケール可能。</div>
+        </article>
+        <article class="takeaway-card">
+          <div class="tk-icon" aria-hidden="true">🤖</div>
+          <div class="tk-title">RAG / AIエージェントに最適</div>
+          <div class="tk-desc">Bedrock Knowledge Bases と統合。社内文書・画像・動画の「意味検索」を安価に構築できる。</div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Table of Contents -->
+    <nav class="toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading">📖 目次</h2>
+      <ol>
+        <li><a href="#what-is">S3 Vectors とは？（3行で）</a></li>
+        <li><a href="#analogy">たとえ話：古本屋の目利き店主</a></li>
+        <li><a href="#embedding">ベクトル埋め込みって何？</a></li>
+        <li><a href="#how-it-works">類似度検索の全体フロー</a></li>
+        <li><a href="#distance">距離の測り方（Cosine vs Euclidean）</a></li>
+        <li><a href="#components">S3 Vectors の3つの構成要素</a></li>
+        <li><a href="#metadata">メタデータによる絞り込み</a></li>
+        <li><a href="#usecases">代表的なユースケース</a></li>
+        <li><a href="#comparison">他のベクトルDBとの使い分け</a></li>
+        <li><a href="#code">コード例（CLI / boto3）</a></li>
+        <li><a href="#limits">制限値とベストプラクティス</a></li>
+        <li><a href="#faq">よくある質問</a></li>
+        <li><a href="#cheatsheet">チートシート</a></li>
+      </ol>
+    </nav>
+
+    <!-- ============================================
+         Section 1: What is S3 Vectors?
+         ============================================ -->
+    <section class="section" id="what-is" aria-labelledby="what-is-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">☁️</span>
+        <h2 id="what-is-heading">S3 Vectors とは？（3行でわかる）</h2>
+      </div>
+
+      <div class="info-box note">
+        <div class="info-box-title">💡 ひとことで言うと</div>
+        <p class="info-note-zero">
+          <strong>「意味で検索できる、S3 の特別バケット」</strong>。<br>
+          普通の S3 がファイルを丸ごと保管する倉庫なら、S3 Vectors は<strong>「数字で表した意味のエッセンス（＝ベクトル）」</strong>を保管・検索するための、新しいタイプのバケットです。
+        </p>
+      </div>
+
+      <p>
+        Amazon S3 Vectors は 2025年7月 に AWS が発表した、<strong>クラウド初の「ベクトル専用オブジェクトストレージ」</strong>です。AI エージェント・RAG(検索拡張生成)・セマンティック検索のために設計されていて、S3 と同じ弾力性・耐久性を保ちながら、ベクトルデータの保存とクエリに特化しています。
+      </p>
+
+      <h3>🔍 従来のキーワード検索と、ここが違う</h3>
+      <p>
+        Amazon ES や Elasticsearch のような「キーワードが完全に一致する」検索と違い、S3 Vectors の類似度検索は <strong>「意味が似ている」</strong>という曖昧さでモノを見つけます。「カフェ」で検索して「喫茶店」「珈琲屋」「ロースタリー」までヒットさせる、あのイメージです。
+      </p>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="キーワード検索と類似度検索の違いを示す比較図" viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-blue-1" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-green-1" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+            </marker>
+            <filter id="softshadow-1" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <!-- background -->
+          <rect x="0" y="0" width="1200" height="560" fill="#F3F4F6"/>
+
+          <!-- Left panel: keyword search -->
+          <rect x="40" y="40" width="540" height="480" rx="18" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-1)"/>
+          <text x="310" y="80" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">❌ 従来のキーワード検索</text>
+          <text x="310" y="108" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#64748B">「文字列が一致したもの」しか見つからない</text>
+
+          <!-- query -->
+          <rect x="90" y="140" width="440" height="60" rx="12" fill="#EFF6FF" stroke="#60A5FA" stroke-width="2"/>
+          <text x="310" y="178" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600" fill="#1E40AF">🔎 クエリ：「カフェ」</text>
+
+          <!-- results -->
+          <rect x="90" y="230" width="440" height="48" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="310" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" fill="#047857">✅ 街角カフェ・カフェラテ専門店</text>
+
+          <rect x="90" y="290" width="440" height="48" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+          <text x="310" y="320" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" fill="#B91C1C">❌ 喫茶店・珈琲屋・ロースタリー</text>
+
+          <rect x="90" y="350" width="440" height="48" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+          <text x="310" y="380" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" fill="#B91C1C">❌ 純喫茶・ティールーム</text>
+
+          <!-- note -->
+          <rect x="90" y="430" width="440" height="60" rx="10" fill="#FEF3C7" stroke="#FBBF24" stroke-width="2"/>
+          <text x="310" y="455" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#92400E">意味が同じでも、</text>
+          <text x="310" y="478" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#92400E">文字が違うと取りこぼす</text>
+
+          <!-- Right panel: similarity search -->
+          <rect x="620" y="40" width="540" height="480" rx="18" fill="#FFFFFF" stroke="#FDBA74" stroke-width="2" filter="url(#softshadow-1)"/>
+          <text x="890" y="80" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#9A3412">✨ S3 Vectors の類似度検索</text>
+          <text x="890" y="108" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#64748B">「意味が近いもの」を全部見つける</text>
+
+          <!-- query -->
+          <rect x="670" y="140" width="440" height="60" rx="12" fill="#FFF7ED" stroke="#FB923C" stroke-width="2"/>
+          <text x="890" y="178" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600" fill="#9A3412">🔎 クエリ：「カフェ」</text>
+
+          <!-- results -->
+          <rect x="670" y="230" width="440" height="48" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="890" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" fill="#047857">✅ 街角カフェ・カフェラテ専門店</text>
+
+          <rect x="670" y="290" width="440" height="48" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="890" y="320" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" fill="#047857">✅ 喫茶店・珈琲屋・ロースタリー</text>
+
+          <rect x="670" y="350" width="440" height="48" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+          <text x="890" y="380" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" fill="#047857">✅ 純喫茶・ティールーム</text>
+
+          <!-- note -->
+          <rect x="670" y="430" width="440" height="60" rx="10" fill="#DCFCE7" stroke="#22C55E" stroke-width="2"/>
+          <text x="890" y="455" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#166534">「コーヒーを飲む場所」という</text>
+          <text x="890" y="478" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#166534">意味で近いものを全部ヒット</text>
+        </svg>
+        <p class="svg-caption">図1: 従来のキーワード検索と類似度検索の違い</p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 2: Analogy - Used Bookstore
+         ============================================ -->
+    <section class="section" id="analogy" aria-labelledby="analogy-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">📚</span>
+        <h2 id="analogy-heading">たとえ話：古本屋の「目利き店主」</h2>
+      </div>
+
+      <p>
+        S3 Vectors の類似度検索を理解するのに、一番しっくりくるのが「<strong>古本屋の目利き店主</strong>」のイメージです。本を1冊持ってお店に行き、「こういう雰囲気の本を探してる」と店主に相談するシーンを思い浮かべてください。
+      </p>
+
+      <div class="info-box tip">
+        <div class="info-box-title">🏪 シナリオ</div>
+        <p class="info-note-zero">
+          あなたは古本屋の店主です。お客さんが1冊の本を持ってきて<strong>「これと似た感じの本、ありますか?」</strong>と聞きます。
+          あなたはタイトルや著者名ではなく、<strong>本の「雰囲気」「テーマ」「読後感」</strong>を手がかりに、大量の在庫から似ている本を5〜10冊選んで差し出します——これが類似度検索そのものです。
+        </p>
+      </div>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="古本屋の店主が類似度検索をするたとえ話の図" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-orange-2" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#F97316"/>
+            </marker>
+            <marker id="arrow-blue-2" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#3B82F6"/>
+            </marker>
+            <filter id="softshadow-2" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="600" fill="#FAF5EF"/>
+
+          <!-- Title -->
+          <text x="600" y="45" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" fill="#78350F">🏪 古本屋の目利き店主</text>
+
+          <!-- Customer (left) -->
+          <g>
+            <rect x="60" y="90" width="220" height="170" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-2)"/>
+            <text x="170" y="130" text-anchor="middle" font-size="48">🧑</text>
+            <text x="170" y="180" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#1E293B">お客さん</text>
+            <text x="170" y="210" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" fill="#475569">「この本と似た感じの</text>
+            <text x="170" y="233" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" fill="#475569">本はありますか？」</text>
+          </g>
+
+          <!-- Query book -->
+          <g>
+            <rect x="310" y="140" width="160" height="80" rx="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+            <text x="390" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#92400E">📕 1冊の本</text>
+            <text x="390" y="195" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#92400E">(=クエリベクトル)</text>
+          </g>
+
+          <!-- Arrow 1 -->
+          <path d="M 280 175 L 308 175" stroke="#F97316" stroke-width="3" fill="none" marker-end="url(#arrow-orange-2)"/>
+
+          <!-- Store owner (center) -->
+          <g>
+            <rect x="500" y="90" width="220" height="170" rx="16" fill="#FFF7ED" stroke="#FB923C" stroke-width="3" filter="url(#softshadow-2)"/>
+            <text x="610" y="130" text-anchor="middle" font-size="48">👨‍💼</text>
+            <text x="610" y="180" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#9A3412">目利き店主</text>
+            <text x="610" y="210" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" fill="#9A3412">雰囲気・テーマを</text>
+            <text x="610" y="233" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" fill="#9A3412">瞬時に読み取る</text>
+          </g>
+
+          <!-- Arrow 2 -->
+          <path d="M 730 175 L 758 175" stroke="#F97316" stroke-width="3" fill="none" marker-end="url(#arrow-orange-2)"/>
+
+          <!-- Shelves (right) -->
+          <g>
+            <rect x="770" y="90" width="370" height="170" rx="16" fill="#FFFFFF" stroke="#94A3B8" stroke-width="2" filter="url(#softshadow-2)"/>
+            <text x="955" y="120" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E293B">📚 店内の大量の本棚</text>
+            <text x="955" y="142" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">(=ベクトルインデックス)</text>
+            <!-- books -->
+            <g>
+              <rect x="790" y="160" width="30" height="80" fill="#EF4444" stroke="#DC2626"/>
+              <rect x="825" y="160" width="30" height="80" fill="#3B82F6" stroke="#2563EB"/>
+              <rect x="860" y="160" width="30" height="80" fill="#10B981" stroke="#059669"/>
+              <rect x="895" y="160" width="30" height="80" fill="#F59E0B" stroke="#D97706"/>
+              <rect x="930" y="160" width="30" height="80" fill="#8B5CF6" stroke="#7C3AED"/>
+              <rect x="965" y="160" width="30" height="80" fill="#EC4899" stroke="#DB2777"/>
+              <rect x="1000" y="160" width="30" height="80" fill="#14B8A6" stroke="#0D9488"/>
+              <rect x="1035" y="160" width="30" height="80" fill="#F97316" stroke="#EA580C"/>
+              <rect x="1070" y="160" width="30" height="80" fill="#6366F1" stroke="#4F46E5"/>
+              <rect x="1105" y="160" width="30" height="80" fill="#EF4444" stroke="#DC2626"/>
+            </g>
+          </g>
+
+          <!-- bottom arrow flow -->
+          <path d="M 600 265 Q 600 305 600 330" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrow-blue-2)"/>
+
+          <!-- Results panel -->
+          <g>
+            <rect x="60" y="340" width="1080" height="220" rx="16" fill="#ECFDF5" stroke="#34D399" stroke-width="2" filter="url(#softshadow-2)"/>
+            <text x="600" y="375" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#065F46">✨ 店主が差し出した「似ている本」トップ5（=検索結果）</text>
+
+            <!-- 5 equal grid books -->
+            <g>
+              <rect x="90" y="400" width="200" height="140" rx="12" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+              <text x="190" y="430" text-anchor="middle" font-size="32">📗</text>
+              <text x="190" y="468" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">1位</text>
+              <text x="190" y="495" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#047857">類似度 98%</text>
+              <text x="190" y="522" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">雰囲気そっくり</text>
+            </g>
+            <g>
+              <rect x="300" y="400" width="200" height="140" rx="12" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+              <text x="400" y="430" text-anchor="middle" font-size="32">📘</text>
+              <text x="400" y="468" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">2位</text>
+              <text x="400" y="495" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#047857">類似度 94%</text>
+              <text x="400" y="522" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">テーマが近い</text>
+            </g>
+            <g>
+              <rect x="510" y="400" width="200" height="140" rx="12" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+              <text x="610" y="430" text-anchor="middle" font-size="32">📙</text>
+              <text x="610" y="468" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">3位</text>
+              <text x="610" y="495" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#047857">類似度 89%</text>
+              <text x="610" y="522" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">読後感が似る</text>
+            </g>
+            <g>
+              <rect x="720" y="400" width="200" height="140" rx="12" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+              <text x="820" y="430" text-anchor="middle" font-size="32">📕</text>
+              <text x="820" y="468" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">4位</text>
+              <text x="820" y="495" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#047857">類似度 85%</text>
+              <text x="820" y="522" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">同ジャンル</text>
+            </g>
+            <g>
+              <rect x="930" y="400" width="200" height="140" rx="12" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+              <text x="1030" y="430" text-anchor="middle" font-size="32">📓</text>
+              <text x="1030" y="468" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">5位</text>
+              <text x="1030" y="495" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#047857">類似度 82%</text>
+              <text x="1030" y="522" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">関連トピック</text>
+            </g>
+          </g>
+        </svg>
+        <p class="svg-caption">図2: 古本屋の目利き店主 = S3 Vectors の類似度検索</p>
+      </div>
+
+      <h3>🗺️ たとえ話と AWS 用語の対応表</h3>
+      <p>古本屋の各要素を、S3 Vectors の用語に対応させるとこうなります。このマッピングを頭に入れておくと、この先の解説がずっと分かりやすくなります。</p>
+
+      <table class="analogy-table">
+        <thead>
+          <tr>
+            <th class="th-w35">🏪 古本屋のたとえ話</th>
+            <th class="th-w30">☁️ AWS S3 Vectors</th>
+            <th class="th-w35">役割</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="analogy-col">お店全体</td>
+            <td class="aws-col">Vector Bucket</td>
+            <td>ベクトルを格納する「器」。S3 とは別の新種バケット</td>
+          </tr>
+          <tr>
+            <td class="analogy-col">ジャンル別の本棚</td>
+            <td class="aws-col">Vector Index</td>
+            <td>似たものをまとめて効率よく検索するための索引</td>
+          </tr>
+          <tr>
+            <td class="analogy-col">本棚に並ぶ1冊の本</td>
+            <td class="aws-col">Vector（ベクトル）</td>
+            <td>元データの「意味のエッセンス」を数字列に変換したもの</td>
+          </tr>
+          <tr>
+            <td class="analogy-col">本の帯・ラベル（著者・年・ジャンル）</td>
+            <td class="aws-col">Metadata</td>
+            <td>年・カテゴリ等で絞り込みフィルタをかけるタグ</td>
+          </tr>
+          <tr>
+            <td class="analogy-col">お客さんが持参した1冊</td>
+            <td class="aws-col">Query Vector</td>
+            <td>「これに似たものを探して」と渡す検索のお手本</td>
+          </tr>
+          <tr>
+            <td class="analogy-col">店主の目利き感覚</td>
+            <td class="aws-col">Distance Metric</td>
+            <td>「似ている」をどう測るかのルール（Cosine / Euclidean）</td>
+          </tr>
+          <tr>
+            <td class="analogy-col">差し出された上位5冊</td>
+            <td class="aws-col">Top-K 結果</td>
+            <td>類似度が高い順に指定件数返される</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================
+         Section 3: Embedding
+         ============================================ -->
+    <section class="section" id="embedding" aria-labelledby="embedding-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">🔢</span>
+        <h2 id="embedding-heading">ベクトル埋め込み（Embedding）って何？</h2>
+      </div>
+
+      <div class="info-box note">
+        <div class="info-box-title">💡 ベクトル埋め込みとは</div>
+        <p class="info-note-zero">
+          テキスト・画像・音声などの<strong>「意味のエッセンス」を、数百〜数千個の数字の並びとして表現したもの</strong>。
+          似た意味のデータは、数字が似たパターンになる性質を持ちます。これを AWS では Bedrock の Titan Embeddings や Cohere Embed などのモデルで生成できます。
+        </p>
+      </div>
+
+      <p>
+        ベクトル埋め込みの考え方はシンプルで、<strong>「意味が似ているほど、数字の並びが近い」</strong>というルールに従います。「犬」と「子犬」は数字がそっくりで、「犬」と「飛行機」は全く違う、というような感じです。古本屋の例えに戻ると、店主が本を読んで「これは冒険モノ、ファンタジー色強め、読後感は爽やか」と頭の中で特徴ベクトルを作っているイメージです。
+      </p>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="テキストがベクトル（数字の並び）に変換される仕組みの図" viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-blue-3" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#3B82F6"/>
+            </marker>
+            <filter id="softshadow-3" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+          <text x="600" y="40" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">テキスト → ベクトルへの変換（Embedding）</text>
+
+          <!-- Left: Input -->
+          <g>
+            <rect x="40" y="80" width="280" height="380" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-3)"/>
+            <text x="180" y="115" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E293B">① 元データ（人が読む形）</text>
+
+            <rect x="60" y="140" width="240" height="70" rx="10" fill="#EFF6FF" stroke="#60A5FA" stroke-width="2"/>
+            <text x="180" y="170" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#1E40AF">📝 「犬」</text>
+            <text x="180" y="195" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">(テキスト)</text>
+
+            <rect x="60" y="230" width="240" height="70" rx="10" fill="#EFF6FF" stroke="#60A5FA" stroke-width="2"/>
+            <text x="180" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#1E40AF">📝 「子犬」</text>
+            <text x="180" y="285" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">(テキスト)</text>
+
+            <rect x="60" y="320" width="240" height="70" rx="10" fill="#EFF6FF" stroke="#60A5FA" stroke-width="2"/>
+            <text x="180" y="350" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#1E40AF">📝 「飛行機」</text>
+            <text x="180" y="375" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">(テキスト)</text>
+
+            <text x="180" y="430" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">意味はあるが、</text>
+            <text x="180" y="450" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">機械には比較しにくい</text>
+          </g>
+
+          <!-- Arrow 1 -->
+          <path d="M 325 270 L 395 270" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrow-blue-3)"/>
+
+          <!-- Middle: Model -->
+          <g>
+            <rect x="400" y="180" width="240" height="170" rx="16" fill="#FFF7ED" stroke="#FB923C" stroke-width="3" filter="url(#softshadow-3)"/>
+            <text x="520" y="220" text-anchor="middle" font-size="40">🤖</text>
+            <text x="520" y="258" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#9A3412">Embedding モデル</text>
+            <text x="520" y="285" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#9A3412">(Bedrock Titan /</text>
+            <text x="520" y="307" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#9A3412">Cohere Embed 等)</text>
+            <text x="520" y="333" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#C2410C">意味を数字に翻訳</text>
+          </g>
+
+          <!-- Arrow 2 -->
+          <path d="M 645 270 L 715 270" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrow-blue-3)"/>
+
+          <!-- Right: Vectors -->
+          <g>
+            <rect x="720" y="80" width="440" height="380" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-3)"/>
+            <text x="940" y="115" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E293B">② ベクトル（機械が比べやすい形）</text>
+
+            <rect x="740" y="140" width="400" height="70" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="760" y="170" font-family="Menlo, monospace" font-size="16" font-weight="700" fill="#065F46">[0.82, 0.11, 0.73, 0.45, ...]</text>
+            <text x="760" y="195" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">「犬」のベクトル (例: 1024次元)</text>
+
+            <rect x="740" y="230" width="400" height="70" rx="10" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+            <text x="760" y="260" font-family="Menlo, monospace" font-size="16" font-weight="700" fill="#065F46">[0.79, 0.14, 0.71, 0.48, ...]</text>
+            <text x="760" y="285" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">「子犬」のベクトル → 犬にそっくり！</text>
+
+            <rect x="740" y="320" width="400" height="70" rx="10" fill="#FEF2F2" stroke="#F87171" stroke-width="2"/>
+            <text x="760" y="350" font-family="Menlo, monospace" font-size="16" font-weight="700" fill="#B91C1C">[0.03, 0.91, 0.12, 0.88, ...]</text>
+            <text x="760" y="375" font-family="Inter, Arial, sans-serif" font-size="14" fill="#991B1B">「飛行機」のベクトル → 全く違う</text>
+
+            <text x="940" y="430" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">意味が近いほど、数字の並びも近い</text>
+          </g>
+        </svg>
+        <p class="svg-caption">図3: テキストから意味ベクトルへの変換（Embedding）</p>
+      </div>
+
+      <h3>🌐 意味空間で点として見てみる</h3>
+      <p>
+        ベクトルは「意味空間」と呼ばれる多次元空間の中の「点の座標」と考えると直感的です。実際は数百〜数千次元ですが、2次元に潰してみると下の図のようなイメージ。<strong>意味が近い概念は近い場所に集まる</strong>のが見どころです。
+      </p>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="2次元に簡略化した意味空間でのベクトルの位置関係の図" viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="softshadow-4" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+          <text x="600" y="40" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">意味空間（2Dに簡略化）：近いもの同士が集まる</text>
+
+          <!-- plot area -->
+          <rect x="100" y="70" width="1000" height="420" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-4)"/>
+
+          <!-- axes -->
+          <line x1="150" y1="450" x2="1050" y2="450" stroke="#94A3B8" stroke-width="2"/>
+          <line x1="150" y1="450" x2="150" y2="100" stroke="#94A3B8" stroke-width="2"/>
+          <text x="1060" y="455" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">次元1 →</text>
+          <text x="140" y="95" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">↑ 次元2</text>
+
+          <!-- Cluster 1: 動物 (犬系) -->
+          <g>
+            <ellipse cx="350" cy="200" rx="120" ry="80" fill="#FEF3C7" fill-opacity="0.5" stroke="#FBBF24" stroke-dasharray="6,4"/>
+            <text x="350" y="130" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#92400E">🐕 動物クラスタ</text>
+            <circle cx="320" cy="190" r="10" fill="#F59E0B"/>
+            <text x="320" y="178" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#78350F">犬</text>
+            <circle cx="370" cy="210" r="10" fill="#F59E0B"/>
+            <text x="390" y="215" font-family="Inter, Arial, sans-serif" font-size="16" fill="#78350F">子犬</text>
+            <circle cx="395" cy="180" r="10" fill="#F59E0B"/>
+            <text x="420" y="185" font-family="Inter, Arial, sans-serif" font-size="16" fill="#78350F">猫</text>
+            <circle cx="340" cy="235" r="10" fill="#F59E0B"/>
+            <text x="335" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#78350F">ハムスター</text>
+          </g>
+
+          <!-- Cluster 2: 乗り物 -->
+          <g>
+            <ellipse cx="800" cy="200" rx="130" ry="80" fill="#DBEAFE" fill-opacity="0.5" stroke="#60A5FA" stroke-dasharray="6,4"/>
+            <text x="800" y="130" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E40AF">🚗 乗り物クラスタ</text>
+            <circle cx="770" cy="210" r="10" fill="#3B82F6"/>
+            <text x="770" y="198" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#1E3A8A">車</text>
+            <circle cx="820" cy="190" r="10" fill="#3B82F6"/>
+            <text x="838" y="193" font-family="Inter, Arial, sans-serif" font-size="16" fill="#1E3A8A">電車</text>
+            <circle cx="850" cy="220" r="10" fill="#3B82F6"/>
+            <text x="866" y="225" font-family="Inter, Arial, sans-serif" font-size="16" fill="#1E3A8A">飛行機</text>
+            <circle cx="780" cy="240" r="10" fill="#3B82F6"/>
+            <text x="780" y="265" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#1E3A8A">自転車</text>
+          </g>
+
+          <!-- Cluster 3: 食べ物 -->
+          <g>
+            <ellipse cx="550" cy="380" rx="130" ry="70" fill="#DCFCE7" fill-opacity="0.5" stroke="#4ADE80" stroke-dasharray="6,4"/>
+            <text x="550" y="340" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#166534">🍎 食べ物クラスタ</text>
+            <circle cx="520" cy="380" r="10" fill="#22C55E"/>
+            <text x="510" y="400" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="16" fill="#14532D">りんご</text>
+            <circle cx="565" cy="395" r="10" fill="#22C55E"/>
+            <text x="580" y="400" font-family="Inter, Arial, sans-serif" font-size="16" fill="#14532D">バナナ</text>
+            <circle cx="595" cy="370" r="10" fill="#22C55E"/>
+            <text x="612" y="375" font-family="Inter, Arial, sans-serif" font-size="16" fill="#14532D">パン</text>
+          </g>
+
+          <!-- note -->
+          <text x="600" y="485" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" fill="#475569">意味が似ているベクトルは空間上で近く集まる（= 類似度が高い）</text>
+        </svg>
+        <p class="svg-caption">図4: 意味空間における「近さ = 類似度」の可視化</p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 4: How it works - flow
+         ============================================ -->
+    <section class="section" id="how-it-works" aria-labelledby="how-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">⚙️</span>
+        <h2 id="how-heading">類似度検索の全体フロー（4ステップ）</h2>
+      </div>
+
+      <p>
+        S3 Vectors を使った類似度検索は、大きく4つのステップで進みます。「データを準備する段階」と「検索を実行する段階」の2フェーズに分かれる点を押さえるとスッキリ理解できます。
+      </p>
+
+      <div class="steps-flow">
+        <article class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-title">元データを Embedding</div>
+          <div class="step-desc">文書・画像などを Bedrock 等のモデルでベクトル化</div>
+        </article>
+        <article class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-title">Vector Index に格納</div>
+          <div class="step-desc">ベクトル本体 + メタデータ（タグ）をまとめて保存</div>
+        </article>
+        <article class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-title">クエリを Embedding</div>
+          <div class="step-desc">検索したい文章も同じモデルでベクトル化</div>
+        </article>
+        <article class="step-card">
+          <div class="step-num">4</div>
+          <div class="step-title">Top-K を取得</div>
+          <div class="step-desc">距離が近い順に指定件数を S3 Vectors が返す</div>
+        </article>
+      </div>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="類似度検索の全体フロー図（書き込みフェーズとクエリフェーズ）" viewBox="0 0 1200 660" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-blue-5" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-green-5" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#10B981"/>
+            </marker>
+            <filter id="softshadow-5" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="660" fill="#F3F4F6"/>
+
+          <!-- Phase A: Write -->
+          <text x="600" y="40" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">【フェーズA】準備：データをベクトルに変えて保存する</text>
+
+          <!-- A1: Raw data -->
+          <g>
+            <rect x="40" y="70" width="200" height="110" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="140" y="100" text-anchor="middle" font-size="32">📄</text>
+            <text x="140" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E293B">元データ</text>
+            <text x="140" y="160" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">文書・画像・音声</text>
+          </g>
+          <path d="M 245 125 L 295 125" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrow-blue-5)"/>
+
+          <!-- A2: Embedding model -->
+          <g>
+            <rect x="300" y="70" width="220" height="110" rx="14" fill="#FFF7ED" stroke="#FB923C" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="410" y="100" text-anchor="middle" font-size="32">🤖</text>
+            <text x="410" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#9A3412">Bedrock Embedding</text>
+            <text x="410" y="160" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#9A3412">意味を数値化</text>
+          </g>
+          <path d="M 525 125 L 575 125" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrow-blue-5)"/>
+
+          <!-- A3: Vector data -->
+          <g>
+            <rect x="580" y="70" width="220" height="110" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="690" y="100" text-anchor="middle" font-size="32">🧮</text>
+            <text x="690" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#065F46">ベクトル+メタデータ</text>
+            <text x="690" y="160" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#065F46">[0.82, 0.11, ...]</text>
+          </g>
+          <path d="M 805 125 L 855 125" stroke="#3B82F6" stroke-width="3" fill="none" marker-end="url(#arrow-blue-5)"/>
+
+          <!-- A4: S3 Vectors write -->
+          <g>
+            <rect x="860" y="70" width="280" height="110" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="3" filter="url(#softshadow-5)"/>
+            <text x="1000" y="100" text-anchor="middle" font-size="32">☁️</text>
+            <text x="1000" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#4338CA">S3 Vector Index</text>
+            <text x="1000" y="160" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#4338CA">PutVectors API で保存</text>
+          </g>
+
+          <!-- Divider -->
+          <line x1="80" y1="230" x2="1120" y2="230" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="8,6"/>
+
+          <!-- Phase B: Query -->
+          <text x="600" y="270" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">【フェーズB】検索：クエリを投げて、似ているものを上位K件取得</text>
+
+          <!-- B1: User query -->
+          <g>
+            <rect x="40" y="300" width="200" height="110" rx="14" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="140" y="330" text-anchor="middle" font-size="32">🔎</text>
+            <text x="140" y="365" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#92400E">検索したい文字列</text>
+            <text x="140" y="390" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#92400E">"猫カフェについて"</text>
+          </g>
+          <path d="M 245 355 L 295 355" stroke="#10B981" stroke-width="3" fill="none" marker-end="url(#arrow-green-5)"/>
+
+          <!-- B2: Embed query -->
+          <g>
+            <rect x="300" y="300" width="220" height="110" rx="14" fill="#FFF7ED" stroke="#FB923C" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="410" y="330" text-anchor="middle" font-size="32">🤖</text>
+            <text x="410" y="365" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#9A3412">同じEmbeddingモデル</text>
+            <text x="410" y="390" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#9A3412">クエリをベクトル化</text>
+          </g>
+          <path d="M 525 355 L 575 355" stroke="#10B981" stroke-width="3" fill="none" marker-end="url(#arrow-green-5)"/>
+
+          <!-- B3: Query vector -->
+          <g>
+            <rect x="580" y="300" width="220" height="110" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="690" y="330" text-anchor="middle" font-size="32">🎯</text>
+            <text x="690" y="365" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#065F46">Query Vector</text>
+            <text x="690" y="390" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#065F46">[0.77, 0.13, ...]</text>
+          </g>
+          <path d="M 805 355 L 855 355" stroke="#10B981" stroke-width="3" fill="none" marker-end="url(#arrow-green-5)"/>
+
+          <!-- B4: S3 Vectors Query -->
+          <g>
+            <rect x="860" y="300" width="280" height="110" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="3" filter="url(#softshadow-5)"/>
+            <text x="1000" y="330" text-anchor="middle" font-size="32">🔍</text>
+            <text x="1000" y="365" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#4338CA">QueryVectors API</text>
+            <text x="1000" y="390" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#4338CA">距離計算で上位K件抽出</text>
+          </g>
+
+          <!-- Downward arrow from S3 Vectors to results -->
+          <path d="M 1000 415 L 1000 460" stroke="#10B981" stroke-width="3" fill="none" marker-end="url(#arrow-green-5)"/>
+
+          <!-- Results -->
+          <g>
+            <rect x="40" y="475" width="1100" height="160" rx="16" fill="#FFFFFF" stroke="#34D399" stroke-width="2" filter="url(#softshadow-5)"/>
+            <text x="590" y="510" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#065F46">✨ Top-K 結果（類似度が高い順）</text>
+
+            <rect x="70" y="535" width="240" height="80" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="190" y="565" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">1位: 猫カフェの記事</text>
+            <text x="190" y="590" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#047857">距離: 0.08（最も近い）</text>
+
+            <rect x="330" y="535" width="240" height="80" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="450" y="565" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">2位: ペット可カフェ</text>
+            <text x="450" y="590" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#047857">距離: 0.15</text>
+
+            <rect x="590" y="535" width="240" height="80" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="710" y="565" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">3位: 動物と過ごす喫茶</text>
+            <text x="710" y="590" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#047857">距離: 0.22</text>
+
+            <rect x="850" y="535" width="240" height="80" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="970" y="565" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">4位: 犬連れカフェ</text>
+            <text x="970" y="590" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#047857">距離: 0.30</text>
+          </g>
+        </svg>
+        <p class="svg-caption">図5: S3 Vectors 類似度検索の全体フロー（準備 → 検索）</p>
+      </div>
+
+      <div class="info-box tip">
+        <div class="info-box-title">🔑 ここがキモ</div>
+        <p class="info-note-zero">
+          <strong>「データを入れるとき」と「検索するとき」で、必ず同じ Embedding モデルを使う</strong>こと。違うモデルで作ったベクトルは同じ空間に住んでいないので、距離を比べても意味のある結果は返りません。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 5: Distance Metric (Cosine vs Euclidean)
+         ============================================ -->
+    <section class="section" id="distance" aria-labelledby="distance-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">📏</span>
+        <h2 id="distance-heading">距離の測り方 — Cosine と Euclidean</h2>
+      </div>
+
+      <p>
+        <span class="highlight-text">「似ている」をどう数字で測るか</span>——これが距離メトリクス(Distance Metric)です。S3 Vectors では <strong>Cosine（コサイン距離）</strong> と <strong>Euclidean（ユークリッド距離）</strong> の2種類から選べます。<strong>インデックス作成時に決めたら後から変更できない</strong>ので、最初の選択が重要です。
+      </p>
+
+      <div class="info-box warning">
+        <div class="info-box-title">⚠️ 選び方の鉄則</div>
+        <p class="info-note-zero">
+          使っている<strong>Embedding モデルが推奨する距離メトリクスに合わせる</strong>こと。学習時の損失関数と整合する距離を選ばないと、計算結果が最適にならず、検索精度が落ちます。モデルのドキュメントを必ずチェックしましょう。
+        </p>
+      </div>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="CosineとEuclideanの距離計算方法の違いを示す図" viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="softshadow-6" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="560" fill="#F3F4F6"/>
+          <text x="600" y="45" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">2つの距離メトリクスの測り方</text>
+
+          <!-- Left: Cosine -->
+          <g>
+            <rect x="40" y="80" width="560" height="440" rx="18" fill="#FFFFFF" stroke="#818CF8" stroke-width="3" filter="url(#softshadow-6)"/>
+            <text x="320" y="120" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#4338CA">📐 Cosine（コサイン距離）</text>
+            <text x="320" y="148" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" fill="#4338CA">2つのベクトルの「角度」で測る</text>
+
+            <!-- coordinate -->
+            <line x1="100" y1="460" x2="540" y2="460" stroke="#94A3B8" stroke-width="2"/>
+            <line x1="120" y1="460" x2="120" y2="180" stroke="#94A3B8" stroke-width="2"/>
+
+            <!-- vector A -->
+            <line x1="120" y1="460" x2="440" y2="220" stroke="#3B82F6" stroke-width="4"/>
+            <polygon points="440,220 430,225 438,236" fill="#3B82F6"/>
+            <text x="460" y="220" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E40AF">A</text>
+
+            <!-- vector B (similar angle, different magnitude) -->
+            <line x1="120" y1="460" x2="280" y2="340" stroke="#F97316" stroke-width="4"/>
+            <polygon points="280,340 270,340 275,352" fill="#F97316"/>
+            <text x="255" y="335" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#C2410C">B</text>
+
+            <!-- angle arc -->
+            <path d="M 180 430 A 60 60 0 0 1 195 405" stroke="#EF4444" stroke-width="3" fill="none"/>
+            <text x="220" y="415" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#B91C1C">θ</text>
+            <text x="220" y="435" font-family="Inter, Arial, sans-serif" font-size="13" fill="#991B1B">この角度で測る</text>
+
+            <!-- notes -->
+            <rect x="80" y="175" width="460" height="40" rx="10" fill="#EEF2FF"/>
+            <text x="310" y="200" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#4338CA">✅ 大きさ(magnitude)を無視、方向だけを比較</text>
+            <rect x="80" y="495" width="460" height="18" rx="6" fill="#FFFFFF"/>
+            <text x="310" y="510" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#4338CA">テキスト埋め込みの定番（範囲: 0=同じ方向, 2=逆方向）</text>
+          </g>
+
+          <!-- Right: Euclidean -->
+          <g>
+            <rect x="620" y="80" width="540" height="440" rx="18" fill="#FFFFFF" stroke="#34D399" stroke-width="3" filter="url(#softshadow-6)"/>
+            <text x="890" y="120" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#047857">📏 Euclidean（ユークリッド距離）</text>
+            <text x="890" y="148" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" fill="#047857">2点間の「直線距離」で測る</text>
+
+            <!-- coordinate -->
+            <line x1="680" y1="460" x2="1120" y2="460" stroke="#94A3B8" stroke-width="2"/>
+            <line x1="700" y1="460" x2="700" y2="180" stroke="#94A3B8" stroke-width="2"/>
+
+            <!-- point A -->
+            <circle cx="900" cy="240" r="10" fill="#3B82F6"/>
+            <text x="920" y="245" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E40AF">A</text>
+
+            <!-- point B -->
+            <circle cx="820" cy="370" r="10" fill="#F97316"/>
+            <text x="835" y="375" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#C2410C">B</text>
+
+            <!-- line between -->
+            <line x1="900" y1="240" x2="820" y2="370" stroke="#EF4444" stroke-width="4" stroke-dasharray="8,4"/>
+            <text x="880" y="315" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#B91C1C">d</text>
+            <text x="895" y="335" font-family="Inter, Arial, sans-serif" font-size="13" fill="#991B1B">直線距離</text>
+
+            <!-- notes -->
+            <rect x="660" y="175" width="460" height="40" rx="10" fill="#ECFDF5"/>
+            <text x="890" y="200" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#047857">✅ 大きさも方向も両方考慮した「空間上の距離」</text>
+            <rect x="660" y="495" width="460" height="18" rx="6" fill="#FFFFFF"/>
+            <text x="890" y="510" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#047857">大きさに意味があるデータ向け（範囲: 0=同じ, ∞=遠い）</text>
+          </g>
+        </svg>
+        <p class="svg-caption">図6: Cosine（角度で測る）と Euclidean（直線距離で測る）の違い</p>
+      </div>
+
+      <div class="compare-grid">
+        <article class="compare-card cosine">
+          <h3><span aria-hidden="true">📐</span> Cosine（コサイン）が向いているケース</h3>
+          <ul>
+            <li>テキスト・文書の意味検索（RAG, セマンティック検索）</li>
+            <li>Bedrock Titan Text Embeddings, OpenAI text-embedding-* など、<strong>正規化されたベクトル</strong>を出力する多くのモデル</li>
+            <li>「方向（意味の傾き）」が重要で、長さ（出現回数など）は無視したいとき</li>
+            <li><strong>迷ったらこちらが無難</strong>（テキスト用途の約80%はこれで十分）</li>
+          </ul>
+        </article>
+        <article class="compare-card euclid">
+          <h3><span aria-hidden="true">📏</span> Euclidean（ユークリッド）が向いているケース</h3>
+          <ul>
+            <li>画像・音声の特徴量など、<strong>数値の大きさ(magnitude)そのものに意味がある</strong>データ</li>
+            <li>センサー値や計測値を埋め込んだベクトル</li>
+            <li>クラスタリング・異常検知と併用するケース</li>
+            <li>学習時の損失関数がユークリッド距離ベース(SNN/Contrastive Loss 等)のモデル</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="info-box note">
+        <div class="info-box-title">💡 豆知識：正規化された(unit length)ベクトルの場合</div>
+        <p class="info-note-zero">
+          ベクトルが<strong>単位ベクトル（長さ1に正規化）</strong>の場合、Cosine と Euclidean は<strong>順位的には同じ結果</strong>になります（数値自体は違う）。多くの最新 Embedding モデルは正規化出力なので、この場合はどちらでも実用上は問題ありません。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 6: 3 components
+         ============================================ -->
+    <section class="section" id="components" aria-labelledby="comp-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">🧩</span>
+        <h2 id="comp-heading">S3 Vectors の3つの構成要素</h2>
+      </div>
+
+      <p>
+        S3 Vectors は <strong>Vector Bucket → Vector Index → Vectors</strong> という「入れ子構造」でデータを管理します。古本屋のたとえで言うと「お店 → 本棚 → 本」の関係です。
+      </p>
+
+      <div class="component-grid">
+        <article class="component-card bucket">
+          <h3><span aria-hidden="true">🪣</span> ① Vector Bucket</h3>
+          <p>
+            ベクトル専用の新しいバケット種類。アカウントあたり1リージョンで最大10,000個。
+            通常の S3 バケットとは名前空間が別(<code>s3vectors</code>)で、ブロックパブリックアクセスが常時有効という安全設計。
+          </p>
+        </article>
+        <article class="component-card index">
+          <h3><span aria-hidden="true">📚</span> ② Vector Index</h3>
+          <p>
+            ベクトルを実際に格納・検索する単位。作成時に<strong>次元数(1〜4096)・距離メトリクス・非フィルタメタデータキー</strong>を指定。
+            これらの値は作成後に変更できないため、事前の設計が必須。
+          </p>
+        </article>
+        <article class="component-card vector">
+          <h3><span aria-hidden="true">🧮</span> ③ Vector</h3>
+          <p>
+            実データ。ベクトル値(float32配列) + 任意のメタデータを一緒に保存。
+            デフォルトで強整合性があり、書き込み直後から検索可能。メタデータで絞り込みフィルタもかけられる。
+          </p>
+        </article>
+      </div>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="S3 Vectorsのバケット・インデックス・ベクトルの階層構造" viewBox="0 0 1200 580" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-gray-7" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#94A3B8"/>
+            </marker>
+            <filter id="softshadow-7" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="580" fill="#F3F4F6"/>
+          <text x="600" y="40" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Vector Bucket の階層構造</text>
+
+          <!-- Outer Vector Bucket -->
+          <rect x="40" y="80" width="1120" height="470" rx="20" fill="#FFF7ED" stroke="#FB923C" stroke-width="3" filter="url(#softshadow-7)"/>
+          <text x="80" y="115" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#9A3412">🪣 Vector Bucket: company-rag-bucket</text>
+          <text x="80" y="138" font-family="Inter, Arial, sans-serif" font-size="15" fill="#9A3412">arn:aws:s3vectors:ap-northeast-1:123456789012:bucket/company-rag-bucket</text>
+
+          <!-- Index 1 -->
+          <g>
+            <rect x="80" y="170" width="500" height="360" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="100" y="200" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#4338CA">📚 Vector Index: product-catalog</text>
+            <text x="100" y="222" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4338CA">次元: 1024 / Metric: Cosine</text>
+
+            <!-- vectors inside -->
+            <rect x="100" y="240" width="460" height="72" rx="10" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="120" y="268" font-family="Menlo, monospace" font-size="15" fill="#065F46">🧮 vec_001: [0.82, 0.11, ...] </text>
+            <text x="120" y="295" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">metadata: {category:"electronics", year:2025}</text>
+
+            <rect x="100" y="324" width="460" height="72" rx="10" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="120" y="352" font-family="Menlo, monospace" font-size="15" fill="#065F46">🧮 vec_002: [0.79, 0.14, ...] </text>
+            <text x="120" y="379" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">metadata: {category:"books", year:2024}</text>
+
+            <rect x="100" y="408" width="460" height="72" rx="10" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="120" y="436" font-family="Menlo, monospace" font-size="15" fill="#065F46">🧮 vec_003: [0.03, 0.91, ...] </text>
+            <text x="120" y="463" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">metadata: {category:"apparel", year:2025}</text>
+
+            <text x="330" y="507" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748B">... 数百万〜数十億ベクトル</text>
+          </g>
+
+          <!-- Index 2 -->
+          <g>
+            <rect x="620" y="170" width="500" height="360" rx="16" fill="#EEF2FF" stroke="#818CF8" stroke-width="2"/>
+            <text x="640" y="200" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#4338CA">📚 Vector Index: support-docs</text>
+            <text x="640" y="222" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4338CA">次元: 1536 / Metric: Cosine</text>
+
+            <rect x="640" y="240" width="460" height="72" rx="10" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="660" y="268" font-family="Menlo, monospace" font-size="15" fill="#065F46">🧮 doc_a: [0.55, 0.32, ...] </text>
+            <text x="660" y="295" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">metadata: {department:"HR"}</text>
+
+            <rect x="640" y="324" width="460" height="72" rx="10" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="660" y="352" font-family="Menlo, monospace" font-size="15" fill="#065F46">🧮 doc_b: [0.61, 0.28, ...] </text>
+            <text x="660" y="379" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">metadata: {department:"Finance"}</text>
+
+            <rect x="640" y="408" width="460" height="72" rx="10" fill="#FFFFFF" stroke="#34D399" stroke-width="2"/>
+            <text x="660" y="436" font-family="Menlo, monospace" font-size="15" fill="#065F46">🧮 doc_c: [0.44, 0.39, ...] </text>
+            <text x="660" y="463" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">metadata: {department:"Legal"}</text>
+
+            <text x="870" y="507" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748B">各インデックスは独立した設定を持つ</text>
+          </g>
+        </svg>
+        <p class="svg-caption">図7: Vector Bucket の中に複数の Vector Index、その中にベクトルが格納される</p>
+      </div>
+
+      <h3>📋 Vector Index の重要な設計項目（作成後変更不可）</h3>
+      <p>Vector Index 作成時に決めた以下の項目は、<strong>後から変更できません</strong>。変更するにはインデックスを作り直す必要があります。設計時に慎重に決めましょう。</p>
+
+      <table class="analogy-table">
+        <thead>
+          <tr>
+            <th class="th-w25">項目</th>
+            <th class="th-w25">値・範囲</th>
+            <th class="th-w50">決めるときのポイント</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="aws-col">次元数 (Dimension)</td>
+            <td>1 〜 4096 の整数</td>
+            <td>使う Embedding モデルの出力次元に合わせる（例: Titan Embed v2 は 256/512/1024、Cohere Embed English v3 は 1024）</td>
+          </tr>
+          <tr>
+            <td class="aws-col">距離メトリクス</td>
+            <td>Cosine / Euclidean</td>
+            <td>モデルの推奨に合わせる。テキストはほぼ Cosine</td>
+          </tr>
+          <tr>
+            <td class="aws-col">非フィルタメタデータ</td>
+            <td>最大10キー</td>
+            <td>原文テキストやURL等、フィルタ不要な補助情報を指定してフィルタサイズ制限を節約</td>
+          </tr>
+          <tr>
+            <td class="aws-col">インデックス名</td>
+            <td>3〜63文字</td>
+            <td>小文字・数字・ハイフン・ドットのみ。バケット内でユニーク</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================
+         Section 7: Metadata filtering
+         ============================================ -->
+    <section class="section" id="metadata" aria-labelledby="meta-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">🏷️</span>
+        <h2 id="meta-heading">メタデータによる絞り込み</h2>
+      </div>
+
+      <p>
+        各ベクトルには<strong>メタデータ（キー・バリューの付箋）</strong>を付けられます。古本屋で言えば「ミステリー、1990年代、A社刊行」といった帯ラベル。
+        類似度検索のときに<strong>「カテゴリ=ミステリー AND 年≥2020 の中で似ているものを探す」</strong>という絞り込みが可能になります。
+      </p>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="メタデータフィルタリングの仕組みを示す図" viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-purple-8" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#8B5CF6"/>
+            </marker>
+            <filter id="softshadow-8" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+          <text x="600" y="40" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">メタデータフィルタリング付き類似度検索</text>
+
+          <!-- Full index -->
+          <g>
+            <rect x="40" y="80" width="340" height="400" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-8)"/>
+            <text x="210" y="115" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1E293B">① インデックス全体</text>
+            <text x="210" y="138" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748B">1000万ベクトル</text>
+
+            <rect x="60" y="160" width="300" height="58" rx="10" fill="#FFF7ED" stroke="#FDBA74"/>
+            <text x="80" y="182" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#9A3412">🧮 vec_001</text>
+            <text x="80" y="205" font-family="Inter, Arial, sans-serif" font-size="14" fill="#9A3412">category: mystery, year: 2023</text>
+
+            <rect x="60" y="228" width="300" height="58" rx="10" fill="#EEF2FF" stroke="#818CF8"/>
+            <text x="80" y="250" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#4338CA">🧮 vec_002</text>
+            <text x="80" y="273" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4338CA">category: romance, year: 2018</text>
+
+            <rect x="60" y="296" width="300" height="58" rx="10" fill="#FFF7ED" stroke="#FDBA74"/>
+            <text x="80" y="318" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#9A3412">🧮 vec_003</text>
+            <text x="80" y="341" font-family="Inter, Arial, sans-serif" font-size="14" fill="#9A3412">category: mystery, year: 2024</text>
+
+            <rect x="60" y="364" width="300" height="58" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="80" y="386" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#047857">🧮 vec_004</text>
+            <text x="80" y="409" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">category: history, year: 2022</text>
+
+            <text x="210" y="450" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748B">混在した状態</text>
+          </g>
+
+          <!-- Arrow + Filter -->
+          <path d="M 390 270 L 460 270" stroke="#8B5CF6" stroke-width="3" fill="none" marker-end="url(#arrow-purple-8)"/>
+
+          <!-- Filter -->
+          <g>
+            <rect x="470" y="180" width="260" height="180" rx="16" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="3" filter="url(#softshadow-8)"/>
+            <text x="600" y="220" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#6D28D9">② フィルタ条件</text>
+            <rect x="490" y="250" width="220" height="40" rx="6" fill="#FFFFFF" stroke="#A78BFA"/>
+            <text x="600" y="275" text-anchor="middle" font-family="Menlo, monospace" font-size="14" fill="#6D28D9">category == "mystery"</text>
+            <rect x="490" y="300" width="220" height="40" rx="6" fill="#FFFFFF" stroke="#A78BFA"/>
+            <text x="600" y="325" text-anchor="middle" font-family="Menlo, monospace" font-size="14" fill="#6D28D9">year &gt;= 2020</text>
+          </g>
+
+          <path d="M 740 270 L 810 270" stroke="#8B5CF6" stroke-width="3" fill="none" marker-end="url(#arrow-purple-8)"/>
+
+          <!-- Filtered + Query -->
+          <g>
+            <rect x="820" y="80" width="340" height="400" rx="16" fill="#FFFFFF" stroke="#34D399" stroke-width="3" filter="url(#softshadow-8)"/>
+            <text x="990" y="115" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#047857">③ 条件合致のみで類似検索</text>
+            <text x="990" y="138" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#047857">2件に絞り込み → 近いもの上位</text>
+
+            <rect x="840" y="170" width="300" height="88" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="860" y="197" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#065F46">🧮 vec_003 （1位）</text>
+            <text x="860" y="220" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">mystery, 2024 / 距離 0.12</text>
+            <text x="860" y="243" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">✅ フィルタ通過＆最も近い</text>
+
+            <rect x="840" y="270" width="300" height="88" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="860" y="297" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#065F46">🧮 vec_001 （2位）</text>
+            <text x="860" y="320" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">mystery, 2023 / 距離 0.19</text>
+            <text x="860" y="343" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">✅ フィルタ通過</text>
+
+            <rect x="840" y="370" width="300" height="80" rx="10" fill="#FEF2F2" stroke="#F87171"/>
+            <text x="860" y="398" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="600" fill="#B91C1C">✗ vec_002 除外</text>
+            <text x="860" y="420" font-family="Inter, Arial, sans-serif" font-size="13" fill="#991B1B">romance なので条件外</text>
+            <text x="860" y="438" font-family="Inter, Arial, sans-serif" font-size="13" fill="#991B1B">✗ vec_004 除外 (history)</text>
+          </g>
+        </svg>
+        <p class="svg-caption">図8: メタデータで絞り込んでから類似度を計算する</p>
+      </div>
+
+      <h3>🏷️ 2種類のメタデータキー</h3>
+      <p>
+        メタデータには<strong>フィルタ可能なキー</strong>と<strong>非フィルタキー(non-filterable)</strong>の2種類があります。検索性能とストレージコストのバランスで使い分けます。
+      </p>
+
+      <div class="compare-grid">
+        <article class="compare-card cosine">
+          <h4><span aria-hidden="true">🔍</span> デフォルト（フィルタ可能）</h4>
+          <ul>
+            <li>指定なしで追加すると、すべてフィルタ可能になる</li>
+            <li>String, Number, Boolean, List の4型をサポート</li>
+            <li>クエリ時に <code>category == "X" AND year &gt;= 2020</code> 等で絞り込み可能</li>
+            <li>サイズ上限が厳しめなので、大きな原文テキストには不向き</li>
+          </ul>
+        </article>
+        <article class="compare-card euclid">
+          <h4><span aria-hidden="true">📎</span> 非フィルタ（non-filterable）</h4>
+          <ul>
+            <li>インデックス作成時に最大<strong>10キーまで</strong>指定可能</li>
+            <li>後から変更不可（重要な判断）</li>
+            <li>検索結果と一緒に<strong>取得できるが、フィルタには使えない</strong></li>
+            <li>典型用途：<strong>原文テキスト</strong>、URL、作成日時など「結果に表示はしたいが検索条件にはしない情報」</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="info-box tip">
+        <div class="info-box-title">💡 RAG での定番パターン</div>
+        <p class="info-note-zero">
+          <strong>チャンク化した原文テキスト</strong>は非フィルタキーで保存し、<strong>カテゴリ・ソースファイル名・作成日</strong>はフィルタ可能キーで保存する——これが RAG でよく使われる構成。原文が大きくてもフィルタ用サイズ上限を圧迫しません。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 8: Use cases
+         ============================================ -->
+    <section class="section" id="usecases" aria-labelledby="usecase-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">🎯</span>
+        <h2 id="usecase-heading">代表的なユースケース</h2>
+      </div>
+
+      <p>
+        S3 Vectors は「キーワード検索では取りこぼす、意味や雰囲気が似たもの」を扱う幅広いシーンで活躍します。AWS 公式に挙げられている代表例を紹介します。
+      </p>
+
+      <div class="usecase-grid">
+        <article class="usecase-card">
+          <div class="uc-icon" aria-hidden="true">🩺</div>
+          <div class="uc-title">医療画像の類似症例検索</div>
+          <div class="uc-desc">数百万件の医用画像から、診断中のケースに似た過去症例を即座に探し出し、診断・治療計画を支援する</div>
+        </article>
+        <article class="usecase-card">
+          <div class="uc-icon" aria-hidden="true">📄</div>
+          <div class="uc-title">企業内ドキュメント検索</div>
+          <div class="uc-desc">社内文書から「意味で近い資料」をセマンティック検索。規定・議事録・マニュアルを自然文で探せる</div>
+        </article>
+        <article class="usecase-card">
+          <div class="uc-icon" aria-hidden="true">🎬</div>
+          <div class="uc-title">動画・映像コンテンツ理解</div>
+          <div class="uc-desc">膨大な映像アセットから特定のシーン・コンテンツを検索。スポーツハイライト抽出やアーカイブ検索に使える</div>
+        </article>
+        <article class="usecase-card">
+          <div class="uc-icon" aria-hidden="true">🛡️</div>
+          <div class="uc-title">著作権侵害の検知</div>
+          <div class="uc-desc">メディアライブラリから二次的著作物や類似コンテンツを特定する</div>
+        </article>
+        <article class="usecase-card">
+          <div class="uc-icon" aria-hidden="true">🖼️</div>
+          <div class="uc-title">画像の重複排除</div>
+          <div class="uc-desc">大規模な画像コレクションから重複・ほぼ同一の画像を検出してクリーンナップ</div>
+        </article>
+        <article class="usecase-card">
+          <div class="uc-icon" aria-hidden="true">🎁</div>
+          <div class="uc-title">レコメンデーション</div>
+          <div class="uc-desc">購入履歴や閲覧履歴から「似ているアイテム」を抽出し、パーソナライズ推薦を実現</div>
+        </article>
+      </div>
+
+      <h3>🌟 最大の用途：RAG（検索拡張生成）</h3>
+      <p>
+        S3 Vectors が最も輝くのは <strong>RAG (Retrieval Augmented Generation)</strong>——LLM に外部知識を注入する仕組みです。Amazon Bedrock Knowledge Bases と直接統合されており、RAG のコストを大幅に下げられます。
+      </p>
+
+      <div class="svg-container">
+        <svg role="img" aria-label="RAGアプリケーションにおけるS3 Vectorsの位置づけ" viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-orange-9" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#F97316"/>
+            </marker>
+            <marker id="arrow-blue-9" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 Z" fill="#3B82F6"/>
+            </marker>
+            <filter id="softshadow-9" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.10"/>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="1200" height="520" fill="#F3F4F6"/>
+          <text x="600" y="40" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">RAG アプリでの S3 Vectors の役割</text>
+
+          <!-- User -->
+          <g>
+            <rect x="40" y="90" width="160" height="110" rx="14" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2" filter="url(#softshadow-9)"/>
+            <text x="120" y="130" text-anchor="middle" font-size="36">🙋</text>
+            <text x="120" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#92400E">ユーザー</text>
+            <text x="120" y="188" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#92400E">「社内の〇〇規程は？」</text>
+          </g>
+          <path d="M 205 145 L 255 145" stroke="#F97316" stroke-width="3" fill="none" marker-end="url(#arrow-orange-9)"/>
+
+          <!-- App -->
+          <g>
+            <rect x="260" y="90" width="180" height="110" rx="14" fill="#F8FAFC" stroke="#64748B" stroke-width="2" filter="url(#softshadow-9)"/>
+            <text x="350" y="130" text-anchor="middle" font-size="36">💻</text>
+            <text x="350" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#1E293B">アプリ</text>
+            <text x="350" y="188" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748B">(Bedrock Agent等)</text>
+          </g>
+          <path d="M 445 145 L 495 145" stroke="#F97316" stroke-width="3" fill="none" marker-end="url(#arrow-orange-9)"/>
+
+          <!-- S3 Vectors -->
+          <g>
+            <rect x="500" y="90" width="240" height="110" rx="14" fill="#EEF2FF" stroke="#818CF8" stroke-width="3" filter="url(#softshadow-9)"/>
+            <text x="620" y="130" text-anchor="middle" font-size="36">☁️</text>
+            <text x="620" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#4338CA">S3 Vectors</text>
+            <text x="620" y="188" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4338CA">意味で関連文書を検索</text>
+          </g>
+          <path d="M 745 145 L 795 145" stroke="#F97316" stroke-width="3" fill="none" marker-end="url(#arrow-orange-9)"/>
+
+          <!-- Relevant docs -->
+          <g>
+            <rect x="800" y="90" width="200" height="110" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2" filter="url(#softshadow-9)"/>
+            <text x="900" y="130" text-anchor="middle" font-size="36">📄📄</text>
+            <text x="900" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#065F46">関連文書 Top-K</text>
+            <text x="900" y="188" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">規程の該当条項を抽出</text>
+          </g>
+          <path d="M 1005 145 L 1055 145" stroke="#F97316" stroke-width="3" fill="none" marker-end="url(#arrow-orange-9)"/>
+
+          <!-- LLM -->
+          <g>
+            <rect x="1060" y="90" width="110" height="110" rx="14" fill="#FFF7ED" stroke="#FB923C" stroke-width="2" filter="url(#softshadow-9)"/>
+            <text x="1115" y="130" text-anchor="middle" font-size="36">🤖</text>
+            <text x="1115" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#9A3412">LLM</text>
+            <text x="1115" y="188" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#9A3412">Claude等</text>
+          </g>
+
+          <!-- Return path -->
+          <path d="M 1115 205 L 1115 290 L 120 290 L 120 205" stroke="#3B82F6" stroke-width="3" stroke-dasharray="6,4" fill="none" marker-end="url(#arrow-blue-9)"/>
+          <text x="600" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#1E40AF">関連文書を踏まえた根拠つき回答</text>
+
+          <!-- Bottom key points -->
+          <rect x="40" y="330" width="1120" height="160" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" filter="url(#softshadow-9)"/>
+          <text x="600" y="365" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0F172A">🎁 S3 Vectors を RAG に使うメリット</text>
+
+          <g>
+            <rect x="70" y="385" width="340" height="88" rx="10" fill="#FFF7ED" stroke="#FDBA74"/>
+            <text x="240" y="410" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#9A3412">💰 ベクトルDBコスト削減</text>
+            <text x="240" y="435" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#9A3412">最大90% 削減可能。</text>
+            <text x="240" y="455" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#9A3412">長期保管・低頻度クエリに最適</text>
+          </g>
+          <g>
+            <rect x="430" y="385" width="340" height="88" rx="10" fill="#EEF2FF" stroke="#818CF8"/>
+            <text x="600" y="410" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#4338CA">🔗 Bedrock統合がワンクリック</text>
+            <text x="600" y="435" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4338CA">Knowledge Base 作成時に</text>
+            <text x="600" y="455" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#4338CA">S3 Vectors を Vector Store として選択</text>
+          </g>
+          <g>
+            <rect x="790" y="385" width="340" height="88" rx="10" fill="#ECFDF5" stroke="#34D399"/>
+            <text x="960" y="410" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#047857">⚙️ インフラ管理ゼロ</text>
+            <text x="960" y="435" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">ノードプロビジョニング不要</text>
+            <text x="960" y="455" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#047857">S3 の弾力性で自動スケール</text>
+          </g>
+        </svg>
+        <p class="svg-caption">図9: RAG アプリケーションにおける S3 Vectors の役割と利点</p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 9: Comparison with other services
+         ============================================ -->
+    <section class="section" id="comparison" aria-labelledby="compare-heading">
+      <div class="section-header">
+        <span class="section-icon" aria-hidden="true">⚖️</span>
+        <h2 id="compare-heading">他のベクトル検索サービスとの使い分け</h2>
+      </div>
+
+      <p>
+        AWS には他にもベクトル検索ができるサービスがあります。<strong>「頻繁に検索する」か「たまに検索する」か</strong>、<strong>「最速性能」か「コスト重視」か</strong>で使い分けるのが基本です。
+      </p>
+
+      <table class="analogy-table">
+        <thead>
+          <tr>
+            <th class="th-w20">サービス</th>
+            <th class="th-w25">得意分野</th>
+            <th class="th-w20">レイテンシ</th>
+            <th class="th-w35">向いている用途</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="aws-col">S3 Vectors</td>
+            <td>大規模・低頻度クエリ</td>
+            <td>秒未満 〜 100ms</td>
+            <td>数十億スケールのRAG、長期保管、QPSが低いバッチ処理的検索</td>
+          </tr>
+          <tr>
+            <td class="aws-col">OpenSearch Service<br>(k-NN)</td>
+            <td>高QPS・低レイテンシ</td>
+            <td>ミリ秒単位</td>
+            <td>リアルタイム推薦、大量同時アクセス、ハイブリッド検索、ファセット検索</td>
+          </tr>
+          <tr>
+            <td class="aws-col">OpenSearch<br>Serverless</td>
+            <td>サーバーレス高性能</td>
+            <td>ミリ秒単位</td>
+            <td>プロビジョニング不要でリアルタイム性も欲しい場面</td>
+          </tr>
+          <tr>
+            <td class="aws-col">Aurora PostgreSQL<br>(pgvector)</td>
+            <td>トランザクション+ベクトル</td>
+            <td>ミリ秒単位</td>
+            <td>既存RDBと同じ場所で管理したい、中規模のベクトル+行データのJOIN</td>
+          </tr>
+          <tr>
+            <td class="aws-col">MemoryDB<br>(Vector Search)</td>
+            <td>超低レイテンシ</td>
+            <td>ミリ秒未満</td>
+            <td>毎秒数万QPSのリアルタイム検索。インメモリ性能が必要な場面</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="info-box tip">
+        <div class="info-box-title">🔄 階層ストレージ戦略（S3 Vectors × OpenSearch）</div>
+        <p class="info-note-zero">
+          大量のベクトルを S3 Vectors に低コスト保管し、<strong>高性能が必要な一部だけ OpenSearch Serverless にスナップショットをエクスポート</strong>する構成が可能。
+          「全量は S3 Vectors、ホットデータだけ OpenSearch」というコストと性能のベストバランス設計ができます。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 10: Code examples
+         ============================================ -->
+    <section class="section" id="code" aria-labelledby="code-heading">
+      <h2 id="code-heading">💻 10. コード例（CLI / CloudFormation / Terraform / Python）</h2>
+
+      <p>
+        基本操作は「<strong>バケット作成 → インデックス作成 → ベクトル投入 → クエリ</strong>」の4段階です。
+        以下のタブで、各ツールでの書き方を比較できます。
+      </p>
+
+      <div class="tabs" role="tablist" aria-label="コード例">
+        <div class="tab-buttons">
+          <button type="button" class="tab-button active" data-tab="cli" role="tab">AWS CLI</button>
+          <button type="button" class="tab-button" data-tab="cfn" role="tab">CloudFormation</button>
+          <button type="button" class="tab-button" data-tab="tf" role="tab">Terraform</button>
+          <button type="button" class="tab-button" data-tab="py" role="tab">Python (boto3)</button>
+        </div>
+
+        <div class="tab-content active" data-tab="cli" role="tabpanel">
+<pre class="code-block"><span class="code-comment"># 1. ベクトルバケット作成</span>
+aws s3vectors create-vector-bucket \\
+  --vector-bucket-name <span class="code-string">my-vector-bucket</span> \\
+  --region <span class="code-string">ap-northeast-1</span>
+
+<span class="code-comment"># 2. ベクトルインデックス作成（次元数・距離メトリクスを指定）</span>
+aws s3vectors create-index \\
+  --vector-bucket-name <span class="code-string">my-vector-bucket</span> \\
+  --index-name <span class="code-string">books-index</span> \\
+  --data-type <span class="code-string">float32</span> \\
+  --dimension <span class="code-number">1024</span> \\
+  --distance-metric <span class="code-string">cosine</span>
+
+<span class="code-comment"># 3. ベクトル投入（バッチで最大500件まで）</span>
+aws s3vectors put-vectors \\
+  --vector-bucket-name <span class="code-string">my-vector-bucket</span> \\
+  --index-name <span class="code-string">books-index</span> \\
+  --vectors <span class="code-string">'[
+    {
+      "key": "book-001",
+      "data": {"float32": [0.12, 0.34, 0.56, ...]},
+      "metadata": {"genre": "mystery", "year": 2024}
+    }
+  ]'</span>
+
+<span class="code-comment"># 4. 類似度検索（Top-Kで似た本を取得）</span>
+aws s3vectors query-vectors \\
+  --vector-bucket-name <span class="code-string">my-vector-bucket</span> \\
+  --index-name <span class="code-string">books-index</span> \\
+  --query-vector <span class="code-string">'{"float32": [0.11, 0.33, 0.55, ...]}'</span> \\
+  --top-k <span class="code-number">5</span> \\
+  --filter <span class="code-string">'{"genre": {"$eq": "mystery"}}'</span> \\
+  --return-metadata</pre>
+        </div>
+
+        <div class="tab-content" data-tab="cfn" role="tabpanel">
+<pre class="code-block"><span class="code-comment"># CloudFormation テンプレート（YAML）</span>
+AWSTemplateFormatVersion: <span class="code-string">'2010-09-09'</span>
+Description: S3 Vectors bucket and index
+
+Resources:
+  <span class="code-keyword">MyVectorBucket</span>:
+    Type: AWS::S3Vectors::VectorBucket
+    Properties:
+      VectorBucketName: <span class="code-string">my-vector-bucket</span>
+      EncryptionConfiguration:
+        SseType: <span class="code-string">AES256</span>
+
+  <span class="code-keyword">MyVectorIndex</span>:
+    Type: AWS::S3Vectors::Index
+    Properties:
+      VectorBucketName: !Ref MyVectorBucket
+      IndexName: <span class="code-string">books-index</span>
+      DataType: <span class="code-string">float32</span>
+      Dimension: <span class="code-number">1024</span>
+      DistanceMetric: <span class="code-string">cosine</span>
+      MetadataConfiguration:
+        NonFilterableMetadataKeys:
+          - <span class="code-string">source_url</span>
+          - <span class="code-string">raw_text</span>
+
+Outputs:
+  BucketName:
+    Value: !Ref MyVectorBucket
+  IndexName:
+    Value: !Ref MyVectorIndex</pre>
+        </div>
+
+        <div class="tab-content" data-tab="tf" role="tabpanel">
+<pre class="code-block"><span class="code-comment"># Terraform (AWS Provider)</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_s3vectors_vector_bucket"</span> <span class="code-string">"main"</span> {
+  vector_bucket_name = <span class="code-string">"my-vector-bucket"</span>
+
+  encryption_configuration {
+    sse_type = <span class="code-string">"AES256"</span>
+  }
+}
+
+<span class="code-keyword">resource</span> <span class="code-string">"aws_s3vectors_index"</span> <span class="code-string">"books"</span> {
+  vector_bucket_name = aws_s3vectors_vector_bucket.main.vector_bucket_name
+  index_name         = <span class="code-string">"books-index"</span>
+  data_type          = <span class="code-string">"float32"</span>
+  dimension          = <span class="code-number">1024</span>
+  distance_metric    = <span class="code-string">"cosine"</span>
+
+  metadata_configuration {
+    non_filterable_metadata_keys = [<span class="code-string">"source_url"</span>, <span class="code-string">"raw_text"</span>]
+  }
+}
+
+<span class="code-keyword">output</span> <span class="code-string">"bucket_name"</span> {
+  value = aws_s3vectors_vector_bucket.main.vector_bucket_name
+}</pre>
+        </div>
+
+        <div class="tab-content" data-tab="py" role="tabpanel">
+<pre class="code-block"><span class="code-keyword">import</span> boto3
+
+client = boto3.client(<span class="code-string">'s3vectors'</span>, region_name=<span class="code-string">'ap-northeast-1'</span>)
+
+<span class="code-comment"># 1. バケット作成</span>
+client.create_vector_bucket(vectorBucketName=<span class="code-string">'my-vector-bucket'</span>)
+
+<span class="code-comment"># 2. インデックス作成</span>
+client.create_index(
+    vectorBucketName=<span class="code-string">'my-vector-bucket'</span>,
+    indexName=<span class="code-string">'books-index'</span>,
+    dataType=<span class="code-string">'float32'</span>,
+    dimension=<span class="code-number">1024</span>,
+    distanceMetric=<span class="code-string">'cosine'</span>,
+)
+
+<span class="code-comment"># 3. ベクトル投入（バッチで最大500件）</span>
+client.put_vectors(
+    vectorBucketName=<span class="code-string">'my-vector-bucket'</span>,
+    indexName=<span class="code-string">'books-index'</span>,
+    vectors=[
+        {
+            <span class="code-string">'key'</span>: <span class="code-string">'book-001'</span>,
+            <span class="code-string">'data'</span>: {<span class="code-string">'float32'</span>: embedding_vector},
+            <span class="code-string">'metadata'</span>: {<span class="code-string">'genre'</span>: <span class="code-string">'mystery'</span>, <span class="code-string">'year'</span>: <span class="code-number">2024</span>},
+        },
+    ],
+)
+
+<span class="code-comment"># 4. 類似度検索（メタデータフィルタ付き）</span>
+response = client.query_vectors(
+    vectorBucketName=<span class="code-string">'my-vector-bucket'</span>,
+    indexName=<span class="code-string">'books-index'</span>,
+    queryVector={<span class="code-string">'float32'</span>: query_embedding},
+    topK=<span class="code-number">5</span>,
+    filter={<span class="code-string">'genre'</span>: {<span class="code-string">'$eq'</span>: <span class="code-string">'mystery'</span>}},
+    returnMetadata=<span class="code-keyword">True</span>,
+    returnDistance=<span class="code-keyword">True</span>,
+)
+
+<span class="code-keyword">for</span> hit <span class="code-keyword">in</span> response[<span class="code-string">'vectors'</span>]:
+    <span class="code-keyword">print</span>(hit[<span class="code-string">'key'</span>], hit[<span class="code-string">'distance'</span>], hit[<span class="code-string">'metadata'</span>])</pre>
+        </div>
+      </div>
+
+      <div class="info-box tip">
+        <div class="info-box-title">💡 Embedding 生成は別サービス</div>
+        <p class="info-note-zero">
+          S3 Vectors は<strong>保管とクエリが専門</strong>で、テキストや画像からベクトルを作る処理（Embedding）は
+          <strong>Amazon Bedrock（Titan Embeddings、Cohere Embed 等）や SageMaker</strong>で行います。
+          生成したベクトルを <code>put-vectors</code> に渡す、という役割分担を押さえておきましょう。
+        </p>
+      </div>
+
+      <!-- Figure 10: End-to-end RAG architecture -->
+      <h3>図10: RAG（検索拡張生成）アーキテクチャの全体像</h3>
+      <div class="svg-container">
+        <svg viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S3 Vectors を使った RAG（検索拡張生成）の全体アーキテクチャ図。文書投入フェーズとユーザー質問フェーズの2つの流れを示す">
+          <defs>
+            <marker id="arrow-rag-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+              <polygon points="0,0 10,5 0,10" fill="#3B82F6"/>
+            </marker>
+            <marker id="arrow-rag-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+              <polygon points="0,0 10,5 0,10" fill="#10B981"/>
+            </marker>
+            <filter id="shadow-rag" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.2"/>
+            </filter>
+          </defs>
+
+          <!-- Phase labels -->
+          <rect x="20" y="20" width="1160" height="50" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" rx="6"/>
+          <text x="600" y="52" text-anchor="middle" font-size="22" font-weight="bold" fill="#1E293B">フェーズA: 文書投入（事前処理） ／ フェーズB: ユーザー質問（リアルタイム）</text>
+
+          <!-- Phase A row (top) -->
+          <text x="40" y="110" font-size="20" font-weight="bold" fill="#3B82F6">A.</text>
+          <!-- A1: Documents -->
+          <rect x="80" y="90" width="180" height="90" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="170" y="125" text-anchor="middle" font-size="20" font-weight="bold" fill="#9A3412">📄 社内文書</text>
+          <text x="170" y="152" text-anchor="middle" font-size="18" fill="#7C2D12">PDF/マニュアル</text>
+          <text x="170" y="172" text-anchor="middle" font-size="18" fill="#7C2D12">FAQ/議事録</text>
+          <!-- A2: Bedrock Embedding -->
+          <rect x="330" y="90" width="200" height="90" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="430" y="125" text-anchor="middle" font-size="20" font-weight="bold" fill="#3730A3">🤖 Bedrock</text>
+          <text x="430" y="152" text-anchor="middle" font-size="18" fill="#3730A3">Titan Embeddings</text>
+          <text x="430" y="172" text-anchor="middle" font-size="18" fill="#3730A3">文書 → ベクトル化</text>
+          <!-- A3: S3 Vectors -->
+          <rect x="600" y="90" width="200" height="90" fill="#ECFDF5" stroke="#34D399" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="700" y="125" text-anchor="middle" font-size="20" font-weight="bold" fill="#047857">📦 S3 Vectors</text>
+          <text x="700" y="152" text-anchor="middle" font-size="18" fill="#065F46">Vector Bucket/Index</text>
+          <text x="700" y="172" text-anchor="middle" font-size="18" fill="#065F46">全文ベクトル保管</text>
+          <!-- A4: Knowledge Base -->
+          <rect x="870" y="90" width="220" height="90" fill="#FEFCE8" stroke="#FACC15" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="980" y="125" text-anchor="middle" font-size="20" font-weight="bold" fill="#854D0E">📚 Bedrock</text>
+          <text x="980" y="152" text-anchor="middle" font-size="18" fill="#713F12">Knowledge Bases</text>
+          <text x="980" y="172" text-anchor="middle" font-size="18" fill="#713F12">自動同期・管理</text>
+
+          <!-- Phase A arrows -->
+          <line x1="260" y1="135" x2="328" y2="135" stroke="#3B82F6" stroke-width="3" marker-end="url(#arrow-rag-blue)"/>
+          <line x1="530" y1="135" x2="598" y2="135" stroke="#3B82F6" stroke-width="3" marker-end="url(#arrow-rag-blue)"/>
+          <line x1="800" y1="135" x2="868" y2="135" stroke="#3B82F6" stroke-width="3" marker-end="url(#arrow-rag-blue)"/>
+
+          <!-- Divider line -->
+          <line x1="40" y1="230" x2="1160" y2="230" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="8 4"/>
+
+          <!-- Phase B row (bottom) -->
+          <text x="40" y="300" font-size="20" font-weight="bold" fill="#10B981">B.</text>
+          <!-- B1: User -->
+          <rect x="80" y="280" width="180" height="90" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="170" y="315" text-anchor="middle" font-size="20" font-weight="bold" fill="#1E293B">👤 ユーザー</text>
+          <text x="170" y="342" text-anchor="middle" font-size="18" fill="#475569">「有給休暇の</text>
+          <text x="170" y="362" text-anchor="middle" font-size="18" fill="#475569">取り方は？」</text>
+          <!-- B2: Embedding query -->
+          <rect x="330" y="280" width="200" height="90" fill="#EEF2FF" stroke="#818CF8" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="430" y="315" text-anchor="middle" font-size="20" font-weight="bold" fill="#3730A3">🤖 Bedrock</text>
+          <text x="430" y="342" text-anchor="middle" font-size="18" fill="#3730A3">質問 → ベクトル化</text>
+          <text x="430" y="362" text-anchor="middle" font-size="18" fill="#3730A3">(Query Vector)</text>
+          <!-- B3: S3 Vectors Query -->
+          <rect x="600" y="280" width="200" height="90" fill="#ECFDF5" stroke="#34D399" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="700" y="315" text-anchor="middle" font-size="20" font-weight="bold" fill="#047857">🔍 類似度検索</text>
+          <text x="700" y="342" text-anchor="middle" font-size="18" fill="#065F46">Top-K 関連文書</text>
+          <text x="700" y="362" text-anchor="middle" font-size="18" fill="#065F46">取得（3〜5件）</text>
+          <!-- B4: LLM -->
+          <rect x="870" y="280" width="220" height="90" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="2" rx="8" filter="url(#shadow-rag)"/>
+          <text x="980" y="315" text-anchor="middle" font-size="20" font-weight="bold" fill="#991B1B">💬 LLM生成</text>
+          <text x="980" y="342" text-anchor="middle" font-size="18" fill="#7F1D1D">Claude 等で</text>
+          <text x="980" y="362" text-anchor="middle" font-size="18" fill="#7F1D1D">回答を合成</text>
+
+          <!-- Phase B arrows -->
+          <line x1="260" y1="325" x2="328" y2="325" stroke="#10B981" stroke-width="3" marker-end="url(#arrow-rag-green)"/>
+          <line x1="530" y1="325" x2="598" y2="325" stroke="#10B981" stroke-width="3" marker-end="url(#arrow-rag-green)"/>
+          <line x1="800" y1="325" x2="868" y2="325" stroke="#10B981" stroke-width="3" marker-end="url(#arrow-rag-green)"/>
+
+          <!-- Connection: S3 Vectors (A3) → Query (B3) -->
+          <line x1="700" y1="180" x2="700" y2="280" stroke="#34D399" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-rag-green)"/>
+          <text x="720" y="235" font-size="16" fill="#047857">保管データを参照</text>
+
+          <!-- Result callout -->
+          <rect x="80" y="420" width="1040" height="110" fill="#F0FDF4" stroke="#34D399" stroke-width="2" rx="8"/>
+          <text x="600" y="455" text-anchor="middle" font-size="22" font-weight="bold" fill="#047857">✅ 結果: ユーザーに正確な回答を返す</text>
+          <text x="600" y="485" text-anchor="middle" font-size="20" fill="#065F46">「就業規則 第12条によると、年次有給休暇は...（社内文書を根拠にした回答）」</text>
+          <text x="600" y="510" text-anchor="middle" font-size="18" fill="#047857">→ LLM単体では知り得ない社内情報を、ベクトル検索で補強するのが RAG</text>
+        </svg>
+        <p class="svg-caption">図10: RAG アーキテクチャ。フェーズA（事前処理）で文書をベクトル化して S3 Vectors に保管し、フェーズB（リアルタイム）で質問ベクトルと類似する文書を検索して LLM に渡す。</p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 11: Limits & Best Practices
+         ============================================ -->
+    <section class="section" id="limits" aria-labelledby="limits-heading">
+      <h2 id="limits-heading">⚠️ 11. 制限値とベストプラクティス</h2>
+
+      <p>
+        S3 Vectors は「安く、スケールする」設計ですが、押さえておくべき制限値と、パフォーマンスを引き出すコツがあります。
+      </p>
+
+      <h3>主な制限値（クォータ）</h3>
+      <table class="limits-table">
+        <thead>
+          <tr>
+            <th class="th-w35">項目</th>
+            <th class="th-w25">値</th>
+            <th class="th-w50">備考</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ベクトルバケット数</td>
+            <td><code>10,000</code> / リージョン</td>
+            <td>通常の設計では十分。足りなければ上限緩和申請。</td>
+          </tr>
+          <tr>
+            <td>ベクトル次元数</td>
+            <td><code>1〜4,096</code></td>
+            <td><strong>インデックス作成後は変更不可</strong>。埋め込みモデルの次元数に合わせる。</td>
+          </tr>
+          <tr>
+            <td>距離メトリクス</td>
+            <td>Cosine / Euclidean</td>
+            <td><strong>インデックス作成後は変更不可</strong>。迷ったら Cosine。</td>
+          </tr>
+          <tr>
+            <td>非フィルタメタデータキー数</td>
+            <td>最大 <code>10</code> 個</td>
+            <td><strong>インデックス作成後は変更不可</strong>。フィルタ不要な大容量フィールド用。</td>
+          </tr>
+          <tr>
+            <td>PutVectors / DeleteVectors</td>
+            <td><code>1,000</code> req/s / index<br><code>2,500</code> vectors/s / index</td>
+            <td>1リクエストで最大 <code>500</code> ベクトル投入可能。バッチ化で効率UP。</td>
+          </tr>
+          <tr>
+            <td>QueryVectors</td>
+            <td>数百 req/s / index</td>
+            <td>超過時は <code>429 Too Many Requests</code>。指数バックオフで再試行。</td>
+          </tr>
+          <tr>
+            <td>ListVectors の並列度</td>
+            <td>最大 <code>16</code> セグメント</td>
+            <td>大量ベクトルの一覧取得を並列化可能。</td>
+          </tr>
+          <tr>
+            <td>ListVectorBuckets / ListIndexes</td>
+            <td>1ページ <code>500</code> 件</td>
+            <td>ページネーションで取得。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>設計ベストプラクティス</h3>
+      <div class="bp-grid">
+        <div class="bp-card">
+          <h4>🎯 次元数は最初に決め切る</h4>
+          <p>
+            1024次元か1536次元か──後から変更できないので、採用する埋め込みモデルを先に決めてからインデックスを作成してください。
+            モデル切替時はインデックス再作成＆再投入が必要です。
+          </p>
+        </div>
+        <div class="bp-card">
+          <h4>📏 距離メトリクスは Cosine 基本</h4>
+          <p>
+            テキストや画像の Embedding は<strong>正規化された単位ベクトル</strong>が多く、意味的類似度には Cosine が自然です。
+            迷ったら Cosine を選べば間違いは少ない。
+          </p>
+        </div>
+        <div class="bp-card">
+          <h4>📦 バッチで投入する</h4>
+          <p>
+            1件ずつ <code>PutVectors</code> を呼ぶのではなく、<strong>500件単位のバッチ</strong>で投入するとスループットが跳ね上がります。
+            大量移行時は複数インデックスに分散させると並列化しやすい。
+          </p>
+        </div>
+        <div class="bp-card">
+          <h4>🏷️ メタデータ設計を先に考える</h4>
+          <ul>
+            <li>フィルタしたいキー（<code>category</code>, <code>year</code>, <code>tenant_id</code>）はフィルタ可能に</li>
+            <li>生テキストや画像URLなど大容量・フィルタ不要なものは<strong>非フィルタメタデータ</strong>（最大10個）に</li>
+            <li>マルチテナント分離にも <code>tenant_id</code> フィルタが有効</li>
+          </ul>
+        </div>
+        <div class="bp-card">
+          <h4>♻️ 429エラーには指数バックオフ</h4>
+          <p>
+            スロットリング発生時は、<code>1秒 → 2秒 → 4秒 → 8秒</code>と待機時間を倍々に伸ばして再試行。
+            AWS SDK は標準で実装していますが、自前実装の場合は忘れずに入れましょう。
+          </p>
+        </div>
+        <div class="bp-card">
+          <h4>🔥 ホットデータは OpenSearch へ</h4>
+          <p>
+            「数万QPSでミリ秒応答が必要」なユースケースは S3 Vectors の想定外。
+            <strong>全量は S3 Vectors に保管</strong>し、高頻度クエリ対象だけ OpenSearch Serverless にエクスポートする階層構成が効果的。
+          </p>
+        </div>
+        <div class="bp-card">
+          <h4>🔐 セキュリティは S3 の流儀</h4>
+          <p>
+            IAM ポリシー、Block Public Access（常時有効）、KMS 暗号化に対応。
+            ただし名前空間は <code>s3vectors</code>（従来の <code>s3</code> とは別）なので、IAM アクションも <code>s3vectors:PutVectors</code> のように書きます。
+          </p>
+        </div>
+        <div class="bp-card">
+          <h4>📊 コスト最適化の勘所</h4>
+          <p>
+            S3 Vectors のコスト構造は<strong>ストレージ + リクエスト + クエリ</strong>。
+            <code>ListVectors</code> を雑に叩かない、<code>QueryVectors</code> の結果をアプリ側でキャッシュ、が基本です。
+            最大 90% 削減は「クエリ数が中程度」の前提条件下。
+          </p>
+        </div>
+      </div>
+
+      <div class="info-box warning">
+        <div class="info-box-title">⚠️ インデックス作成時に固定される値</div>
+        <p class="info-note-zero">
+          以下はインデックス作成時に決定し、<strong>後から絶対に変更できません</strong>：
+          <strong>① 次元数、② 距離メトリクス、③ データ型（float32）、④ 非フィルタメタデータキー</strong>。
+          変更したい場合は新しいインデックスを作り直してベクトルを再投入する必要があります。設計時の最重要決定ポイント。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         Section 12: FAQ
+         ============================================ -->
+    <section class="section" id="faq" aria-labelledby="faq-heading">
+      <h2 id="faq-heading">❓ 12. よくある質問（FAQ）</h2>
+
+      <details class="faq-item">
+        <summary>S3 Vectors は普通の S3 バケットと同じ場所に作れますか？</summary>
+        <div class="faq-answer">
+          いいえ、別の名前空間（<strong>s3vectors</strong>）として独立しています。従来の S3 バケットと S3 Vectors バケットは名前空間も API も別物です。
+          CLI なら <code>aws s3</code> ではなく <code>aws s3vectors</code> を使います。
+          IAM アクションも <code>s3vectors:CreateVectorBucket</code> のように書く必要があります。
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>ベクトルに変換する処理（Embedding）は S3 Vectors でやってくれるの？</summary>
+        <div class="faq-answer">
+          いいえ、<strong>S3 Vectors は「保管」と「類似度検索」が専門</strong>です。
+          テキストや画像からベクトルを生成する処理は <strong>Amazon Bedrock（Titan Embeddings、Cohere Embed 等）や SageMaker</strong> で行い、
+          できたベクトルを <code>PutVectors</code> API で S3 Vectors に投入する、という役割分担になります。
+          Bedrock Knowledge Bases を使えばこの連携を自動化できます。
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>距離メトリクスは Cosine と Euclidean のどちらを選べばいい？</summary>
+        <div class="faq-answer">
+          <strong>迷ったら Cosine を選んでください</strong>。テキストや画像の Embedding モデルは多くが正規化された単位ベクトルを出力するため、
+          意味的な類似度を測るには Cosine（角度ベース）が自然です。
+          Euclidean は「ベクトルの大きさ自体に意味があるデータ」（座標データなど）で有効ですが、一般的な類似度検索では Cosine で問題ありません。
+          <strong>なお、作成後は変更不可</strong>なので慎重に選びましょう。
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>OpenSearch Service との違いは？どう使い分ける？</summary>
+        <div class="faq-answer">
+          ざっくり「<strong>コスト重視なら S3 Vectors、低レイテンシ・高QPS重視なら OpenSearch</strong>」です。
+          S3 Vectors はサーバーレスで最大 90% のコスト削減、レイテンシは秒未満〜100ms程度。
+          OpenSearch Serverless は高性能で数十ms以下、ただしコストは高め。
+          <strong>階層構成</strong>（全量は S3 Vectors、ホットデータだけ OpenSearch にエクスポート）も AWS 公式パターンとして推奨されています。
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>後から次元数やメタデータ設計を変更できる？</summary>
+        <div class="faq-answer">
+          <strong>できません</strong>。インデックス作成時に固定される項目は：
+          ① 次元数、② 距離メトリクス、③ データ型、④ 非フィルタメタデータキーの4つ。
+          変更したい場合は<strong>新しいインデックスを作ってベクトルを再投入</strong>する必要があります。
+          設計時に埋め込みモデルと必要なメタデータを先に確定させておきましょう。
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>どれくらいのベクトル数までスケールする？</summary>
+        <div class="faq-answer">
+          AWS は「<strong>数十億ベクトル</strong>までスケール」とアナウンスしており、1つのインデックスで大規模なコーパス（文書群）を扱えます。
+          ストレージは S3 と同じ弾力性・耐久性（11ナイン）・可用性を持つため、容量に関する事前プロビジョニングは不要です。
+          リクエスト側のリミット（PutVectors 1,000 req/s、QueryVectors 数百 req/s）はインデックス単位なので、超大規模ワークロードではインデックスを分割して並列化するのが定石。
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>マルチテナントSaaSで、テナントごとにデータを分離したい</summary>
+        <div class="faq-answer">
+          2つの設計パターンがあります：<br>
+          ① <strong>テナントごとにインデックス</strong>：完全分離だがインデックス数に応じて管理コスト増<br>
+          ② <strong>1インデックス+メタデータ分離</strong>：<code>tenant_id</code> をフィルタ可能なメタデータにし、クエリ時に必ず
+          <code>{"tenant_id": {"$eq": "xxx"}}</code> フィルタを付与<br>
+          小規模なら②、厳格な分離要件があれば①。ハイブリッドで「大口テナントだけ専用インデックス」もアリです。
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================
+         Section 13: Cheatsheet
+         ============================================ -->
+    <section class="cheatsheet" id="cheatsheet" aria-labelledby="cs-heading">
+      <h2 id="cs-heading">📝 13. チートシート</h2>
+
+      <div class="cheatsheet-grid">
+        <div class="cheatsheet-item">
+          <div class="cs-term">S3 Vectors</div>
+          <div class="cs-def">
+            AWS初のサーバーレス・ベクトル保管＆類似度検索サービス。S3のコストパフォーマンスで、意味ベースの検索を実現。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">Vector Bucket / Index / Vector</div>
+          <div class="cs-def">
+            バケット = 店舗、インデックス = 本棚（次元数と距離メトリクスを持つ）、ベクトル = 1冊の本（キー＋数値配列＋メタデータ）。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">Embedding</div>
+          <div class="cs-def">
+            テキスト/画像を意味空間の数値配列に変換する処理。Bedrock Titan Embeddings や Cohere Embed を使用。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">距離メトリクス</div>
+          <div class="cs-def">
+            <strong>Cosine</strong>（角度、テキスト向け・デフォルト推奨）または <strong>Euclidean</strong>（直線距離、座標データ向け）。作成後変更不可。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">Top-K クエリ</div>
+          <div class="cs-def">
+            クエリベクトルに最も近い K 個を返す。<code>topK=5</code> なら上位5件。メタデータフィルタと組み合わせ可。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">メタデータフィルタ</div>
+          <div class="cs-def">
+            <code>$eq</code>, <code>$ne</code>, <code>$gt</code>, <code>$in</code> などの演算子で絞り込み。フィルタ可能キーに事前登録が必要。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">固定パラメータ（変更不可）</div>
+          <div class="cs-def">
+            ① 次元数（1〜4096）、② 距離メトリクス、③ データ型、④ 非フィルタメタデータキー（最大10）。設計時に確定。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">スループット</div>
+          <div class="cs-def">
+            PutVectors: 1,000 req/s・2,500 vectors/s per index、QueryVectors: 数百 req/s per index。超過時は 429。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">統合サービス</div>
+          <div class="cs-def">
+            <strong>Bedrock Knowledge Bases</strong>（RAG自動化）、<strong>OpenSearch Service</strong>（階層エクスポート）、<strong>SageMaker Unified Studio</strong>。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">向いている用途</div>
+          <div class="cs-def">
+            RAG、類似画像検索、文書重複検出、レコメンド、著作権侵害チェック──<strong>大規模×低〜中頻度クエリ×コスト重視</strong>。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">API名前空間</div>
+          <div class="cs-def">
+            <code>s3vectors</code>（通常の <code>s3</code> とは別）。IAMアクションも <code>s3vectors:PutVectors</code> の形式。
+          </div>
+        </div>
+        <div class="cheatsheet-item">
+          <div class="cs-term">コスト優位性</div>
+          <div class="cs-def">
+            ベクトルのアップロード・保管・クエリコストを<strong>最大90%削減</strong>（従来のベクトルDB比較、中〜低頻度クエリ前提）。
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scroll to top button -->
+  <button type="button" id="scrollToTopBtn" class="scroll-to-top" aria-label="ページトップへスクロール">
+    ↑
+  </button>
+
+  <!-- Footer -->
+  <footer class="page-footer" role="contentinfo">
+    <p>Amazon S3 Vectors 類似度検索 完全ガイド（古本屋のたとえ話で理解する）</p>
+    <p>本ガイドは AWS 公式ドキュメントをもとに、学習目的で作成した非公式の解説資料です。</p>
+  </footer>
+`;
+---
+<ResourceLayout {...frontmatter}>
+  <Fragment set:html={rawContent} />
+</ResourceLayout>
