@@ -33,17 +33,23 @@ L2 service、L3 concept、L4 keyword の `axis_tags[]` に使用できる値。
 ## parent_domain_id（L1ドメイン）
 
 L2 service の `parent_domain_id` に使用できる値。
+**実在する 8 ドメインのみ有効**（`concepts/domains/*.json` が真実のソース）。
 
 | 値 | 日本語名 | 主なサービス |
 |----|--------|------------|
 | `dom-network` | ネットワーキング | VPC, Route 53, CloudFront, Direct Connect |
-| `dom-compute` | コンピュート | EC2, Lambda, ECS, EKS, Fargate |
+| `dom-compute` | コンピューティング | EC2, Lambda, ECS, EKS, Fargate |
 | `dom-storage` | ストレージ | S3, EBS, EFS, FSx, Storage Gateway |
-| `dom-database` | データベース | RDS, DynamoDB, Aurora, ElastiCache, Redshift |
-| `dom-security` | セキュリティ & アイデンティティ | IAM, KMS, WAF, Shield, GuardDuty, Cognito |
-| `dom-analytics` | アナリティクス & ML | Kinesis, Glue, Athena, SageMaker, EMR |
-| `dom-management` | 管理 & 運用 | CloudWatch, CloudTrail, Systems Manager, Config |
-| `dom-integration` | アプリケーション統合 | SQS, SNS, EventBridge, Step Functions, API Gateway |
+| `dom-database` | データベース | RDS, Aurora, DynamoDB, ElastiCache |
+| `dom-security` | セキュリティ・コンプライアンス | IAM, KMS, GuardDuty, Security Hub, WAF, Shield |
+| `dom-data` | データ分析 | Kinesis, Athena, Redshift, EMR, Glue |
+| `dom-ml` | 機械学習・AI | **SageMaker, Bedrock, Rekognition, Comprehend** |
+| `dom-management` | 管理・ガバナンス | CloudWatch, CloudTrail, Config, Organizations, Systems Manager |
+
+> **禁止値（存在しないドメイン）:** `dom-analytics`, `dom-integration`, `dom-ai` 等。
+> 存在しない `parent_domain_id` を指定すると、UI のツリー構築で親が見つからず
+> **サービスが画面に表示されません**（silent failure — validator も検出しない）。
+> 追加前に必ず `ls concepts/domains/` で実ファイルを確認すること。
 
 ---
 
