@@ -1,0 +1,1855 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   AWS Transit Gateway マルチキャスト完全ガイド - ケーブルTV局で理解するマルチキャスト配信
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h3"> <a href="#マルチキャスト-=-チャンネル配信">マルチキャスト = チャンネル配信</a> </li><li class="toc-h3"> <a href="#Transit-Gateway-=-TV局の中継局">Transit Gateway = TV局の中継局</a> </li><li class="toc-h3"> <a href="#IGMP-=-チャンネル契約の仕組み">IGMP = チャンネル契約の仕組み</a> </li><li class="toc-h3"> <a href="#2つのモード-IGMP-vs-静的">2つのモード: IGMP vs 静的</a> </li><li class="toc-h2"> <a href="#ケーブルTV局で理解するマルチキャスト">ケーブルTV局で理解するマルチキャスト</a> </li><li class="toc-h3"> <a href="#マルチキャスト-＝-ケーブルTVの契約チャンネル配信">マルチキャスト ＝ ケーブルTVの契約チャンネル配信</a> </li><li class="toc-h3"> <a href="#電話1対1通話">電話（1対1通話）</a> </li><li class="toc-h3"> <a href="#街頭スピーカー1対全員">街頭スピーカー（1対全員）</a> </li><li class="toc-h3"> <a href="#ケーブルTV1対登録者">ケーブルTV（1対登録者）</a> </li><li class="toc-h2"> <a href="#アーキテクチャ全体像">アーキテクチャ全体像</a> </li><li class="toc-h3"> <a href="#マルチキャストドメイン">📡 マルチキャストドメイン</a> </li><li class="toc-h3"> <a href="#マルチキャストグループ">📺 マルチキャストグループ</a> </li><li class="toc-h2"> <a href="#IGMP-＝-チャンネル契約の仕組み">IGMP ＝ チャンネル契約の仕組み</a> </li><li class="toc-h3"> <a href="#JOIN-チャンネル契約">JOIN: チャンネル契約</a> </li><li class="toc-h3"> <a href="#QUERY-視聴確認はがき">QUERY: 視聴確認はがき</a> </li><li class="toc-h3"> <a href="#応答-まだ見てます！">応答: まだ見てます！</a> </li><li class="toc-h3"> <a href="#LEAVE-チャンネル解約">LEAVE: チャンネル解約</a> </li><li class="toc-h3"> <a href="#⚠️-IGMPv2-強制設定が必要">⚠️ IGMPv2 強制設定が必要</a> </li><li class="toc-h2"> <a href="#2つのモード-静的-vs-IGMP">2つのモード: 静的 vs IGMP</a> </li><li class="toc-h3"> <a href="#静的Staticモード">📋 静的（Static）モード</a> </li><li class="toc-h3"> <a href="#IGMP動的モード">🔄 IGMP（動的）モード</a> </li><li class="toc-h3"> <a href="#試験対策ポイントANS-C01">📝 試験対策ポイント（ANS-C01）</a> </li><li class="toc-h2"> <a href="#必要なネットワーク設定">必要なネットワーク設定</a> </li><li class="toc-h3"> <a href="#ネットワークACL-インバウンドルール最小構成">ネットワークACL: インバウンドルール（最小構成）</a> </li><li class="toc-h3"> <a href="#ネットワークACL-アウトバウンドルール最小構成">ネットワークACL: アウトバウンドルール（最小構成）</a> </li><li class="toc-h3"> <a href="#セキュリティグループの注意点">💡 セキュリティグループの注意点</a> </li><li class="toc-h2"> <a href="#設定手順とコード例">設定手順とコード例</a> </li><li class="toc-h2"> <a href="#主なユースケース">主なユースケース</a> </li><li class="toc-h3"> <a href="#金融データの同時配信">金融データの同時配信</a> </li><li class="toc-h3"> <a href="#ストリーミングメディア配信">ストリーミングメディア配信</a> </li><li class="toc-h3"> <a href="#分散システムの状態同期">分散システムの状態同期</a> </li><li class="toc-h3"> <a href="#ソフトウェア更新の一斉配布">ソフトウェア更新の一斉配布</a> </li><li class="toc-h3"> <a href="#⚠️-不向きなケース">⚠️ 不向きなケース</a> </li><li class="toc-h2"> <a href="#IGMP対応マルチキャストの利点">IGMP対応マルチキャストの利点</a> </li><li class="toc-h3"> <a href="#動的なグループ管理">動的なグループ管理</a> </li><li class="toc-h3"> <a href="#アプリケーション変更不要">アプリケーション変更不要</a> </li><li class="toc-h3"> <a href="#リアルタイムの追跡">リアルタイムの追跡</a> </li><li class="toc-h3"> <a href="#帯域幅の効率化">帯域幅の効率化</a> </li><li class="toc-h2"> <a href="#よくある質問FAQ">よくある質問（FAQ）</a> </li><li class="toc-h2"> <a href="#まとめ">まとめ</a> </li><li class="toc-h3"> <a href="#マルチキャスト">📡 マルチキャスト</a> </li><li class="toc-h3"> <a href="#Transit-Gateway">🔀 Transit Gateway</a> </li><li class="toc-h3"> <a href="#IGMP">📋 IGMP</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> ネットワーキング </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <style>/* ========================================
+   CSS Custom Properties
+   ======================================== */
+:root {
+    --color-primary: #232F3E;
+    --color-accent: #dc7600;
+    --color-accent-light: #FFF3E0;
+    --color-accent-original: #FF9900;
+    --color-text: #374151;
+    --color-text-secondary: #6B7280;
+    --color-text-white: #FFFFFF;
+    --color-bg: #FFFFFF;
+    --color-bg-light: #F9FAFB;
+    --color-bg-section: #F3F4F6;
+    --color-border: #E5E7EB;
+    --color-border-dark: #909296;
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+    --color-info: #3B82F6;
+    --color-networking: #2563EB;
+    --color-networking-light: #EFF6FF;
+    --color-networking-mid: #BFDBFE;
+    --color-multicast-purple: #7C3AED;
+    --color-multicast-light: #F5F3FF;
+    --color-igmp-teal: #0D9488;
+    --color-igmp-light: #F0FDFA;
+    --color-source-pink: #DB2777;
+    --color-source-light: #FDF2F8;
+    --color-member-green: #059669;
+    --color-member-light: #ECFDF5;
+    --font-sans: "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Meiryo", sans-serif;
+    --spacing-xs: 5px;
+    --spacing-sm: 10px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+    --spacing-3xl: 64px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+    --transition: 0.3s ease;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: var(--font-sans);
+    font-size: 20px;
+    line-height: 1.7;
+    color: var(--color-text);
+    background: var(--color-bg);
+            padding-top: 70px;}
+
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+}
+
+h1 { font-size: 2.2em; line-height: 1.3; }
+h2 { font-size: 1.6em; line-height: 1.35; }
+h3 { font-size: 1.25em; line-height: 1.4; }
+p { margin-bottom: var(--spacing-md); }
+
+/* ========================================
+   Hero Section
+   ======================================== */
+.hero {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #1a2332 60%, #2d1b69 100%);
+    color: var(--color-text-white);
+    padding: var(--spacing-3xl) var(--spacing-lg);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(124,58,237,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(37,99,235,0.15) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.hero-content { position: relative; max-width: 900px; margin: 0 auto; }
+
+.hero-badge {
+    display: inline-block;
+    background: rgba(255,153,0,0.2);
+    border: 1px solid rgba(255,153,0,0.4);
+    color: var(--color-accent-original);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: 100px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    letter-spacing: 0.03em;
+}
+
+.hero h1 { margin-bottom: var(--spacing-md); color: var(--color-text-white); }
+
+.hero-sub {
+    font-size: 1.1em;
+    opacity: 0.85;
+    max-width: 700px;
+    margin: 0 auto var(--spacing-2xl);
+}
+
+/* Conclusion-First Cards */
+.conclusion-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+    text-align: left;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.conclusion-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    backdrop-filter: blur(10px);
+    transition: background var(--transition);
+}
+
+.conclusion-card:hover { background: rgba(255,255,255,0.12); }
+
+.conclusion-icon {
+    font-size: 1.5em;
+    margin-bottom: var(--spacing-xs);
+    display: block;
+}
+
+.conclusion-card .conclusion-card-title {
+    font-size: 1em;
+    margin-bottom: var(--spacing-xs);
+    color: var(--color-accent-original);
+}
+
+.conclusion-card p {
+    font-size: 0.88em;
+    opacity: 0.85;
+    margin-bottom: 0;
+    line-height: 1.55;
+}
+
+/* ========================================
+   Section Styles
+   ======================================== */
+.section {
+    padding: var(--spacing-3xl) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.section:last-child { border-bottom: none; }
+
+.section-header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.section-number {
+    display: inline-block;
+    background: var(--color-primary);
+    color: var(--color-text-white);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    line-height: 44px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.section-header h2 { margin-bottom: var(--spacing-xs); }
+
+.section-header p {
+    color: var(--color-text-secondary);
+    font-size: 0.95em;
+}
+
+/* ========================================
+   Analogy Section
+   ======================================== */
+.analogy-hero {
+    background: linear-gradient(135deg, var(--color-networking-light) 0%, #f0f0ff 100%);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    margin-bottom: var(--spacing-2xl);
+    text-align: center;
+    border: 1px solid var(--color-networking-mid);
+}
+
+.analogy-hero .analogy-emoji {
+    font-size: 3.5em;
+    display: block;
+    margin-bottom: var(--spacing-md);
+}
+
+.analogy-hero h3 {
+    font-size: 1.35em;
+    color: var(--color-networking);
+    margin-bottom: var(--spacing-sm);
+}
+
+.analogy-hero p {
+    max-width: 680px;
+    margin: 0 auto;
+    color: var(--color-text-secondary);
+    font-size: 0.95em;
+}
+
+/* Communication Types Comparison */
+.comm-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.comm-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    transition: transform var(--transition), box-shadow var(--transition);
+    border-top: 4px solid transparent;
+}
+
+.comm-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.comm-card.unicast { border-top-color: var(--color-info); }
+.comm-card.broadcast { border-top-color: var(--color-warning); }
+.comm-card.multicast { border-top-color: var(--color-multicast-purple); }
+
+.comm-card .card-emoji {
+    font-size: 2.5em;
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.comm-card h3 { font-size: 1.1em; margin-bottom: var(--spacing-xs); }
+
+.comm-card .comm-type {
+    font-size: 0.85em;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.comm-card p {
+    font-size: 0.88em;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+.comm-card .highlight-label {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 100px;
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.unicast .highlight-label { background: #DBEAFE; color: #1D4ED8; }
+.broadcast .highlight-label { background: #FEF3C7; color: #B45309; }
+.multicast .highlight-label { background: #EDE9FE; color: #6D28D9; }
+
+/* ========================================
+   Mapping Table
+   ======================================== */
+.mapping-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: var(--spacing-2xl);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.mapping-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92em;
+}
+
+.mapping-table thead {
+    background: var(--color-primary);
+    color: var(--color-text-white);
+}
+
+.mapping-table th {
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: left;
+    font-weight: 600;
+}
+
+.mapping-table td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+}
+
+.mapping-table tbody tr:nth-child(even) { background: var(--color-bg-light); }
+.mapping-table tbody tr:hover { background: var(--color-accent-light); }
+
+.mapping-table .emoji-cell {
+    text-align: center;
+    font-size: 1.4em;
+}
+
+/* ========================================
+   SVG Diagram Area
+   ======================================== */
+.diagram-container {
+    background: var(--color-bg-light);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+    border: 1px solid var(--color-border);
+}
+
+.diagram-title {
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.diagram-container svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
+/* ========================================
+   IGMP Flow
+   ======================================== */
+.flow-steps {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.flow-step {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    border-left: 5px solid var(--color-igmp-teal);
+    position: relative;
+}
+
+.flow-step-number {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-igmp-teal);
+    color: var(--color-text-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95em;
+}
+
+.flow-step h3 {
+    color: var(--color-igmp-teal);
+    font-size: 1.05em;
+    margin-bottom: var(--spacing-xs);
+}
+
+.flow-step p {
+    font-size: 0.88em;
+    margin-bottom: 0;
+    line-height: 1.55;
+}
+
+/* ========================================
+   Domain / Architecture Cards
+   ======================================== */
+.arch-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.arch-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border-top: 4px solid var(--color-networking);
+}
+
+.arch-card h3 {
+    font-size: 1.05em;
+    color: var(--color-networking);
+    margin-bottom: var(--spacing-sm);
+}
+
+.arch-card p {
+    font-size: 0.88em;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-sm);
+}
+
+.arch-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.arch-card li {
+    font-size: 0.85em;
+    padding: var(--spacing-xs) 0;
+    padding-left: 1.5em;
+    position: relative;
+}
+
+.arch-card li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--color-success);
+    font-weight: 700;
+}
+
+/* ========================================
+   Benefit Grid
+   ======================================== */
+.benefit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.benefit-card {
+    display: flex;
+    gap: var(--spacing-md);
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    transition: box-shadow var(--transition);
+}
+
+.benefit-card:hover { box-shadow: var(--shadow-md); }
+
+.benefit-icon {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    background: var(--color-multicast-light);
+}
+
+.benefit-card h3 {
+    font-size: 1em;
+    margin-bottom: var(--spacing-xs);
+}
+
+.benefit-card p {
+    font-size: 0.85em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0;
+    line-height: 1.5;
+}
+
+/* ========================================
+   Use Case Section
+   ======================================== */
+.usecase-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.usecase-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition);
+}
+
+.usecase-card:hover { transform: translateY(-3px); }
+
+.usecase-card .card-emoji {
+    font-size: 2em;
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.usecase-card h3 {
+    font-size: 1.05em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.usecase-card p {
+    font-size: 0.85em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0;
+    line-height: 1.55;
+}
+
+/* ========================================
+   Caution / Warning Boxes
+   ======================================== */
+.caution-box {
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    border-left: 5px solid var(--color-error);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.caution-box h3 {
+    color: var(--color-error);
+    font-size: 1.05em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.caution-box ul {
+    padding-left: 1.5em;
+    margin: 0;
+}
+
+.caution-box li {
+    font-size: 0.88em;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-xs);
+}
+
+.tip-box {
+    background: var(--color-networking-light);
+    border: 1px solid var(--color-networking-mid);
+    border-left: 5px solid var(--color-networking);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.tip-box h3 {
+    color: var(--color-networking);
+    font-size: 1.05em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.tip-box p {
+    font-size: 0.88em;
+    margin-bottom: 0;
+    line-height: 1.6;
+}
+
+.exam-tip {
+    background: var(--color-accent-light);
+    border: 1px solid #FFCC80;
+    border-left: 5px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.exam-tip h3 {
+    color: var(--color-accent);
+    font-size: 1.05em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.exam-tip ul {
+    padding-left: 1.5em;
+    margin: 0;
+}
+
+.exam-tip li {
+    font-size: 0.88em;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-xs);
+}
+
+/* ========================================
+   Code Block
+   ======================================== */
+.code-section { margin-bottom: var(--spacing-2xl); }
+
+.code-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 0;
+}
+
+.code-tab {
+    background: var(--color-bg-section);
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    transition: background var(--transition), color var(--transition);
+}
+
+.code-tab.active {
+    background: var(--color-primary);
+    color: var(--color-text-white);
+    border-color: var(--color-primary);
+}
+
+.code-block {
+    display: none;
+    background: var(--color-primary);
+    color: #E5E7EB;
+    border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
+    padding: var(--spacing-lg);
+    overflow-x: auto;
+    font-family: "Cascadia Code", "Fira Code", "Source Code Pro", monospace;
+    font-size: 0.78em;
+    line-height: 1.7;
+}
+
+.code-block.active { display: block; }
+
+.code-block .comment { color: #6B7280; }
+.code-block .keyword { color: #93C5FD; }
+.code-block .string { color: #86EFAC; }
+.code-block .prop { color: #FCD34D; }
+
+/* ========================================
+   Comparison Table (Static vs IGMP)
+   ======================================== */
+.compare-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.compare-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.compare-card.static-mode {
+    border-top: 4px solid var(--color-info);
+}
+
+.compare-card.igmp-mode {
+    border-top: 4px solid var(--color-multicast-purple);
+}
+
+.compare-card h3 {
+    font-size: 1.1em;
+    margin-bottom: var(--spacing-md);
+}
+
+.compare-card .compare-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.85em;
+}
+
+.compare-card .compare-item:last-child { border-bottom: none; }
+
+.compare-label { color: var(--color-text-secondary); }
+.compare-value { font-weight: 600; }
+
+/* ========================================
+   ACL / Security Table
+   ======================================== */
+.security-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.security-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+}
+
+.security-table thead { background: #1E3A5F; color: var(--color-text-white); }
+
+.security-table th {
+    padding: var(--spacing-md);
+    text-align: left;
+    font-weight: 600;
+}
+
+.security-table td {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.security-table tbody tr:nth-child(even) { background: var(--color-bg-light); }
+
+.security-table code {
+    background: #E5E7EB;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    font-family: "Cascadia Code", monospace;
+}
+
+/* ========================================
+   FAQ Section
+   ======================================== */
+.faq-list { margin-bottom: var(--spacing-2xl); }
+
+.faq-item {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+    overflow: hidden;
+    transition: box-shadow var(--transition);
+}
+
+.faq-item:hover { box-shadow: var(--shadow-sm); }
+
+.faq-question {
+    width: 100%;
+    background: var(--color-bg);
+    border: none;
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: left;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: inherit;
+    transition: background var(--transition);
+}
+
+.faq-question:hover { background: var(--color-bg-light); }
+
+.faq-arrow {
+    transition: transform var(--transition);
+    font-size: 0.85em;
+    color: var(--color-text-secondary);
+}
+
+.faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+}
+
+.faq-item.open .faq-answer {
+    max-height: 500px;
+}
+
+.faq-answer-inner {
+    padding: 0 var(--spacing-lg) var(--spacing-lg);
+    font-size: 0.88em;
+    line-height: 1.65;
+    color: var(--color-text-secondary);
+}
+
+/* ========================================
+   Summary Section
+   ======================================== */
+.summary-section {
+    background: linear-gradient(135deg, var(--color-primary), #1a2332);
+    color: var(--color-text-white);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    margin: var(--spacing-2xl) 0;
+    text-align: center;
+}
+
+.summary-section h2 {
+    margin-bottom: var(--spacing-lg);
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+    text-align: left;
+    margin-bottom: var(--spacing-lg);
+}
+
+.summary-item {
+    background: rgba(255,255,255,0.07);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.summary-item h3 {
+    font-size: 0.95em;
+    color: var(--color-accent-original);
+    margin-bottom: var(--spacing-xs);
+}
+
+.summary-item p {
+    font-size: 0.82em;
+    opacity: 0.85;
+    margin-bottom: 0;
+    line-height: 1.5;
+}
+
+.summary-formula {
+    font-size: 1.15em;
+    font-weight: 700;
+    padding: var(--spacing-md);
+    background: rgba(255,153,0,0.15);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255,153,0,0.3);
+    display: inline-block;
+}
+
+/* ========================================
+   Footer
+   ======================================== */
+footer {
+    text-align: center;
+    padding: var(--spacing-2xl) var(--spacing-lg);
+    color: var(--color-text-secondary);
+    font-size: 0.82em;
+    border-top: 1px solid var(--color-border);
+}
+
+footer a {
+    color: var(--color-networking);
+    text-decoration: none;
+}
+
+footer a:hover { text-decoration: underline; }
+
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 768px) {
+    body { font-size: 18px;
+            padding-top: 70px;}
+    .conclusion-grid,
+    .comm-grid,
+    .flow-steps,
+    .arch-grid,
+    .benefit-grid,
+    .usecase-grid,
+    .compare-grid,
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    .hero { padding: var(--spacing-2xl) var(--spacing-md); }
+}</style>
+<!-- ============ Hero / Conclusion-First ============ -->
+<header class="hero">
+    <div class="hero-content">
+        <span class="hero-badge">AWS Transit Gateway Multicast</span>
+        <h1>マルチキャスト完全ガイド</h1>
+        <p class="hero-sub">ケーブルTV局のたとえで、1対多のグループ配信を直感的に理解する</p>
+
+        <!-- 結論ファースト: 4つの要点 -->
+        <div class="conclusion-grid">
+            <div class="conclusion-card">
+                <span class="conclusion-icon" aria-hidden="true">📡</span>
+                <div class="conclusion-card-title">マルチキャスト = チャンネル配信</div>
+                <p>1つのデータストリームを「登録した受信者だけ」に同時配信する通信方式。ケーブルTVの契約チャンネルと同じ仕組み。</p>
+            </div>
+            <div class="conclusion-card">
+                <span class="conclusion-icon" aria-hidden="true">🔀</span>
+                <div class="conclusion-card-title">Transit Gateway = TV局の中継局</div>
+                <p>VPC間のマルチキャストルーターとして機能し、複数のサブネットへ効率的にトラフィックを中継する。</p>
+            </div>
+            <div class="conclusion-card">
+                <span class="conclusion-icon" aria-hidden="true">📋</span>
+                <div class="conclusion-card-title">IGMP = チャンネル契約の仕組み</div>
+                <p>ホストがマルチキャストグループへ参加（JOIN）・離脱（LEAVE）するためのプロトコル。IGMPv2のみサポート。</p>
+            </div>
+            <div class="conclusion-card">
+                <span class="conclusion-icon" aria-hidden="true">⚙️</span>
+                <div class="conclusion-card-title">2つのモード: IGMP vs 静的</div>
+                <p>動的なIGMP方式と、AWS CLIで手動管理する静的方式の2つ。用途に応じて使い分ける。</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main>
+
+<!-- ============ Section 1: たとえ話 ============ -->
+<section class="section" id="analogy">
+    <div class="section-header">
+        <div class="section-number">1</div>
+        <h2 id="ケーブルTV局で理解するマルチキャスト">ケーブルTV局で理解するマルチキャスト</h2>
+        <p>3つの通信方式を「テレビの見方」で比較してみましょう</p>
+    </div>
+
+    <div class="analogy-hero">
+        <span class="analogy-emoji" aria-hidden="true">📺</span>
+        <h3 id="マルチキャスト-＝-ケーブルTVの契約チャンネル配信">マルチキャスト ＝ ケーブルTVの契約チャンネル配信</h3>
+        <p>ケーブルTV局は番組を1回だけ送出し、契約している家庭だけが視聴できます。未契約の家庭には届きません。AWSマルチキャストもまったく同じ仕組みで、登録されたグループメンバーだけにデータを効率的に同時配信します。</p>
+    </div>
+
+    <!-- 3つの通信方式を均等3カラムで比較 -->
+    <div class="comm-grid">
+        <div class="comm-card unicast">
+            <span class="card-emoji" aria-hidden="true">📞</span>
+            <span class="highlight-label">ユニキャスト</span>
+            <h3 id="電話1対1通話">電話（1対1通話）</h3>
+            <p class="comm-type">Aさん → Bさん</p>
+            <p>1人の相手に専用回線で話す方式。確実だが、100人に同じ話をするには100回電話する必要がある。</p>
+        </div>
+        <div class="comm-card broadcast">
+            <span class="card-emoji" aria-hidden="true">📢</span>
+            <span class="highlight-label">ブロードキャスト</span>
+            <h3 id="街頭スピーカー1対全員">街頭スピーカー（1対全員）</h3>
+            <p class="comm-type">Aさん → 全員</p>
+            <p>街中に放送を流す方式。全員に届くが、興味がない人にも強制的に聞こえてしまう。帯域の無駄遣い。</p>
+        </div>
+        <div class="comm-card multicast">
+            <span class="card-emoji" aria-hidden="true">📺</span>
+            <span class="highlight-label">マルチキャスト</span>
+            <h3 id="ケーブルTV1対登録者">ケーブルTV（1対登録者）</h3>
+            <p class="comm-type">Aさん → 契約者グループ</p>
+            <p>番組は1回だけ送出し、契約チャンネルの視聴者だけが受信。効率的かつ無駄がない。</p>
+        </div>
+    </div>
+
+    <!-- たとえ話マッピングテーブル -->
+    <div class="mapping-table-wrapper">
+        <table class="mapping-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>ケーブルTV局のたとえ</th>
+                    <th>AWS マルチキャスト</th>
+                    <th>役割</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">🏢</td>
+                    <td>ケーブルTV局（中継局）</td>
+                    <td>Transit Gateway</td>
+                    <td>マルチキャストルーターとして配信を中継</td>
+                </tr>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">📡</td>
+                    <td>放送エリア（配信区域）</td>
+                    <td>マルチキャストドメイン</td>
+                    <td>どのサブネットに配信するかの範囲を定義</td>
+                </tr>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">📺</td>
+                    <td>チャンネル（スポーツ、映画など）</td>
+                    <td>マルチキャストグループ（IPアドレス）</td>
+                    <td>受信したいデータの種類を区別</td>
+                </tr>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">🎬</td>
+                    <td>番組制作会社</td>
+                    <td>マルチキャスト送信元（Source ENI）</td>
+                    <td>データを送出するEC2インスタンス</td>
+                </tr>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">🏠</td>
+                    <td>契約している家庭の視聴者</td>
+                    <td>グループメンバー（Member ENI）</td>
+                    <td>データを受信するEC2インスタンス</td>
+                </tr>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">📋</td>
+                    <td>チャンネル契約・解約の手続き</td>
+                    <td>IGMP JOIN / LEAVE</td>
+                    <td>グループへの参加・離脱を動的に管理</td>
+                </tr>
+                <tr>
+                    <td class="emoji-cell" aria-hidden="true">📮</td>
+                    <td>「まだ視聴していますか？」の確認はがき</td>
+                    <td>IGMP Query（2分ごと）</td>
+                    <td>TGWがメンバーシップを定期的に確認</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ============ Section 2: アーキテクチャ図解 ============ -->
+<section class="section" id="architecture">
+    <div class="section-header">
+        <div class="section-number">2</div>
+        <h2 id="アーキテクチャ全体像">アーキテクチャ全体像</h2>
+        <p>Transit Gatewayがマルチキャストルーターとして機能する仕組み</p>
+    </div>
+
+    <div class="diagram-container">
+        <div class="diagram-title">Transit Gateway マルチキャスト アーキテクチャ図</div>
+        <svg viewBox="0 0 960 620" role="img" aria-label="Transit Gatewayマルチキャストのアーキテクチャ図。送信元EC2からTransit Gatewayを経由して複数のVPCのメンバーEC2にマルチキャストデータが配信される流れを示す。" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background -->
+            <rect width="960" height="620" fill="#F9FAFB" rx="16"/>
+
+            <!-- Transit Gateway (Center Hub) -->
+            <rect x="360" y="40" width="240" height="90" rx="14" fill="#232F3E" stroke="#FF9900" stroke-width="2.5"/>
+            <text x="480" y="72" text-anchor="middle" fill="#FF9900" font-size="21" font-weight="700">Transit Gateway</text>
+            <text x="480" y="100" text-anchor="middle" fill="#CBD5E1" font-size="16">マルチキャストルーター</text>
+
+            <!-- Multicast Domain Label -->
+            <rect x="100" y="160" width="760" height="440" rx="14" fill="none" stroke="#7C3AED" stroke-width="2" stroke-dasharray="8 4"/>
+            <rect x="310" y="147" width="340" height="28" rx="6" fill="#F5F3FF"/>
+            <text x="480" y="167" text-anchor="middle" fill="#7C3AED" font-size="16" font-weight="700">📡 マルチキャストドメイン</text>
+
+            <!-- VPC A: Source -->
+            <rect x="130" y="200" width="250" height="190" rx="12" fill="#FDF2F8" stroke="#DB2777" stroke-width="1.5"/>
+            <text x="255" y="228" text-anchor="middle" fill="#DB2777" font-size="17" font-weight="700">VPC-A（送信元）</text>
+
+            <!-- Subnet A -->
+            <rect x="150" y="245" width="210" height="55" rx="8" fill="#FFFFFF" stroke="#F9A8D4" stroke-width="1"/>
+            <text x="255" y="268" text-anchor="middle" fill="#6B7280" font-size="14">Subnet-A</text>
+            <text x="255" y="290" text-anchor="middle" fill="#DB2777" font-size="16" font-weight="600">🎬 Source EC2</text>
+
+            <!-- Source arrow label -->
+            <rect x="155" y="318" width="200" height="55" rx="8" fill="#FCE7F3" stroke="#F9A8D4" stroke-width="1"/>
+            <text x="255" y="340" text-anchor="middle" fill="#9D174D" font-size="14" font-weight="600">マルチキャスト送信</text>
+            <text x="255" y="360" text-anchor="middle" fill="#9D174D" font-size="13">グループIP: 239.1.1.1</text>
+
+            <!-- VPC B: Members -->
+            <rect x="580" y="200" width="250" height="190" rx="12" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+            <text x="705" y="228" text-anchor="middle" fill="#059669" font-size="17" font-weight="700">VPC-B（受信者）</text>
+
+            <!-- Subnet B-1 -->
+            <rect x="600" y="245" width="210" height="55" rx="8" fill="#FFFFFF" stroke="#A7F3D0" stroke-width="1"/>
+            <text x="705" y="268" text-anchor="middle" fill="#6B7280" font-size="14">Subnet-B-1</text>
+            <text x="705" y="290" text-anchor="middle" fill="#059669" font-size="16" font-weight="600">🏠 Member EC2 ×2</text>
+
+            <!-- Subnet B-2 -->
+            <rect x="600" y="318" width="210" height="55" rx="8" fill="#FFFFFF" stroke="#A7F3D0" stroke-width="1"/>
+            <text x="705" y="340" text-anchor="middle" fill="#6B7280" font-size="14">Subnet-B-2</text>
+            <text x="705" y="360" text-anchor="middle" fill="#059669" font-size="16" font-weight="600">🏠 Member EC2 ×1</text>
+
+            <!-- VPC C: Mixed -->
+            <rect x="330" y="420" width="300" height="160" rx="12" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="480" y="448" text-anchor="middle" fill="#2563EB" font-size="17" font-weight="700">VPC-C（送受信）</text>
+
+            <rect x="350" y="468" width="120" height="50" rx="8" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1"/>
+            <text x="410" y="490" text-anchor="middle" fill="#2563EB" font-size="14" font-weight="600">🎬 Source</text>
+            <text x="410" y="508" text-anchor="middle" fill="#6B7280" font-size="13">Subnet-C-1</text>
+
+            <rect x="490" y="468" width="120" height="50" rx="8" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1"/>
+            <text x="550" y="490" text-anchor="middle" fill="#059669" font-size="14" font-weight="600">🏠 Member</text>
+            <text x="550" y="508" text-anchor="middle" fill="#6B7280" font-size="13">Subnet-C-2</text>
+
+            <!-- IGMP label -->
+            <rect x="355" y="535" width="250" height="30" rx="6" fill="#DBEAFE"/>
+            <text x="480" y="556" text-anchor="middle" fill="#1D4ED8" font-size="14" font-weight="600">📋 IGMP JOIN/LEAVE で動的管理</text>
+
+            <!-- Arrows: Source VPC-A → TGW -->
+            <defs>
+                <marker id="arrowOrange" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                    <path d="M0,0 L10,4 L0,8 Z" fill="#FF9900"/>
+                </marker>
+                <marker id="arrowGreen" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                    <path d="M0,0 L10,4 L0,8 Z" fill="#059669"/>
+                </marker>
+                <marker id="arrowBlue" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                    <path d="M0,0 L10,4 L0,8 Z" fill="#2563EB"/>
+                </marker>
+            </defs>
+
+            <!-- VPC-A → TGW -->
+            <path d="M310,260 Q380,180 410,130" fill="none" stroke="#FF9900" stroke-width="2.5" marker-end="url(#arrowOrange)" stroke-dasharray="6 3"/>
+            <text x="335" y="185" fill="#FF9900" font-size="13" font-weight="600">送信</text>
+
+            <!-- TGW → VPC-B -->
+            <path d="M550,130 Q620,180 650,260" fill="none" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="610" y="185" fill="#059669" font-size="13" font-weight="600">配信</text>
+
+            <!-- TGW → VPC-C -->
+            <path d="M480,130 L480,420" fill="none" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+            <text x="492" y="280" fill="#2563EB" font-size="13" font-weight="600">配信</text>
+
+            <!-- Legend -->
+            <rect x="130" y="420" width="170" height="140" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+            <text x="145" y="446" fill="#374151" font-size="14" font-weight="700">凡例</text>
+            <line x1="145" y1="462" x2="175" y2="462" stroke="#FF9900" stroke-width="2.5" stroke-dasharray="6 3"/>
+            <text x="185" y="467" fill="#6B7280" font-size="13">送信トラフィック</text>
+            <line x1="145" y1="487" x2="175" y2="487" stroke="#059669" stroke-width="2.5"/>
+            <text x="185" y="492" fill="#6B7280" font-size="13">配信トラフィック</text>
+            <circle cx="155" cy="515" r="6" fill="#DB2777"/>
+            <text x="170" y="520" fill="#6B7280" font-size="13">送信元 (Source)</text>
+            <circle cx="155" cy="540" r="6" fill="#059669"/>
+            <text x="170" y="545" fill="#6B7280" font-size="13">受信者 (Member)</text>
+        </svg>
+    </div>
+
+    <!-- Architecture concept cards -->
+    <div class="arch-grid">
+        <div class="arch-card">
+            <h3 id="マルチキャストドメイン">📡 マルチキャストドメイン</h3>
+            <p>ケーブルTVの「配信エリア」にあたります。どのサブネットがマルチキャスト配信に参加するかを定義するコンテナです。</p>
+            <ul>
+                <li>1つのサブネットは1つのドメインにのみ所属可能</li>
+                <li>1つのTGWに複数ドメインを作成可能</li>
+                <li>IGMPサポートの有効/無効をドメインごとに設定</li>
+                <li>マルチキャスト有効の新しいTGWが必要</li>
+            </ul>
+        </div>
+        <div class="arch-card">
+            <h3 id="マルチキャストグループ">📺 マルチキャストグループ</h3>
+            <p>ケーブルTVの「チャンネル」にあたります。マルチキャストグループIPアドレス（239.x.x.x等）で識別される送受信のまとまりです。</p>
+            <ul>
+                <li>グループIPアドレスで識別（例: 239.1.1.1）</li>
+                <li>メンバーシップはENI単位で定義</li>
+                <li>Source（送信元）とMember（受信者）で構成</li>
+                <li>UDPプロトコルを使用（コネクションレス）</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ============ Section 3: IGMP 詳解 ============ -->
+<section class="section" id="igmp">
+    <div class="section-header">
+        <div class="section-number">3</div>
+        <h2 id="IGMP-＝-チャンネル契約の仕組み">IGMP ＝ チャンネル契約の仕組み</h2>
+        <p>ホストがグループに参加・離脱するプロトコルの動作フロー</p>
+    </div>
+
+    <!-- IGMP Flow Diagram -->
+    <div class="diagram-container">
+        <div class="diagram-title">IGMPv2 動作フロー図</div>
+        <svg viewBox="0 0 920 460" role="img" aria-label="IGMPv2の動作フロー。EC2ホストがJOINメッセージでグループに参加し、Transit GatewayがQueryで定期確認し、LEAVEで離脱する一連の流れ。" xmlns="http://www.w3.org/2000/svg">
+            <rect width="920" height="460" fill="#F9FAFB" rx="16"/>
+
+            <!-- EC2 Host Column -->
+            <rect x="60" y="30" width="200" height="50" rx="10" fill="#059669"/>
+            <text x="160" y="62" text-anchor="middle" fill="#FFFFFF" font-size="18" font-weight="700">EC2 ホスト</text>
+            <line x1="160" y1="80" x2="160" y2="440" stroke="#059669" stroke-width="2" stroke-dasharray="5 3"/>
+
+            <!-- TGW Column -->
+            <rect x="360" y="30" width="200" height="50" rx="10" fill="#232F3E"/>
+            <text x="460" y="62" text-anchor="middle" fill="#FF9900" font-size="18" font-weight="700">Transit Gateway</text>
+            <line x1="460" y1="80" x2="460" y2="440" stroke="#232F3E" stroke-width="2" stroke-dasharray="5 3"/>
+
+            <!-- Result Column -->
+            <rect x="660" y="30" width="200" height="50" rx="10" fill="#7C3AED"/>
+            <text x="760" y="62" text-anchor="middle" fill="#FFFFFF" font-size="18" font-weight="700">結果</text>
+            <line x1="760" y1="80" x2="760" y2="440" stroke="#7C3AED" stroke-width="2" stroke-dasharray="5 3"/>
+
+            <!-- Step 1: JOIN -->
+            <rect x="60" y="110" width="200" height="44" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+            <text x="160" y="138" text-anchor="middle" fill="#059669" font-size="15" font-weight="700">① IGMP JOIN 送信</text>
+
+            <line x1="260" y1="132" x2="360" y2="132" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="310" y="122" text-anchor="middle" fill="#059669" font-size="13">JOIN</text>
+
+            <rect x="360" y="110" width="200" height="44" rx="8" fill="#FFF3E0" stroke="#FF9900" stroke-width="1.5"/>
+            <text x="460" y="138" text-anchor="middle" fill="#B45309" font-size="15" font-weight="600">メンバー登録</text>
+
+            <line x1="560" y1="132" x2="660" y2="132" stroke="#7C3AED" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+            <rect x="660" y="110" width="200" height="44" rx="8" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5"/>
+            <text x="760" y="138" text-anchor="middle" fill="#7C3AED" font-size="14" font-weight="600">✅ 配信開始</text>
+
+            <!-- Step 2: QUERY (every 2 min) -->
+            <rect x="360" y="190" width="200" height="44" rx="8" fill="#FFF3E0" stroke="#FF9900" stroke-width="1.5"/>
+            <text x="460" y="218" text-anchor="middle" fill="#B45309" font-size="15" font-weight="700">② IGMP QUERY</text>
+
+            <defs>
+                <marker id="arrowPurple" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                    <path d="M0,0 L10,4 L0,8 Z" fill="#7C3AED"/>
+                </marker>
+                <marker id="arrowLeft" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto">
+                    <path d="M10,0 L0,4 L10,8 Z" fill="#FF9900"/>
+                </marker>
+            </defs>
+
+            <line x1="360" y1="212" x2="260" y2="212" stroke="#FF9900" stroke-width="2.5" marker-end="url(#arrowLeft)"/>
+            <text x="310" y="202" text-anchor="middle" fill="#B45309" font-size="13">2分ごと</text>
+
+            <rect x="660" y="190" width="200" height="44" rx="8" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5"/>
+            <text x="760" y="218" text-anchor="middle" fill="#7C3AED" font-size="14" font-weight="600">🔄 メンバー確認</text>
+            <line x1="560" y1="212" x2="660" y2="212" stroke="#7C3AED" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+            <!-- Step 3: Response -->
+            <rect x="60" y="270" width="200" height="44" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+            <text x="160" y="298" text-anchor="middle" fill="#059669" font-size="15" font-weight="700">③ JOIN で応答</text>
+
+            <line x1="260" y1="292" x2="360" y2="292" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+            <text x="310" y="282" text-anchor="middle" fill="#059669" font-size="13">応答</text>
+
+            <rect x="360" y="270" width="200" height="44" rx="8" fill="#FFF3E0" stroke="#FF9900" stroke-width="1.5"/>
+            <text x="460" y="298" text-anchor="middle" fill="#B45309" font-size="15" font-weight="600">メンバーシップ更新</text>
+
+            <rect x="660" y="270" width="200" height="44" rx="8" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5"/>
+            <text x="760" y="298" text-anchor="middle" fill="#7C3AED" font-size="14" font-weight="600">✅ 配信継続</text>
+            <line x1="560" y1="292" x2="660" y2="292" stroke="#7C3AED" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+            <!-- Step 4: LEAVE -->
+            <rect x="60" y="350" width="200" height="44" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
+            <text x="160" y="378" text-anchor="middle" fill="#DC2626" font-size="15" font-weight="700">④ IGMP LEAVE 送信</text>
+
+            <line x1="260" y1="372" x2="360" y2="372" stroke="#EF4444" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+            <text x="310" y="362" text-anchor="middle" fill="#DC2626" font-size="13">LEAVE</text>
+
+            <defs>
+                <marker id="arrowRed" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                    <path d="M0,0 L10,4 L0,8 Z" fill="#EF4444"/>
+                </marker>
+            </defs>
+
+            <rect x="360" y="350" width="200" height="44" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
+            <text x="460" y="378" text-anchor="middle" fill="#DC2626" font-size="15" font-weight="600">メンバー削除</text>
+
+            <rect x="660" y="350" width="200" height="44" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
+            <text x="760" y="378" text-anchor="middle" fill="#DC2626" font-size="14" font-weight="600">🛑 配信停止</text>
+            <line x1="560" y1="372" x2="660" y2="372" stroke="#EF4444" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+            <!-- Timeout note -->
+            <rect x="360" y="412" width="500" height="36" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1"/>
+            <text x="610" y="436" text-anchor="middle" fill="#92400E" font-size="14">⚠️ 3回連続Query無応答 → メンバーシップ自動削除（ただし12時間Queryは継続）</text>
+        </svg>
+    </div>
+
+    <!-- IGMP Flow Steps (4 cards, 2x2 grid) -->
+    <div class="flow-steps">
+        <div class="flow-step">
+            <div class="flow-step-number">1</div>
+            <h3 id="JOIN-チャンネル契約">JOIN: チャンネル契約</h3>
+            <p>EC2ホストがマルチキャストグループに参加したいとき、IGMP JOINメッセージを送信します。TV局でいえば「スポーツチャンネルを契約します！」と申し込むイメージです。通常2〜3回のリトライが自動で行われます。</p>
+        </div>
+        <div class="flow-step">
+            <div class="flow-step-number">2</div>
+            <h3 id="QUERY-視聴確認はがき">QUERY: 視聴確認はがき</h3>
+            <p>Transit Gatewayは2分ごとにIGMP QUERYを全メンバーに送信し、「まだ視聴していますか？」と確認します。送信元IP 0.0.0.0、送信先IP 224.0.0.1、プロトコル番号2で送信されます。</p>
+        </div>
+        <div class="flow-step">
+            <div class="flow-step-number">3</div>
+            <h3 id="応答-まだ見てます！">応答: まだ見てます！</h3>
+            <p>メンバーはQUERYに対してJOINメッセージで応答し、メンバーシップを更新します。3回連続で応答がないとメンバーシップが自動削除されますが、完全削除まで12時間は猶予があります。</p>
+        </div>
+        <div class="flow-step">
+            <div class="flow-step-number">4</div>
+            <h3 id="LEAVE-チャンネル解約">LEAVE: チャンネル解約</h3>
+            <p>ホストがグループを離脱する場合、IGMP LEAVEメッセージを送信します。「チャンネル解約します」と明示的に通知することで、即座にマルチキャスト配信が停止されます。</p>
+        </div>
+    </div>
+
+    <div class="caution-box">
+        <h3 id="⚠️-IGMPv2-強制設定が必要">⚠️ IGMPv2 強制設定が必要</h3>
+        <ul>
+            <li>EC2インスタンスはデフォルトでIGMPv3が有効ですが、Transit GatewayはIGMPv2のみサポートします</li>
+            <li>IGMPv2を強制するコマンド: <code>sudo sysctl net.ipv4.conf.eth0.force_igmp_version=2</code></li>
+            <li>永続化する場合は <code>/etc/sysctl.conf</code> に追記が必要です</li>
+            <li>全JOINメッセージが失われた場合、ホストはグループに参加できません。アプリ側で再トリガーが必要です。</li>
+        </ul>
+    </div>
+</section>
+
+<!-- ============ Section 4: 静的 vs IGMP 比較 ============ -->
+<section class="section" id="comparison">
+    <div class="section-header">
+        <div class="section-number">4</div>
+        <h2 id="2つのモード-静的-vs-IGMP">2つのモード: 静的 vs IGMP</h2>
+        <p>ケーブルTVの「手動チャンネル割当」と「視聴者が自分で契約」の違い</p>
+    </div>
+
+    <div class="compare-grid">
+        <div class="compare-card static-mode">
+            <h3 id="静的Staticモード">📋 静的（Static）モード</h3>
+            <p style="font-size:0.85em; color:#6B7280; margin-bottom:16px;">TV局が手動でチャンネル契約を管理するイメージ</p>
+            <div class="compare-item">
+                <span class="compare-label">メンバー管理</span>
+                <span class="compare-value">AWS CLI / API で手動登録</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">Source の定義</span>
+                <span class="compare-value">静的に指定（必須）</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">IGMP</span>
+                <span class="compare-value">不要</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">IPv6</span>
+                <span class="compare-value">✅ サポート</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">適用場面</span>
+                <span class="compare-value">固定メンバー構成</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">メンバーの役割</span>
+                <span class="compare-value">受信のみ</span>
+            </div>
+        </div>
+        <div class="compare-card igmp-mode">
+            <h3 id="IGMP動的モード">🔄 IGMP（動的）モード</h3>
+            <p style="font-size:0.85em; color:#6B7280; margin-bottom:16px;">視聴者が自分でチャンネルを契約・解約するイメージ</p>
+            <div class="compare-item">
+                <span class="compare-label">メンバー管理</span>
+                <span class="compare-value">ホストが自動的にJOIN/LEAVE</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">Source の定義</span>
+                <span class="compare-value">不要（メンバーが送信も可能）</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">IGMP</span>
+                <span class="compare-value">IGMPv2 必須</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">IPv6</span>
+                <span class="compare-value">❌ 非サポート</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">適用場面</span>
+                <span class="compare-value">動的メンバー変更が頻繁</span>
+            </div>
+            <div class="compare-item">
+                <span class="compare-label">メンバーの役割</span>
+                <span class="compare-value">送受信可能</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="exam-tip">
+        <h3 id="試験対策ポイントANS-C01">📝 試験対策ポイント（ANS-C01）</h3>
+        <ul>
+            <li>「IGMPを使用した動的グループ管理」が問われたら → IGMPv2のみサポートという制約を思い出す</li>
+            <li>「IPv6マルチキャスト」が問われたら → 静的モードのみ対応</li>
+            <li>「アプリケーション変更不要でマルチキャスト」→ IGMPモードを選択</li>
+            <li>「マルチキャストのフラグメンテーション」→ TGWはフラグメント化されたパケットをドロップする</li>
+            <li>「Direct Connect / VPN でマルチキャスト」→ 非サポート（VPCアタッチメントのみ）</li>
+        </ul>
+    </div>
+</section>
+
+<!-- ============ Section 5: ネットワークACL & セキュリティグループ ============ -->
+<section class="section" id="security">
+    <div class="section-header">
+        <div class="section-number">5</div>
+        <h2 id="必要なネットワーク設定">必要なネットワーク設定</h2>
+        <p>IGMPトラフィックとマルチキャストUDPの許可ルール</p>
+    </div>
+
+    <h3 id="ネットワークACL-インバウンドルール最小構成" style="margin-bottom:var(--spacing-md);">ネットワークACL: インバウンドルール（最小構成）</h3>
+    <div class="security-table-wrapper">
+        <table class="security-table">
+            <thead>
+                <tr>
+                    <th>タイプ</th>
+                    <th>プロトコル</th>
+                    <th>送信元</th>
+                    <th>説明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>カスタムプロトコル</td>
+                    <td><code>IGMP (2)</code></td>
+                    <td><code>0.0.0.0/32</code></td>
+                    <td>TGWからのIGMP Query を許可</td>
+                </tr>
+                <tr>
+                    <td>カスタムUDP</td>
+                    <td><code>UDP</code></td>
+                    <td>送信元ホストIP</td>
+                    <td>受信マルチキャストトラフィックを許可</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 id="ネットワークACL-アウトバウンドルール最小構成" style="margin-bottom:var(--spacing-md);">ネットワークACL: アウトバウンドルール（最小構成）</h3>
+    <div class="security-table-wrapper">
+        <table class="security-table">
+            <thead>
+                <tr>
+                    <th>タイプ</th>
+                    <th>プロトコル</th>
+                    <th>送信先</th>
+                    <th>説明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>カスタムプロトコル</td>
+                    <td><code>IGMP (2)</code></td>
+                    <td><code>224.0.0.2/32</code></td>
+                    <td>IGMP LEAVE メッセージ</td>
+                </tr>
+                <tr>
+                    <td>カスタムプロトコル</td>
+                    <td><code>IGMP (2)</code></td>
+                    <td>マルチキャストグループIP</td>
+                    <td>IGMP JOIN メッセージ</td>
+                </tr>
+                <tr>
+                    <td>カスタムUDP</td>
+                    <td><code>UDP</code></td>
+                    <td>マルチキャストグループIP</td>
+                    <td>送信マルチキャストトラフィック</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tip-box">
+        <h3 id="セキュリティグループの注意点">💡 セキュリティグループの注意点</h3>
+        <p>マルチキャストの送信元と送信先が同じVPC内にある場合でも、セキュリティグループ参照（ソースSGの指定）は使用できません。IPアドレスベースのルールで許可を設定する必要があります。また、Nitro以外のインスタンスを使用する場合は「送信元/送信先チェック」を無効にしてください。</p>
+    </div>
+</section>
+
+<!-- ============ Section 6: 設定手順コード例 ============ -->
+<section class="section" id="setup">
+    <div class="section-header">
+        <div class="section-number">6</div>
+        <h2 id="設定手順とコード例">設定手順とコード例</h2>
+        <p>AWS CLIとCloudFormationでのマルチキャスト設定</p>
+    </div>
+
+    <div class="code-section">
+        <div class="code-tabs">
+            <button class="code-tab active" data-tab="cli" type="button">AWS CLI</button>
+            <button class="code-tab" data-tab="cfn" type="button">CloudFormation</button>
+            <button class="code-tab" data-tab="igmp-setup" type="button">IGMP設定</button>
+        </div>
+
+        <pre class="code-block active" id="tab-cli"><span class="comment"># 1. マルチキャスト有効のTransit Gatewayを作成</span>
+aws ec2 create-transit-gateway \
+    --description <span class="string">"Multicast TGW"</span> \
+    --options <span class="string">"MulticastSupport=enable"</span>
+
+<span class="comment"># 2. マルチキャストドメインを作成（IGMPサポート有効）</span>
+aws ec2 create-transit-gateway-multicast-domain \
+    --transit-gateway-id <span class="prop">tgw-0123456789abcdef0</span> \
+    --options <span class="string">"Igmpv2Support=enable,StaticSourcesSupport=disable"</span>
+
+<span class="comment"># 3. サブネットをマルチキャストドメインに関連付け</span>
+aws ec2 associate-transit-gateway-multicast-domain \
+    --transit-gateway-multicast-domain-id <span class="prop">tgw-mcast-domain-xxxxx</span> \
+    --transit-gateway-attachment-id <span class="prop">tgw-attach-xxxxx</span> \
+    --subnet-ids <span class="prop">subnet-xxxxx</span>
+
+<span class="comment"># 4. （静的モードの場合）送信元を登録</span>
+aws ec2 register-transit-gateway-multicast-group-sources \
+    --transit-gateway-multicast-domain-id <span class="prop">tgw-mcast-domain-xxxxx</span> \
+    --group-ip-address <span class="string">"239.1.1.1"</span> \
+    --network-interface-ids <span class="prop">eni-source-xxxxx</span>
+
+<span class="comment"># 5. （静的モードの場合）メンバーを登録</span>
+aws ec2 register-transit-gateway-multicast-group-members \
+    --transit-gateway-multicast-domain-id <span class="prop">tgw-mcast-domain-xxxxx</span> \
+    --group-ip-address <span class="string">"239.1.1.1"</span> \
+    --network-interface-ids <span class="prop">eni-member-xxxxx</span></pre>
+
+        <pre class="code-block" id="tab-cfn"><span class="comment"># CloudFormation テンプレート（YAML）</span>
+<span class="prop">AWSTemplateFormatVersion</span>: <span class="string">'2010-09-09'</span>
+<span class="prop">Description</span>: <span class="string">'Transit Gateway Multicast Setup'</span>
+
+<span class="prop">Resources</span>:
+  <span class="keyword">MulticastTGW</span>:
+    <span class="prop">Type</span>: AWS::EC2::TransitGateway
+    <span class="prop">Properties</span>:
+      <span class="prop">Description</span>: <span class="string">"Multicast-enabled TGW"</span>
+      <span class="prop">MulticastSupport</span>: <span class="string">enable</span>
+
+  <span class="keyword">MulticastDomain</span>:
+    <span class="prop">Type</span>: AWS::EC2::TransitGatewayMulticastDomain
+    <span class="prop">Properties</span>:
+      <span class="prop">TransitGatewayId</span>: !Ref MulticastTGW
+      <span class="prop">Options</span>:
+        <span class="prop">Igmpv2Support</span>: <span class="string">enable</span>
+        <span class="prop">StaticSourcesSupport</span>: <span class="string">disable</span>
+
+  <span class="keyword">DomainAssociation</span>:
+    <span class="prop">Type</span>: AWS::EC2::TransitGatewayMulticastDomainAssociation
+    <span class="prop">Properties</span>:
+      <span class="prop">TransitGatewayMulticastDomainId</span>: !Ref MulticastDomain
+      <span class="prop">TransitGatewayAttachmentId</span>: !Ref TGWAttachment
+      <span class="prop">SubnetId</span>: !Ref PrivateSubnet</pre>
+
+        <pre class="code-block" id="tab-igmp-setup"><span class="comment"># EC2インスタンスでのIGMPv2強制設定</span>
+
+<span class="comment"># 1. 現在のIGMPバージョンを確認</span>
+cat /proc/sys/net/ipv4/conf/eth0/force_igmp_version
+<span class="comment"># → 0（デフォルト: IGMPv3）</span>
+
+<span class="comment"># 2. IGMPv2を強制</span>
+<span class="keyword">sudo</span> sysctl net.ipv4.conf.eth0.force_igmp_version=<span class="string">2</span>
+
+<span class="comment"># 3. 永続化（再起動後も有効にする場合）</span>
+<span class="keyword">echo</span> <span class="string">"net.ipv4.conf.eth0.force_igmp_version=2"</span> | \
+    <span class="keyword">sudo</span> tee -a /etc/sysctl.conf
+
+<span class="comment"># 4. 設定確認</span>
+<span class="keyword">sudo</span> sysctl net.ipv4.conf.eth0.force_igmp_version
+<span class="comment"># → 2</span>
+
+<span class="comment"># 5. マルチキャストグループに参加（テスト用）</span>
+<span class="comment"># socat を使用した例</span>
+socat UDP4-RECVFROM:<span class="string">5001</span>,ip-add-membership=<span class="string">239.1.1.1</span>:eth0,reuseaddr -
+
+<span class="comment"># 6. マルチキャスト送信テスト（送信元から）</span>
+<span class="keyword">echo</span> <span class="string">"Hello Multicast"</span> | socat - UDP4-DATAGRAM:<span class="string">239.1.1.1</span>:<span class="string">5001</span></pre>
+    </div>
+</section>
+
+<!-- ============ Section 7: ユースケース ============ -->
+<section class="section" id="usecases">
+    <div class="section-header">
+        <div class="section-number">7</div>
+        <h2 id="主なユースケース">主なユースケース</h2>
+        <p>マルチキャストが活躍する代表的なシナリオ</p>
+    </div>
+
+    <div class="usecase-grid">
+        <div class="usecase-card">
+            <span class="card-emoji" aria-hidden="true">📈</span>
+            <h3 id="金融データの同時配信">金融データの同時配信</h3>
+            <p>株価、為替レートなどのリアルタイム市場データを、複数のトレーディングシステムへ同時に配信。ユニキャストでは帯域がN倍必要だが、マルチキャストなら1ストリームで済む。</p>
+        </div>
+        <div class="usecase-card">
+            <span class="card-emoji" aria-hidden="true">🎬</span>
+            <h3 id="ストリーミングメディア配信">ストリーミングメディア配信</h3>
+            <p>社内向けライブ動画配信やビデオ会議のマルチキャスト配信。帯域を大幅に節約しながら、大人数への同時配信を実現する。</p>
+        </div>
+        <div class="usecase-card">
+            <span class="card-emoji" aria-hidden="true">🔄</span>
+            <h3 id="分散システムの状態同期">分散システムの状態同期</h3>
+            <p>クラスタ間での設定変更の一斉通知、キャッシュの無効化通知、サービスディスカバリーなど。全ノードに同時に情報を到達させる。</p>
+        </div>
+        <div class="usecase-card">
+            <span class="card-emoji" aria-hidden="true">💿</span>
+            <h3 id="ソフトウェア更新の一斉配布">ソフトウェア更新の一斉配布</h3>
+            <p>数百台のEC2インスタンスへのパッチ配布やファームウェア更新。マルチキャストならネットワーク負荷を最小限に抑えつつ全台に同時配信可能。</p>
+        </div>
+    </div>
+
+    <div class="caution-box">
+        <h3 id="⚠️-不向きなケース">⚠️ 不向きなケース</h3>
+        <ul>
+            <li><strong>高頻度取引（HFT）</strong>: Transit Gatewayマルチキャストはレイテンシに敏感な用途には不向き。パフォーマンス要件は事前にAWSチームと確認してください。</li>
+            <li><strong>Direct Connect / VPN経由</strong>: オンプレミスからのマルチキャストはサポートされていません。VPCアタッチメントのみ対応。</li>
+            <li><strong>Transit Gateway Connect</strong>: Connectアタッチメント経由のマルチキャストルーティングは非サポート。</li>
+        </ul>
+    </div>
+</section>
+
+<!-- ============ Section 8: メリット ============ -->
+<section class="section" id="benefits">
+    <div class="section-header">
+        <div class="section-number">8</div>
+        <h2 id="IGMP対応マルチキャストの利点">IGMP対応マルチキャストの利点</h2>
+        <p>動的グループ管理がもたらすメリット</p>
+    </div>
+
+    <div class="benefit-grid">
+        <div class="benefit-card">
+            <div class="benefit-icon" aria-hidden="true">🔄</div>
+            <div>
+                <h3 id="動的なグループ管理">動的なグループ管理</h3>
+                <p>ホストが自律的にJOIN/LEAVEするため、管理者の手動操作が不要。スケールアウト時にも自動でメンバー追加される。</p>
+            </div>
+        </div>
+        <div class="benefit-card">
+            <div class="benefit-icon" aria-hidden="true">🚀</div>
+            <div>
+                <h3 id="アプリケーション変更不要">アプリケーション変更不要</h3>
+                <p>既存のマルチキャスト対応アプリケーションをそのままAWSに移行可能。標準的なIGMPv2プロトコルに準拠。</p>
+            </div>
+        </div>
+        <div class="benefit-card">
+            <div class="benefit-icon" aria-hidden="true">⚡</div>
+            <div>
+                <h3 id="リアルタイムの追跡">リアルタイムの追跡</h3>
+                <p>TGWが2分ごとにメンバーシップを確認し、離脱したホストを自動検出。常に最新のメンバーリストを維持する。</p>
+            </div>
+        </div>
+        <div class="benefit-card">
+            <div class="benefit-icon" aria-hidden="true">📊</div>
+            <div>
+                <h3 id="帯域幅の効率化">帯域幅の効率化</h3>
+                <p>1つのストリームを複数メンバーに同時配信するため、ユニキャストのN倍通信と比較して大幅な帯域節約を実現。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ Section 9: FAQ ============ -->
+<section class="section" id="faq">
+    <div class="section-header">
+        <div class="section-number">9</div>
+        <h2 id="よくある質問FAQ">よくある質問（FAQ）</h2>
+    </div>
+
+    <div class="faq-list">
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                <span>既存のTransit Gatewayでマルチキャストを有効にできますか？</span>
+                <span class="faq-arrow">▼</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    いいえ、できません。マルチキャストをサポートするには、作成時にマルチキャストを有効にした新しいTransit Gatewayが必要です。既存のTGWに後からマルチキャスト機能を追加することはできないため、新規作成してVPCアタッチメントを移行する必要があります。
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                <span>IGMPv3は使えますか？</span>
+                <span class="faq-arrow">▼</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Transit GatewayはIGMPv2のみをサポートしています。EC2インスタンスはデフォルトでIGMPv3が有効なので、<code>sudo sysctl net.ipv4.conf.eth0.force_igmp_version=2</code> で明示的にv2を強制する必要があります。
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                <span>1つのサブネットを複数のマルチキャストドメインに所属させられますか？</span>
+                <span class="faq-arrow">▼</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    いいえ、1つのサブネットは1つのマルチキャストドメインにのみ関連付け可能です。複数ドメインへの所属が必要な場合は、サブネットを分割して設計してください。
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                <span>オンプレミスからDirect Connect経由でマルチキャスト通信はできますか？</span>
+                <span class="faq-arrow">▼</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    いいえ。マルチキャストのルーティングは、Direct Connect、Site-to-Site VPN、ピアリングアタッチメント、Transit Gateway Connectアタッチメントではサポートされていません。VPCアタッチメント間のみで動作します。
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                <span>Nitro以外のインスタンスを送信元にできますか？</span>
+                <span class="faq-arrow">▼</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    いいえ、Nitro以外のインスタンスをマルチキャスト送信元にすることはできません。受信者（メンバー）としては使用可能ですが、その場合は「送信元/送信先チェック」を無効にする必要があります。
+                </div>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                <span>マルチキャストパケットのフラグメント化は対応していますか？</span>
+                <span class="faq-arrow">▼</span>
+            </button>
+            <div class="faq-answer">
+                <div class="faq-answer-inner">
+                    Transit Gatewayはマルチキャストパケットのフラグメント化をサポートしていません。フラグメント化されたパケットはドロップされます。送信するデータのサイズがMTUを超えないよう注意し、アプリケーション側でパケットサイズを制御してください。
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ Summary Section ============ -->
+<section class="summary-section" id="summary">
+    <h2 id="まとめ">まとめ</h2>
+    <div class="summary-grid">
+        <div class="summary-item">
+            <h3 id="マルチキャスト">📡 マルチキャスト</h3>
+            <p>1つのストリームを登録済みメンバーに同時配信。UDPベースのコネクションレス通信で帯域を効率化。</p>
+        </div>
+        <div class="summary-item">
+            <h3 id="Transit-Gateway">🔀 Transit Gateway</h3>
+            <p>VPC間のマルチキャストルーター。マルチキャストドメインでサブネットを束ね、グループIPで配信先を制御。</p>
+        </div>
+        <div class="summary-item">
+            <h3 id="IGMP">📋 IGMP</h3>
+            <p>JOIN/LEAVE/QUERYで動的にグループメンバーシップを管理。IGMPv2のみサポート。2分ごとのQuery確認。</p>
+        </div>
+    </div>
+    <div class="summary-formula">
+        Transit Gateway（中継局）+ マルチキャストドメイン（配信エリア）+ IGMP（契約管理）= 効率的な1対多配信
+    </div>
+</section>
+
+</main>
+
+<!-- ============ Footer ============ -->
+<footer>
+    <p>AWS Transit Gateway マルチキャスト完全ガイド</p>
+    <p>参考: <a href="https://docs.aws.amazon.com/ja_jp/vpc/latest/tgw/tgw-multicast-overview.html" target="_blank" rel="noopener">AWS公式ドキュメント - Transit Gateway マルチキャスト</a></p>
+</footer>
+
+<!-- ============ JavaScript ============ -->
+<script>
+/* FAQ Accordion */
+document.querySelectorAll('.faq-question').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var item = this.closest('.faq-item');
+        var isOpen = item.classList.contains('open');
+        /* Close all */
+        document.querySelectorAll('.faq-item.open').forEach(function(openItem) {
+            openItem.classList.remove('open');
+        });
+        /* Toggle clicked */
+        if (!isOpen) {
+            item.classList.add('open');
+        }
+    });
+});
+
+/* Code Tabs */
+document.querySelectorAll('.code-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        var targetId = 'tab-' + this.getAttribute('data-tab');
+        /* Deactivate all tabs */
+        document.querySelectorAll('.code-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.code-block').forEach(function(b) { b.classList.remove('active'); });
+        /* Activate clicked */
+        this.classList.add('active');
+        document.getElementById(targetId).classList.add('active');
+    });
+});
+</script>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>
+<script>/* FAQ Accordion */
+document.querySelectorAll('.faq-question').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var item = this.closest('.faq-item');
+        var isOpen = item.classList.contains('open');
+        /* Close all */
+        document.querySelectorAll('.faq-item.open').forEach(function(openItem) {
+            openItem.classList.remove('open');
+        });
+        /* Toggle clicked */
+        if (!isOpen) {
+            item.classList.add('open');
+        }
+    });
+});
+
+/* Code Tabs */
+document.querySelectorAll('.code-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        var targetId = 'tab-' + this.getAttribute('data-tab');
+        /* Deactivate all tabs */
+        document.querySelectorAll('.code-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.code-block').forEach(function(b) { b.classList.remove('active'); });
+        /* Activate clicked */
+        this.classList.add('active');
+        document.getElementById(targetId).classList.add('active');
+    });
+});</script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">1</span> <span class="separator" aria-hidden="true">/</span> <span class="total">1</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

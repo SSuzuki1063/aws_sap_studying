@@ -1,0 +1,1552 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   EC2ボットネットC2通信からの保護ガイド - Route 53 Resolver DNS Firewall
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#ボットネットとC2通信とは？">ボットネットとC2通信とは？</a> </li><li class="toc-h3"> <a href="#操り人形劇場のイメージ">「操り人形劇場」のイメージ</a> </li><li class="toc-h2"> <a href="#なぜDNSレベルで守るのが効果的？">なぜDNSレベルで守るのが効果的？</a> </li><li class="toc-h3"> <a href="#電話帳の受付係のイメージ">「電話帳の受付係」のイメージ</a> </li><li class="toc-h2"> <a href="#Route-53-Resolver-DNS-Firewall-の全体像">Route 53 Resolver DNS Firewall の全体像</a> </li><li class="toc-h2"> <a href="#AWSマネージドドメインリスト">AWSマネージドドメインリスト</a> </li><li class="toc-h2"> <a href="#実装ステップ">実装ステップ</a> </li><li class="toc-h3"> <a href="#ビルのセキュリティシステム導入のイメージ">「ビルのセキュリティシステム導入」のイメージ</a> </li><li class="toc-h2"> <a href="#導入前-vs-導入後">導入前 vs 導入後</a> </li><li class="toc-h2"> <a href="#ベストプラクティス">ベストプラクティス</a> </li><li class="toc-h2"> <a href="#よくある質問">よくある質問</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <style>/* ==========================================
+           CSS Variables
+           ========================================== */
+        :root {
+            --aws-dark: #232F3E;
+            --aws-orange: #FF9900;
+            --aws-orange-deep: #EC7211;
+            --color-danger: #E74C3C;
+            --color-danger-light: #FFF5F5;
+            --color-danger-border: #FED7D7;
+            --color-success: #10B981;
+            --color-success-light: #F0FDF4;
+            --color-success-border: #BBF7D0;
+            --color-info: #3B82F6;
+            --color-info-light: #EFF6FF;
+            --color-info-border: #BFDBFE;
+            --color-warning: #F59E0B;
+            --color-warning-light: #FFFBEB;
+            --color-warning-border: #FDE68A;
+            --color-purple: #8B5CF6;
+            --color-purple-light: #F5F3FF;
+            --color-purple-border: #DDD6FE;
+            --text-primary: #1E293B;
+            --text-secondary: #475569;
+            --text-tertiary: #64748B;
+            --bg-white: #FFFFFF;
+            --bg-light: #F8FAFC;
+            --bg-subtle: #F1F5F9;
+            --border-light: #E2E8F0;
+            --border-medium: #CBD5E1;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+            --shadow-xl: 0 16px 48px rgba(0,0,0,0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --font-main: 'Noto Sans JP', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        /* ==========================================
+           Base Reset & Typography
+           ========================================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-main);
+            font-size: 20px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            background: var(--bg-light);
+            -webkit-font-smoothing: antialiased;
+            padding-top: 70px;}
+
+        /* ==========================================
+           Layout Container
+           ========================================== */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ==========================================
+           Hero Header
+           ========================================== */
+        .hero {
+            background: linear-gradient(135deg, var(--aws-dark) 0%, #1a2332 50%, #2d3a4a 100%);
+            color: white;
+            padding: 56px 0 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,153,0,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,153,0,0.15);
+            border: 1px solid rgba(255,153,0,0.3);
+            color: var(--aws-orange);
+            padding: 8px 18px;
+            border-radius: 100px;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero h1 .highlight {
+            color: var(--aws-orange);
+        }
+
+        .hero-subtitle {
+            font-size: 22px;
+            color: rgba(255,255,255,0.75);
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        /* ==========================================
+           Conclusion First Box
+           ========================================== */
+        .conclusion-first {
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFFBF5 100%);
+            border: 2px solid #FDBA74;
+            border-radius: var(--radius-xl);
+            padding: 36px 40px;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .conclusion-first::before {
+            content: '💡';
+            position: absolute;
+            top: -18px;
+            left: 32px;
+            font-size: 32px;
+            background: var(--bg-light);
+            padding: 0 12px;
+        }
+
+        .conclusion-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--aws-orange-deep);
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .conclusion-text {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        .conclusion-text strong {
+            color: var(--aws-orange-deep);
+        }
+
+        /* ==========================================
+           Section Headers
+           ========================================== */
+        .section {
+            margin: 48px 0;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .section-number {
+            width: 44px;
+            height: 44px;
+            background: var(--aws-dark);
+            color: var(--aws-orange);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+
+        /* ==========================================
+           Analogy Box
+           ========================================== */
+        .analogy-box {
+            background: var(--bg-white);
+            border-radius: var(--radius-xl);
+            padding: 36px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+            margin-bottom: 32px;
+        }
+
+        .analogy-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-info);
+            background: var(--color-info-light);
+            padding: 6px 16px;
+            border-radius: 100px;
+            margin-bottom: 18px;
+        }
+
+        .analogy-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .analogy-desc {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* ==========================================
+           Diagram: Botnet Structure
+           ========================================== */
+        .diagram-card {
+            background: var(--bg-white);
+            border-radius: var(--radius-xl);
+            padding: 36px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+            margin-bottom: 32px;
+            overflow: hidden;
+        }
+
+        .diagram-title {
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 28px;
+            color: var(--text-primary);
+        }
+
+        /* Botnet Visual */
+        .botnet-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 20px 0;
+        }
+
+        .attacker-node {
+            background: linear-gradient(135deg, #991B1B, #DC2626);
+            color: white;
+            padding: 18px 32px;
+            border-radius: var(--radius-lg);
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(220,38,38,0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .attacker-node .sub {
+            font-size: 20px;
+            font-weight: 400;
+            opacity: 0.85;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .connection-line {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .connection-line .arrow {
+            font-size: 28px;
+            color: var(--color-danger);
+            line-height: 1;
+        }
+
+        .connection-label {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-danger);
+            background: var(--color-danger-light);
+            border: 1px solid var(--color-danger-border);
+            padding: 6px 18px;
+            border-radius: 100px;
+            margin: 4px 0;
+        }
+
+        .c2-server-node {
+            background: linear-gradient(135deg, #92400E, #D97706);
+            color: white;
+            padding: 18px 32px;
+            border-radius: var(--radius-lg);
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(217,119,6,0.3);
+        }
+
+        .c2-server-node .sub {
+            font-size: 20px;
+            font-weight: 400;
+            opacity: 0.85;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .dns-query-label {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-purple);
+            background: var(--color-purple-light);
+            border: 1px solid var(--color-purple-border);
+            padding: 6px 18px;
+            border-radius: 100px;
+            margin: 4px 0;
+        }
+
+        .bot-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .bot-node {
+            background: var(--bg-subtle);
+            border: 2px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            position: relative;
+        }
+
+        .bot-node .bot-icon {
+            font-size: 28px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .bot-node.infected {
+            border-color: var(--color-danger);
+            background: var(--color-danger-light);
+            color: var(--color-danger);
+        }
+
+        .bot-node.infected::after {
+            content: '⚠️';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 20px;
+        }
+
+        /* ==========================================
+           Feature Grid
+           ========================================== */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 14px;
+        }
+
+        .feature-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ==========================================
+           Protection Flow Diagram
+           ========================================== */
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 28px 0;
+        }
+
+        .flow-node {
+            width: 100%;
+            max-width: 600px;
+            padding: 22px 28px;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .flow-node.ec2 {
+            background: linear-gradient(135deg, #1E40AF, #3B82F6);
+            color: white;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+        }
+
+        .flow-node.dns-query {
+            background: var(--color-purple-light);
+            border: 2px solid var(--color-purple-border);
+            color: var(--color-purple);
+        }
+
+        .flow-node.firewall {
+            background: linear-gradient(135deg, #065F46, #10B981);
+            color: white;
+            box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+            padding: 26px 28px;
+        }
+
+        .flow-node.firewall .shield-icon {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .flow-node.block {
+            background: var(--color-danger-light);
+            border: 2px solid var(--color-danger-border);
+            color: var(--color-danger);
+        }
+
+        .flow-node.allow {
+            background: var(--color-success-light);
+            border: 2px solid var(--color-success-border);
+            color: #065F46;
+        }
+
+        .flow-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 0;
+            color: var(--text-tertiary);
+            font-size: 24px;
+        }
+
+        .flow-arrow .arrow-text {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .flow-branch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .flow-branch-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 100px;
+            padding: 4px 0;
+        }
+
+        .flow-branch-arrow .branch-left,
+        .flow-branch-arrow .branch-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .flow-branch-arrow .branch-left {
+            color: var(--color-danger);
+        }
+
+        .flow-branch-arrow .branch-right {
+            color: var(--color-success);
+        }
+
+        /* ==========================================
+           Managed List Table
+           ========================================== */
+        .managed-list-card {
+            background: var(--bg-white);
+            border-radius: var(--radius-xl);
+            padding: 36px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+            margin-bottom: 32px;
+        }
+
+        .managed-list-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .managed-item {
+            background: var(--bg-light);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            border: 1px solid var(--border-light);
+        }
+
+        .managed-item-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .managed-item-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .managed-item-desc {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .managed-item.primary {
+            background: linear-gradient(135deg, #FFF7ED, #FEF3C7);
+            border: 2px solid #FDBA74;
+        }
+
+        .managed-item.primary .managed-item-name {
+            color: var(--aws-orange-deep);
+        }
+
+        /* ==========================================
+           Steps
+           ========================================== */
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 20px;
+            background: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--aws-dark);
+            color: var(--aws-orange);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .step-desc {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .step-code {
+            font-family: var(--font-mono);
+            background: var(--aws-dark);
+            color: #E2E8F0;
+            padding: 18px 22px;
+            border-radius: var(--radius-md);
+            font-size: 17px;
+            margin-top: 14px;
+            overflow-x: auto;
+            line-height: 1.6;
+            white-space: pre;
+        }
+
+        .step-code .keyword {
+            color: #93C5FD;
+        }
+
+        .step-code .string {
+            color: #86EFAC;
+        }
+
+        .step-code .comment {
+            color: #64748B;
+        }
+
+        /* ==========================================
+           Comparison: Before / After
+           ========================================== */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .comparison-card {
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .comparison-card.before {
+            background: linear-gradient(135deg, #FFF5F5, #FEF2F2);
+            border: 2px solid var(--color-danger-border);
+        }
+
+        .comparison-card.after {
+            background: linear-gradient(135deg, #F0FDF4, #ECFDF5);
+            border: 2px solid var(--color-success-border);
+        }
+
+        .comparison-label {
+            font-size: 20px;
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 100px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .comparison-card.before .comparison-label {
+            background: rgba(239,68,68,0.12);
+            color: var(--color-danger);
+        }
+
+        .comparison-card.after .comparison-label {
+            background: rgba(16,185,129,0.12);
+            color: #065F46;
+        }
+
+        .comparison-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .comparison-list li {
+            font-size: 20px;
+            color: var(--text-secondary);
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .comparison-list li::before {
+            position: absolute;
+            left: 0;
+            font-size: 20px;
+        }
+
+        .comparison-card.before .comparison-list li::before {
+            content: '❌';
+        }
+
+        .comparison-card.after .comparison-list li::before {
+            content: '✅';
+        }
+
+        /* ==========================================
+           DNS Analogy Visual
+           ========================================== */
+        .analogy-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 24px 0;
+        }
+
+        .analogy-node {
+            width: 100%;
+            max-width: 520px;
+            padding: 20px 28px;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .analogy-node.person {
+            background: var(--color-info-light);
+            border: 2px solid var(--color-info-border);
+            color: #1E40AF;
+        }
+
+        .analogy-node.guard {
+            background: linear-gradient(135deg, #065F46, #10B981);
+            color: white;
+            box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+            padding: 24px 28px;
+        }
+
+        .analogy-node.guard .guard-icon {
+            font-size: 36px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .analogy-node.danger-dest {
+            background: var(--color-danger-light);
+            border: 2px solid var(--color-danger-border);
+            color: var(--color-danger);
+        }
+
+        .analogy-node.safe-dest {
+            background: var(--color-success-light);
+            border: 2px solid var(--color-success-border);
+            color: #065F46;
+        }
+
+        .analogy-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 20px;
+            color: var(--text-tertiary);
+        }
+
+        /* ==========================================
+           Best Practices
+           ========================================== */
+        .practices-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .practice-card {
+            background: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+        }
+
+        .practice-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .practice-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .practice-desc {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ==========================================
+           FAQ Section
+           ========================================== */
+        .faq-item {
+            background: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            margin-bottom: 16px;
+        }
+
+        .faq-q {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .faq-a {
+            font-size: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            padding-left: 34px;
+        }
+
+        /* ==========================================
+           Key Takeaway Box
+           ========================================== */
+        .key-takeaway {
+            background: linear-gradient(135deg, var(--aws-dark) 0%, #1a2332 100%);
+            color: white;
+            border-radius: var(--radius-xl);
+            padding: 36px 40px;
+            margin: 40px 0;
+        }
+
+        .key-takeaway-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--aws-orange);
+            margin-bottom: 14px;
+        }
+
+        .key-takeaway-text {
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.92);
+        }
+
+        .key-takeaway-list {
+            list-style: none;
+            margin-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .key-takeaway-list li {
+            font-size: 20px;
+            color: rgba(255,255,255,0.85);
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .key-takeaway-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--aws-orange);
+            font-size: 22px;
+        }
+
+        /* ==========================================
+           Footer
+           ========================================== */
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-tertiary);
+            font-size: 20px;
+        }
+
+        /* ==========================================
+           Responsive
+           ========================================== */
+        @media (max-width: 768px) {
+            body { font-size: 18px;
+            padding-top: 70px;}
+            .hero h1 { font-size: 28px; }
+            .feature-grid,
+            .comparison-grid,
+            .managed-list-grid,
+            .practices-grid { grid-template-columns: 1fr; }
+            .flow-branch { grid-template-columns: 1fr; }
+            .flow-branch-arrow { gap: 40px; }
+            .bot-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ==========================================
+           Animations
+           ========================================== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            animation: fadeInUp 0.5s ease both;
+        }
+
+        /* ==========================================
+           Helper: info note
+           ========================================== */
+        .info-note {
+            background: var(--color-info-light);
+            border: 1px solid var(--color-info-border);
+            border-radius: var(--radius-md);
+            padding: 20px 24px;
+            font-size: 20px;
+            color: #1E40AF;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+
+        .info-note strong {
+            font-weight: 700;
+        }</style>
+<!-- ==========================================
+         CONCLUSION FIRST
+         ========================================== -->
+    <div class="conclusion-first">
+        <div class="conclusion-label">⚡ 結論ファースト</div>
+        <p class="conclusion-text">
+            EC2がボットネットのC2通信を行うのを防ぐには、<strong>Route 53 Resolver DNS Firewall</strong> で <strong>AWSManagedDomainsBotnetCommandandControl</strong> リストを使い、悪意あるドメインへのDNS解決をブロックするのが最も効果的です。通信の「最初の一歩」であるDNS解決を止めることで、攻撃者との接続自体を成立させません。
+        </p>
+    </div>
+
+    <!-- ==========================================
+         SECTION 1: What is Botnet C2?
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">1</div>
+            <h2 id="ボットネットとC2通信とは？" class="section-title">ボットネットとC2通信とは？</h2>
+        </div>
+
+        <div class="analogy-box">
+            <div class="analogy-label">🎭 たとえ話で理解</div>
+            <h3 id="操り人形劇場のイメージ" class="analogy-title">「操り人形劇場」のイメージ</h3>
+            <p class="analogy-desc">
+                ボットネットは、攻撃者（人形師）がマルウェアで感染させた大量のコンピュータ（操り人形）を遠隔操作するネットワークです。C2（コマンド＆コントロール）通信は、人形師が人形に指示を送る「糸」のようなものです。人形は定期的に人形師に「次は何をすればいい？」と電話をかけ、人形師は「あのサイトを攻撃しろ」「データを送れ」と指示を出します。
+            </p>
+        </div>
+
+        <!-- Botnet Structure Diagram -->
+        <div class="diagram-card">
+            <div class="diagram-title">🔍 ボットネットの構造</div>
+            <div class="botnet-diagram">
+                <div class="attacker-node">
+                    🎭 攻撃者（人形師）
+                    <span class="sub">ボットネット全体を遠隔操作</span>
+                </div>
+
+                <div class="connection-line">
+                    <span class="arrow">↕</span>
+                    <span class="connection-label">C2通信（指示と報告）</span>
+                    <span class="arrow">↕</span>
+                </div>
+
+                <div class="c2-server-node">
+                    🖥️ C2サーバー（中継基地）
+                    <span class="sub">攻撃者の指示を配信するドメイン</span>
+                </div>
+
+                <div class="connection-line">
+                    <span class="arrow">↕</span>
+                    <span class="dns-query-label">🔤 DNS解決でC2サーバーのIPを取得</span>
+                    <span class="arrow">↕</span>
+                </div>
+
+                <div class="bot-grid">
+                    <div class="bot-node infected">
+                        <span class="bot-icon">💻</span>
+                        感染EC2
+                    </div>
+                    <div class="bot-node infected">
+                        <span class="bot-icon">💻</span>
+                        感染EC2
+                    </div>
+                    <div class="bot-node infected">
+                        <span class="bot-icon">💻</span>
+                        感染EC2
+                    </div>
+                </div>
+            </div>
+            <div class="info-note">
+                <strong>💡 ポイント：</strong>感染したEC2がC2サーバーに接続するとき、まずDNSでドメイン名をIPアドレスに変換します。この「DNS解決」のステップがブロックの最適なポイントです。
+            </div>
+        </div>
+
+        <!-- C2 Communication Features -->
+        <div class="diagram-title" style="margin-bottom: 20px;">C2通信の特徴</div>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🔤</div>
+                <div class="feature-name">DNS依存</div>
+                <div class="feature-desc">C2サーバーへの通信開始時に、ほぼ必ずDNSでドメイン解決を行います</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔀</div>
+                <div class="feature-name">動的ドメイン生成</div>
+                <div class="feature-desc">DGA（ドメイン生成アルゴリズム）で接続先ドメインを動的に変更し、追跡を回避します</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📋</div>
+                <div class="feature-name">既知C2ドメイン</div>
+                <div class="feature-desc">セキュリティ研究機関が特定した既知のC2ドメインはブラックリスト化されています</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🕵️</div>
+                <div class="feature-name">隠密通信</div>
+                <div class="feature-desc">通常のHTTPS通信に紛れて指示を受け取るため、通信内容の検査だけでは発見が困難です</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 2: DNS Security Approach
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">2</div>
+            <h2 id="なぜDNSレベルで守るのが効果的？" class="section-title">なぜDNSレベルで守るのが効果的？</h2>
+        </div>
+
+        <div class="analogy-box">
+            <div class="analogy-label">🎭 たとえ話で理解</div>
+            <h3 id="電話帳の受付係のイメージ" class="analogy-title">「電話帳の受付係」のイメージ</h3>
+            <p class="analogy-desc">
+                DNSは「インターネットの電話帳」のようなもので、ドメイン名（名前）をIPアドレス（電話番号）に変換します。DNS Firewallは、この電話帳を管理する「受付係」に相当します。誰かが危険な相手の電話番号を調べようとしたら、受付係が「その番号はお教えできません」と断ります。電話番号が分からなければ、電話をかけること自体ができません。
+            </p>
+        </div>
+
+        <!-- DNS Security Visual -->
+        <div class="diagram-card">
+            <div class="diagram-title">📞 DNS Firewallの仕組み（受付係のたとえ）</div>
+            <div class="analogy-visual">
+                <div class="analogy-node person">
+                    💻 感染したEC2（電話をかけたい人）
+                    <div style="font-size:20px; font-weight:400; margin-top:4px;">「evil-c2.example.com の番号を教えて」</div>
+                </div>
+
+                <div class="analogy-arrow">
+                    <span style="font-size:24px;">⬇</span>
+                    <span>DNSクエリ送信</span>
+                </div>
+
+                <div class="analogy-node guard">
+                    <span class="guard-icon">🛡️</span>
+                    Route 53 DNS Firewall（受付係）
+                    <div style="font-size:20px; font-weight:400; margin-top:4px;">「ブラックリストと照合中...」</div>
+                </div>
+
+                <div class="flow-branch-arrow" style="padding: 12px 0;">
+                    <div class="branch-left">
+                        ⬇ リストに一致<br>🚫 BLOCK
+                    </div>
+                    <div class="branch-right">
+                        ⬇ リストに無し<br>✅ ALLOW
+                    </div>
+                </div>
+
+                <div class="flow-branch">
+                    <div class="analogy-node danger-dest">
+                        🚫 DNS解決を拒否
+                        <div style="font-size:20px; font-weight:400; margin-top:4px;">「その番号はお教えできません」<br>→ 通信不成立</div>
+                    </div>
+                    <div class="analogy-node safe-dest">
+                        ✅ DNS解決を許可
+                        <div style="font-size:20px; font-weight:400; margin-top:4px;">「番号は xxx.xxx.xxx.xxx です」<br>→ 正常に通信</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DNS Security Advantages -->
+        <div class="diagram-title" style="margin-bottom: 20px;">DNSレベル防御の3つの利点</div>
+        <div class="feature-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="feature-card">
+                <div class="feature-icon">🚪</div>
+                <div class="feature-name">最初の関所</div>
+                <div class="feature-desc">通信の最初のステップでブロックするため、悪意のある通信が発生する前に遮断できます</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏢</div>
+                <div class="feature-name">中央管理</div>
+                <div class="feature-desc">VPC全体に一括適用できるため、EC2を1台ずつ設定する必要がありません</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <div class="feature-name">自動更新</div>
+                <div class="feature-desc">AWSマネージドリストは自動更新されるため、最新の脅威に常に対応できます</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 3: Route 53 Resolver DNS Firewall
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">3</div>
+            <h2 id="Route-53-Resolver-DNS-Firewall-の全体像" class="section-title">Route 53 Resolver DNS Firewall の全体像</h2>
+        </div>
+
+        <!-- Protection Flow -->
+        <div class="diagram-card">
+            <div class="diagram-title">🔄 保護フロー全体図</div>
+            <div class="flow-diagram">
+                <div class="flow-node ec2">
+                    💻 EC2インスタンス（VPC内）
+                    <div style="font-size:20px; font-weight:400; margin-top:4px;">DNSクエリ「malware-c2.bad.com → ?」</div>
+                </div>
+
+                <div class="flow-arrow">
+                    <span class="arrow-text">DNSクエリ</span>
+                    <span>⬇</span>
+                </div>
+
+                <div class="flow-node dns-query">
+                    📡 Route 53 Resolver
+                    <div style="font-size:20px; font-weight:400; margin-top:4px;">VPC内のDNS解決を担当</div>
+                </div>
+
+                <div class="flow-arrow">
+                    <span class="arrow-text">ルールグループで検査</span>
+                    <span>⬇</span>
+                </div>
+
+                <div class="flow-node firewall">
+                    <span class="shield-icon">🛡️</span>
+                    DNS Firewall ルールグループ
+                    <div style="font-size:20px; font-weight:400; margin-top:4px;">ドメインリストと照合 → アクション実行</div>
+                </div>
+
+                <div class="flow-branch-arrow" style="padding: 12px 0;">
+                    <div class="branch-left">
+                        ⬇ 悪意あるドメイン<br>🚫 BLOCK / ALERT
+                    </div>
+                    <div class="branch-right">
+                        ⬇ 正常なドメイン<br>✅ ALLOW
+                    </div>
+                </div>
+
+                <div class="flow-branch">
+                    <div class="flow-node block">
+                        🚫 BLOCK
+                        <div style="font-size:20px; font-weight:400; margin-top:4px;">NODATA / NXDOMAIN / OVERRIDE を返す</div>
+                    </div>
+                    <div class="flow-node allow">
+                        ✅ ALLOW
+                        <div style="font-size:20px; font-weight:400; margin-top:4px;">通常のDNS解決が行われ通信可能</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Components -->
+        <div class="diagram-title" style="margin-bottom: 20px;">DNS Firewallの主要コンポーネント</div>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📜</div>
+                <div class="feature-name">ドメインリスト</div>
+                <div class="feature-desc">フィルタリング対象のドメインを定義。AWSマネージドリスト（自動更新）とカスタムリスト（手動管理）の2種類があります</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📐</div>
+                <div class="feature-name">ルールグループ</div>
+                <div class="feature-desc">「どのドメインリストに対して、どのアクションを取るか」を定義するルールの集合体です</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚙️</div>
+                <div class="feature-name">アクション</div>
+                <div class="feature-desc">ALLOW（許可）、BLOCK（拒否）、ALERT（許可＋ログ記録）の3つから選択できます</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔗</div>
+                <div class="feature-name">VPCへの関連付け</div>
+                <div class="feature-desc">ルールグループをVPCに関連付けることで、そのVPC内のすべてのDNSクエリに適用されます</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 4: AWS Managed Domain Lists
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">4</div>
+            <h2 id="AWSマネージドドメインリスト" class="section-title">AWSマネージドドメインリスト</h2>
+        </div>
+
+        <div class="managed-list-card">
+            <p style="font-size: 20px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.7;">
+                AWSが管理・定期更新する脅威インテリジェンスに基づいたドメインリストです。ユーザーがリストを自分で管理する必要がなく、最新の脅威に自動対応できます。
+            </p>
+            <div class="managed-list-grid">
+                <div class="managed-item primary">
+                    <div class="managed-item-icon">🤖</div>
+                    <div class="managed-item-name">AWSManagedDomains​BotnetCommandand​Control</div>
+                    <div class="managed-item-desc">既知のボットネットC2ドメインのリスト。今回の主役。定期的に更新され、新たに発見されたC2ドメインが自動追加されます。</div>
+                </div>
+                <div class="managed-item">
+                    <div class="managed-item-icon">🦠</div>
+                    <div class="managed-item-name">AWSManagedDomains​MalwareDomainList</div>
+                    <div class="managed-item-desc">マルウェア配布に使われる既知のドメインリスト。マルウェアのダウンロードやアップデートを防止します。</div>
+                </div>
+                <div class="managed-item">
+                    <div class="managed-item-icon">🔒</div>
+                    <div class="managed-item-name">AWSManagedDomains​AggregateThreatList</div>
+                    <div class="managed-item-desc">複数の脅威カテゴリを統合した包括的なリスト。広範な脅威からの保護に使用します。</div>
+                </div>
+                <div class="managed-item">
+                    <div class="managed-item-icon">📝</div>
+                    <div class="managed-item-name">カスタムドメインリスト</div>
+                    <div class="managed-item-desc">自社で独自に管理するドメインリスト。組織固有の脅威やポリシーに基づいて追加できます。</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 5: Implementation Steps
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">5</div>
+            <h2 id="実装ステップ" class="section-title">実装ステップ</h2>
+        </div>
+
+        <div class="analogy-box">
+            <div class="analogy-label">🎭 たとえ話で理解</div>
+            <h3 id="ビルのセキュリティシステム導入のイメージ" class="analogy-title">「ビルのセキュリティシステム導入」のイメージ</h3>
+            <p class="analogy-desc">
+                実装は、ビルにセキュリティシステムを導入するのと同じです。まず「ブラックリスト」を用意し、次に「警備員のマニュアル（ルールグループ）」を作成し、最後に「各フロアに配置（VPCに関連付け）」します。
+            </p>
+        </div>
+
+        <div class="steps-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">ルールグループを作成する</div>
+                    <div class="step-desc">DNS Firewallのルールグループを作成します。これが「警備マニュアル」の枠になります。</div>
+                    <div class="step-code"><span class="comment"># ルールグループの作成</span>
+aws route53resolver create-firewall-rule-group \
+  --name <span class="string">"botnet-c2-protection"</span> \
+  --tags Key=Purpose,Value=Security</div>
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">マネージドドメインリストでルールを追加する</div>
+                    <div class="step-desc">AWSManagedDomainsBotnetCommandandControl リストを使ったBLOCKルールを追加します。</div>
+                    <div class="step-code"><span class="comment"># ボットネットC2ドメインをブロックするルールを追加</span>
+aws route53resolver create-firewall-rule \
+  --firewall-rule-group-id <span class="string">rslvr-frg-xxxxxxxxx</span> \
+  --firewall-domain-list-id \
+    <span class="string">rslvr-fdl-xxxxxxxxx</span> \  <span class="comment"># AWSManagedDomainsBotnetCommandandControl</span>
+  --priority <span class="string">100</span> \
+  --action <span class="string">BLOCK</span> \
+  --block-response <span class="string">NODATA</span> \
+  --name <span class="string">"block-botnet-c2"</span></div>
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">VPCにルールグループを関連付ける</div>
+                    <div class="step-desc">作成したルールグループを保護対象のVPCに関連付け、DNSフィルタリングを有効化します。</div>
+                    <div class="step-code"><span class="comment"># VPCへの関連付け</span>
+aws route53resolver associate-firewall-rule-group \
+  --firewall-rule-group-id <span class="string">rslvr-frg-xxxxxxxxx</span> \
+  --vpc-id <span class="string">vpc-xxxxxxxxx</span> \
+  --priority <span class="string">101</span> \
+  --name <span class="string">"protect-production-vpc"</span></div>
+                </div>
+            </div>
+
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">ログ記録を有効化して監視する</div>
+                    <div class="step-desc">Route 53 Resolver クエリログを有効化し、ブロックされたクエリを可視化・監視します。</div>
+                    <div class="step-code"><span class="comment"># クエリログの設定</span>
+aws route53resolver create-resolver-query-log-config \
+  --name <span class="string">"dns-firewall-logs"</span> \
+  --destination-arn <span class="string">arn:aws:s3:::my-dns-logs-bucket</span>
+
+<span class="comment"># VPCへの関連付け</span>
+aws route53resolver \
+  associate-resolver-query-log-config \
+  --resolver-query-log-config-id <span class="string">rqlc-xxxxxxxxx</span> \
+  --resource-id <span class="string">vpc-xxxxxxxxx</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 6: Before & After
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">6</div>
+            <h2 id="導入前-vs-導入後" class="section-title">導入前 vs 導入後</h2>
+        </div>
+
+        <div class="comparison-grid">
+            <div class="comparison-card before">
+                <div class="comparison-label">🚨 DNS Firewall導入前</div>
+                <ul class="comparison-list">
+                    <li>感染EC2が自由にC2ドメインを解決できる</li>
+                    <li>攻撃者がボットに任意の指示を送信可能</li>
+                    <li>データ窃取やDDoS攻撃の踏み台にされる</li>
+                    <li>悪意ある通信の発見が遅れ被害が拡大</li>
+                    <li>各インスタンスごとの対策が必要で管理が煩雑</li>
+                </ul>
+            </div>
+            <div class="comparison-card after">
+                <div class="comparison-label">✅ DNS Firewall導入後</div>
+                <ul class="comparison-list">
+                    <li>既知のC2ドメインへのDNS解決が自動ブロック</li>
+                    <li>攻撃者との通信経路が成立しない</li>
+                    <li>VPC全体を一括で保護できる</li>
+                    <li>ブロックログで感染インスタンスの特定が容易</li>
+                    <li>AWSマネージドリストで脅威情報が自動更新</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 7: Best Practices
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">7</div>
+            <h2 id="ベストプラクティス" class="section-title">ベストプラクティス</h2>
+        </div>
+
+        <div class="practices-grid">
+            <div class="practice-card">
+                <div class="practice-icon">📊</div>
+                <div class="practice-name">まずALERTモードで検証</div>
+                <div class="practice-desc">本番環境では、いきなりBLOCKせずALERTモードで誤検知がないか確認してからBLOCKに切り替えましょう</div>
+            </div>
+            <div class="practice-card">
+                <div class="practice-icon">🔀</div>
+                <div class="practice-name">複数リストの併用</div>
+                <div class="practice-desc">BotnetC2リストに加えて、MalwareDomainListやカスタムリストも併用し、多層防御を実現しましょう</div>
+            </div>
+            <div class="practice-card">
+                <div class="practice-icon">📝</div>
+                <div class="practice-name">ログの監視と分析</div>
+                <div class="practice-desc">CloudWatch LogsやS3にクエリログを出力し、定期的に分析してインシデントの早期発見に活用しましょう</div>
+            </div>
+            <div class="practice-card">
+                <div class="practice-icon">🔗</div>
+                <div class="practice-name">他サービスとの連携</div>
+                <div class="practice-desc">GuardDuty、Security Hub、AWS Configと組み合わせて、包括的なセキュリティ監視体制を構築しましょう</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         SECTION 8: FAQ
+         ========================================== -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-number">8</div>
+            <h2 id="よくある質問" class="section-title">よくある質問</h2>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">❓ Security GroupやNACLとの違いは？</div>
+            <p class="faq-a">Security GroupやNACLはIPアドレス/ポートベースで通信を制御しますが、DNS Firewallは<strong>ドメイン名ベース</strong>で制御します。C2サーバーはIPアドレスを頻繁に変更するため、ドメインレベルでブロックする方が効果的です。</p>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">❓ マネージドリストはどのくらいの頻度で更新される？</div>
+            <p class="faq-a">AWSが脅威インテリジェンスに基づいて定期的に更新します。具体的な更新頻度は公開されていませんが、新しいC2ドメインが発見され次第、リストに追加されます。</p>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">❓ 正常な通信が誤ってブロックされることはある？</div>
+            <p class="faq-a">可能性はゼロではありません。そのため、本番導入前にALERTモードで検証し、ホワイトリスト（ALLOWルール）で正当なドメインを明示的に許可することが推奨されます。</p>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-q">❓ DNSを使わないC2通信も防げる？</div>
+            <p class="faq-a">DNS Firewallは<strong>DNS解決をブロック</strong>するサービスのため、IPアドレス直指定のC2通信には対応できません。そのような場合は、Network Firewall、Security Group、GuardDutyなど他のサービスとの組み合わせが必要です。</p>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         KEY TAKEAWAY
+         ========================================== -->
+    <div class="key-takeaway">
+        <div class="key-takeaway-label">📌 試験対策のポイント</div>
+        <p class="key-takeaway-text">
+            「EC2のボットネットC2通信を防ぎたい」→ Route 53 Resolver DNS Firewall ＋ AWSManagedDomainsBotnetCommandandControl
+        </p>
+        <ul class="key-takeaway-list">
+            <li>DNS Firewallは「DNSクエリをフィルタリング」するサービス</li>
+            <li>AWSマネージドドメインリストで既知のC2ドメインを自動ブロック</li>
+            <li>VPC単位で適用 → 全インスタンスに一括保護</li>
+            <li>Security Group / NACLは「IPベース」、DNS Firewallは「ドメインベース」の制御</li>
+            <li>ALERTモードで検証 → BLOCKモードに切り替えが本番のベストプラクティス</li>
+        </ul>
+    </div>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <p>AWS Route 53 Resolver DNS Firewall - ボットネットC2保護ガイド</p>
+    
+
+</div>
+</footer>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="guardduty-traffic-analysis-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">73</span> <span class="separator" aria-hidden="true">/</span> <span class="total">73</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

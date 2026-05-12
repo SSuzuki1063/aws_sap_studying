@@ -1,0 +1,659 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   CloudFront HTTPセキュリティヘッダー完全ガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/cloudfront-security-headers-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#結論-3つの方法でセキュリティヘッダーを追加できる">📌 結論：3つの方法でセキュリティヘッダーを追加できる</a> </li><li class="toc-h2"> <a href="#HTTPセキュリティヘッダーとは？">🏨 HTTPセキュリティヘッダーとは？</a> </li><li class="toc-h2"> <a href="#高級ホテルのセキュリティバッジで理解しよう！">🏨 高級ホテルの「セキュリティバッジ」で理解しよう！</a> </li><li class="toc-h3"> <a href="#HTTPセキュリティヘッダー-=-ホテルのセキュリティルール書">🎯 HTTPセキュリティヘッダー = ホテルの「セキュリティルール書」</a> </li><li class="toc-h2"> <a href="#主要なセキュリティヘッダー6選">🔐 主要なセキュリティヘッダー6選</a> </li><li class="toc-h2"> <a href="#セキュリティヘッダー追加の流れ">🔄 セキュリティヘッダー追加の流れ</a> </li><li class="toc-h3"> <a href="#CloudFrontでヘッダーが追加されるタイミング">CloudFrontでヘッダーが追加されるタイミング</a> </li><li class="toc-h2"> <a href="#⚙️-3つの方法を詳しく解説">⚙️ 3つの方法を詳しく解説</a> </li><li class="toc-h2"> <a href="#️-どの方法を選ぶべき？">🛠️ どの方法を選ぶべき？</a> </li><li class="toc-h3"> <a href="#✅-メリット">✅ メリット</a> </li><li class="toc-h2"> <a href="#3つの方法を比較">📊 3つの方法を比較</a> </li><li class="toc-h3"> <a href="#どれを選ぶべき？完全比較表">🔍 どれを選ぶべき？完全比較表</a> </li><li class="toc-h2"> <a href="#Response-Headers-Policyの設定手順">📝 Response Headers Policyの設定手順</a> </li><li class="toc-h2"> <a href="#5ステップで完了！推奨方法">🚀 5ステップで完了！（推奨方法）</a> </li><li class="toc-h3"> <a href="#CloudFrontコンソールを開く">CloudFrontコンソールを開く</a> </li><li class="toc-h2"> <a href="#⚠️-ベストプラクティス">⚠️ ベストプラクティス</a> </li><li class="toc-h2"> <a href="#セキュリティヘッダー設定の注意点">🎯 セキュリティヘッダー設定の注意点</a> </li><li class="toc-h3"> <a href="#HSTSは慎重に">🔒 HSTSは慎重に</a> </li><li class="toc-h2"> <a href="#❓-よくある質問">❓ よくある質問</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> ネットワーキング </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>🛡️ CloudFront HTTPセキュリティヘッダー</h1>
+<p>高級ホテルの門番で理解する！レスポンスにセキュリティを追加する完全ガイド</p>
+</div>
+<div class="content">
+<!-- 結論ファースト -->
+<div class="conclusion-first">
+<h2 id="結論-3つの方法でセキュリティヘッダーを追加できる">📌 結論：3つの方法でセキュリティヘッダーを追加できる</h2>
+<div class="three-methods">
+<div class="method-card">
+<div class="method-badge recommend-badge">🏆 推奨</div>
+<div class="method-icon">📋</div>
+<div class="method-title">Response Headers Policy</div>
+<div class="method-desc">
+                            CloudFront標準機能<br/>
+<strong>コード不要！</strong><br/>
+                            設定画面でポチポチするだけ<br/><br/>
+                            🏨 ホテルの「標準セキュリティ」
+                        </div>
+</div>
+<div class="method-card">
+<div class="method-badge">⚡ 高機能</div>
+<div class="method-icon">λ</div>
+<div class="method-title">Lambda@Edge</div>
+<div class="method-desc">
+                            Lambdaで自由にカスタマイズ<br/>
+<strong>複雑なロジックも可能</strong><br/>
+                            レイテンシ：やや大きい<br/><br/>
+                            🏨 ホテルの「専属コンシェルジュ」
+                        </div>
+</div>
+<div class="method-card">
+<div class="method-badge">🚀 軽量</div>
+<div class="method-icon">⚡</div>
+<div class="method-title">CloudFront Functions</div>
+<div class="method-desc">
+                            軽量・高速な処理<br/>
+<strong>シンプルな変換向き</strong><br/>
+                            レイテンシ：最小<br/><br/>
+                            🏨 ホテルの「自動ドア」
+                        </div>
+</div>
+</div>
+</div>
+<!-- ホテルの比喩 -->
+<h2 class="section-title" id="HTTPセキュリティヘッダーとは？">🏨 HTTPセキュリティヘッダーとは？</h2>
+<div class="hotel-analogy">
+<h2 class="hotel-title" id="高級ホテルのセキュリティバッジで理解しよう！">🏨 高級ホテルの「セキュリティバッジ」で理解しよう！</h2>
+<div class="hotel-visual">
+<div class="visitor-flow">
+<div class="visitor">
+<div class="visitor-icon">👤</div>
+<div>お客様<br/>（ブラウザ）</div>
+</div>
+<div class="flow-arrow">⬇️</div>
+<div class="visitor">
+<div class="visitor-icon">📨</div>
+<div>リクエスト<br/>「ページをください」</div>
+</div>
+</div>
+<div class="flow-arrow">➡️</div>
+<div class="hotel-building">
+<div class="hotel-roof">🏨 CloudFront（高級ホテル）</div>
+<div class="hotel-entrance">
+<div class="doorman">🛎️</div>
+<div class="doorman-label">門番（エッジロケーション）</div>
+<div class="security-checks">
+<div class="check-item">✅ セキュリティバッジを発行</div>
+<div class="check-item">✅ 「このホテルのルール」を伝達</div>
+<div class="check-item">✅ 危険な行為を禁止</div>
+</div>
+</div>
+</div>
+<div class="flow-arrow">➡️</div>
+<div class="visitor-flow">
+<div class="visitor">
+<div class="visitor-icon">📄</div>
+<div>レスポンス<br/>（Webページ）</div>
+</div>
+<div class="flow-arrow">⬇️</div>
+<div class="visitor" style="background: #d1fae5; border: 3px solid #10b981;">
+<div class="visitor-icon">🛡️</div>
+<div>セキュリティヘッダー付き<br/>「安全なルール」が添付</div>
+</div>
+</div>
+</div>
+<div class="analogy-explanation">
+<h3 id="HTTPセキュリティヘッダー-=-ホテルのセキュリティルール書" style="color: #0c4a6e; margin-bottom: 15px; text-align: center;">🎯 HTTPセキュリティヘッダー = ホテルの「セキュリティルール書」</h3>
+<div class="analogy-grid">
+<div class="analogy-item">
+<div class="analogy-item-icon">🏨</div>
+<div class="analogy-item-text">
+<strong>CloudFront</strong>
+                                高級ホテル（エントランスでルールを伝達）
+                            </div>
+</div>
+<div class="analogy-item">
+<div class="analogy-item-icon">📋</div>
+<div class="analogy-item-text">
+<strong>セキュリティヘッダー</strong>
+                                「当ホテルのセキュリティルール」書類
+                            </div>
+</div>
+<div class="analogy-item">
+<div class="analogy-item-icon">👤</div>
+<div class="analogy-item-text">
+<strong>ブラウザ</strong>
+                                ルールに従う宿泊客
+                            </div>
+</div>
+<div class="analogy-item">
+<div class="analogy-item-icon">😈</div>
+<div class="analogy-item-text">
+<strong>攻撃者</strong>
+                                ルールを悪用しようとする不審者
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- 主要なセキュリティヘッダー -->
+<h2 class="section-title" id="主要なセキュリティヘッダー6選">🔐 主要なセキュリティヘッダー6選</h2>
+<div class="headers-section">
+<div class="headers-grid">
+<!-- HSTS -->
+<div class="header-card">
+<div class="header-card-icon">🔒</div>
+<div class="header-card-name">Strict-Transport-Security</div>
+<div class="header-card-title">HSTS（HTTPS強制）</div>
+<div class="header-card-desc">
+                            ブラウザに「このサイトは常にHTTPSで接続してね」と指示。HTTP接続を自動的にHTTPSにリダイレクト。
+                        </div>
+<div class="header-card-analogy">
+<strong>🏨 ホテルのたとえ</strong>
+<p>「当ホテルは正面玄関（HTTPS）からのみ入館可能です。裏口（HTTP）は使用禁止！」</p>
+</div>
+</div>
+<!-- CSP -->
+<div class="header-card">
+<div class="header-card-icon">📜</div>
+<div class="header-card-name">Content-Security-Policy</div>
+<div class="header-card-title">CSP（コンテンツ制限）</div>
+<div class="header-card-desc">
+                            どこからスクリプトや画像を読み込めるか制限。XSS攻撃を防ぐ最強の盾。
+                        </div>
+<div class="header-card-analogy">
+<strong>🏨 ホテルのたとえ</strong>
+<p>「部屋に持ち込める荷物は、指定の業者からのみ！不審な荷物は受け取り拒否！」</p>
+</div>
+</div>
+<!-- X-Content-Type-Options -->
+<div class="header-card">
+<div class="header-card-icon">📦</div>
+<div class="header-card-name">X-Content-Type-Options</div>
+<div class="header-card-title">MIMEスニッフィング防止</div>
+<div class="header-card-desc">
+                            ブラウザが勝手にファイルタイプを推測するのを禁止。悪意あるファイル実行を防ぐ。
+                        </div>
+<div class="header-card-analogy">
+<strong>🏨 ホテルのたとえ</strong>
+<p>「荷物のラベルを信用せよ！中身を勝手に開けて確認するな！（偽装防止）」</p>
+</div>
+</div>
+<!-- X-Frame-Options -->
+<div class="header-card">
+<div class="header-card-icon">🖼️</div>
+<div class="header-card-name">X-Frame-Options</div>
+<div class="header-card-title">クリックジャッキング防止</div>
+<div class="header-card-desc">
+                            このページを他サイトのiframe内に埋め込むことを禁止。偽サイトでの悪用を防ぐ。
+                        </div>
+<div class="header-card-analogy">
+<strong>🏨 ホテルのたとえ</strong>
+<p>「当ホテルの写真を他のパンフレットに無断掲載禁止！（偽ホテル対策）」</p>
+</div>
+</div>
+<!-- X-XSS-Protection -->
+<div class="header-card">
+<div class="header-card-icon">⚔️</div>
+<div class="header-card-name">X-XSS-Protection</div>
+<div class="header-card-title">XSSフィルター有効化</div>
+<div class="header-card-desc">
+                            ブラウザ内蔵のXSSフィルターを有効化。反射型XSS攻撃を検知・ブロック。
+                        </div>
+<div class="header-card-analogy">
+<strong>🏨 ホテルのたとえ</strong>
+<p>「不審な動きをする宿泊客は、警備員が自動検知して退去させます！」</p>
+</div>
+</div>
+<!-- Referrer-Policy -->
+<div class="header-card">
+<div class="header-card-icon">🔗</div>
+<div class="header-card-name">Referrer-Policy</div>
+<div class="header-card-title">リファラー情報制御</div>
+<div class="header-card-desc">
+                            リンククリック時に「どこから来たか」情報をどこまで伝えるか制御。プライバシー保護。
+                        </div>
+<div class="header-card-analogy">
+<strong>🏨 ホテルのたとえ</strong>
+<p>「宿泊客がどこから来たかは、必要最小限しか外部に伝えません（プライバシー保護）」</p>
+</div>
+</div>
+</div>
+</div>
+<!-- リクエストフロー図 -->
+<h2 class="section-title" id="セキュリティヘッダー追加の流れ">🔄 セキュリティヘッダー追加の流れ</h2>
+<div class="flow-diagram">
+<h3 class="flow-title" id="CloudFrontでヘッダーが追加されるタイミング">CloudFrontでヘッダーが追加されるタイミング</h3>
+<div class="request-flow">
+<div class="flow-node">
+<div class="flow-node-icon">👤</div>
+<div class="flow-node-label">ユーザー</div>
+</div>
+<div class="flow-connector">
+<div class="connector-label">リクエスト</div>
+<div class="connector-arrow">➡️</div>
+</div>
+<div class="flow-node">
+<div class="flow-node-icon">🌐</div>
+<div class="flow-node-label">CloudFront</div>
+</div>
+<div class="flow-connector">
+<div class="connector-label">取得</div>
+<div class="connector-arrow">➡️</div>
+</div>
+<div class="flow-node">
+<div class="flow-node-icon">🗄️</div>
+<div class="flow-node-label">オリジン<br/>(S3/ALB等)</div>
+</div>
+</div>
+<div class="request-flow" style="margin-top: 30px;">
+<div class="flow-node" style="background: #d1fae5; border: 3px solid #10b981;">
+<div class="flow-node-icon">🛡️</div>
+<div class="flow-node-label">セキュリティヘッダー<br/>付きレスポンス</div>
+</div>
+<div class="flow-connector">
+<div class="connector-arrow">⬅️</div>
+</div>
+<div class="header-injection">
+<div class="injection-icon">✨</div>
+<div class="injection-title">ヘッダー追加</div>
+<div class="injection-desc">ここで追加！</div>
+</div>
+<div class="flow-connector">
+<div class="connector-arrow">⬅️</div>
+<div class="connector-label">レスポンス</div>
+</div>
+<div class="flow-node">
+<div class="flow-node-icon">📄</div>
+<div class="flow-node-label">オリジンからの<br/>レスポンス</div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px; text-align: center;">
+<p style="color: #065f46; font-size: 1.1em;">
+<strong>💡 ポイント：</strong>セキュリティヘッダーは<strong>レスポンス時</strong>に追加される<br/>
+                        オリジン（S3等）を変更せず、CloudFrontだけで対応可能！
+                    </p>
+</div>
+</div>
+<!-- 3つの方法詳細 -->
+<h2 class="section-title" id="⚙️-3つの方法を詳しく解説">⚙️ 3つの方法を詳しく解説</h2>
+<div class="methods-detail">
+<h2 class="methods-title" id="️-どの方法を選ぶべき？">🛠️ どの方法を選ぶべき？</h2>
+<!-- Response Headers Policy -->
+<div class="method-detail-card">
+<div class="method-detail-header">
+<div class="method-detail-icon">📋</div>
+<div class="method-detail-info">
+<div class="method-detail-name">Response Headers Policy</div>
+<div class="method-detail-subtitle">CloudFrontマネージドポリシー</div>
+</div>
+<div class="method-badge-group">
+<span class="detail-badge badge-recommend">🏆 推奨</span>
+<span class="detail-badge badge-easy">簡単</span>
+</div>
+</div>
+<div class="method-features">
+<div class="feature-box">
+<h3 id="✅-メリット">✅ メリット</h3>
+<ul>
+<li>✨ コード不要（GUI設定のみ）</li>
+<li>✨ AWS管理のプリセットあり</li>
+<li>✨ レイテンシ影響なし</li>
+<li>✨ 追加コストなし</li>
+<li>✨ メンテナンス不要</li>
+</ul>
+</div>
+<div class="feature-box">
+<h4>⚠️ デメリット・制限</h4>
+<ul>
+<li>⚠️ 動的な値設定は不可</li>
+<li>⚠️ 複雑な条件分岐は不可</li>
+<li>⚠️ カスタムロジックは不可</li>
+</ul>
+</div>
+</div>
+<div style="background: #d1fae5; padding: 20px; border-radius: 12px; margin-top: 20px;">
+<p style="color: #065f46;">
+<strong>🎯 こんな場合におすすめ：</strong><br/>
+                            「標準的なセキュリティヘッダーを追加したい」「とにかく簡単に設定したい」<br/>
+                            → <strong>90%以上のケースでこれを選べばOK！</strong>
+</p>
+</div>
+</div>
+<!-- Lambda@Edge -->
+<div class="method-detail-card">
+<div class="method-detail-header">
+<div class="method-detail-icon">λ</div>
+<div class="method-detail-info">
+<div class="method-detail-name">Lambda@Edge</div>
+<div class="method-detail-subtitle">エッジで実行するLambda関数</div>
+</div>
+<div class="method-badge-group">
+<span class="detail-badge badge-advanced">上級者向け</span>
+<span class="detail-badge badge-flexible">高機能</span>
+</div>
+</div>
+<div class="method-features">
+<div class="feature-box">
+<h4>✅ メリット</h4>
+<ul>
+<li>✨ 完全なカスタマイズ可能</li>
+<li>✨ 動的な値の設定OK</li>
+<li>✨ 複雑な条件分岐OK</li>
+<li>✨ 外部API呼び出し可能</li>
+<li>✨ Node.js / Pythonで記述</li>
+</ul>
+</div>
+<div class="feature-box">
+<h4>⚠️ デメリット・制限</h4>
+<ul>
+<li>⚠️ コード記述が必要</li>
+<li>⚠️ レイテンシが追加される</li>
+<li>⚠️ 追加コストがかかる</li>
+<li>⚠️ us-east-1でのみ作成可能</li>
+<li>⚠️ メンテナンスが必要</li>
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">📝 Lambda@Edge サンプルコード（Node.js）</div>
+<pre><span class="code-keyword">exports</span>.handler = <span class="code-keyword">async</span> (event) =&gt; {
+    <span class="code-keyword">const</span> response = event.Records[<span class="code-string">0</span>].cf.response;
+    <span class="code-keyword">const</span> headers = response.headers;
+    
+    <span class="code-comment">// セキュリティヘッダーを追加</span>
+    headers[<span class="code-string">'strict-transport-security'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'Strict-Transport-Security'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'max-age=31536000; includeSubdomains'</span>
+    }];
+    headers[<span class="code-string">'x-content-type-options'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'X-Content-Type-Options'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'nosniff'</span>
+    }];
+    headers[<span class="code-string">'x-frame-options'</span>] = [{
+        <span class="code-property">key</span>: <span class="code-string">'X-Frame-Options'</span>,
+        <span class="code-property">value</span>: <span class="code-string">'DENY'</span>
+    }];
+    
+    <span class="code-keyword">return</span> response;
+};</pre>
+</div>
+</div>
+<!-- CloudFront Functions -->
+<div class="method-detail-card">
+<div class="method-detail-header">
+<div class="method-detail-icon">⚡</div>
+<div class="method-detail-info">
+<div class="method-detail-name">CloudFront Functions</div>
+<div class="method-detail-subtitle">軽量・高速な関数</div>
+</div>
+<div class="method-badge-group">
+<span class="detail-badge badge-easy">軽量</span>
+<span class="detail-badge badge-flexible">高速</span>
+</div>
+</div>
+<div class="method-features">
+<div class="feature-box">
+<h4>✅ メリット</h4>
+<ul>
+<li>✨ Lambda@Edgeより高速</li>
+<li>✨ コストが安い（1/6程度）</li>
+<li>✨ どのリージョンでも作成可</li>
+<li>✨ シンプルな処理に最適</li>
+</ul>
+</div>
+<div class="feature-box">
+<h4>⚠️ デメリット・制限</h4>
+<ul>
+<li>⚠️ JavaScriptのみ</li>
+<li>⚠️ 実行時間1ms以下制限</li>
+<li>⚠️ メモリ2MB制限</li>
+<li>⚠️ ネットワークアクセス不可</li>
+<li>⚠️ 外部ライブラリ使用不可</li>
+</ul>
+</div>
+</div>
+<div class="code-example">
+<div class="code-title">📝 CloudFront Functions サンプルコード</div>
+<pre><span class="code-keyword">function</span> handler(event) {
+    <span class="code-keyword">var</span> response = event.response;
+    <span class="code-keyword">var</span> headers = response.headers;
+    
+    <span class="code-comment">// セキュリティヘッダーを追加</span>
+    headers[<span class="code-string">'strict-transport-security'</span>] = { 
+        <span class="code-property">value</span>: <span class="code-string">'max-age=31536000; includeSubdomains'</span>
+    };
+    headers[<span class="code-string">'x-content-type-options'</span>] = { 
+        <span class="code-property">value</span>: <span class="code-string">'nosniff'</span>
+    };
+    headers[<span class="code-string">'x-frame-options'</span>] = { 
+        <span class="code-property">value</span>: <span class="code-string">'DENY'</span>
+    };
+    
+    <span class="code-keyword">return</span> response;
+}</pre>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<h2 class="section-title" id="3つの方法を比較">📊 3つの方法を比較</h2>
+<div class="comparison-table">
+<h3 class="table-title" id="どれを選ぶべき？完全比較表">🔍 どれを選ぶべき？完全比較表</h3>
+<table>
+<thead>
+<tr>
+<th>比較項目</th>
+<th>📋 Response Headers Policy</th>
+<th>λ Lambda@Edge</th>
+<th>⚡ CloudFront Functions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🎯 難易度</td>
+<td><span class="check">⭐</span> 超簡単</td>
+<td><span class="partial">⭐⭐⭐</span> 難しい</td>
+<td><span class="partial">⭐⭐</span> 普通</td>
+</tr>
+<tr>
+<td>💻 コード記述</td>
+<td><span class="check">✅</span> 不要</td>
+<td><span class="cross">❌</span> 必要</td>
+<td><span class="cross">❌</span> 必要</td>
+</tr>
+<tr>
+<td>⚡ レイテンシ</td>
+<td><span class="check">✅</span> なし</td>
+<td><span class="cross">❌</span> 数ms追加</td>
+<td><span class="partial">⚠️</span> 微小</td>
+</tr>
+<tr>
+<td>💰 追加コスト</td>
+<td><span class="check">✅</span> なし</td>
+<td><span class="cross">❌</span> あり</td>
+<td><span class="partial">⚠️</span> 少額</td>
+</tr>
+<tr>
+<td>🔧 カスタマイズ</td>
+<td><span class="partial">⚠️</span> 限定的</td>
+<td><span class="check">✅</span> 完全自由</td>
+<td><span class="partial">⚠️</span> 制限あり</td>
+</tr>
+<tr>
+<td>🔄 動的な値</td>
+<td><span class="cross">❌</span> 不可</td>
+<td><span class="check">✅</span> 可能</td>
+<td><span class="check">✅</span> 可能</td>
+</tr>
+<tr>
+<td>🌐 外部API呼出</td>
+<td><span class="cross">❌</span> 不可</td>
+<td><span class="check">✅</span> 可能</td>
+<td><span class="cross">❌</span> 不可</td>
+</tr>
+<tr>
+<td>🏆 おすすめ度</td>
+<td style="background: #d1fae5;"><strong>⭐⭐⭐⭐⭐</strong></td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- 設定手順 -->
+<h2 class="section-title" id="Response-Headers-Policyの設定手順">📝 Response Headers Policyの設定手順</h2>
+<div class="setup-steps">
+<h2 class="setup-title" id="5ステップで完了！推奨方法">🚀 5ステップで完了！（推奨方法）</h2>
+<div class="step-cards">
+<div class="step-card">
+<div class="step-number">1</div>
+<div class="step-content">
+<h3 id="CloudFrontコンソールを開く">CloudFrontコンソールを開く</h3>
+<p>AWSマネジメントコンソール → CloudFront → 対象のディストリビューションを選択</p>
+</div>
+</div>
+<div class="step-arrow">⬇️</div>
+<div class="step-card">
+<div class="step-number">2</div>
+<div class="step-content">
+<h4>Behaviorを編集</h4>
+<p>「Behaviors」タブ → 編集したいBehaviorを選択 → 「Edit」をクリック</p>
+</div>
+</div>
+<div class="step-arrow">⬇️</div>
+<div class="step-card">
+<div class="step-number">3</div>
+<div class="step-content">
+<h4>Response Headers Policyを選択</h4>
+<p>「Response headers policy」セクションで、AWS管理ポリシーまたはカスタムポリシーを選択<br/>
+<strong>おすすめ：</strong>「SecurityHeadersPolicy」（AWS管理）</p>
+</div>
+</div>
+<div class="step-arrow">⬇️</div>
+<div class="step-card">
+<div class="step-number">4</div>
+<div class="step-content">
+<h4>設定を保存</h4>
+<p>「Save changes」をクリックして設定を保存</p>
+</div>
+</div>
+<div class="step-arrow">⬇️</div>
+<div class="step-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #10b981;">
+<div class="step-number" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">✓</div>
+<div class="step-content">
+<h4 style="color: #065f46;">完了！🎉</h4>
+<p style="color: #065f46;">デプロイ完了後（数分）、レスポンスにセキュリティヘッダーが追加されます</p>
+</div>
+</div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<h2 class="section-title" id="⚠️-ベストプラクティス">⚠️ ベストプラクティス</h2>
+<div class="best-practices">
+<h2 class="practices-title" id="セキュリティヘッダー設定の注意点">🎯 セキュリティヘッダー設定の注意点</h2>
+<div class="practices-grid">
+<div class="practice-card">
+<h3 id="HSTSは慎重に">🔒 HSTSは慎重に</h3>
+<p>max-ageを長くしすぎると、HTTPに戻せなくなる。まずは短い値（86400＝1日）でテストしてから延長。</p>
+</div>
+<div class="practice-card">
+<h4>📜 CSPは段階的に</h4>
+<p>最初は「Content-Security-Policy-Report-Only」でテスト。いきなり本番適用すると、サイトが壊れる可能性あり。</p>
+</div>
+<div class="practice-card">
+<h4>🧪 ステージング環境でテスト</h4>
+<p>本番適用前に必ずステージング環境でテスト。SecurityHeaders.comなどのツールで確認。</p>
+</div>
+<div class="practice-card">
+<h4>📊 モニタリングを忘れずに</h4>
+<p>CloudWatch Logsでエラーを監視。CSP違反レポートを収集して、問題を早期発見。</p>
+</div>
+</div>
+</div>
+<!-- FAQ -->
+<h2 class="section-title" id="❓-よくある質問">❓ よくある質問</h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>S3オリジンでもセキュリティヘッダーを追加できる？</span>
+</div>
+<div class="faq-answer">
+<strong>はい、できます！</strong><br/>
+                        S3自体にはセキュリティヘッダーを設定する機能がありませんが、CloudFrontのResponse Headers Policyを使えば、S3から配信するコンテンツにもセキュリティヘッダーを追加できます。これがCloudFrontを使う大きなメリットの1つです。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>オリジンが既にセキュリティヘッダーを返している場合は？</span>
+</div>
+<div class="faq-answer">
+<strong>設定によって動作が変わります。</strong><br/>
+                        Response Headers Policyでは、オリジンのヘッダーを「上書き」するか「維持」するかを選択できます。Lambda@EdgeやCloudFront Functionsでは、コードで自由に制御可能です。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+<span>AWS管理のSecurityHeadersPolicyには何が含まれている？</span>
+</div>
+<div class="faq-answer">
+<strong>主要なセキュリティヘッダーが含まれています：</strong><br/>
+                        • X-Content-Type-Options: nosniff<br/>
+                        • X-Frame-Options: SAMEORIGIN<br/>
+                        • X-XSS-Protection: 1; mode=block<br/>
+                        • Strict-Transport-Security: max-age=31536000<br/>
+                        • Referrer-Policy: strict-origin-when-cross-origin<br/><br/>
+                        より厳格な設定が必要な場合は、カスタムポリシーを作成してください。
+                    </div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ">🎓 まとめ</h2>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">📋</div>
+<div class="summary-title">Response Headers Policy</div>
+<div class="summary-desc">
+                            🏆 推奨！<br/>
+                            コード不要<br/>
+                            90%のケースでこれでOK
+                        </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">λ</div>
+<div class="summary-title">Lambda@Edge</div>
+<div class="summary-desc">
+                            高機能・柔軟<br/>
+                            複雑なロジック向け<br/>
+                            外部API連携も可能
+                        </div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">⚡</div>
+<div class="summary-title">CloudFront Functions</div>
+<div class="summary-desc">
+                            軽量・高速<br/>
+                            シンプルな処理向け<br/>
+                            コスト効率◎
+                        </div>
+</div>
+</div>
+<div class="final-message">
+<strong>🏨 高級ホテルの「セキュリティルール」を思い出そう！</strong><br/><br/>
+                    🔒 HTTPS必須（HSTS）= 正面玄関からのみ入館<br/>
+                    📜 コンテンツ制限（CSP）= 指定業者の荷物のみ<br/>
+                    🖼️ iframe禁止（X-Frame-Options）= パンフレット無断掲載禁止<br/><br/>
+<span style="font-size: 1.3em;">CloudFrontでセキュリティヘッダーを追加して<br/>安全なWebサイトを構築しよう！🛡️</span>
+</div>
+</div>
+</div>
+
+
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="eks-security-visual-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">14</span> <span class="separator" aria-hidden="true">/</span> <span class="total">19</span> </div> <a href="s3-vpc-endpoint-policy-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

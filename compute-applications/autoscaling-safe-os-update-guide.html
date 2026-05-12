@@ -1,0 +1,1862 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Auto Scaling安全なOSアップデート戦略完全ガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/autoscaling-safe-os-update-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#✈️-飛行機の機材変更で例えると超わかりやすい!">✈️ 飛行機の機材変更で例えると超わかりやすい!</a> </li><li class="toc-h2"> <a href="#✈️-飛行機の機材変更に例えると...">✈️ 飛行機の機材変更に例えると...</a> </li><li class="toc-h3"> <a href="#古い飛行機旧OS">古い飛行機（旧OS）</a> </li><li class="toc-h3"> <a href="#新しい飛行機新OS">新しい飛行機（新OS）</a> </li><li class="toc-h2"> <a href="#7つのステップで完璧なアップデート">🎯 7つのステップで完璧なアップデート</a> </li><li class="toc-h3"> <a href="#Step-1新しいAMI作成">Step 1 新しいAMI作成</a> </li><li class="toc-h3"> <a href="#Step-2起動設定を更新">Step 2 起動設定を更新</a> </li><li class="toc-h3"> <a href="#Step-3終了ポリシー設定">Step 3 終了ポリシー設定</a> </li><li class="toc-h3"> <a href="#Step-4グループを2倍に">Step 4 グループを2倍に</a> </li><li class="toc-h3"> <a href="#Step-5ヘルスチェック待機">Step 5 ヘルスチェック待機</a> </li><li class="toc-h3"> <a href="#Step-6元のサイズに戻す">Step 6 元のサイズに戻す</a> </li><li class="toc-h3"> <a href="#Step-7セキュリティ強化">Step 7 セキュリティ強化</a> </li><li class="toc-h2"> <a href="#詳細な実行フロー">🔄 詳細な実行フロー</a> </li><li class="toc-h2"> <a href="#ビジュアル図解-インスタンスの遷移">📊 ビジュアル図解: インスタンスの遷移</a> </li><li class="toc-h2"> <a href="#他の更新手法との比較">📊 他の更新手法との比較</a> </li><li class="toc-h2"> <a href="#完全な実装スクリプト例">💻 完全な実装スクリプト例</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li><li class="toc-h3"> <a href="#✈️-飛行機の乗客移動-=-OSアップデート">✈️ 飛行機の乗客移動 = OSアップデート</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> コンピュート・アプリケーション </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>
+     ✈️ Auto Scaling安全なOSアップデート戦略
+    </h1>
+
+<p>
+     飛行機の乗客を新しい機体に移し替えるように、ダウンタイムゼロでシステムを更新
+     <br/>
+     Blue/Green + Rolling Update 完全ガイド
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="✈️-飛行機の機材変更で例えると超わかりやすい!">
+      ✈️ 飛行機の機材変更で例えると超わかりやすい!
+     </h2>
+<p class="intro-text">
+<strong>
+       古い飛行機から新しい飛行機への乗客移動 = OSアップデート🛫
+      </strong>
+<br/>
+<br/>
+      飛行中の飛行機（稼働中のサーバー）のOSをアップデートしたい！
+      <br/>
+      でも、
+      <strong>
+       乗客（ユーザー）には一切気づかれたくない
+      </strong>
+      😱
+      <br/>
+<br/>
+      どうする？ →
+      <strong>
+       新しい飛行機を用意して、乗客を徐々に移動させる！
+      </strong>
+      ✈️→✈️
+      <br/>
+<br/>
+      これが今日学ぶ
+      <strong>
+       「ダウンタイムゼロのOSアップデート戦略」
+      </strong>
+      です。
+      <br/>
+<br/>
+<strong>
+       7つのステップ
+      </strong>
+      で完璧に実現できます✨
+     </p>
+</div>
+<!-- たとえ話セクション -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="✈️-飛行機の機材変更に例えると...">
+      ✈️ 飛行機の機材変更に例えると...
+     </h2>
+<div class="airplane-comparison">
+<div class="airplane-card">
+<div class="airplane-icon">
+        🛩️
+       </div>
+<h3 id="古い飛行機旧OS">
+        古い飛行機（旧OS）
+       </h3>
+<div class="airplane-description">
+<strong>
+         🎯 現在の状態：
+        </strong>
+<br/>
+        • 20年前のモデル（古いOS）
+        <br/>
+        • 100人の乗客が搭乗中（稼働中のサービス）
+        <br/>
+        • セキュリティアップデートが必要
+        <br/>
+        • でも飛行中に作業は不可能
+        <br/>
+<br/>
+<strong>
+         ❌ 悪い方法：
+        </strong>
+<br/>
+        飛行中に空中でエンジンを交換？
+        <br/>
+        →
+        <strong>
+         墜落します！（システムダウン）
+        </strong>
+<br/>
+<br/>
+<strong>
+         🤔 どうすれば？
+        </strong>
+<br/>
+        乗客を降ろさずに、新しい機体に移動させたい...
+       </div>
+</div>
+<div class="airplane-card">
+<div class="airplane-icon">
+        🛫
+       </div>
+<h3 id="新しい飛行機新OS">
+        新しい飛行機（新OS）
+       </h3>
+<div class="airplane-description">
+<strong>
+         ✨ 目指す状態：
+        </strong>
+<br/>
+        • 最新モデル（新しいOS）
+        <br/>
+        • 同じ100人の乗客（継続稼働）
+        <br/>
+        • セキュリティ完璧
+        <br/>
+        • 乗客は移動に気づかない
+        <br/>
+<br/>
+<strong>
+         ✅ 正しい方法：
+        </strong>
+<br/>
+        1. 新しい飛行機を100機準備
+        <br/>
+        2. 乗客を1人ずつ新しい機体へ
+        <br/>
+        3. 古い機体は順次着陸
+        <br/>
+        4. 最終的に全員が新機体に！
+        <br/>
+<br/>
+<strong>
+         🎉 これで完璧な移行！
+        </strong>
+</div>
+</div>
+</div>
+<div class="alert-box">
+<div class="alert-title">
+<span>
+        💡
+       </span>
+<span>
+        この戦略の正式名称
+       </span>
+</div>
+<div class="alert-content">
+<strong>
+        Blue/Green Deployment + Rolling Update
+       </strong>
+<br/>
+<br/>
+       •
+       <strong>
+        Blue
+       </strong>
+       = 古い環境（古いOS）
+       <br/>
+       •
+       <strong>
+        Green
+       </strong>
+       = 新しい環境（新しいOS）
+       <br/>
+       •
+       <strong>
+        Rolling
+       </strong>
+       = 徐々に切り替え
+       <br/>
+<br/>
+       Auto Scalingグループを
+       <strong>
+        2倍に拡大
+       </strong>
+       して、
+       <br/>
+       古いインスタンスを
+       <strong>
+        徐々に削除
+       </strong>
+       していく手法です。
+       <br/>
+<br/>
+<strong>
+        🎯 ダウンタイム: 完全にゼロ！
+       </strong>
+</div>
+</div>
+</div>
+<!-- 7つのステップ -->
+<div class="strategy-section">
+<h2 class="section-title" id="7つのステップで完璧なアップデート">
+      🎯 7つのステップで完璧なアップデート
+     </h2>
+<div class="strategy-steps">
+<div class="strategy-card">
+<div class="strategy-icon">
+        🖼️
+       </div>
+<h3 id="Step-1新しいAMI作成">
+        Step 1
+        <br/>
+        新しいAMI作成
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        最新の飛行機を設計
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • 最新OSでEC2起動
+        <br/>
+        • セキュリティパッチ適用
+        <br/>
+        • 会社標準に準拠
+        <br/>
+        • アプリインストール
+        <br/>
+        • AMIとして保存
+        <br/>
+<br/>
+<span class="badge badge-info">
+         重要度: ★★★★★
+        </span>
+</div>
+</div>
+<div class="strategy-card">
+<div class="strategy-icon">
+        ⚙️
+       </div>
+<h3 id="Step-2起動設定を更新">
+        Step 2
+        <br/>
+        起動設定を更新
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        新機体の運航許可取得
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • 新しいLaunch Configuration作成
+        <br/>
+        • 新AMIを指定
+        <br/>
+        • Auto Scalingグループに設定
+        <br/>
+        • 古い設定は保持
+        <br/>
+<br/>
+<strong>
+         💡 ポイント：
+        </strong>
+<br/>
+        Launch Templateの使用推奨
+        <br/>
+<br/>
+<span class="badge badge-info">
+         重要度: ★★★★☆
+        </span>
+</div>
+</div>
+<div class="strategy-card">
+<div class="strategy-icon">
+        📏
+       </div>
+<h3 id="Step-3終了ポリシー設定">
+        Step 3
+        <br/>
+        終了ポリシー設定
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        「古い機体から順に着陸」ルール
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • Termination Policy設定
+        <br/>
+        •
+        <code>
+         OldestLaunchConfiguration
+        </code>
+<br/>
+        • 古い設定のインスタンスから削除
+        <br/>
+        • 新しいものは保護
+        <br/>
+<br/>
+<strong>
+         🎯 これが超重要！
+        </strong>
+<br/>
+        これで新旧を区別できる
+        <br/>
+<br/>
+<span class="badge badge-danger">
+         重要度: ★★★★★
+        </span>
+</div>
+</div>
+<div class="strategy-card">
+<div class="strategy-icon">
+        📈
+       </div>
+<h3 id="Step-4グループを2倍に">
+        Step 4
+        <br/>
+        グループを2倍に
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        新機体を100機追加
+        <br/>
+        （合計200機に）
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • Desired Capacity × 2
+        <br/>
+        • 例: 10台 → 20台
+        <br/>
+        • 新AMIで10台起動
+        <br/>
+        • 古い10台はそのまま
+        <br/>
+<br/>
+<strong>
+         💰 一時的にコスト2倍
+        </strong>
+<br/>
+        でも短時間で済む
+        <br/>
+<br/>
+<span class="badge badge-warning">
+         重要度: ★★★★★
+        </span>
+</div>
+</div>
+<div class="strategy-card">
+<div class="strategy-icon">
+        ⏳
+       </div>
+<h3 id="Step-5ヘルスチェック待機">
+        Step 5
+        <br/>
+        ヘルスチェック待機
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        新機体の離陸準備完了確認
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • ELBヘルスチェック通過待ち
+        <br/>
+        • InService状態確認
+        <br/>
+        • アプリが正常起動
+        <br/>
+        • 準備完了まで待機
+        <br/>
+<br/>
+<strong>
+         ⏱️ 待機時間：
+        </strong>
+<br/>
+        通常5-10分程度
+        <br/>
+<br/>
+<span class="badge badge-success">
+         重要度: ★★★★☆
+        </span>
+</div>
+</div>
+<div class="strategy-card">
+<div class="strategy-icon">
+        📉
+       </div>
+<h3 id="Step-6元のサイズに戻す">
+        Step 6
+        <br/>
+        元のサイズに戻す
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        古い機体を順次着陸させる
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • Desired Capacity を元に戻す
+        <br/>
+        • 例: 20台 → 10台
+        <br/>
+        • Auto Scalingが自動削除
+        <br/>
+        • OldestLaunchConfigurationから削除
+        <br/>
+        • = 古いインスタンスが削除される
+        <br/>
+<br/>
+<strong>
+         🎉 新しいインスタンスだけ残る！
+        </strong>
+<br/>
+<br/>
+<span class="badge badge-success">
+         重要度: ★★★★★
+        </span>
+</div>
+</div>
+<div class="strategy-card">
+<div class="strategy-icon">
+        🔒
+       </div>
+<h3 id="Step-7セキュリティ強化">
+        Step 7
+        <br/>
+        セキュリティ強化
+       </h3>
+<div class="strategy-content">
+<strong>
+         ✈️ たとえ：
+        </strong>
+<br/>
+        コックピットへの不正侵入防止
+        <br/>
+<br/>
+<strong>
+         📋 実際の作業：
+        </strong>
+<br/>
+        • EC2インスタンスコンソールアクセス無効
+        <br/>
+        • Systems Manager Session Manager使用
+        <br/>
+        • SSHキー不要に
+        <br/>
+        • 監査ログ完全記録
+        <br/>
+<br/>
+<strong>
+         🛡️ セキュリティ最強化！
+        </strong>
+<br/>
+        直接ログイン禁止
+        <br/>
+<br/>
+<span class="badge badge-info">
+         重要度: ★★★★☆
+        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- 詳細フロー -->
+<div class="flow-section">
+<h2 class="section-title" id="詳細な実行フロー">
+      🔄 詳細な実行フロー
+     </h2>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        0
+       </span>
+       現在の状態確認
+      </div>
+<div class="flow-step-desc">
+<strong>
+        📊 Before: 開始前の状態
+       </strong>
+<br/>
+<br/>
+       • Auto Scalingグループ: 10インスタンス
+       <br/>
+       • 全て古いAMI（例: ami-old-12345）
+       <br/>
+       • Launch Configuration: lc-old-v1
+       <br/>
+       • ユーザー: 1000人が利用中
+       <br/>
+       • ダウンタイム許容: 0秒
+       <br/>
+<br/>
+<strong>
+        🎯 目標: 全インスタンスを新OSに更新
+       </strong>
+</div>
+</div>
+<div class="arrow-down">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        1
+       </span>
+       新AMI作成・起動設定更新
+      </div>
+<div class="flow-step-desc">
+<strong>
+        🛠️ 準備作業
+       </strong>
+<br/>
+<br/>
+<div class="code-example">
+<div class="code-title">
+         📄 AWS CLI例
+        </div>
+<pre><span class="code-comment"># 1. 新しいAMI作成（既存インスタンスから）</span>
+aws ec2 create-image \
+  --instance-id <span class="code-string">i-xxxxx</span> \
+  --name <span class="code-string">"app-v2-2025-01-01"</span> \
+  --description <span class="code-string">"Updated OS with security patches"</span>
+
+<span class="code-comment"># 2. 新しいLaunch Configuration作成</span>
+aws autoscaling create-launch-configuration \
+  --launch-configuration-name <span class="code-string">lc-new-v2</span> \
+  --image-id <span class="code-string">ami-new-67890</span> \
+  --instance-type <span class="code-string">t3.medium</span> \
+  --security-groups <span class="code-string">sg-xxxxx</span>
+
+<span class="code-comment"># 3. Auto Scalingグループを更新</span>
+aws autoscaling update-auto-scaling-group \
+  --auto-scaling-group-name <span class="code-string">my-asg</span> \
+  --launch-configuration-name <span class="code-string">lc-new-v2</span></pre>
+</div>
+<strong>
+        ✅ 結果: 準備完了！でもまだ新インスタンスは起動していない
+       </strong>
+</div>
+</div>
+<div class="arrow-down">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        2
+       </span>
+       終了ポリシー設定
+      </div>
+<div class="flow-step-desc">
+<strong>
+        📏 削除ルールの設定
+       </strong>
+<br/>
+<br/>
+<div class="code-example">
+<div class="code-title">
+         📄 終了ポリシー設定
+        </div>
+<pre>aws autoscaling update-auto-scaling-group \
+  --auto-scaling-group-name <span class="code-string">my-asg</span> \
+  --termination-policies <span class="code-string">"OldestLaunchConfiguration"</span>
+
+<span class="code-comment"># これで古いLaunch Configurationのインスタンスから削除される</span></pre>
+</div>
+<strong>
+        🎯 これが最重要！
+       </strong>
+<br/>
+       • この設定がないと新インスタンスも削除される可能性
+       <br/>
+       • 必ずOldestLaunchConfigurationを指定
+       <br/>
+       • 他のポリシー（OldestInstance等）は不可
+      </div>
+</div>
+<div class="arrow-down">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        3
+       </span>
+       Desired Capacityを2倍に
+      </div>
+<div class="flow-step-desc">
+<strong>
+        📈 インスタンス数を倍増
+       </strong>
+<br/>
+<br/>
+<div class="code-example">
+<div class="code-title">
+         📄 キャパシティ変更
+        </div>
+<pre>aws autoscaling set-desired-capacity \
+  --auto-scaling-group-name <span class="code-string">my-asg</span> \
+  --desired-capacity <span class="code-value">20</span>  <span class="code-comment"># 元は10台</span>
+
+<span class="code-comment"># Auto Scalingが自動的に新しいLaunch Configで10台起動</span></pre>
+</div>
+<strong>
+        🚀 起動プロセス：
+       </strong>
+<br/>
+       1. Auto Scalingが不足を検出（10台足りない）
+       <br/>
+       2. 新Launch Configuration（lc-new-v2）で起動
+       <br/>
+       3. 新AMI（ami-new-67890）を使用
+       <br/>
+       4. ELBに自動登録
+       <br/>
+       5. ヘルスチェック開始
+       <br/>
+<br/>
+<strong>
+        ⏱️ 所要時間: 5-10分
+       </strong>
+</div>
+</div>
+<div class="arrow-down">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        4
+       </span>
+       新インスタンスのヘルスチェック待機
+      </div>
+<div class="flow-step-desc">
+<strong>
+        ⏳ 全ての新インスタンスがInServiceになるまで待つ
+       </strong>
+<br/>
+<br/>
+<div class="code-example">
+<div class="code-title">
+         📄 ステータス確認
+        </div>
+<pre><span class="code-comment"># Auto Scalingグループのインスタンス状態確認</span>
+aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names <span class="code-string">my-asg</span> \
+  --query <span class="code-string">"AutoScalingGroups[0].Instances[*].[InstanceId,HealthStatus,LifecycleState]"</span>
+
+<span class="code-comment"># 出力例:</span>
+<span class="code-comment"># i-old-001    Healthy    InService  ← 古いインスタンス</span>
+<span class="code-comment"># i-old-002    Healthy    InService</span>
+<span class="code-comment"># ...</span>
+<span class="code-comment"># i-new-001    Healthy    InService  ← 新しいインスタンス</span>
+<span class="code-comment"># i-new-002    Healthy    InService</span>
+<span class="code-comment"># ...</span></pre>
+</div>
+<strong>
+        ✅ 確認事項：
+       </strong>
+<br/>
+       • 全20台がInService
+       <br/>
+       • ELBヘルスチェック通過
+       <br/>
+       • アプリケーション正常応答
+       <br/>
+       • エラーログなし
+       <br/>
+<br/>
+<strong>
+        💡 この時点で新旧両方が稼働中！
+       </strong>
+</div>
+</div>
+<div class="arrow-down">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        5
+       </span>
+       Desired Capacityを元に戻す
+      </div>
+<div class="flow-step-desc">
+<strong>
+        📉 インスタンス数を元の10台に
+       </strong>
+<br/>
+<br/>
+<div class="code-example">
+<div class="code-title">
+         📄 キャパシティ削減
+        </div>
+<pre>aws autoscaling set-desired-capacity \
+  --auto-scaling-group-name <span class="code-string">my-asg</span> \
+  --desired-capacity <span class="code-value">10</span>  <span class="code-comment"># 元に戻す</span>
+
+<span class="code-comment"># Auto Scalingが自動処理:</span>
+<span class="code-comment"># 1. 過剰な10台を削除対象に</span>
+<span class="code-comment"># 2. 終了ポリシー「OldestLaunchConfiguration」に従う</span>
+<span class="code-comment"># 3. 古いlc-old-v1のインスタンスを1台ずつ削除</span>
+<span class="code-comment"># 4. ELBから登録解除してから削除</span>
+<span class="code-comment"># 5. 新しいインスタンスはそのまま残る</span></pre>
+</div>
+<strong>
+        🎯 削除プロセス（自動）：
+       </strong>
+<br/>
+       1. ELBから登録解除（Deregister）
+       <br/>
+       2. Connection Draining（既存接続の完了待ち）
+       <br/>
+       3. インスタンス終了
+       <br/>
+       4. 次のインスタンスへ
+       <br/>
+<br/>
+<strong>
+        ⏱️ 所要時間: 10-20分（10台削除）
+       </strong>
+<br/>
+<strong>
+        🎉 完了後: 新OSの10台だけが稼働！
+       </strong>
+</div>
+</div>
+<div class="arrow-down">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-step-title">
+<span class="flow-step-number">
+        6
+       </span>
+       セキュリティ強化とメンテナンス設定
+      </div>
+<div class="flow-step-desc">
+<strong>
+        🔒 最終的なセキュリティ設定
+       </strong>
+<br/>
+<br/>
+<strong>
+        1. EC2インスタンスコンソールアクセス無効化：
+       </strong>
+<br/>
+       • Security GroupからSSH（22）削除
+       <br/>
+       • KeyPairを使用しない設定
+       <br/>
+       • Systems Manager経由のみ許可
+       <br/>
+<br/>
+<strong>
+        2. Systems Manager設定：
+       </strong>
+<div class="code-example">
+<div class="code-title">
+         📄 Session Manager設定
+        </div>
+<pre><span class="code-comment"># IAMロールにSSM権限付与（インスタンスプロファイル）</span>
+{
+  <span class="code-keyword">"Version"</span>: <span class="code-string">"2012-10-17"</span>,
+  <span class="code-keyword">"Statement"</span>: [{
+    <span class="code-keyword">"Effect"</span>: <span class="code-string">"Allow"</span>,
+    <span class="code-keyword">"Action"</span>: [
+      <span class="code-string">"ssm:UpdateInstanceInformation"</span>,
+      <span class="code-string">"ssmmessages:CreateControlChannel"</span>,
+      <span class="code-string">"ssmmessages:CreateDataChannel"</span>,
+      <span class="code-string">"ssmmessages:OpenControlChannel"</span>,
+      <span class="code-string">"ssmmessages:OpenDataChannel"</span>
+    ],
+    <span class="code-keyword">"Resource"</span>: <span class="code-string">"*"</span>
+  }]
+}
+
+<span class="code-comment"># これでAWSコンソールから安全にログイン可能</span>
+<span class="code-comment"># セッションは全てCloudTrailに記録される</span></pre>
+</div>
+<strong>
+        3. 緊急メンテナンス用Runbook設定：
+       </strong>
+<br/>
+       • Systems Manager Automationドキュメント作成
+       <br/>
+       • 定期パッチ適用の自動化
+       <br/>
+       • 障害時の自動復旧スクリプト
+       <br/>
+<br/>
+<strong>
+        ✅ セキュリティと運用性が大幅向上！
+       </strong>
+</div>
+</div>
+</div>
+<!-- ビジュアル図解 -->
+<div class="visual-diagram">
+<h2 class="section-title" id="ビジュアル図解-インスタンスの遷移">
+      📊 ビジュアル図解: インスタンスの遷移
+     </h2>
+<div class="diagram-stage">
+<div class="diagram-title">
+       🚀 Stage 1: 開始前（10台）
+      </div>
+<div class="instance-grid">
+<div class="instance-box instance-old">
+        旧1
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧2
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧3
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧4
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧5
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧6
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧7
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧8
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧9
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧10
+        <br/>
+        ami-old
+       </div>
+</div>
+<p style="text-align: center; margin-top: 15px; color: #475569;">
+       全て古いAMI（ami-old-12345）で稼働中
+      </p>
+</div>
+<div class="arrow-down">
+      ⬇️ Desired Capacity: 10 → 20
+     </div>
+<div class="diagram-stage">
+<div class="diagram-title">
+       🎯 Stage 2: 2倍に拡張（20台）
+      </div>
+<div class="instance-grid">
+<div class="instance-box instance-old">
+        旧1
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧2
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧3
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧4
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧5
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧6
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧7
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧8
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧9
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧10
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-new">
+        新1
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新2
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新3
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新4
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新5
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新6
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新7
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新8
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新9
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新10
+        <br/>
+        ami-new
+       </div>
+</div>
+<p style="text-align: center; margin-top: 15px; color: #475569;">
+       新しいAMI（ami-new-67890）で10台追加起動
+       <br/>
+       一時的にコスト2倍だが、全てがInServiceで稼働中
+      </p>
+</div>
+<div class="arrow-down">
+      ⬇️ Desired Capacity: 20 → 10
+     </div>
+<div class="diagram-stage">
+<div class="diagram-title">
+       🔄 Stage 3: 削除プロセス（進行中）
+      </div>
+<div class="instance-grid">
+<div class="instance-box instance-terminating">
+        旧1
+        <br/>
+        削除中
+       </div>
+<div class="instance-box instance-terminating">
+        旧2
+        <br/>
+        削除中
+       </div>
+<div class="instance-box instance-terminating">
+        旧3
+        <br/>
+        削除中
+       </div>
+<div class="instance-box instance-old">
+        旧4
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧5
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧6
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧7
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧8
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧9
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-old">
+        旧10
+        <br/>
+        ami-old
+       </div>
+<div class="instance-box instance-new">
+        新1
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新2
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新3
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新4
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新5
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新6
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新7
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新8
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新9
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新10
+        <br/>
+        ami-new
+       </div>
+</div>
+<p style="text-align: center; margin-top: 15px; color: #475569;">
+       OldestLaunchConfigurationポリシーにより
+       <br/>
+       古いインスタンスから順次削除（ELBから登録解除後）
+      </p>
+</div>
+<div class="arrow-down">
+      ⬇️ 全ての旧インスタンス削除完了
+     </div>
+<div class="diagram-stage">
+<div class="diagram-title">
+       ✅ Stage 4: 完了（10台）
+      </div>
+<div class="instance-grid">
+<div class="instance-box instance-new">
+        新1
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新2
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新3
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新4
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新5
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新6
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新7
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新8
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新9
+        <br/>
+        ami-new
+       </div>
+<div class="instance-box instance-new">
+        新10
+        <br/>
+        ami-new
+       </div>
+</div>
+<p style="text-align: center; margin-top: 15px; color: #065f46; font-weight: bold;">
+       🎉 全て新しいAMI（ami-new-67890）に更新完了！
+       <br/>
+       ダウンタイム: 0秒 | ユーザーへの影響: なし
+      </p>
+</div>
+</div>
+<!-- 比較表 -->
+<div class="comparison-table">
+<h2 class="section-title" id="他の更新手法との比較">
+      📊 他の更新手法との比較
+     </h2>
+<table>
+<thead>
+<tr>
+<th>
+         手法
+        </th>
+<th>
+         ダウンタイム
+        </th>
+<th>
+         リスク
+        </th>
+<th>
+         コスト
+        </th>
+<th>
+         推奨度
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+          この手法（Blue/Green + Rolling）
+         </strong>
+</td>
+<td>
+<span class="badge badge-success">
+          0秒
+         </span>
+</td>
+<td>
+<span class="badge badge-success">
+          超低
+         </span>
+</td>
+<td>
+<span class="badge badge-warning">
+          一時的に2倍
+         </span>
+</td>
+<td>
+<span class="badge badge-success">
+          ★★★★★
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          全停止→更新→再起動
+         </strong>
+</td>
+<td>
+<span class="badge badge-danger">
+          30-60分
+         </span>
+</td>
+<td>
+<span class="badge badge-danger">
+          高
+         </span>
+</td>
+<td>
+<span class="badge badge-success">
+          増加なし
+         </span>
+</td>
+<td>
+<span class="badge badge-danger">
+          ★☆☆☆☆
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          Rolling Update（1台ずつ）
+         </strong>
+</td>
+<td>
+<span class="badge badge-warning">
+          部分的
+         </span>
+</td>
+<td>
+<span class="badge badge-warning">
+          中
+         </span>
+</td>
+<td>
+<span class="badge badge-success">
+          増加なし
+         </span>
+</td>
+<td>
+<span class="badge badge-warning">
+          ★★★☆☆
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          インプレース更新（yum update）
+         </strong>
+</td>
+<td>
+<span class="badge badge-warning">
+          一時的
+         </span>
+</td>
+<td>
+<span class="badge badge-danger">
+          超高
+         </span>
+</td>
+<td>
+<span class="badge badge-success">
+          増加なし
+         </span>
+</td>
+<td>
+<span class="badge badge-danger">
+          ★★☆☆☆
+         </span>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          Blue/Green（完全切替）
+         </strong>
+</td>
+<td>
+<span class="badge badge-success">
+          0秒
+         </span>
+</td>
+<td>
+<span class="badge badge-success">
+          低
+         </span>
+</td>
+<td>
+<span class="badge badge-danger">
+          常時2倍
+         </span>
+</td>
+<td>
+<span class="badge badge-info">
+          ★★★★☆
+         </span>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="alert-box" style="margin-top: 30px;">
+<div class="alert-title">
+<span>
+        🏆
+       </span>
+<span>
+        なぜこの手法が最適なのか？
+       </span>
+</div>
+<div class="alert-content">
+<strong>
+        完璧なバランス！
+       </strong>
+<br/>
+<br/>
+<strong>
+        ✅ メリット：
+       </strong>
+<br/>
+       • ダウンタイム完全ゼロ
+       <br/>
+       • リスク最小（問題あれば即ロールバック）
+       <br/>
+       • コストは一時的のみ（15-30分程度）
+       <br/>
+       • ユーザーへの影響なし
+       <br/>
+       • 自動化が容易
+       <br/>
+<br/>
+<strong>
+        ⚠️ 注意点：
+       </strong>
+<br/>
+       • 一時的にキャパシティが2倍必要
+       <br/>
+       • 15-30分程度コストが増加
+       <br/>
+       • でも本番環境ではこれが最適！
+       <br/>
+<br/>
+<strong>
+        💡 実務では圧倒的にこれが推奨されます
+       </strong>
+</div>
+</div>
+</div>
+<!-- ベストプラクティス -->
+<div class="best-practice-box">
+<div class="best-practice-title">
+<span>
+       🏆
+      </span>
+<span>
+       実装のベストプラクティス
+      </span>
+</div>
+<div class="best-practice-content">
+<strong>
+       1. 事前テストを必ず実施
+      </strong>
+<br/>
+      • 開発環境で完全にテスト
+      <br/>
+      • 新AMIの動作確認
+      <br/>
+      • ヘルスチェック通過を確認
+      <br/>
+      • タイミング（15-30分）を計測
+      <br/>
+<br/>
+<strong>
+       2. メンテナンス時間帯を選ぶ
+      </strong>
+<br/>
+      • ダウンタイムはゼロだが念のため
+      <br/>
+      • 低トラフィック時間帯（深夜など）
+      <br/>
+      • ビジネスアワーは避ける
+      <br/>
+      • チーム全員が待機できる時間
+      <br/>
+<br/>
+<strong>
+       3. モニタリングを強化
+      </strong>
+<br/>
+      • CloudWatch Alarmsを設定
+      <br/>
+      • エラー率、レスポンスタイムを監視
+      <br/>
+      • 新旧両方のメトリクスを比較
+      <br/>
+      • 異常があれば即座にロールバック
+      <br/>
+<br/>
+<strong>
+       4. ロールバック手順を準備
+      </strong>
+<br/>
+      • 古いLaunch Configurationを保持
+      <br/>
+      • 問題発生時の切り戻し手順書
+      <br/>
+      • ワンコマンドでロールバック可能に
+      <br/>
+      • 5分以内に元に戻せるように
+      <br/>
+<br/>
+<strong>
+       5. 段階的なロールアウト
+      </strong>
+<br/>
+      • 最初は小規模環境で実施
+      <br/>
+      • 問題なければステージング
+      <br/>
+      • 最後に本番環境
+      <br/>
+      • 複数リージョンある場合は1つずつ
+      <br/>
+<br/>
+<strong>
+       6. 通知設定
+      </strong>
+<br/>
+      • SNSトピック設定
+      <br/>
+      • Auto Scaling イベントを通知
+      <br/>
+      • Slackに自動投稿
+      <br/>
+      • チーム全員が状況把握
+      <br/>
+<br/>
+<strong>
+       7. コスト最適化
+      </strong>
+<br/>
+      • 一時的な2倍期間を最小化
+      <br/>
+      • Connection Draining時間を調整
+      <br/>
+      • 不要な待機時間を削減
+      <br/>
+      • 通常15-20分で完了するように調整
+      <br/>
+<br/>
+<strong>
+       8. 自動化スクリプト化
+      </strong>
+<br/>
+      • 全ステップをスクリプト化
+      <br/>
+      • AWS CLI / Boto3 / Terraform
+      <br/>
+      • 人的ミスを排除
+      <br/>
+      • CI/CDパイプラインに組み込み
+     </div>
+</div>
+<!-- 実装例 -->
+<div class="strategy-section">
+<h2 class="section-title" id="完全な実装スクリプト例">
+      💻 完全な実装スクリプト例
+     </h2>
+<div class="code-example">
+<div class="code-title">
+       🐚 Bash スクリプト完全版
+      </div>
+<pre>#!/bin/bash
+<span class="code-comment"># Auto Scaling安全なOSアップデートスクリプト</span>
+
+<span class="code-keyword">set</span> -e  <span class="code-comment"># エラーで停止</span>
+
+<span class="code-comment"># 設定</span>
+<span class="code-keyword">ASG_NAME</span>=<span class="code-string">"my-auto-scaling-group"</span>
+<span class="code-keyword">NEW_AMI</span>=<span class="code-string">"ami-new-67890"</span>
+<span class="code-keyword">NEW_LC_NAME</span>=<span class="code-string">"lc-new-v2-$(date +%Y%m%d)"</span>
+
+<span class="code-comment"># 現在の設定を取得</span>
+<span class="code-keyword">echo</span> <span class="code-string">"📊 現在の設定を取得中..."</span>
+<span class="code-keyword">CURRENT_CAPACITY</span>=$(<span class="code-keyword">aws autoscaling describe-auto-scaling-groups</span> \
+  --auto-scaling-group-names <span class="code-value">${ASG_NAME}</span> \
+  --query <span class="code-string">"AutoScalingGroups[0].DesiredCapacity"</span> \
+  --output text)
+
+<span class="code-keyword">echo</span> <span class="code-string">"現在のCapacity: ${CURRENT_CAPACITY}"</span>
+
+<span class="code-comment"># Step 1: 新Launch Configuration作成</span>
+<span class="code-keyword">echo</span> <span class="code-string">"🔧 Step 1: 新Launch Configuration作成..."</span>
+<span class="code-keyword">aws autoscaling create-launch-configuration</span> \
+  --launch-configuration-name <span class="code-value">${NEW_LC_NAME}</span> \
+  --image-id <span class="code-value">${NEW_AMI}</span> \
+  --instance-type <span class="code-string">t3.medium</span> \
+  --security-groups <span class="code-string">sg-xxxxx</span> \
+  --iam-instance-profile <span class="code-string">my-instance-profile</span> \
+  --user-data <span class="code-string">file://userdata.sh</span>
+
+<span class="code-comment"># Step 2: Auto Scalingグループ更新</span>
+<span class="code-keyword">echo</span> <span class="code-string">"🔄 Step 2: Auto Scalingグループ更新..."</span>
+<span class="code-keyword">aws autoscaling update-auto-scaling-group</span> \
+  --auto-scaling-group-name <span class="code-value">${ASG_NAME}</span> \
+  --launch-configuration-name <span class="code-value">${NEW_LC_NAME}</span> \
+  --termination-policies <span class="code-string">"OldestLaunchConfiguration"</span>
+
+<span class="code-comment"># Step 3: Desired Capacityを2倍に</span>
+<span class="code-keyword">NEW_CAPACITY</span>=$((${CURRENT_CAPACITY} * 2))
+<span class="code-keyword">echo</span> <span class="code-string">"📈 Step 3: Capacityを${CURRENT_CAPACITY}から${NEW_CAPACITY}に拡大..."</span>
+<span class="code-keyword">aws autoscaling set-desired-capacity</span> \
+  --auto-scaling-group-name <span class="code-value">${ASG_NAME}</span> \
+  --desired-capacity <span class="code-value">${NEW_CAPACITY}</span>
+
+<span class="code-comment"># Step 4: 新インスタンスのInService待機</span>
+<span class="code-keyword">echo</span> <span class="code-string">"⏳ Step 4: 新インスタンスの起動待機..."</span>
+<span class="code-keyword">while true</span>; <span class="code-keyword">do</span>
+  <span class="code-keyword">IN_SERVICE_COUNT</span>=$(<span class="code-keyword">aws autoscaling describe-auto-scaling-groups</span> \
+    --auto-scaling-group-names <span class="code-value">${ASG_NAME}</span> \
+    --query <span class="code-string">"length(AutoScalingGroups[0].Instances[?LifecycleState=='InService'])"</span> \
+    --output text)
+  
+  <span class="code-keyword">echo</span> <span class="code-string">"  現在InService: ${IN_SERVICE_COUNT}/${NEW_CAPACITY}"</span>
+  
+  <span class="code-keyword">if</span> [ <span class="code-value">${IN_SERVICE_COUNT}</span> -eq <span class="code-value">${NEW_CAPACITY}</span> ]; <span class="code-keyword">then</span>
+    <span class="code-keyword">break</span>
+  <span class="code-keyword">fi</span>
+  
+  <span class="code-keyword">sleep</span> <span class="code-value">30</span>
+<span class="code-keyword">done</span>
+
+<span class="code-keyword">echo</span> <span class="code-string">"✅ 全インスタンスがInServiceになりました"</span>
+
+<span class="code-comment"># Step 5: 少し待機（安全のため）</span>
+<span class="code-keyword">echo</span> <span class="code-string">"⏱️  Step 5: 安定性確認のため2分待機..."</span>
+<span class="code-keyword">sleep</span> <span class="code-value">120</span>
+
+<span class="code-comment"># Step 6: Desired Capacityを元に戻す</span>
+<span class="code-keyword">echo</span> <span class="code-string">"📉 Step 6: Capacityを${CURRENT_CAPACITY}に戻す..."</span>
+<span class="code-keyword">aws autoscaling set-desired-capacity</span> \
+  --auto-scaling-group-name <span class="code-value">${ASG_NAME}</span> \
+  --desired-capacity <span class="code-value">${CURRENT_CAPACITY}</span>
+
+<span class="code-comment"># Step 7: 旧インスタンス削除完了待機</span>
+<span class="code-keyword">echo</span> <span class="code-string">"⏳ Step 7: 旧インスタンス削除待機..."</span>
+<span class="code-keyword">while true</span>; <span class="code-keyword">do</span>
+  <span class="code-keyword">CURRENT_COUNT</span>=$(<span class="code-keyword">aws autoscaling describe-auto-scaling-groups</span> \
+    --auto-scaling-group-names <span class="code-value">${ASG_NAME}</span> \
+    --query <span class="code-string">"length(AutoScalingGroups[0].Instances)"</span> \
+    --output text)
+  
+  <span class="code-keyword">echo</span> <span class="code-string">"  現在のインスタンス数: ${CURRENT_COUNT}"</span>
+  
+  <span class="code-keyword">if</span> [ <span class="code-value">${CURRENT_COUNT}</span> -eq <span class="code-value">${CURRENT_CAPACITY}</span> ]; <span class="code-keyword">then</span>
+    <span class="code-keyword">break</span>
+  <span class="code-keyword">fi</span>
+  
+  <span class="code-keyword">sleep</span> <span class="code-value">30</span>
+<span class="code-keyword">done</span>
+
+<span class="code-keyword">echo</span> <span class="code-string">"🎉 完了！全インスタンスが新AMIに更新されました"</span>
+
+<span class="code-comment"># Step 8: 最終確認</span>
+<span class="code-keyword">echo</span> <span class="code-string">"📊 最終状態:"</span>
+<span class="code-keyword">aws autoscaling describe-auto-scaling-groups</span> \
+  --auto-scaling-group-names <span class="code-value">${ASG_NAME}</span> \
+  --query <span class="code-string">"AutoScalingGroups[0].Instances[*].[InstanceId,LaunchConfigurationName,HealthStatus]"</span> \
+  --output table</pre>
+</div>
+<div class="alert-box">
+<div class="alert-title">
+<span>
+        💡
+       </span>
+<span>
+        スクリプト使用方法
+       </span>
+</div>
+<div class="alert-content">
+<strong>
+        実行手順：
+       </strong>
+<br/>
+<br/>
+       1. AWS CLIがインストール済みであること
+       <br/>
+       2. 適切なIAM権限があること
+       <br/>
+       3. 変数（ASG_NAME, NEW_AMI）を環境に合わせて変更
+       <br/>
+       4. テスト環境で動作確認
+       <br/>
+       5. 本番環境で実行
+       <br/>
+<br/>
+<strong>
+        ⏱️ 実行時間：
+       </strong>
+<br/>
+       • 10インスタンスの場合: 約15-20分
+       <br/>
+       • 20インスタンスの場合: 約20-30分
+       <br/>
+       • 50インスタンスの場合: 約30-45分
+       <br/>
+<br/>
+<strong>
+        🎯 自動化のヒント：
+       </strong>
+<br/>
+       • Jenkins / GitHub Actions / GitLab CIで実行
+       <br/>
+       • 定期的なOSパッチ適用に使用
+       <br/>
+       • Slack通知を追加してチーム共有
+      </div>
+</div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #9333EA 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="✈️-飛行機の乗客移動-=-OSアップデート" style="font-size: 1.8em; margin-bottom: 15px;">
+        ✈️ 飛行機の乗客移動 = OSアップデート
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        新しい飛行機を用意して、乗客を徐々に移動させる🛫
+        <br/>
+        これが
+        <strong>
+         ダウンタイムゼロ
+        </strong>
+        の秘訣！
+        <br/>
+<br/>
+<strong>
+         7つのステップ
+        </strong>
+        で完璧に実現できます✨
+       </p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         🖼️
+        </div>
+<strong>
+         新AMI
+         <br/>
+         作成
+        </strong>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         ⚙️
+        </div>
+<strong>
+         起動設定
+         <br/>
+         更新
+        </strong>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         📏
+        </div>
+<strong>
+         終了
+         <br/>
+         ポリシー
+        </strong>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         📈
+        </div>
+<strong>
+         2倍に
+         <br/>
+         拡張
+        </strong>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         ⏳
+        </div>
+<strong>
+         ヘルスチェック
+         <br/>
+         待機
+        </strong>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         📉
+        </div>
+<strong>
+         元のサイズに
+         <br/>
+         戻す
+        </strong>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2em; margin-bottom: 10px;">
+         🔒
+        </div>
+<strong>
+         セキュリティ
+         <br/>
+         強化
+        </strong>
+</div>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 30px; border-radius: 12px; backdrop-filter: blur(10px); margin: 30px 0;">
+<p style="font-size: 1.3em; line-height: 1.8;">
+<strong>
+         🎯 この手法の最大のメリット：
+        </strong>
+<br/>
+<br/>
+<span style="font-size: 1.1em;">
+         ✅
+         <strong>
+          ダウンタイム: 完全にゼロ
+         </strong>
+<br/>
+         ✅
+         <strong>
+          リスク: 最小限
+         </strong>
+         （問題あれば即ロールバック）
+         <br/>
+         ✅
+         <strong>
+          ユーザー影響: なし
+         </strong>
+         （気づかれない）
+         <br/>
+         ✅
+         <strong>
+          自動化: 容易
+         </strong>
+         （スクリプト化可能）
+         <br/>
+<br/>
+         ⚠️ 一時的にコスト2倍（15-30分）
+         <br/>
+         でも
+         <strong>
+          本番環境では絶対これ！
+         </strong>
+</span>
+</p>
+</div>
+<p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+<strong>
+        💡 覚えておくべき最重要ポイント：
+       </strong>
+<br/>
+<br/>
+       「
+       <strong>
+        OldestLaunchConfiguration
+       </strong>
+       」
+       <br/>
+       この終了ポリシーが全てのカギ🔑
+       <br/>
+<br/>
+       これを設定するだけで、
+       <br/>
+       Auto Scalingが賢く古いインスタンスだけを削除してくれます！
+       <br/>
+<br/>
+<strong>
+        安全・確実・ダウンタイムゼロ！🚀✨
+       </strong>
+</p>
+</div>
+</div>
+</div>
+
+
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="iam-passrole-vs-assumerole-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">8</span> <span class="separator" aria-hidden="true">/</span> <span class="total">41</span> </div> <a href="ec2-autoscaling-notifications-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

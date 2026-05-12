@@ -1,0 +1,661 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   EC2ブートストラップ入門ガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/ec2-bootstrap-infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#ブートストラップとは？">ブートストラップとは？</a> </li><li class="toc-h2"> <a href="#ブートストラップの全体像">ブートストラップの全体像</a> </li><li class="toc-h2"> <a href="#ブートストラップの方法">ブートストラップの方法</a> </li><li class="toc-h3"> <a href="#ユーザーデータの活用">ユーザーデータの活用</a> </li><li class="toc-h3"> <a href="#ユーザーデータの指定方法">ユーザーデータの指定方法</a> </li><li class="toc-h2"> <a href="#ブートストラップの高度な方法">ブートストラップの高度な方法</a> </li><li class="toc-h3"> <a href="#CloudFormationの使用">CloudFormationの使用</a> </li><li class="toc-h3"> <a href="#EC2-Image-Builder">EC2 Image Builder</a> </li><li class="toc-h2"> <a href="#ユースケース別ブートストラップサンプル">ユースケース別ブートストラップサンプル</a> </li><li class="toc-h3"> <a href="#Webサーバー構築">Webサーバー構築</a> </li><li class="toc-h3"> <a href="#アプリケーションサーバー構築">アプリケーションサーバー構築</a> </li><li class="toc-h2"> <a href="#ブートストラップのベストプラクティス">ブートストラップのベストプラクティス</a> </li><li class="toc-h3"> <a href="#推奨事項">推奨事項</a> </li><li class="toc-h3"> <a href="#避けるべきこと">避けるべきこと</a> </li><li class="toc-h3"> <a href="#エラーハンドリングの例">エラーハンドリングの例</a> </li><li class="toc-h2"> <a href="#ブートストラップのトラブルシューティング">ブートストラップのトラブルシューティング</a> </li><li class="toc-h3"> <a href="#一般的な問題と解決策">一般的な問題と解決策</a> </li><li class="toc-h2"> <a href="#まとめ">まとめ</a> </li><li class="toc-h3"> <a href="#次のステップ">次のステップ</a> </li><li class="toc-h3"> <a href="#関連リソース">関連リソース</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> その他 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> その他 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Ec2 Bootstrap Infographic </span> </nav> <!-- ページコンテンツ (slot) -->  <h1>
+   EC2ブートストラップ入門ガイド
+  </h1>
+
+<div class="intro">
+<h2 id="ブートストラップとは？">
+    ブートストラップとは？
+   </h2>
+<p>
+    EC2インスタンスのブートストラップとは、インスタンスが起動する際に自動的に実行される初期設定プロセスのことです。これにより、インスタンス起動時に必要なソフトウェアのインストールやサービスの設定などを自動化できます。
+   </p>
+</div>
+<div class="card">
+<h2 id="ブートストラップの全体像">
+    ブートストラップの全体像
+   </h2>
+<svg aria-labelledby="svg-title-1 svg-desc-1" class="diagram" role="img" viewbox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+<title id="svg-title-1">
+     ブートストラップの全体像の図
+    </title>
+<desc id="svg-desc-1">
+     EC2インスタンスのブートストラップとは、インスタンスが起動する際に自動的に実行される初期設定プロセスのことです。5個のコンポーネント（矩形）、矢印や接続線で構成された図。9個のラベル付き要素を含む。
+    </desc>
+<!-- EC2インスタンス起動フロー図 -->
+<rect fill="#f5f5f5" height="300" rx="10" stroke="#A0A0A0" stroke-width="2" width="700" x="50" y="50">
+</rect>
+<!-- タイトル -->
+<text fill="#0066cc" font-size="20" font-weight="bold" text-anchor="middle" x="400" y="30">
+     EC2ブートストラッププロセス
+    </text>
+<!-- 起動プロセス -->
+<rect fill="#dc7600" height="60" rx="5" stroke="#232F3E" stroke-width="2" width="120" x="100" y="100">
+</rect>
+<text fill="white" font-size="14" text-anchor="middle" x="160" y="135">
+     EC2インスタンス起動
+    </text>
+<!-- ユーザーデータスクリプト -->
+<rect fill="#dc7600" height="60" rx="5" stroke="#232F3E" stroke-width="2" width="120" x="340" y="100">
+</rect>
+<text fill="white" font-size="14" text-anchor="middle" x="400" y="135">
+     ユーザーデータ実行
+    </text>
+<!-- 完了状態 -->
+<rect fill="#dc7600" height="60" rx="5" stroke="#232F3E" stroke-width="2" width="120" x="580" y="100">
+</rect>
+<text fill="white" font-size="14" text-anchor="middle" x="640" y="135">
+     設定完了
+    </text>
+<!-- フロー矢印 -->
+<line stroke="#232F3E" stroke-width="2" x1="220" x2="340" y1="130" y2="130">
+</line>
+<polygon fill="#232F3E" points="330,125 340,130 330,135">
+</polygon>
+<line stroke="#232F3E" stroke-width="2" x1="460" x2="580" y1="130" y2="130">
+</line>
+<polygon fill="#232F3E" points="570,125 580,130 570,135">
+</polygon>
+<!-- ユーザーデータの詳細 -->
+<rect fill="white" height="120" rx="5" stroke="#A0A0A0" stroke-width="2" width="220" x="290" y="200">
+</rect>
+<text font-size="14" font-weight="bold" text-anchor="middle" x="400" y="220">
+     ユーザーデータ内容:
+    </text>
+<text font-size="12" text-anchor="middle" x="400" y="245">
+     • パッケージ更新・インストール
+    </text>
+<text font-size="12" text-anchor="middle" x="400" y="265">
+     • アプリケーションのデプロイ
+    </text>
+<text font-size="12" text-anchor="middle" x="400" y="285">
+     • 設定ファイルの配置
+    </text>
+<text font-size="12" text-anchor="middle" x="400" y="305">
+     • サービスの開始
+    </text>
+<!-- 接続線 -->
+<line stroke="#A0A0A0" stroke-dasharray="5,5" stroke-width="2" x1="400" x2="400" y1="160" y2="200">
+</line>
+</svg>
+<p>
+    ブートストラップの主な目的は、インスタンス起動時に自動的に以下のタスクを実行することです：
+   </p>
+<ul>
+<li>
+     オペレーティングシステムの更新
+    </li>
+<li>
+     必要なソフトウェアパッケージのインストール
+    </li>
+<li>
+     アプリケーションコードのダウンロードとデプロイ
+    </li>
+<li>
+     サービスの設定と起動
+    </li>
+<li>
+     メタデータの設定やタグ付け
+    </li>
+</ul>
+</div>
+<div class="card">
+<h2 id="ブートストラップの方法">
+    ブートストラップの方法
+   </h2>
+<div class="step">
+<div class="step-number">
+     1
+    </div>
+<div class="step-content">
+<h3 id="ユーザーデータの活用">
+      ユーザーデータの活用
+     </h3>
+<p>
+      EC2インスタンス起動時に「ユーザーデータ」としてシェルスクリプトやクラウドイニットなどの初期化コードを提供できます。
+     </p>
+<div class="code-block">
+      #!/bin/bash
+      <br/>
+      # システム更新
+      <br/>
+      yum update -y
+      <br/>
+<br/>
+      # Apacheウェブサーバーのインストール
+      <br/>
+      yum install -y httpd
+      <br/>
+<br/>
+      # サービスの有効化と開始
+      <br/>
+      systemctl enable httpd
+      <br/>
+      systemctl start httpd
+      <br/>
+<br/>
+      # シンプルなウェブページの作成
+      <br/>
+      echo "&lt;html&gt;&lt;body&gt;&lt;h1&gt;Hello from EC2&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;" &gt; /var/www/html/index.html
+     </div>
+<div class="note">
+<p>
+<strong>
+        注意：
+       </strong>
+       ユーザーデータスクリプトは、デフォルトでrootユーザーとして実行されます。最大サイズは16KBまでです。
+      </p>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+     2
+    </div>
+<div class="step-content">
+<h3 id="ユーザーデータの指定方法">
+      ユーザーデータの指定方法
+     </h3>
+<p>
+      EC2インスタンス作成時に、以下の手順でユーザーデータを設定できます：
+     </p>
+<ol>
+<li>
+       EC2ダッシュボードから「インスタンスの起動」を選択
+      </li>
+<li>
+       AMI、インスタンスタイプなどを選択
+      </li>
+<li>
+       「詳細設定」セクションを開く
+      </li>
+<li>
+       「ユーザーデータ」テキストボックスにスクリプトを入力
+      </li>
+</ol>
+<svg aria-labelledby="svg-title-2 svg-desc-2" class="diagram" role="img" viewbox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+<title id="svg-title-2">
+       ユーザーデータの指定方法の図
+      </title>
+<desc id="svg-desc-2">
+       4個のコンポーネント（矩形）で構成された図。ラベル: EC2インスタンス作成画面、詳細設定、ユーザーデータ、#!/bin/bash...
+      </desc>
+<!-- ユーザーデータ入力画面の模式図 -->
+<rect fill="white" height="150" rx="5" stroke="#A0A0A0" stroke-width="2" width="500" x="50" y="30">
+</rect>
+<text font-size="16" font-weight="bold" text-anchor="middle" x="300" y="20">
+       EC2インスタンス作成画面
+      </text>
+<rect fill="#f5f5f5" height="30" stroke="#A0A0A0" stroke-width="1" width="460" x="70" y="50">
+</rect>
+<text font-size="14" x="100" y="70">
+       詳細設定
+      </text>
+<rect fill="white" height="70" stroke="#A0A0A0" stroke-width="1" width="460" x="70" y="90">
+</rect>
+<text font-size="14" font-weight="bold" x="100" y="110">
+       ユーザーデータ
+      </text>
+<rect fill="#f9f9f9" height="30" rx="3" stroke="#A0A0A0" stroke-width="1" width="420" x="90" y="120">
+</rect>
+<text fill="#666" font-size="12" x="105" y="140">
+       #!/bin/bash...
+      </text>
+</svg>
+</div>
+</div>
+</div>
+<div class="card">
+<h2 id="ブートストラップの高度な方法">
+    ブートストラップの高度な方法
+   </h2>
+<div class="two-column">
+<div class="column">
+<h3 id="CloudFormationの使用">
+      CloudFormationの使用
+     </h3>
+<p>
+      AWSのCloudFormationテンプレートを使用して、より体系的なインフラストラクチャのプロビジョニングとEC2インスタンスのブートストラップを行うことができます。
+     </p>
+<div class="code-block">
+      Resources:
+      <br/>
+      MyEC2Instance:
+      <br/>
+      Type: AWS::EC2::Instance
+      <br/>
+      Properties:
+      <br/>
+      ImageId: ami-12345678
+      <br/>
+      InstanceType: t2.micro
+      <br/>
+      UserData:
+      <br/>
+      Fn::Base64: !Sub |
+      <br/>
+      #!/bin/bash -xe
+      <br/>
+      yum update -y
+      <br/>
+      yum install -y httpd
+      <br/>
+      systemctl start httpd
+      <br/>
+      systemctl enable httpd
+     </div>
+</div>
+<div class="column">
+<h3 id="EC2-Image-Builder">
+      EC2 Image Builder
+     </h3>
+<p>
+      カスタムAMI（Amazon Machine Image）を作成し、ブートストラップの一部を事前に実行しておくことで、インスタンス起動時間を短縮できます。
+     </p>
+<div class="note">
+<p>
+<strong>
+        メリット：
+       </strong>
+       インスタンス起動が高速化され、複雑な設定を事前に組み込めます。
+      </p>
+<p>
+<strong>
+        活用例：
+       </strong>
+       複数のインスタンスで同じ設定を繰り返し使用する場合に効果的です。
+      </p>
+</div>
+</div>
+</div>
+</div>
+<div class="card">
+<h2 id="ユースケース別ブートストラップサンプル">
+    ユースケース別ブートストラップサンプル
+   </h2>
+<div class="step">
+<div class="step-number">
+     A
+    </div>
+<div class="step-content">
+<h3 id="Webサーバー構築">
+      Webサーバー構築
+     </h3>
+<div class="code-block">
+      #!/bin/bash
+      <br/>
+      # Amazon Linux 2用Webサーバー構築スクリプト
+      <br/>
+<br/>
+      # システム更新
+      <br/>
+      yum update -y
+      <br/>
+<br/>
+      # Apacheインストール
+      <br/>
+      yum install -y httpd
+      <br/>
+<br/>
+      # PHPインストール
+      <br/>
+      amazon-linux-extras install -y php7.4
+      <br/>
+<br/>
+      # サービス開始
+      <br/>
+      systemctl start httpd
+      <br/>
+      systemctl enable httpd
+      <br/>
+<br/>
+      # サンプルコンテンツ設置
+      <br/>
+      echo '&lt;?php phpinfo(); ?&gt;' &gt; /var/www/html/info.php
+      <br/>
+      echo '&lt;html&gt;&lt;body&gt;&lt;h1&gt;サーバー準備完了！&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;' &gt; /var/www/html/index.html
+     </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+     B
+    </div>
+<div class="step-content">
+<h3 id="アプリケーションサーバー構築">
+      アプリケーションサーバー構築
+     </h3>
+<div class="code-block">
+      #!/bin/bash
+      <br/>
+      # NodeJSアプリケーションサーバー構築スクリプト
+      <br/>
+<br/>
+      # システム更新
+      <br/>
+      yum update -y
+      <br/>
+<br/>
+      # Node.jsインストール
+      <br/>
+      curl -fsSL https://rpm.nodesource.com/setup_14.x | bash -
+      <br/>
+      yum install -y nodejs
+      <br/>
+<br/>
+      # Gitインストール
+      <br/>
+      yum install -y git
+      <br/>
+<br/>
+      # アプリケーションのクローン
+      <br/>
+      git clone https://github.com/example/node-app.git /opt/node-app
+      <br/>
+<br/>
+      # 依存関係のインストール
+      <br/>
+      cd /opt/node-app
+      <br/>
+      npm install
+      <br/>
+<br/>
+      # PM2でアプリケーション起動
+      <br/>
+      npm install -g pm2
+      <br/>
+      pm2 start app.js
+      <br/>
+      pm2 startup
+      <br/>
+      pm2 save
+     </div>
+</div>
+</div>
+</div>
+<div class="card">
+<h2 id="ブートストラップのベストプラクティス">
+    ブートストラップのベストプラクティス
+   </h2>
+<div class="pros-cons">
+<div class="pros">
+<h3 id="推奨事項">
+      推奨事項
+     </h3>
+<ul>
+<li>
+       スクリプトをモジュール化して再利用可能にする
+      </li>
+<li>
+       エラーハンドリングを組み込む
+      </li>
+<li>
+       ログを取得して診断を容易にする
+      </li>
+<li>
+       セキュリティ更新を含める
+      </li>
+<li>
+       S3やGitHubからスクリプトを取得する
+      </li>
+</ul>
+</div>
+<div class="cons">
+<h3 id="避けるべきこと">
+      避けるべきこと
+     </h3>
+<ul>
+<li>
+       秘密情報をプレーンテキストで埋め込む
+      </li>
+<li>
+       複雑すぎるスクリプトを作成する
+      </li>
+<li>
+       エラー処理を省略する
+      </li>
+<li>
+       起動時間を極端に長くする
+      </li>
+<li>
+       信頼できないソースからスクリプトを実行する
+      </li>
+</ul>
+</div>
+</div>
+<div class="note">
+<p>
+<strong>
+      TIP:
+     </strong>
+     Systems Manager Parameter StoreやSecretsManagerを活用して、スクリプト内に秘密情報を直接書き込まずに設定を管理できます。
+    </p>
+</div>
+<h3 id="エラーハンドリングの例">
+    エラーハンドリングの例
+   </h3>
+<div class="code-block">
+    #!/bin/bash
+    <br/>
+    # エラーハンドリング付きブートストラップスクリプト
+    <br/>
+<br/>
+    # エラー発生時に終了するように設定
+    <br/>
+    set -e
+    <br/>
+<br/>
+    # ログファイルの設定
+    <br/>
+    LOGFILE="/var/log/bootstrap.log"
+    <br/>
+<br/>
+    # ログ関数
+    <br/>
+    log() {
+    <br/>
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a $LOGFILE
+    <br/>
+    }
+    <br/>
+<br/>
+    # エラーハンドラー
+    <br/>
+    error_handler() {
+    <br/>
+    log "エラーが発生しました: $1 ($2)"
+    <br/>
+    exit 1
+    <br/>
+    }
+    <br/>
+<br/>
+    # エラーハンドラーを設定
+    <br/>
+    trap 'error_handler "${BASH_COMMAND}" "$?"' ERR
+    <br/>
+<br/>
+    # 開始ログ
+    <br/>
+    log "ブートストラッププロセスを開始します"
+    <br/>
+<br/>
+    # システム更新
+    <br/>
+    log "システムの更新を開始します"
+    <br/>
+    yum update -y
+    <br/>
+    log "システムの更新が完了しました"
+    <br/>
+<br/>
+    # 他のインストールと設定...
+    <br/>
+    log "ブートストラッププロセスが正常に完了しました"
+   </div>
+</div>
+<div class="card">
+<h2 id="ブートストラップのトラブルシューティング">
+    ブートストラップのトラブルシューティング
+   </h2>
+<h3 id="一般的な問題と解決策">
+    一般的な問題と解決策
+   </h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+<tr style="background-color: #f0f0f0;">
+<th style="border: 1px solid #A0A0A0; padding: 10px; text-align: left;">
+      問題
+     </th>
+<th style="border: 1px solid #A0A0A0; padding: 10px; text-align: left;">
+      考えられる原因
+     </th>
+<th style="border: 1px solid #A0A0A0; padding: 10px; text-align: left;">
+      解決策
+     </th>
+</tr>
+<tr>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      スクリプトが実行されない
+     </td>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      • シバン（#!）の不足
+      <br/>
+      • 実行権限の問題
+      <br/>
+      • Base64エンコーディングの問題
+     </td>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      • スクリプトの先頭に #!/bin/bash を追加
+      <br/>
+      • ログを確認（/var/log/cloud-init-output.log）
+     </td>
+</tr>
+<tr>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      スクリプトがエラーで終了
+     </td>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      • 依存関係の欠如
+      <br/>
+      • ネットワーク接続の問題
+      <br/>
+      • 構文エラー
+     </td>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      • エラーログを確認
+      <br/>
+      • 依存関係を事前インストール
+      <br/>
+      • スクリプトのテスト実行
+     </td>
+</tr>
+<tr>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      起動時間が長すぎる
+     </td>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      • 重いパッケージのダウンロード
+      <br/>
+      • 非効率なスクリプト
+      <br/>
+      • リソース競合
+     </td>
+<td style="border: 1px solid #A0A0A0; padding: 10px;">
+      • AMIに事前インストール
+      <br/>
+      • 非同期処理の活用
+      <br/>
+      • スクリプトの最適化
+     </td>
+</tr>
+</table>
+<div class="note">
+<p>
+<strong>
+      診断方法：
+     </strong>
+     EC2インスタンスに接続し、以下のログファイルを確認してブートストラッププロセスのトラブルシューティングを行えます：
+    </p>
+<ul>
+<li>
+      /var/log/cloud-init.log
+     </li>
+<li>
+      /var/log/cloud-init-output.log
+     </li>
+<li>
+      /var/log/user-data.log（カスタムログの場合）
+     </li>
+</ul>
+</div>
+</div>
+<div class="card">
+<h2 id="まとめ">
+    まとめ
+   </h2>
+<p>
+    EC2ブートストラップを使うことで、インスタンス起動時に自動的に設定を行い、一貫性のあるインフラストラクチャを効率的に構築できます。ユーザーデータスクリプトは単純なものから始め、徐々に高度な手法に移行していくことで、AWSでのインフラ管理スキルを向上させることができます。
+   </p>
+<div class="two-column">
+<div class="column">
+<h3 id="次のステップ">
+      次のステップ
+     </h3>
+<ul>
+<li>
+       独自のブートストラップスクリプトを作成してみる
+      </li>
+<li>
+       CloudFormationやAWS CDKでインフラのコード化を試す
+      </li>
+<li>
+       Systems ManagerやAnsibleなどの高度な設定管理ツールを学ぶ
+      </li>
+</ul>
+</div>
+<div class="column">
+<h3 id="関連リソース">
+      関連リソース
+     </h3>
+<ul>
+<li>
+       AWS公式ドキュメント：「インスタンスユーザーデータ」
+      </li>
+<li>
+       AWS CloudFormationテンプレートリファレンス
+      </li>
+<li>
+       AWS Systems Manager ユーザーガイド
+      </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="footer">
+<p>
+    © 2025 EC2ブートストラップ入門ガイド
+   </p>
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="../compute-applications/aws-ec2-capacity-infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">2</span> <span class="separator" aria-hidden="true">/</span> <span class="total">41</span> </div> <a href="efa_infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

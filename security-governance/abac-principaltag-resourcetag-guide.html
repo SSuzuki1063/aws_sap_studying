@@ -1,0 +1,1468 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   AWS ABAC完全ガイド - PrincipalTag vs ResourceTag
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/abac-principaltag-resourcetag-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#オフィスビルのセキュリティで例えると超わかりやすい！">🏢 オフィスビルのセキュリティで例えると超わかりやすい！</a> </li><li class="toc-h2"> <a href="#そもそもABACって何？">🎯 そもそもABACって何？</a> </li><li class="toc-h3"> <a href="#従来のRBACロールベース">従来のRBAC（ロールベース）</a> </li><li class="toc-h3"> <a href="#新しいABAC属性ベース">新しいABAC（属性ベース）</a> </li><li class="toc-h2"> <a href="#オフィスビルのセキュリティシステムで理解しよう！">🏢 オフィスビルのセキュリティシステムで理解しよう！</a> </li><li class="toc-h3"> <a href="#PrincipalTagあなたの社員証のタグ">PrincipalTag 「あなたの社員証のタグ」</a> </li><li class="toc-h3"> <a href="#ResourceTag部屋のドアのタグ">ResourceTag 「部屋のドアのタグ」</a> </li><li class="toc-h3"> <a href="#入室の仕組み">🔓 入室の仕組み</a> </li><li class="toc-h2"> <a href="#ABACの動作フロー">🔄 ABACの動作フロー</a> </li><li class="toc-h3"> <a href="#タグ一致の判定パターン">📊 タグ一致の判定パターン</a> </li><li class="toc-h2"> <a href="#PrincipalTag-vs-ResourceTag-完全比較">📊 PrincipalTag vs ResourceTag 完全比較</a> </li><li class="toc-h2"> <a href="#実際のIAMポリシー例">📝 実際のIAMポリシー例</a> </li><li class="toc-h2"> <a href="#よく使う条件キー一覧">🔑 よく使う条件キー一覧</a> </li><li class="toc-h3"> <a href="#PrincipalTag関連の条件キー">👤 PrincipalTag関連の条件キー</a> </li><li class="toc-h2"> <a href="#実践ユースケース">💼 実践ユースケース</a> </li><li class="toc-h3"> <a href="#部署別アクセス制御">部署別アクセス制御</a> </li><li class="toc-h2"> <a href="#✅-ABACベストプラクティス">✅ ABACベストプラクティス</a> </li><li class="toc-h3"> <a href="#1-タグ戦略を文書化">1 タグ戦略を文書化</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li><li class="toc-h3"> <a href="#オフィスビルのセキュリティ-=-ABAC">🏢 オフィスビルのセキュリティ = ABAC</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>
+     🏷️ AWS ABAC 完全ガイド
+    </h1>
+<p>
+     PrincipalTag vs ResourceTag - 「誰が」と「何を」のタグで完璧なアクセス制御！
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="オフィスビルのセキュリティで例えると超わかりやすい！">
+      🏢 オフィスビルのセキュリティで例えると超わかりやすい！
+     </h2>
+<p class="intro-text">
+<strong>
+       ABAC（属性ベースアクセス制御）は「タグの一致」でアクセス許可を決める仕組み！
+      </strong>
+<br/>
+<br/>
+      オフィスビルに入るとき、あなたの
+      <strong>
+       社員証
+      </strong>
+      と
+      <strong>
+       部屋のドア
+      </strong>
+      両方に
+      <br/>
+      同じ「部署タグ」が付いていたら入室OK、というイメージです。
+      <br/>
+<br/>
+<strong>
+       PrincipalTag
+      </strong>
+      ：あなた（社員）に付いているタグ 👤
+      <br/>
+<strong>
+       ResourceTag
+      </strong>
+      ：リソース（部屋）に付いているタグ 🚪
+      <br/>
+<br/>
+      この2つを比較してアクセス制御を実現します！✨
+     </p>
+</div>
+<!-- ABACとは -->
+<div class="abac-overview">
+<h2 class="abac-overview-title" id="そもそもABACって何？">
+      🎯 そもそもABACって何？
+     </h2>
+<div class="abac-concept">
+<div class="concept-card">
+<div class="concept-icon">
+        📋
+       </div>
+<h3 id="従来のRBACロールベース">
+        従来のRBAC（ロールベース）
+       </h3>
+<div class="concept-description">
+<strong>
+         🔧 仕組み：
+        </strong>
+<br/>
+        「誰が」「何に」アクセスできるかを
+        <strong>
+         個別に定義
+        </strong>
+<br/>
+<br/>
+<strong>
+         😓 問題点：
+        </strong>
+<br/>
+        • 新しいリソースができるたびにポリシー更新
+        <br/>
+        • 新しいユーザーが増えるたびにロール割り当て
+        <br/>
+        • ポリシーが増えすぎて管理が大変！
+       </div>
+<div class="concept-description" style="background: #fee2e2; border-left: 4px solid #ef4444;">
+<strong>
+         ❌ 例：
+        </strong>
+<br/>
+        「田中さんは EC2-001 にアクセスできる」
+        <br/>
+        「佐藤さんは EC2-002 にアクセスできる」
+        <br/>
+        → 100人×100リソース = 管理地獄！
+       </div>
+</div>
+<div class="concept-card">
+<div class="concept-icon">
+        🏷️
+       </div>
+<h3 id="新しいABAC属性ベース">
+        新しいABAC（属性ベース）
+       </h3>
+<div class="concept-description">
+<strong>
+         🔧 仕組み：
+        </strong>
+<br/>
+        「タグが一致したら」アクセスOKと
+        <strong>
+         ルールで定義
+        </strong>
+<br/>
+<br/>
+<strong>
+         😊 メリット：
+        </strong>
+<br/>
+        • 新リソースにタグを付けるだけで自動適用
+        <br/>
+        • 新ユーザーにタグを付けるだけで自動適用
+        <br/>
+        • ポリシーは1つでOK！超シンプル！
+       </div>
+<div class="concept-description" style="background: #d1fae5; border-left: 4px solid #047857;">
+<strong>
+         ✅ 例：
+        </strong>
+<br/>
+        「ユーザーのDepartmentタグとリソースの
+        <br/>
+        Departmentタグが一致したらアクセスOK」
+        <br/>
+        → これ1つで全員・全リソースをカバー！
+       </div>
+</div>
+</div>
+</div>
+<!-- オフィスビルの例え -->
+<div class="analogy-section">
+<h2 class="analogy-title" id="オフィスビルのセキュリティシステムで理解しよう！">
+      🏢 オフィスビルのセキュリティシステムで理解しよう！
+     </h2>
+<div class="analogy-grid">
+<div class="analogy-card">
+<div class="analogy-icon">
+        👤
+       </div>
+<h3 id="PrincipalTagあなたの社員証のタグ">
+        PrincipalTag
+        <br/>
+        「あなたの社員証のタグ」
+       </h3>
+<div class="analogy-description">
+<strong>
+         🎭 シチュエーション：
+        </strong>
+<br/>
+        あなたは営業部所属の社員。社員証には
+        <br/>
+<strong>
+         「Department: Sales」
+        </strong>
+        というタグが付いています。
+       </div>
+<div class="analogy-description">
+<strong>
+         🔍 AWSでの意味：
+        </strong>
+<br/>
+        •
+        <strong>
+         IAMユーザー/ロール
+        </strong>
+        に付けるタグ
+        <br/>
+        • 「この人は誰？どんな属性？」を表す
+        <br/>
+        • aws:PrincipalTag で参照
+       </div>
+<div class="analogy-description">
+<strong>
+         📍 タグを付ける場所：
+        </strong>
+<br/>
+        • IAMユーザー
+        <br/>
+        • IAMロール
+        <br/>
+        • フェデレーテッドユーザー（SAML/OIDC）
+       </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+        🚪
+       </div>
+<h3 id="ResourceTag部屋のドアのタグ">
+        ResourceTag
+        <br/>
+        「部屋のドアのタグ」
+       </h3>
+<div class="analogy-description">
+<strong>
+         🎭 シチュエーション：
+        </strong>
+<br/>
+        営業部の会議室のドアには
+        <br/>
+<strong>
+         「Department: Sales」
+        </strong>
+        というタグが付いています。
+       </div>
+<div class="analogy-description">
+<strong>
+         🔍 AWSでの意味：
+        </strong>
+<br/>
+        •
+        <strong>
+         AWSリソース
+        </strong>
+        （EC2/S3等）に付けるタグ
+        <br/>
+        • 「このリソースは何用？誰の持ち物？」を表す
+        <br/>
+        • aws:ResourceTag で参照
+       </div>
+<div class="analogy-description">
+<strong>
+         📍 タグを付ける場所：
+        </strong>
+<br/>
+        • EC2インスタンス
+        <br/>
+        • S3バケット
+        <br/>
+        • RDS、Lambda、その他AWSリソース
+       </div>
+</div>
+</div>
+<div style="background: white; padding: 30px; border-radius: 15px; margin-top: 30px; text-align: center;">
+<h3 id="入室の仕組み" style="color: #92400e; font-size: 1.8em; margin-bottom: 20px;">
+       🔓 入室の仕組み
+      </h3>
+<p style="font-size: 1.2em; color: #78350f; line-height: 2;">
+<strong>
+        社員証のタグ
+       </strong>
+       （PrincipalTag）と
+       <strong>
+        ドアのタグ
+       </strong>
+       （ResourceTag）が
+       <br/>
+<strong style="background: #fef3c7; padding: 5px 15px; border-radius: 10px;">
+        一致したら入室OK！🎉
+       </strong>
+<br/>
+<br/>
+       営業部の社員（Department: Sales）は
+       <br/>
+       営業部の部屋（Department: Sales）に入れる！
+       <br/>
+<br/>
+<span style="color: #dc2626;">
+        ❌ 経理部の部屋（Department: Finance）には入れない！
+       </span>
+</p>
+</div>
+</div>
+<!-- 詳細比較カード -->
+<div class="comparison-section">
+<div class="tag-card principal-tag">
+<div class="card-icon">
+       👤
+      </div>
+<div class="card-title">
+       PrincipalTag
+      </div>
+<div class="card-subtitle">
+       アクセスする「人」の属性
+      </div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         🎯
+        </span>
+<span>
+         役割
+        </span>
+</div>
+<div class="feature-content">
+        アクセスを
+        <strong>
+         要求する側
+        </strong>
+        （ユーザー/ロール）に付与されたタグ。「この人はどんな属性を持っているか」を定義します。
+       </div>
+</div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         📝
+        </span>
+<span>
+         構文
+        </span>
+</div>
+<div class="feature-content">
+<code style="background: #d1fae5; padding: 5px 10px; border-radius: 5px;">
+         aws:PrincipalTag/タグキー
+        </code>
+<br/>
+<br/>
+        例：aws:PrincipalTag/Department
+        <br/>
+        例：aws:PrincipalTag/Project
+        <br/>
+        例：aws:PrincipalTag/CostCenter
+       </div>
+</div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         ⚙️
+        </span>
+<span>
+         設定場所
+        </span>
+</div>
+<div class="feature-content">
+        • IAMユーザーの「タグ」タブ
+        <br/>
+        • IAMロールの「タグ」タブ
+        <br/>
+        • SAML/OIDCのセッションタグ
+        <br/>
+        • AssumeRole時のタグ
+       </div>
+</div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         💡
+        </span>
+<span>
+         ポイント
+        </span>
+</div>
+<div class="feature-content">
+        • ユーザー作成時/ロール作成時に設定
+        <br/>
+        • 人事異動時はタグを変更するだけ
+        <br/>
+        • フェデレーションでも使える
+        <br/>
+        •
+        <strong>
+         アイデンティティの属性を表す
+        </strong>
+</div>
+</div>
+</div>
+<div class="tag-card resource-tag">
+<div class="card-icon">
+       🚪
+      </div>
+<div class="card-title">
+       ResourceTag
+      </div>
+<div class="card-subtitle">
+       アクセスされる「リソース」の属性
+      </div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         🎯
+        </span>
+<span>
+         役割
+        </span>
+</div>
+<div class="feature-content">
+        アクセスを
+        <strong>
+         受ける側
+        </strong>
+        （AWSリソース）に付与されたタグ。「このリソースはどんな属性を持っているか」を定義します。
+       </div>
+</div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         📝
+        </span>
+<span>
+         構文
+        </span>
+</div>
+<div class="feature-content">
+<code style="background: #A0A0A06fe; padding: 5px 10px; border-radius: 5px;">
+         aws:ResourceTag/タグキー
+        </code>
+<br/>
+<br/>
+        例：aws:ResourceTag/Department
+        <br/>
+        例：aws:ResourceTag/Project
+        <br/>
+        例：aws:ResourceTag/Environment
+       </div>
+</div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         ⚙️
+        </span>
+<span>
+         設定場所
+        </span>
+</div>
+<div class="feature-content">
+        • EC2インスタンスのタグ
+        <br/>
+        • S3バケットのタグ
+        <br/>
+        • RDSインスタンスのタグ
+        <br/>
+        • その他AWSリソースのタグ
+       </div>
+</div>
+<div class="feature-box">
+<div class="feature-title">
+<span>
+         💡
+        </span>
+<span>
+         ポイント
+        </span>
+</div>
+<div class="feature-content">
+        • リソース作成時に設定
+        <br/>
+        • リソースの所有者/用途を示す
+        <br/>
+        • コスト配分にも活用可能
+        <br/>
+        •
+        <strong>
+         リソースの属性を表す
+        </strong>
+</div>
+</div>
+</div>
+</div>
+<!-- 動作フロー -->
+<div class="flow-section">
+<h2 class="flow-title" id="ABACの動作フロー">
+      🔄 ABACの動作フロー
+     </h2>
+<div class="flow-diagram">
+<div class="flow-box">
+<div class="flow-box-icon">
+        👤
+       </div>
+<div class="flow-box-text">
+        ユーザー
+        <br/>
+<small>
+         PrincipalTag:
+         <br/>
+         Department=Sales
+        </small>
+</div>
+</div>
+<div class="flow-arrow">
+       ➡️
+      </div>
+<div class="flow-box">
+<div class="flow-box-icon">
+        📋
+       </div>
+<div class="flow-box-text">
+        IAMポリシー
+        <br/>
+<small>
+         タグ一致を
+         <br/>
+         チェック
+        </small>
+</div>
+</div>
+<div class="flow-arrow">
+       ➡️
+      </div>
+<div class="flow-box">
+<div class="flow-box-icon">
+        🚪
+       </div>
+<div class="flow-box-text">
+        リソース
+        <br/>
+<small>
+         ResourceTag:
+         <br/>
+         Department=Sales
+        </small>
+</div>
+</div>
+<div class="flow-arrow">
+       ➡️
+      </div>
+<div class="flow-box flow-check">
+<div class="flow-box-icon">
+        ✅
+       </div>
+<div class="flow-box-text">
+        アクセス許可！
+       </div>
+</div>
+</div>
+<div style="background: #f8fafc; padding: 30px; border-radius: 15px; margin-top: 30px;">
+<h3 id="タグ一致の判定パターン" style="text-align: center; color: #1e293b; margin-bottom: 20px;">
+       📊 タグ一致の判定パターン
+      </h3>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+<div style="background: #d1fae5; padding: 20px; border-radius: 10px;">
+<div style="font-size: 2em;">
+         ✅
+        </div>
+<strong style="color: #065f46;">
+         一致 → 許可
+        </strong>
+<br/>
+<small>
+         Principal: Sales
+         <br/>
+         Resource: Sales
+        </small>
+</div>
+<div style="background: #fee2e2; padding: 20px; border-radius: 10px;">
+<div style="font-size: 2em;">
+         ❌
+        </div>
+<strong style="color: #991b1b;">
+         不一致 → 拒否
+        </strong>
+<br/>
+<small>
+         Principal: Sales
+         <br/>
+         Resource: Finance
+        </small>
+</div>
+<div style="background: #fef3c7; padding: 20px; border-radius: 10px;">
+<div style="font-size: 2em;">
+         ⚠️
+        </div>
+<strong style="color: #92400e;">
+         タグなし → 拒否
+        </strong>
+<br/>
+<small>
+         Principal: Sales
+         <br/>
+         Resource: (なし)
+        </small>
+</div>
+</div>
+</div>
+</div>
+<!-- 比較テーブル -->
+<div class="comparison-table">
+<h2 class="table-title" id="PrincipalTag-vs-ResourceTag-完全比較">
+      📊 PrincipalTag vs ResourceTag 完全比較
+     </h2>
+<table>
+<thead>
+<tr>
+<th>
+         項目
+        </th>
+<th>
+<span class="tag-principal">
+          PrincipalTag
+         </span>
+</th>
+<th>
+<span class="tag-resource">
+          ResourceTag
+         </span>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+          対象
+         </strong>
+</td>
+<td>
+         IAMユーザー / IAMロール
+        </td>
+<td>
+         AWSリソース（EC2、S3など）
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          表すもの
+         </strong>
+</td>
+<td>
+         「誰が」アクセスするか
+        </td>
+<td>
+         「何に」アクセスするか
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          構文
+         </strong>
+</td>
+<td>
+<code>
+          aws:PrincipalTag/キー
+         </code>
+</td>
+<td>
+<code>
+          aws:ResourceTag/キー
+         </code>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          設定タイミング
+         </strong>
+</td>
+<td>
+         ユーザー/ロール作成時
+        </td>
+<td>
+         リソース作成時
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          例え話
+         </strong>
+</td>
+<td>
+         社員証のタグ 🪪
+        </td>
+<td>
+         部屋のドアのタグ 🚪
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          変更頻度
+         </strong>
+</td>
+<td>
+         人事異動時など
+        </td>
+<td>
+         リソース再割り当て時など
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          典型的なタグ
+         </strong>
+</td>
+<td>
+         Department, Team, Role
+        </td>
+<td>
+         Department, Project, Environment
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          管理者
+         </strong>
+</td>
+<td>
+         IAM管理者 / HR連携
+        </td>
+<td>
+         リソース管理者 / 開発チーム
+        </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- ポリシー例 -->
+<div class="policy-section">
+<h2 class="policy-title" id="実際のIAMポリシー例">
+      📝 実際のIAMポリシー例
+     </h2>
+<div class="policy-grid">
+<div class="policy-card">
+<div class="policy-header principal">
+        👤 PrincipalTagを使った条件
+       </div>
+<div class="policy-code">
+<span class="code-comment">
+         // ユーザーのDepartmentタグが "Engineering" の場合のみ許可
+        </span>
+        {
+        <span class="code-keyword">
+         "Version"
+        </span>
+        :
+        <span class="code-string">
+         "2012-10-17"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Statement"
+        </span>
+        : [{
+        <span class="code-keyword">
+         "Effect"
+        </span>
+        :
+        <span class="code-string">
+         "Allow"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Action"
+        </span>
+        :
+        <span class="code-string">
+         "ec2:*"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Resource"
+        </span>
+        :
+        <span class="code-string">
+         "*"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Condition"
+        </span>
+        : {
+        <span class="code-keyword">
+         "StringEquals"
+        </span>
+        : {
+        <span class="code-highlight-green">
+         "aws:PrincipalTag/Department"
+        </span>
+        :
+        <span class="code-string">
+         "Engineering"
+        </span>
+        }
+    }
+  }]
+}
+       </div>
+</div>
+<div class="policy-card">
+<div class="policy-header resource">
+        🚪 ResourceTagを使った条件
+       </div>
+<div class="policy-code">
+<span class="code-comment">
+         // リソースのEnvironmentタグが "Development" の場合のみ許可
+        </span>
+        {
+        <span class="code-keyword">
+         "Version"
+        </span>
+        :
+        <span class="code-string">
+         "2012-10-17"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Statement"
+        </span>
+        : [{
+        <span class="code-keyword">
+         "Effect"
+        </span>
+        :
+        <span class="code-string">
+         "Allow"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Action"
+        </span>
+        :
+        <span class="code-string">
+         "ec2:*"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Resource"
+        </span>
+        :
+        <span class="code-string">
+         "*"
+        </span>
+        ,
+        <span class="code-keyword">
+         "Condition"
+        </span>
+        : {
+        <span class="code-keyword">
+         "StringEquals"
+        </span>
+        : {
+        <span class="code-highlight">
+         "aws:ResourceTag/Environment"
+        </span>
+        :
+        <span class="code-string">
+         "Development"
+        </span>
+        }
+    }
+  }]
+}
+       </div>
+</div>
+</div>
+<div class="policy-card" style="margin-top: 30px;">
+<div class="policy-header" style="background: linear-gradient(135deg, #CA8A04, #d97706);">
+       ⭐ 両方を組み合わせた最強パターン（タグ一致）
+      </div>
+<div class="policy-code">
+<span class="code-comment">
+        // ユーザーのDepartmentタグとリソースのDepartmentタグが一致する場合のみ許可
+       </span>
+<span class="code-comment">
+        // これがABACの真骨頂！
+       </span>
+       {
+       <span class="code-keyword">
+        "Version"
+       </span>
+       :
+       <span class="code-string">
+        "2012-10-17"
+       </span>
+       ,
+       <span class="code-keyword">
+        "Statement"
+       </span>
+       : [{
+       <span class="code-keyword">
+        "Effect"
+       </span>
+       :
+       <span class="code-string">
+        "Allow"
+       </span>
+       ,
+       <span class="code-keyword">
+        "Action"
+       </span>
+       : [
+       <span class="code-string">
+        "ec2:StartInstances"
+       </span>
+       ,
+       <span class="code-string">
+        "ec2:StopInstances"
+       </span>
+       ,
+       <span class="code-string">
+        "ec2:TerminateInstances"
+       </span>
+       ],
+       <span class="code-keyword">
+        "Resource"
+       </span>
+       :
+       <span class="code-string">
+        "*"
+       </span>
+       ,
+       <span class="code-keyword">
+        "Condition"
+       </span>
+       : {
+       <span class="code-keyword">
+        "StringEquals"
+       </span>
+       : {
+       <span class="code-comment">
+        // 🎯 ここがポイント！PrincipalTagの値とResourceTagの値を比較
+       </span>
+<span class="code-highlight">
+        "aws:ResourceTag/Department"
+       </span>
+       :
+       <span class="code-highlight-green">
+        "${aws:PrincipalTag/Department}"
+       </span>
+       }
+    }
+  }]
+}
+       <span class="code-comment">
+        // 営業部（Department: Sales）のユーザーは
+       </span>
+<span class="code-comment">
+        // 営業部（Department: Sales）のEC2だけ操作できる！
+       </span>
+</div>
+</div>
+</div>
+<!-- 条件キー一覧 -->
+<div class="condition-keys">
+<h2 class="condition-keys-title" id="よく使う条件キー一覧">
+      🔑 よく使う条件キー一覧
+     </h2>
+<div class="keys-grid">
+<div class="keys-card principal-keys">
+<h3 id="PrincipalTag関連の条件キー">
+<span>
+         👤
+        </span>
+        PrincipalTag関連の条件キー
+       </h3>
+<div class="key-item">
+<div class="key-name">
+         aws:PrincipalTag/タグキー
+        </div>
+<div class="key-desc">
+         プリンシパル（ユーザー/ロール）に付いたタグの値をチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         aws:PrincipalAccount
+        </div>
+<div class="key-desc">
+         リクエスト元のAWSアカウントIDをチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         aws:PrincipalArn
+        </div>
+<div class="key-desc">
+         プリンシパルのARNをチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         aws:PrincipalOrgID
+        </div>
+<div class="key-desc">
+         Organizations組織IDをチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         aws:PrincipalType
+        </div>
+<div class="key-desc">
+         プリンシパルの種類（User, Role等）をチェック
+        </div>
+</div>
+</div>
+<div class="keys-card resource-keys">
+<h4>
+<span>
+         🚪
+        </span>
+        ResourceTag関連の条件キー
+       </h4>
+<div class="key-item">
+<div class="key-name">
+         aws:ResourceTag/タグキー
+        </div>
+<div class="key-desc">
+         リソースに付いたタグの値をチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         aws:ResourceAccount
+        </div>
+<div class="key-desc">
+         リソースが属するAWSアカウントIDをチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         aws:ResourceOrgID
+        </div>
+<div class="key-desc">
+         リソースが属する組織IDをチェック
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         ec2:ResourceTag/タグキー
+        </div>
+<div class="key-desc">
+         EC2固有のリソースタグ（サービス固有キー）
+        </div>
+</div>
+<div class="key-item">
+<div class="key-name">
+         s3:ResourceTag/タグキー
+        </div>
+<div class="key-desc">
+         S3固有のリソースタグ（サービス固有キー）
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- ユースケース -->
+<div class="usecase-section">
+<h2 class="usecase-title" id="実践ユースケース">
+      💼 実践ユースケース
+     </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<div class="usecase-icon">
+        🏢
+       </div>
+<h3 id="部署別アクセス制御">
+        部署別アクセス制御
+       </h3>
+<div class="usecase-description">
+        営業部、開発部、経理部それぞれのメンバーが
+        <strong>
+         自分の部署のリソースだけ
+        </strong>
+        にアクセスできるようにする。
+       </div>
+<div class="usecase-tags">
+<span class="tag-principal">
+         PrincipalTag/Department
+        </span>
+<span class="tag-resource">
+         ResourceTag/Department
+        </span>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        📁
+       </div>
+<h4>
+        プロジェクト別制御
+       </h4>
+<div class="usecase-description">
+        プロジェクトAのメンバーはプロジェクトAのリソースだけ、プロジェクトBのメンバーはプロジェクトBだけにアクセス。
+       </div>
+<div class="usecase-tags">
+<span class="tag-principal">
+         PrincipalTag/Project
+        </span>
+<span class="tag-resource">
+         ResourceTag/Project
+        </span>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        🌍
+       </div>
+<h4>
+        環境別アクセス
+       </h4>
+<div class="usecase-description">
+        開発者は開発環境だけ、SREは本番環境も含めてアクセスできるように制御。
+       </div>
+<div class="usecase-tags">
+<span class="tag-principal">
+         PrincipalTag/AccessLevel
+        </span>
+<span class="tag-resource">
+         ResourceTag/Environment
+        </span>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        💰
+       </div>
+<h4>
+        コストセンター制御
+       </h4>
+<div class="usecase-description">
+        各コストセンターの責任者が
+        <strong>
+         自分のコストセンターのリソースだけ
+        </strong>
+        管理できるようにする。
+       </div>
+<div class="usecase-tags">
+<span class="tag-principal">
+         PrincipalTag/CostCenter
+        </span>
+<span class="tag-resource">
+         ResourceTag/CostCenter
+        </span>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        👥
+       </div>
+<h4>
+        マルチテナント分離
+       </h4>
+<div class="usecase-description">
+        SaaS環境で、各テナントのユーザーが
+        <strong>
+         自分のテナントのデータだけ
+        </strong>
+        にアクセスできるようにする。
+       </div>
+<div class="usecase-tags">
+<span class="tag-principal">
+         PrincipalTag/TenantID
+        </span>
+<span class="tag-resource">
+         ResourceTag/TenantID
+        </span>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        🔐
+       </div>
+<h4>
+        機密レベル制御
+       </h4>
+<div class="usecase-description">
+        クリアランスレベルの高いユーザーだけが機密データにアクセスできるようにする。
+       </div>
+<div class="usecase-tags">
+<span class="tag-principal">
+         PrincipalTag/Clearance
+        </span>
+<span class="tag-resource">
+         ResourceTag/Sensitivity
+        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       ABACを成功させるコツ
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. タグ命名規則を統一する：
+      </strong>
+<br/>
+      Department/department/dept など表記ゆれを防ぐため、
+      <strong>
+       大文字小文字も含めて統一
+      </strong>
+      しよう。PascalCase推奨！
+      <br/>
+<br/>
+<strong>
+       2. タグの必須化を徹底：
+      </strong>
+<br/>
+      リソース作成時にタグを必須にするSCP/ポリシーを設定。タグなしリソースはABACで制御できない！
+      <br/>
+<br/>
+<strong>
+       3. タグの値を標準化：
+      </strong>
+<br/>
+      「営業部」「営業」「Sales」など値がバラバラだと一致しない。
+      <strong>
+       マスターデータを定義
+      </strong>
+      しよう。
+      <br/>
+<br/>
+<strong>
+       4. 段階的に導入：
+      </strong>
+<br/>
+      いきなり全社適用せず、まず1つのプロジェクトや部署で試して、問題がないことを確認してから拡大。
+      <br/>
+<br/>
+<strong>
+       5. IAM Access Analyzerを活用：
+      </strong>
+<br/>
+      意図しないアクセスがないか定期的にチェック。ABACポリシーの検証にも使える！
+     </div>
+</div>
+<!-- 注意点 -->
+<div class="warning-box">
+<div class="warning-title">
+<span>
+       ⚠️
+      </span>
+<span>
+       ABACの注意点・よくある落とし穴
+      </span>
+</div>
+<div class="warning-content">
+<strong>
+       1. タグ変更権限の管理：
+      </strong>
+<br/>
+      ユーザーが
+      <strong>
+       自分のPrincipalTagを変更できると
+      </strong>
+      、任意のリソースにアクセスできてしまう！タグ変更権限は厳密に制限しよう。
+      <br/>
+<br/>
+<strong>
+       2. リソースタグの保護：
+      </strong>
+<br/>
+      ユーザーが
+      <strong>
+       リソースのタグを変更できると
+      </strong>
+      、アクセス制御を迂回できる。タグ変更アクションも制限が必要！
+      <br/>
+<br/>
+<strong>
+       3. タグなしリソースへのアクセス：
+      </strong>
+<br/>
+      ResourceTagがないリソースは条件にマッチしない。
+      <strong>
+       明示的な拒否ポリシー
+      </strong>
+      も検討しよう。
+      <br/>
+<br/>
+<strong>
+       4. サービスによるタグサポートの違い：
+      </strong>
+<br/>
+      すべてのAWSサービス/アクションがResourceTagをサポートしているわけではない。事前に確認が必要！
+      <br/>
+<br/>
+<strong>
+       5. タグの伝播：
+      </strong>
+<br/>
+      Auto Scalingで起動したEC2など、自動作成されるリソースにタグが
+      <strong>
+       正しく伝播されるか
+      </strong>
+      確認しよう。
+     </div>
+</div>
+<!-- ベストプラクティス -->
+<div class="best-practices">
+<h2 class="best-practices-title" id="✅-ABACベストプラクティス">
+      ✅ ABACベストプラクティス
+     </h2>
+<div class="practice-grid">
+<div class="practice-item">
+<h3 id="1-タグ戦略を文書化">
+<span class="practice-number">
+         1
+        </span>
+        タグ戦略を文書化
+       </h3>
+<p>
+        どのタグキーを使うか、値の規則は何か、誰がタグを管理するかを明文化。全チームで共有しよう。
+       </p>
+</div>
+<div class="practice-item">
+<h4>
+<span class="practice-number">
+         2
+        </span>
+        AWS Organizationsタグポリシー活用
+       </h4>
+<p>
+        組織全体でタグキーの大文字小文字、許可される値を強制。表記ゆれを防止できる。
+       </p>
+</div>
+<div class="practice-item">
+<h4>
+<span class="practice-number">
+         3
+        </span>
+        SCPでタグ必須化
+       </h4>
+<p>
+        リソース作成時に特定のタグがないと拒否するSCPを設定。タグ漏れを防止。
+       </p>
+</div>
+<div class="practice-item">
+<h4>
+<span class="practice-number">
+         4
+        </span>
+        定期的なタグ監査
+       </h4>
+<p>
+        AWS Configルールでタグ付けコンプライアンスを監視。非準拠リソースを検出・修正。
+       </p>
+</div>
+<div class="practice-item">
+<h4>
+<span class="practice-number">
+         5
+        </span>
+        最小権限の原則
+       </h4>
+<p>
+        ABACでもアクションは必要最小限に。「ec2:*」ではなく具体的なアクションを指定。
+       </p>
+</div>
+<div class="practice-item">
+<h4>
+<span class="practice-number">
+         6
+        </span>
+        テスト環境で検証
+       </h4>
+<p>
+        本番適用前にテスト環境でポリシーを検証。IAM Policy Simulatorも活用しよう。
+       </p>
+</div>
+</div>
+</div>
+<!-- まとめ -->
+<div class="summary">
+<h2 id="まとめ">
+      🎓 まとめ
+     </h2>
+<div class="summary-content">
+<div class="summary-box">
+<h3 id="オフィスビルのセキュリティ-=-ABAC" style="font-size: 1.8em; margin-bottom: 15px;">
+        🏢 オフィスビルのセキュリティ = ABAC
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        社員証のタグ（PrincipalTag）と部屋のドアのタグ（ResourceTag）が
+        <br/>
+<strong>
+         一致したらアクセスOK！
+        </strong>
+        というシンプルな仕組み
+       </p>
+</div>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-item-icon">
+         👤
+        </div>
+<strong>
+         PrincipalTag
+        </strong>
+<br/>
+<br/>
+        「誰が」アクセスするか
+        <br/>
+        ユーザー/ロールに付ける
+        <br/>
+        社員証のタグ🪪
+       </div>
+<div class="summary-item">
+<div class="summary-item-icon">
+         🚪
+        </div>
+<strong>
+         ResourceTag
+        </strong>
+<br/>
+<br/>
+        「何に」アクセスするか
+        <br/>
+        AWSリソースに付ける
+        <br/>
+        部屋のドアのタグ🚪
+       </div>
+</div>
+<div class="summary-formula">
+<strong>
+        🎯 ABACの黄金公式：
+       </strong>
+<br/>
+<br/>
+<code style="background: rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 10px;">
+        "aws:ResourceTag/Department": "${aws:PrincipalTag/Department}"
+       </code>
+<br/>
+<br/>
+<strong>
+        → タグが一致したら許可、一致しなければ拒否！
+       </strong>
+<br/>
+<br/>
+<span style="font-size: 0.9em;">
+        ポリシーは1つでOK！新しいユーザーやリソースが増えても
+        <br/>
+        タグを付けるだけで自動的にアクセス制御が適用される！🎉
+       </span>
+</div>
+<p style="font-size: 1.2em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8; margin-top: 30px;">
+       ABACを使いこなせば、
+       <strong>
+        スケーラブルで管理しやすい
+       </strong>
+       アクセス制御が実現できます！
+       <br/>
+       まずは1つのタグ（Department等）から始めて、徐々に拡大していこう！🚀
+      </p>
+</div>
+</div>
+</div>
+
+
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="api_gateway_auth_infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">4</span> <span class="separator" aria-hidden="true">/</span> <span class="total">71</span> </div> <a href="saml-certificate-rotation-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

@@ -1,0 +1,557 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   AWS ENI（Elastic Network Interface）初心者向け図解
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/aws-eni-infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#ENIの基本概念">ENIの基本概念</a> </li><li class="toc-h2"> <a href="#ENIの主な特徴">ENIの主な特徴</a> </li><li class="toc-h3"> <a href="#接続性">🔌 接続性</a> </li><li class="toc-h3"> <a href="#再利用可能">🔄 再利用可能</a> </li><li class="toc-h3"> <a href="#複数の属性">📝 複数の属性</a> </li><li class="toc-h3"> <a href="#セキュリティ">🔒 セキュリティ</a> </li><li class="toc-h3"> <a href="#複数インターフェース">🔢 複数インターフェース</a> </li><li class="toc-h3"> <a href="#⚡-ホットアタッチ">⚡ ホットアタッチ</a> </li><li class="toc-h2"> <a href="#ENIの構成要素">ENIの構成要素</a> </li><li class="toc-h3"> <a href="#ENIの構成要素-1">ENIの構成要素</a> </li><li class="toc-h2"> <a href="#ENIのユースケース">ENIのユースケース</a> </li><li class="toc-h3"> <a href="#️-マルチホームネットワーク複数ネットワーク接続">🛡️ マルチホームネットワーク（複数ネットワーク接続）</a> </li><li class="toc-h3"> <a href="#フェイルオーバーとHA高可用性構成">🔄 フェイルオーバーとHA（高可用性）構成</a> </li><li class="toc-h3"> <a href="#️-ネットワークとセキュリティアプライアンス">🛠️ ネットワークとセキュリティアプライアンス</a> </li><li class="toc-h2"> <a href="#ENIの作成-管理方法">ENIの作成・管理方法</a> </li><li class="toc-h3"> <a href="#ENIの作成">ENIの作成</a> </li><li class="toc-h3"> <a href="#ENIのアタッチ">ENIのアタッチ</a> </li><li class="toc-h3"> <a href="#セキュリティグループの設定">セキュリティグループの設定</a> </li><li class="toc-h3"> <a href="#IPアドレスの管理">IPアドレスの管理</a> </li><li class="toc-h3"> <a href="#モニタリングと管理">モニタリングと管理</a> </li><li class="toc-h2"> <a href="#ENIと関連するAWSサービス">ENIと関連するAWSサービス</a> </li><li class="toc-h3"> <a href="#EC2">EC2</a> </li><li class="toc-h3"> <a href="#VPC">VPC</a> </li><li class="toc-h3"> <a href="#LambdaVPC内">Lambda（VPC内）</a> </li><li class="toc-h3"> <a href="#RDS">RDS</a> </li><li class="toc-h3"> <a href="#EKS">EKS</a> </li><li class="toc-h3"> <a href="#ECS">ECS</a> </li><li class="toc-h2"> <a href="#ENIに関するよくある質問">ENIに関するよくある質問</a> </li><li class="toc-h3"> <a href="#ENIとEIPの違いは何ですか？">ENIとEIPの違いは何ですか？</a> </li><li class="toc-h3"> <a href="#1つのEC2インスタンスに複数のENIをアタッチする理由は？">1つのEC2インスタンスに複数のENIをアタッチする理由は？</a> </li><li class="toc-h3"> <a href="#ENIの制限事項は何ですか？">ENIの制限事項は何ですか？</a> </li><li class="toc-h3"> <a href="#ENIの料金はどうなっていますか？">ENIの料金はどうなっていますか？</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> ネットワーキング </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> VPC &amp; ネットワーク基礎 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Aws Eni Infographic </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>
+    AWS ENI（Elastic Network Interface）とは？
+   </h1>
+
+<p class="subtitle">
+    AWS初心者のための図解ガイド
+   </p>
+</div>
+<div class="section">
+<h2 id="ENIの基本概念">
+    ENIの基本概念
+   </h2>
+<p>
+    ENI（Elastic Network Interface）は、AWSのVPC（Virtual Private Cloud）内で
+    <span class="highlight">
+     仮想ネットワークカード
+    </span>
+    として機能します。物理的なコンピュータのネットワークインターフェースカード（NIC）に相当する仮想リソースです。
+   </p>
+<div class="diagram">
+<div class="vpc">
+<div class="vpc-label">
+      VPC
+     </div>
+<div class="subnet">
+<div class="subnet-label">
+       サブネット
+      </div>
+<div class="ec2">
+       EC2インスタンス
+      </div>
+<div style="text-align: center; margin: 10px 0;">
+<div class="eni">
+        プライマリENI
+       </div>
+<div style="font-size: 12px; margin-top: 5px;">
+        eth0
+       </div>
+</div>
+<div class="eni" style="position: absolute; right: 20px; top: 50%;">
+       セカンダリENI
+       <div style="font-size: 12px; margin-top: 5px;">
+        eth1
+       </div>
+</div>
+</div>
+</div>
+<p style="text-align: center; margin-top: 20px;">
+     ENIはEC2インスタンスと接続される仮想ネットワークインターフェース
+    </p>
+</div>
+</div>
+<div class="section">
+<h2 id="ENIの主な特徴">
+    ENIの主な特徴
+   </h2>
+<div class="flex-container">
+<div class="feature-card">
+<h3 id="接続性">
+      🔌 接続性
+     </h3>
+<p>
+      EC2インスタンスをVPC内のネットワークに接続します。各ENIは特定のサブネットに紐づきます。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="再利用可能">
+      🔄 再利用可能
+     </h3>
+<p>
+      ENIはEC2インスタンス間で
+      <span class="highlight">
+       移動可能
+      </span>
+      で、インスタンスの終了後も存続します。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="複数の属性">
+      📝 複数の属性
+     </h3>
+<p>
+      プライベートIPアドレス、Elastic IPアドレス、MACアドレスなどの属性を持ちます。
+     </p>
+</div>
+</div>
+<div class="flex-container" style="margin-top: 20px;">
+<div class="feature-card">
+<h3 id="セキュリティ">
+      🔒 セキュリティ
+     </h3>
+<p>
+      セキュリティグループとネットワークACLによるトラフィック制御が可能です。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="複数インターフェース">
+      🔢 複数インターフェース
+     </h3>
+<p>
+      一つのEC2インスタンスに
+      <span class="highlight">
+       複数のENI
+      </span>
+      をアタッチ可能です。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="⚡-ホットアタッチ">
+      ⚡ ホットアタッチ
+     </h3>
+<p>
+      稼働中のインスタンスにENIをアタッチ・デタッチできます。
+     </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ENIの構成要素">
+    ENIの構成要素
+   </h2>
+<div class="diagram">
+<div class="eni" style="width: 80%; margin: 0 auto; text-align: left; padding: 20px;">
+<h3 id="ENIの構成要素-1" style="margin-top: 0;">
+      ENIの構成要素
+     </h3>
+<ul>
+<li>
+<strong>
+        プライマリプライベートIPv4アドレス
+       </strong>
+       : サブネット内での固定IP
+      </li>
+<li>
+<strong>
+        セカンダリプライベートIPv4アドレス
+       </strong>
+       （オプション）: 追加のプライベートIP
+      </li>
+<li>
+<strong>
+        Elastic IP
+       </strong>
+       （オプション）: インターネットからアクセス可能な固定IP
+      </li>
+<li>
+<strong>
+        MACアドレス
+       </strong>
+       : 一意のネットワーク識別子
+      </li>
+<li>
+<strong>
+        セキュリティグループ
+       </strong>
+       : トラフィックを制御するファイアウォールルール
+      </li>
+<li>
+<strong>
+        送受信チェック
+       </strong>
+       : 不正なトラフィック防止の設定
+      </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ENIのユースケース">
+    ENIのユースケース
+   </h2>
+<div class="use-case">
+<h3 id="️-マルチホームネットワーク複数ネットワーク接続">
+     🛡️ マルチホームネットワーク（複数ネットワーク接続）
+    </h3>
+<div class="diagram" style="text-align: left;">
+<div class="vpc">
+<div class="vpc-label">
+       VPC
+      </div>
+<div style="display: flex; justify-content: space-between;">
+<div class="subnet" style="width: 45%;">
+<div class="subnet-label">
+         パブリックサブネット
+        </div>
+<div class="ec2" style="margin: 20px auto;">
+         Web サーバー
+        </div>
+<div class="eni" style="margin: 10px auto;">
+         ENI 1 (eth0)
+         <br/>
+<small>
+          インターネット接続用
+         </small>
+</div>
+</div>
+<div class="subnet" style="width: 45%;">
+<div class="subnet-label">
+         プライベートサブネット
+        </div>
+<div style="height: 40px;">
+</div>
+<div class="eni" style="margin: 10px auto;">
+         ENI 2 (eth1)
+         <br/>
+<small>
+          データベース接続用
+         </small>
+</div>
+</div>
+</div>
+</div>
+<p style="margin-top: 15px;">
+<strong>
+       説明:
+      </strong>
+      1つのEC2インスタンスに2つのENIをアタッチすることで、パブリックとプライベート両方のサブネットに接続します。これにより、インターネットからのトラフィックを受けながらも、データベースへは分離されたプライベートネットワーク経由でアクセスできます。
+     </p>
+</div>
+</div>
+<div class="use-case">
+<h3 id="フェイルオーバーとHA高可用性構成">
+     🔄 フェイルオーバーとHA（高可用性）構成
+    </h3>
+<div class="diagram" style="text-align: left;">
+<div class="vpc">
+<div class="vpc-label">
+       VPC
+      </div>
+<div style="display: flex; justify-content: space-around; align-items: center;">
+<div style="text-align: center;">
+<div class="ec2">
+         プライマリEC2
+        </div>
+<div class="eni" style="margin-top: 10px;">
+         ENI
+        </div>
+</div>
+<div style="text-align: center; position: relative;">
+<div style="border: 2px dashed #dc7600; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; margin: 0 auto;">
+<span style="font-size: 24px;">
+          →
+         </span>
+</div>
+<div style="margin-top: 10px; font-size: 12px;">
+         障害発生時
+        </div>
+</div>
+<div style="text-align: center;">
+<div class="ec2">
+         バックアップEC2
+        </div>
+<div style="height: 45px;">
+</div>
+</div>
+</div>
+</div>
+<p style="margin-top: 15px;">
+<strong>
+       説明:
+      </strong>
+      プライマリサーバーに障害が発生した場合、そのENIをバックアップEC2インスタンスに移行することで、IPアドレスを変更せずにサービスを継続できます。これにより、DNSの変更を待つことなくすぐにフェイルオーバーが可能になります。
+     </p>
+</div>
+</div>
+<div class="use-case">
+<h3 id="️-ネットワークとセキュリティアプライアンス">
+     🛠️ ネットワークとセキュリティアプライアンス
+    </h3>
+<div class="diagram" style="text-align: left;">
+<div class="vpc">
+<div class="vpc-label">
+       VPC
+      </div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<div class="subnet" style="width: 30%;">
+<div class="subnet-label">
+         インバウンド
+        </div>
+<div class="ec2" style="margin: 10px auto; background-color: #1E88E5;">
+         インターネット
+        </div>
+</div>
+<div style="width: 30%; text-align: center;">
+<div class="ec2" style="background-color: #F44336; width: 120px;">
+         ファイアウォール
+        </div>
+<div style="display: flex; justify-content: space-between; margin-top: 10px;">
+<div class="eni" style="font-size: 12px;">
+          入口ENI
+         </div>
+<div class="eni" style="font-size: 12px;">
+          出口ENI
+         </div>
+</div>
+</div>
+<div class="subnet" style="width: 30%;">
+<div class="subnet-label">
+         アプリケーション
+        </div>
+<div class="ec2" style="margin: 10px auto;">
+         Webサーバー
+        </div>
+</div>
+</div>
+</div>
+<p style="margin-top: 15px;">
+<strong>
+       説明:
+      </strong>
+      複数のENIを使用して、トラフィックのフィルタリングや監視を行うファイアウォールアプライアンスを実装できます。入口ENIと出口ENIを分けることで、両方のトラフィックを制御・検査できます。
+     </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ENIの作成-管理方法">
+    ENIの作成・管理方法
+   </h2>
+<div class="step">
+<div class="step-number">
+     1
+    </div>
+<div>
+<h3 id="ENIの作成">
+      ENIの作成
+     </h3>
+<p>
+      AWSマネジメントコンソール、AWS CLI、またはAWS SDKを使用して作成できます。作成時にサブネットを指定する必要があります。
+     </p>
+<div class="tag">
+      Console
+     </div>
+<div class="tag">
+      CLI
+     </div>
+<div class="tag">
+      SDK
+     </div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+     2
+    </div>
+<div>
+<h3 id="ENIのアタッチ">
+      ENIのアタッチ
+     </h3>
+<p>
+      作成したENIをEC2インスタンスにアタッチします。インスタンスは稼働中でも停止状態でもかまいません。
+     </p>
+<code style="display: block; background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 10px;">
+      # AWS CLIの例
+      <br/>
+      aws ec2 attach-network-interface --network-interface-id eni-xxxxxxxx --instance-id i-xxxxxxxx --device-index 1
+     </code>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+     3
+    </div>
+<div>
+<h3 id="セキュリティグループの設定">
+      セキュリティグループの設定
+     </h3>
+<p>
+      ENIに適用するセキュリティグループを設定して、トラフィックを制御します。
+     </p>
+<div class="security-group">
+<div class="sg-label">
+       セキュリティグループ
+      </div>
+<ul style="margin-top: 5px; font-size: 14px;">
+<li>
+        インバウンドルール: HTTPSトラフィック（ポート443）を許可
+       </li>
+<li>
+        アウトバウンドルール: すべてのトラフィックを許可
+       </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+     4
+    </div>
+<div>
+<h3 id="IPアドレスの管理">
+      IPアドレスの管理
+     </h3>
+<p>
+      必要に応じてセカンダリIPアドレスの割り当てやElastic IPの関連付けを行います。
+     </p>
+<div style="display: flex; justify-content: space-between; flex-wrap: wrap; margin-top: 10px;">
+<div style="background-color: #E8F5E9; padding: 10px; border-radius: 5px; flex: 1; min-width: 200px; margin-right: 10px;">
+<strong>
+        プライベートIP:
+       </strong>
+       10.0.1.25
+      </div>
+<div style="background-color: #E8F5E9; padding: 10px; border-radius: 5px; flex: 1; min-width: 200px;">
+<strong>
+        Elastic IP:
+       </strong>
+       52.x.x.x
+      </div>
+</div>
+</div>
+</div>
+<div class="step">
+<div class="step-number">
+     5
+    </div>
+<div>
+<h3 id="モニタリングと管理">
+      モニタリングと管理
+     </h3>
+<p>
+      CloudWatchを使用してENIのトラフィックやパフォーマンスをモニタリングします。必要に応じてタグを追加して管理を容易にします。
+     </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ENIと関連するAWSサービス">
+    ENIと関連するAWSサービス
+   </h2>
+<div class="flex-container">
+<div class="feature-card">
+<h3 id="EC2">
+      EC2
+     </h3>
+<p>
+      仮想サーバーインスタンスにネットワーク接続を提供します。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="VPC">
+      VPC
+     </h3>
+<p>
+      ENIはVPC内の特定のサブネットに紐づけられます。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="LambdaVPC内">
+      Lambda（VPC内）
+     </h3>
+<p>
+      VPC内のLambda関数はENIを使用してVPCリソースにアクセスします。
+     </p>
+</div>
+</div>
+<div class="flex-container" style="margin-top: 20px;">
+<div class="feature-card">
+<h3 id="RDS">
+      RDS
+     </h3>
+<p>
+      データベースインスタンスもENIを使用してネットワークに接続します。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="EKS">
+      EKS
+     </h3>
+<p>
+      Kubernetesポッドに割り当てられるENIを通じてネットワーク接続を提供します。
+     </p>
+</div>
+<div class="feature-card">
+<h3 id="ECS">
+      ECS
+     </h3>
+<p>
+      awsvpc ネットワークモードでは、各タスクに専用のENIが割り当てられます。
+     </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ENIに関するよくある質問">
+    ENIに関するよくある質問
+   </h2>
+<div style="background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+<h3 id="ENIとEIPの違いは何ですか？" style="margin-top: 0; color: #dc7600;">
+     ENIとEIPの違いは何ですか？
+    </h3>
+<p>
+<strong>
+      ENI（Elastic Network Interface）
+     </strong>
+     は仮想ネットワークインターフェースであり、
+     <strong>
+      EIP（Elastic IP）
+     </strong>
+     は固定のパブリックIPアドレスです。EIPはENIまたはEC2インスタンスに関連付けることができます。
+    </p>
+</div>
+<div style="background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+<h3 id="1つのEC2インスタンスに複数のENIをアタッチする理由は？" style="margin-top: 0; color: #dc7600;">
+     1つのEC2インスタンスに複数のENIをアタッチする理由は？
+    </h3>
+<p>
+     マルチホームネットワーク（複数のサブネットへの接続）、異なるセキュリティグループの適用、フェイルオーバー構成、またはネットワークアプライアンス構築のためです。
+    </p>
+</div>
+<div style="background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+<h3 id="ENIの制限事項は何ですか？" style="margin-top: 0; color: #dc7600;">
+     ENIの制限事項は何ですか？
+    </h3>
+<p>
+     ENIはアタッチする際に同じAZのEC2インスタンスに制限されます。また、インスタンスタイプによってアタッチ可能なENIの数やIPアドレスの数に制限があります。
+    </p>
+</div>
+<div style="background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+<h3 id="ENIの料金はどうなっていますか？" style="margin-top: 0; color: #dc7600;">
+     ENIの料金はどうなっていますか？
+    </h3>
+<p>
+     ENI自体には追加料金はかかりません。ただし、関連付けるElastic IPや転送されるデータ量に応じて料金が発生する場合があります。
+    </p>
+</div>
+</div>
+<div class="footnote">
+<p>
+    ※ この資料はAWS初心者向けに作成されたENI（Elastic Network Interface）の概要説明です。詳細な仕様や制限については、AWS公式ドキュメントをご確認ください。
+   </p>
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="../new-solutions/vpn-vs-privatelink.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">6</span> <span class="separator" aria-hidden="true">/</span> <span class="total">19</span> </div> <a href="../new-solutions/aws_eip_nat_infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

@@ -1,0 +1,1988 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Amazon MSK をレストランの注文システムで理解しよう
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/amazon_msk_infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#‍-ウェイター-→-キッチン-→-お客様">👨‍🍳 ウェイター → 🏪 キッチン → 👥 お客様</a> </li><li class="toc-h2"> <a href="#Apache-Kafkaって何？">📚 Apache Kafkaって何？</a> </li><li class="toc-h2"> <a href="#データのハブ中継地点">🏪 データのハブ（中継地点）</a> </li><li class="toc-h3"> <a href="#従来の方法電話注文">📞 従来の方法（電話注文）</a> </li><li class="toc-h3"> <a href="#Kafkaの方法注文システム">🔄 Kafkaの方法（注文システム）</a> </li><li class="toc-h3"> <a href="#発行-購読モデルPub-Sub">発行-購読モデル (Pub-Sub)</a> </li><li class="toc-h3"> <a href="#高速-大容量処理">高速・大容量処理</a> </li><li class="toc-h3"> <a href="#耐久性-信頼性">耐久性・信頼性</a> </li><li class="toc-h3"> <a href="#Kafkaの核心概念">🎯 Kafkaの核心概念</a> </li><li class="toc-h2"> <a href="#🆚-Apache-Kafka-vs-Amazon-MSK">🆚 Apache Kafka vs Amazon MSK</a> </li><li class="toc-h2"> <a href="#自営業-vs-フランチャイズ">🏪 自営業 vs フランチャイズ</a> </li><li class="toc-h3"> <a href="#Apache-Kafkaオープンソース版">Apache Kafka （オープンソース版）</a> </li><li class="toc-h3"> <a href="#Amazon-MSKマネージド版">Amazon MSK （マネージド版）</a> </li><li class="toc-h3"> <a href="#比較表">📊 比較表</a> </li><li class="toc-h2"> <a href="#なぜKafkaが人気なの？">🌟 なぜKafkaが人気なの？</a> </li><li class="toc-h2"> <a href="#テレビ放送局のような仕組み">📺 テレビ放送局のような仕組み</a> </li><li class="toc-h3"> <a href="#従来のシステムメール的">従来のシステム（メール的）</a> </li><li class="toc-h3"> <a href="#Kafka放送局的">Kafka（放送局的）</a> </li><li class="toc-h3"> <a href="#Kafkaが解決した課題">🚀 Kafkaが解決した課題</a> </li><li class="toc-h2"> <a href="#✅-Kafkaが適している場面-vs-❌-適さない場面">✅ Kafkaが適している場面 vs ❌ 適さない場面</a> </li><li class="toc-h3"> <a href="#✅-Kafkaが向いている">✅ Kafkaが向いている</a> </li><li class="toc-h3"> <a href="#❌-Kafkaが向かない">❌ Kafkaが向かない</a> </li><li class="toc-h3"> <a href="#判断基準">💡 判断基準</a> </li><li class="toc-h2"> <a href="#まず、Amazon-MSKって何？">🤔 まず、Amazon MSKって何？</a> </li><li class="toc-h3"> <a href="#簡単に言うと...">📝 簡単に言うと...</a> </li><li class="toc-h3"> <a href="#️-レストランの例">🍽️ レストランの例</a> </li><li class="toc-h3"> <a href="#☁️-AWSの世界">☁️ AWSの世界</a> </li><li class="toc-h2"> <a href="#5つの重要な要素をレストランで理解">🏪 5つの重要な要素をレストランで理解</a> </li><li class="toc-h3"> <a href="#プロデューサー=-ウェイター">プロデューサー = ウェイター</a> </li><li class="toc-h3"> <a href="#トピック=-料理カテゴリ">トピック = 料理カテゴリ</a> </li><li class="toc-h3"> <a href="#パーティション=-調理台">パーティション = 調理台</a> </li><li class="toc-h3"> <a href="#コンシューマー=-シェフ-配膳係">コンシューマー = シェフ・配膳係</a> </li><li class="toc-h3"> <a href="#Kafkaクラスター=-キッチンシステム">Kafkaクラスター = キッチンシステム</a> </li><li class="toc-h2"> <a href="#️-レストランでの注文の流れ">🍽️ レストランでの注文の流れ</a> </li><li class="toc-h3"> <a href="#1.-お客様が注文">1. お客様が注文</a> </li><li class="toc-h3"> <a href="#2.-ウェイターが注文を受付">2. ウェイターが注文を受付</a> </li><li class="toc-h3"> <a href="#3.-キッチンシステムが振り分け">3. キッチンシステムが振り分け</a> </li><li class="toc-h3"> <a href="#4.-シェフが料理を作成">4. シェフが料理を作成</a> </li><li class="toc-h3"> <a href="#5.-配膳係がお客様へ提供">5. 配膳係がお客様へ提供</a> </li><li class="toc-h2"> <a href="#️-Amazon-MSKのアーキテクチャ">🏗️ Amazon MSKのアーキテクチャ</a> </li><li class="toc-h3"> <a href="#データの流れを見てみよう">データの流れを見てみよう</a> </li><li class="toc-h3"> <a href="#プロデューサー">プロデューサー</a> </li><li class="toc-h3"> <a href="#Amazon-MSK">Amazon MSK</a> </li><li class="toc-h3"> <a href="#コンシューマー">コンシューマー</a> </li><li class="toc-h2"> <a href="#Amazon-MSKの特徴とメリット">🎯 Amazon MSKの特徴とメリット</a> </li><li class="toc-h3"> <a href="#高速処理">高速処理</a> </li><li class="toc-h3"> <a href="#順序保証">順序保証</a> </li><li class="toc-h3"> <a href="#耐久性">耐久性</a> </li><li class="toc-h3"> <a href="#スケーラビリティ">スケーラビリティ</a> </li><li class="toc-h3"> <a href="#フルマネージド">フルマネージド</a> </li><li class="toc-h3"> <a href="#リアルタイム">リアルタイム</a> </li><li class="toc-h2"> <a href="#実際の使用例">🏢 実際の使用例</a> </li><li class="toc-h3"> <a href="#SNSアプリ">SNSアプリ</a> </li><li class="toc-h3"> <a href="#ECサイト">ECサイト</a> </li><li class="toc-h3"> <a href="#IoT-車両追跡">IoT・車両追跡</a> </li><li class="toc-h3"> <a href="#金融取引">金融取引</a> </li><li class="toc-h3"> <a href="#ログ分析">ログ分析</a> </li><li class="toc-h3"> <a href="#ゲーム">ゲーム</a> </li><li class="toc-h2"> <a href="#インタラクティブデモ">🎮 インタラクティブデモ</a> </li><li class="toc-h3"> <a href="#レストランの注文システムを体験してみよう！">レストランの注文システムを体験してみよう！</a> </li><li class="toc-h2"> <a href="#❓-よくある質問">❓ よくある質問</a> </li><li class="toc-h2"> <a href="#まとめ">🎯 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> ストレージ・データベース </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> データベース &amp; キャッシング </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Amazon Msk Infographic </span> </nav> <!-- ページコンテンツ (slot) -->  <header class="header">
+<h1>
+     🍽️ Amazon MSK
+    </h1>
+
+<p>
+     レストランの注文システムで理解する超入門ガイド
+    </p>
+<div class="intro-analogy">
+<h2 id="‍-ウェイター-→-キッチン-→-お客様">
+      👨‍🍳 ウェイター → 🏪 キッチン → 👥 お客様
+     </h2>
+<p>
+      Amazon Managed Streaming for Apache Kafkaを、身近なレストランの注文システムで例えて分かりやすく説明します！
+     </p>
+</div>
+</header>
+<div class="section">
+<h2 id="Apache-Kafkaって何？">
+     📚 Apache Kafkaって何？
+    </h2>
+<div class="intro-analogy">
+<h2 id="データのハブ中継地点">
+      🏪 データのハブ（中継地点）
+     </h2>
+<p>
+      Apache Kafkaは、大量のデータをリアルタイムで複数のシステム間で効率的にやり取りするためのオープンソースソフトウェアです
+     </p>
+</div>
+<div class="comparison-table">
+<div class="comparison-side restaurant-side">
+<h3 id="従来の方法電話注文">
+       📞 従来の方法（電話注文）
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         お客様
+        </strong>
+        → 電話 →
+        <strong>
+         レストラン
+        </strong>
+</p>
+<br/>
+<p>
+        👆 1対1の直接やり取り
+        <br/>
+        😓 同時に多くの注文を受けるのが困難
+        <br/>
+        📞 注文が多いと混乱してしまう
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="Kafkaの方法注文システム">
+       🔄 Kafkaの方法（注文システム）
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         お客様
+        </strong>
+        → システム →
+        <strong>
+         複数の処理先
+        </strong>
+</p>
+<br/>
+<p>
+        👆 システムが注文を整理・分配
+        <br/>
+        ⚡ 同時に何百件でも処理可能
+        <br/>
+        📊 注文履歴も確実に残る
+       </p>
+</div>
+</div>
+</div>
+<div class="component-grid">
+<div class="component-card" style="background: linear-gradient(135deg, #008662 0%, #00cec9 100%);">
+<div class="component-icon">
+       📡
+      </div>
+<h3 id="発行-購読モデルPub-Sub">
+       発行-購読モデル
+       <br/>
+       (Pub-Sub)
+      </h3>
+<p>
+       1つのデータを複数の宛先に
+       <strong>
+        同時配信
+       </strong>
+<br/>
+       送信者と受信者が直接やり取りしなくてOK
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px; font-family: monospace; font-size: 0.9em;">
+       📱アプリ → 📋システム → 🏪キッチン
+       <br/>
+       ↘️ 💾データベース
+       <br/>
+       ↘️ 📊分析システム
+      </div>
+</div>
+<div class="component-card" style="background: linear-gradient(135deg, #fd79a8 0%, #9e6c0f 100%);">
+<div class="component-icon">
+       ⚡
+      </div>
+<h3 id="高速-大容量処理">
+       高速・大容量処理
+      </h3>
+<p>
+       毎秒
+       <strong>
+        数百万件
+       </strong>
+       のメッセージを処理
+       <br/>
+       数TB〜数PBのデータも扱える
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       同時に1万テーブルの
+       <br/>
+       注文処理が可能！
+      </div>
+</div>
+<div class="component-card" style="background: linear-gradient(135deg, #7E22CE 0%, #6c5ce7 100%);">
+<div class="component-icon">
+       🛡️
+      </div>
+<h3 id="耐久性-信頼性">
+       耐久性・信頼性
+      </h3>
+<p>
+       データを
+       <strong>
+        複数のサーバー
+       </strong>
+       に保存
+       <br/>
+       サーバーが故障してもデータが消えない
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        安心ポイント:
+       </strong>
+<br/>
+       注文が確実に処理される
+       <br/>
+       仕組みを提供
+      </div>
+</div>
+</div>
+<div class="highlight-box" style="background: linear-gradient(135deg, #008662 0%, #00cec9 100%);">
+<h3 id="Kafkaの核心概念">
+      🎯 Kafkaの核心概念
+     </h3>
+<div style="text-align: left; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+<div>
+<h4>
+        🔄 ストリーミング処理
+       </h4>
+<p>
+        データを
+        <strong>
+         川の流れ
+        </strong>
+        のように連続処理
+        <br/>
+        → リアルタイムでデータが流れ続ける
+       </p>
+</div>
+<div>
+<h4>
+        📊 イベントドリブン
+       </h4>
+<p>
+        「何かが起きた」をトリガーに処理実行
+        <br/>
+        → 注文が入ったら自動で処理開始
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="🆚-Apache-Kafka-vs-Amazon-MSK">
+     🆚 Apache Kafka vs Amazon MSK
+    </h2>
+<div class="intro-analogy">
+<h2 id="自営業-vs-フランチャイズ">
+      🏪 自営業 vs フランチャイズ
+     </h2>
+<p>
+      Apache Kafkaは「レストランを自分で経営」、Amazon MSKは「フランチャイズで楽々経営」のようなもの
+     </p>
+</div>
+<div style="background: #f8f9fa; border-radius: 20px; padding: 40px; margin: 30px 0;">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+<div style="background: linear-gradient(135deg, #3378be 0%, #0984e3 100%); color: white; padding: 30px; border-radius: 15px;">
+<div style="text-align: center; margin-bottom: 20px;">
+<div style="font-size: 4em;">
+         🛠️
+        </div>
+<h3 id="Apache-Kafkaオープンソース版">
+         Apache Kafka
+         <br/>
+         （オープンソース版）
+        </h3>
+</div>
+<div style="font-size: 1.1em;">
+<p>
+<strong>
+          🏪 自営業レストラン
+         </strong>
+</p>
+<ul style="margin: 15px 0; margin-left: 20px;">
+<li>
+          ソフトウェア自体は無料
+         </li>
+<li>
+          サーバー設置・管理が必要
+         </li>
+<li>
+          手動でインフラ構築
+         </li>
+<li>
+          自分で監視システム構築
+         </li>
+<li>
+          障害対応も自分で
+         </li>
+<li>
+          スケーリングは手動
+         </li>
+</ul>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+          💰 コスト:
+         </strong>
+         サーバー代 + 人件費
+         <br/>
+<strong>
+          🎯 向いている:
+         </strong>
+         技術者が豊富な企業
+        </div>
+</div>
+</div>
+<div style="background: linear-gradient(135deg, #fd79a8 0%, #9e6c0f 100%); color: #2d3436; padding: 30px; border-radius: 15px;">
+<div style="text-align: center; margin-bottom: 20px;">
+<div style="font-size: 4em;">
+         ☁️
+        </div>
+<h3 id="Amazon-MSKマネージド版">
+         Amazon MSK
+         <br/>
+         （マネージド版）
+        </h3>
+</div>
+<div style="font-size: 1.1em;">
+<p>
+<strong>
+          🏪 フランチャイズレストラン
+         </strong>
+</p>
+<ul style="margin: 15px 0; margin-left: 20px;">
+<li>
+          従量課金制
+         </li>
+<li>
+          AWSが運用・管理
+         </li>
+<li>
+          数クリックで開始
+         </li>
+<li>
+          自動監視・アラート
+         </li>
+<li>
+          AWSが障害対応
+         </li>
+<li>
+          自動スケーリング
+         </li>
+</ul>
+<div style="background: rgba(255,255,255,0.3); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+          💰 コスト:
+         </strong>
+         使った分だけ
+         <br/>
+<strong>
+          🎯 向いている:
+         </strong>
+         開発に集中したい企業
+        </div>
+</div>
+</div>
+</div>
+<div style="text-align: center; margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #008662 0%, #00cec9 100%); color: white; border-radius: 15px;">
+<h3 id="比較表">
+       📊 比較表
+      </h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px; text-align: left;">
+<div>
+<strong>
+         項目
+        </strong>
+</div>
+<div>
+<strong>
+         Apache Kafka
+        </strong>
+</div>
+<div>
+<strong>
+         Amazon MSK
+        </strong>
+</div>
+<div>
+        初期費用
+       </div>
+<div>
+        サーバー購入費用
+       </div>
+<div>
+        無料
+       </div>
+<div>
+        運用費用
+       </div>
+<div>
+        サーバー代+人件費
+       </div>
+<div>
+        従量課金
+       </div>
+<div>
+        セットアップ時間
+       </div>
+<div>
+        数週間〜数ヶ月
+       </div>
+<div>
+        数時間
+       </div>
+<div>
+        専門知識
+       </div>
+<div>
+        必要（高度）
+       </div>
+<div>
+        不要（基本的なAWS知識のみ）
+       </div>
+<div>
+        監視・アラート
+       </div>
+<div>
+        自分で構築
+       </div>
+<div>
+        自動提供
+       </div>
+<div>
+        障害対応
+       </div>
+<div>
+        24時間自社対応
+       </div>
+<div>
+        AWS側で対応
+       </div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="なぜKafkaが人気なの？">
+     🌟 なぜKafkaが人気なの？
+    </h2>
+<div class="intro-analogy">
+<h2 id="テレビ放送局のような仕組み">
+      📺 テレビ放送局のような仕組み
+     </h2>
+<p>
+      従来のメール的な1対1通信から、放送局的な1対多数通信へ革命を起こしました
+     </p>
+</div>
+<div style="background: #2d3436; color: white; padding: 40px; border-radius: 20px; margin: 30px 0;">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+<div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; text-align: center;">
+<div style="font-size: 4em; margin-bottom: 15px;">
+        📧
+       </div>
+<h3 id="従来のシステムメール的">
+        従来のシステム（メール的）
+       </h3>
+<div style="margin-top: 20px; text-align: left;">
+<p>
+         ❌
+         <strong>
+          問題点：
+         </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+          1対1、または1対少数
+         </li>
+<li>
+          処理速度に限界がある
+         </li>
+<li>
+          スケールが困難
+         </li>
+<li>
+          システム間の依存関係が複雑
+         </li>
+<li>
+          障害時の影響が大きい
+         </li>
+</ul>
+</div>
+<div style="background: rgba(231,76,60,0.3); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         レストラン例:
+        </strong>
+<br/>
+        お客様一人一人に
+        <br/>
+        個別に電話で対応
+       </div>
+</div>
+<div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; text-align: center;">
+<div style="font-size: 4em; margin-bottom: 15px;">
+        📺
+       </div>
+<h3 id="Kafka放送局的">
+        Kafka（放送局的）
+       </h3>
+<div style="margin-top: 20px; text-align: left;">
+<p>
+         ✅
+         <strong>
+          メリット：
+         </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+          1対多数に効率的に配信
+         </li>
+<li>
+          超高速処理（毎秒数百万件）
+         </li>
+<li>
+          簡単にスケール可能
+         </li>
+<li>
+          システム間の疎結合
+         </li>
+<li>
+          障害に強い分散設計
+         </li>
+</ul>
+</div>
+<div style="background: rgba(0,184,148,0.3); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         レストラン例:
+        </strong>
+<br/>
+        注文システムで
+        <br/>
+        全テーブルを一括管理
+       </div>
+</div>
+</div>
+<div style="text-align: center; margin-top: 30px;">
+<h3 id="Kafkaが解決した課題">
+       🚀 Kafkaが解決した課題
+      </h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         ⚡
+        </div>
+<strong>
+         スピード問題
+        </strong>
+<br/>
+        リアルタイム処理を実現
+       </div>
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         📈
+        </div>
+<strong>
+         スケール問題
+        </strong>
+<br/>
+        水平スケーリングが容易
+       </div>
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         🔗
+        </div>
+<strong>
+         結合度問題
+        </strong>
+<br/>
+        システム間の疎結合
+       </div>
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+         💾
+        </div>
+<strong>
+         データ保持問題
+        </strong>
+<br/>
+        設定可能な保持期間
+       </div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="✅-Kafkaが適している場面-vs-❌-適さない場面">
+     ✅ Kafkaが適している場面 vs ❌ 適さない場面
+    </h2>
+<div class="comparison-table">
+<div class="comparison-side" style="background: linear-gradient(135deg, #008662 0%, #00cec9 100%); color: white;">
+<h3 id="✅-Kafkaが向いている">
+       ✅ Kafkaが向いている
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px; text-align: left;">
+<p>
+<strong>
+         🎯 こんな場面にピッタリ：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         大量のデータをリアルタイム処理
+        </li>
+<li>
+         複数システム間でのデータ共有
+        </li>
+<li>
+         ログ収集・ストリーミング分析
+        </li>
+<li>
+         イベントドリブンアーキテクチャ
+        </li>
+<li>
+         マイクロサービス間の通信
+        </li>
+<li>
+         IoTデータの収集・処理
+        </li>
+</ul>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         🏪 レストラン例:
+        </strong>
+<br/>
+        全国チェーン店の統合注文システム
+        <br/>
+        リアルタイム売上分析
+       </div>
+</div>
+</div>
+<div class="comparison-side" style="background: linear-gradient(135deg, #fab1a0 0%, #c35237 100%); color: white;">
+<h3 id="❌-Kafkaが向かない">
+       ❌ Kafkaが向かない
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px; text-align: left;">
+<p>
+<strong>
+         🚫 こんな場面は他の方法が良い：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         小規模なデータのやり取り
+        </li>
+<li>
+         バッチ処理中心のシステム
+        </li>
+<li>
+         リアルタイム性が不要な処理
+        </li>
+<li>
+         単純なリクエスト-レスポンス
+        </li>
+<li>
+         データ量が少ない（1日数GB以下）
+        </li>
+<li>
+         一時的な処理のみ
+        </li>
+</ul>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+         🏪 レストラン例:
+        </strong>
+<br/>
+        個人経営の小さなカフェ
+        <br/>
+        1日数十件の注文のみ
+       </div>
+</div>
+</div>
+</div>
+<div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 30px; border-radius: 15px; margin-top: 30px;">
+<h3 id="判断基準" style="text-align: center; color: #d63384; margin-bottom: 20px;">
+      💡 判断基準
+     </h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+<div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+        📊
+       </div>
+<h4>
+        データ量
+       </h4>
+<p>
+<strong>
+         毎日1GB以上
+        </strong>
+        のデータを扱うならKafkaを検討
+       </p>
+</div>
+<div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+        ⏰
+       </div>
+<h4>
+        リアルタイム性
+       </h4>
+<p>
+<strong>
+         秒単位での処理
+        </strong>
+        が必要ならKafkaが最適
+       </p>
+</div>
+<div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+<div style="font-size: 2.5em; margin-bottom: 10px;">
+        🔗
+       </div>
+<h4>
+        システム数
+       </h4>
+<p>
+<strong>
+         3つ以上のシステム
+        </strong>
+        が連携するならKafkaが有効
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="まず、Amazon-MSKって何？">
+     🤔 まず、Amazon MSKって何？
+    </h2>
+<div class="highlight-box">
+<h3 id="簡単に言うと...">
+      📝 簡単に言うと...
+     </h3>
+<p style="font-size: 1.2em; margin-top: 15px;">
+<strong>
+       大量のデータ
+      </strong>
+      を
+      <strong>
+       リアルタイム
+      </strong>
+      で、
+                    複数のシステム間で
+      <strong>
+       順序よく安全に
+      </strong>
+      やり取りするための仕組みです
+     </p>
+</div>
+<div class="comparison-table">
+<div class="comparison-side restaurant-side">
+<h3 id="️-レストランの例">
+       🍽️ レストランの例
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         お客様
+        </strong>
+        から
+        <strong>
+         キッチン
+        </strong>
+        に
+        <br/>
+        注文を
+        <strong>
+         正確に早く
+        </strong>
+        伝えたい
+       </p>
+<br/>
+<p>
+        👆 メモだと遅い、口頭だと間違う...
+        <br/>
+        🔄
+        <strong>
+         注文システム
+        </strong>
+        で効率化！
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="☁️-AWSの世界">
+       ☁️ AWSの世界
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         システムA
+        </strong>
+        から
+        <strong>
+         システムB
+        </strong>
+        に
+        <br/>
+        データを
+        <strong>
+         正確に早く
+        </strong>
+        送りたい
+       </p>
+<br/>
+<p>
+        👆 従来の方法だと遅い、複雑...
+        <br/>
+        🔄
+        <strong>
+         Amazon MSK
+        </strong>
+        で効率化！
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="5つの重要な要素をレストランで理解">
+     🏪 5つの重要な要素をレストランで理解
+    </h2>
+<div class="component-grid">
+<div class="component-card">
+<div class="component-icon">
+       👨‍💼
+      </div>
+<h3 id="プロデューサー=-ウェイター">
+       プロデューサー
+       <br/>
+       = ウェイター
+      </h3>
+<p>
+<strong>
+        注文を受ける人
+       </strong>
+       です。
+       <br/>
+       お客様から注文を聞いて、
+       <br/>
+<strong>
+        キッチンシステム
+       </strong>
+       に正確に伝えます。
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        AWS例:
+       </strong>
+       ウェブアプリ、IoTセンサー
+       <br/>
+<strong>
+        役割:
+       </strong>
+       データを生成・送信
+      </div>
+</div>
+<div class="component-card">
+<div class="component-icon">
+       📋
+      </div>
+<h3 id="トピック=-料理カテゴリ">
+       トピック
+       <br/>
+       = 料理カテゴリ
+      </h3>
+<p>
+<strong>
+        注文の種類分け
+       </strong>
+       です。
+       <br/>
+       前菜、メイン、デザート、ドリンクなど、
+       <br/>
+<strong>
+        料理の種類別
+       </strong>
+       に注文を管理します。
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        AWS例:
+       </strong>
+       ユーザーアクション、ログデータ
+       <br/>
+<strong>
+        役割:
+       </strong>
+       データの分類・整理
+      </div>
+</div>
+<div class="component-card">
+<div class="component-icon">
+       🍳
+      </div>
+<h3 id="パーティション=-調理台">
+       パーティション
+       <br/>
+       = 調理台
+      </h3>
+<p>
+<strong>
+        並列処理の仕組み
+       </strong>
+       です。
+       <br/>
+       複数の調理台で同時に料理することで、
+       <br/>
+<strong>
+        効率よく
+       </strong>
+       注文をさばけます。
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        特徴:
+       </strong>
+       順序保証 + 並列処理
+       <br/>
+<strong>
+        効果:
+       </strong>
+       高速処理が可能
+      </div>
+</div>
+<div class="component-card">
+<div class="component-icon">
+       👨‍🍳
+      </div>
+<h3 id="コンシューマー=-シェフ-配膳係">
+       コンシューマー
+       <br/>
+       = シェフ・配膳係
+      </h3>
+<p>
+<strong>
+        注文を処理する人
+       </strong>
+       です。
+       <br/>
+       料理を作ったり、お客様にお料理を
+       <br/>
+<strong>
+        提供
+       </strong>
+       したりします。
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        AWS例:
+       </strong>
+       データベース、分析システム
+       <br/>
+<strong>
+        役割:
+       </strong>
+       データを受信・処理
+      </div>
+</div>
+<div class="component-card">
+<div class="component-icon">
+       🏪
+      </div>
+<h3 id="Kafkaクラスター=-キッチンシステム">
+       Kafkaクラスター
+       <br/>
+       = キッチンシステム
+      </h3>
+<p>
+<strong>
+        注文管理の中枢
+       </strong>
+       です。
+       <br/>
+       すべての注文を受け取り、適切な
+       <br/>
+<strong>
+        調理台とスタッフ
+       </strong>
+       に振り分けます。
+      </p>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        Amazon MSK:
+       </strong>
+       完全マネージド
+       <br/>
+<strong>
+        メリット:
+       </strong>
+       運用・監視が楽
+      </div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="️-レストランでの注文の流れ">
+     🍽️ レストランでの注文の流れ
+    </h2>
+<div class="restaurant-flow">
+<div class="flow-step" onclick="highlightStep(this)">
+<div class="flow-icon">
+       👥
+      </div>
+<div class="flow-content">
+<h3 id="1.-お客様が注文">
+        1. お客様が注文
+       </h3>
+<p>
+        「パスタとサラダをお願いします」
+        <br/>
+<strong>
+         複数のお客様
+        </strong>
+        が同時に注文することもあります
+       </p>
+</div>
+<div class="flow-arrow">
+       ↓
+      </div>
+</div>
+<div class="flow-step" onclick="highlightStep(this)">
+<div class="flow-icon">
+       👨‍💼
+      </div>
+<div class="flow-content">
+<h3 id="2.-ウェイターが注文を受付">
+        2. ウェイターが注文を受付
+       </h3>
+<p>
+        注文をデジタルシステムに入力
+        <br/>
+<strong>
+         料理の種類別
+        </strong>
+        に分けて送信します
+       </p>
+</div>
+<div class="flow-arrow">
+       ↓
+      </div>
+</div>
+<div class="flow-step" onclick="highlightStep(this)">
+<div class="flow-icon">
+       🏪
+      </div>
+<div class="flow-content">
+<h3 id="3.-キッチンシステムが振り分け">
+        3. キッチンシステムが振り分け
+       </h3>
+<p>
+        パスタ → 調理台A、サラダ → 調理台B
+        <br/>
+<strong>
+         効率的に処理
+        </strong>
+        できるよう自動配分
+       </p>
+</div>
+<div class="flow-arrow">
+       ↓
+      </div>
+</div>
+<div class="flow-step" onclick="highlightStep(this)">
+<div class="flow-icon">
+       👨‍🍳
+      </div>
+<div class="flow-content">
+<h3 id="4.-シェフが料理を作成">
+        4. シェフが料理を作成
+       </h3>
+<p>
+        各調理台で
+        <strong>
+         並行して
+        </strong>
+        料理を作成
+        <br/>
+        注文の順番通りに完成させます
+       </p>
+</div>
+<div class="flow-arrow">
+       ↓
+      </div>
+</div>
+<div class="flow-step" onclick="highlightStep(this)">
+<div class="flow-icon">
+       🍽️
+      </div>
+<div class="flow-content">
+<h3 id="5.-配膳係がお客様へ提供">
+        5. 配膳係がお客様へ提供
+       </h3>
+<p>
+        完成した料理をお客様のテーブルへ
+        <br/>
+<strong>
+         正確で迅速
+        </strong>
+        なサービスを実現
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="️-Amazon-MSKのアーキテクチャ">
+     🏗️ Amazon MSKのアーキテクチャ
+    </h2>
+<div class="kafka-architecture">
+<h3 id="データの流れを見てみよう" style="text-align: center; margin-bottom: 30px;">
+      データの流れを見てみよう
+     </h3>
+<div class="architecture-row">
+<div class="architecture-item">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        📱
+       </div>
+<h3 id="プロデューサー">
+        プロデューサー
+       </h3>
+<p>
+        ウェブアプリ
+        <br/>
+        IoTデバイス
+        <br/>
+        マイクロサービス
+       </p>
+</div>
+<div class="data-stream">
+</div>
+<div class="architecture-item">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🔄
+       </div>
+<h3 id="Amazon-MSK">
+        Amazon MSK
+       </h3>
+<p>
+        Kafkaクラスター
+        <br/>
+        トピック管理
+        <br/>
+        パーティション分散
+       </p>
+</div>
+<div class="data-stream">
+</div>
+<div class="architecture-item">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        💾
+       </div>
+<h3 id="コンシューマー">
+        コンシューマー
+       </h3>
+<p>
+        データベース
+        <br/>
+        分析システム
+        <br/>
+        監視ツール
+       </p>
+</div>
+</div>
+<div style="text-align: center; margin-top: 30px;">
+<h4>
+       📊 トピック（料理カテゴリ）の例
+      </h4>
+<div style="display: flex; justify-content: space-around; margin-top: 20px; flex-wrap: wrap;">
+<div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 5px;">
+<strong>
+         🥗 user-actions
+        </strong>
+<br/>
+        ユーザーの行動ログ
+       </div>
+<div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 5px;">
+<strong>
+         🍝 system-logs
+        </strong>
+<br/>
+        システムの動作ログ
+       </div>
+<div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 5px;">
+<strong>
+         🍰 payment-events
+        </strong>
+<br/>
+        決済イベント
+       </div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="Amazon-MSKの特徴とメリット">
+     🎯 Amazon MSKの特徴とメリット
+    </h2>
+<div class="benefit-showcase">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       ⚡
+      </div>
+<h3 id="高速処理">
+       高速処理
+      </h3>
+<p>
+       毎秒数百万件のメッセージを処理可能
+      </p>
+<br/>
+<p>
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       同時に100テーブルの注文を瞬時に処理
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📊
+      </div>
+<h3 id="順序保証">
+       順序保証
+      </h3>
+<p>
+       パーティション内でメッセージの順序を保持
+      </p>
+<br/>
+<p>
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       前菜→メイン→デザートの順番を確実に守る
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔒
+      </div>
+<h3 id="耐久性">
+       耐久性
+      </h3>
+<p>
+       データを複数のサーバーに複製して保存
+      </p>
+<br/>
+<p>
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       注文が消えないよう複数の端末に記録
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📈
+      </div>
+<h3 id="スケーラビリティ">
+       スケーラビリティ
+      </h3>
+<p>
+       需要に応じて自動的にスケールアップ/ダウン
+      </p>
+<br/>
+<p>
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       混雑時は調理台を増やし、暇な時は減らす
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🛠️
+      </div>
+<h3 id="フルマネージド">
+       フルマネージド
+      </h3>
+<p>
+       AWSが運用・監視・メンテナンスを全て担当
+      </p>
+<br/>
+<p>
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       システム保守は専門業者におまかせ
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🌐
+      </div>
+<h3 id="リアルタイム">
+       リアルタイム
+      </h3>
+<p>
+       ミリ秒単位でのデータ配信が可能
+      </p>
+<br/>
+<p>
+<strong>
+        レストラン例:
+       </strong>
+<br/>
+       注文と同時に厨房に情報が届く
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実際の使用例">
+     🏢 実際の使用例
+    </h2>
+<div class="use-case-grid">
+<div class="use-case-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📱
+      </div>
+<h3 id="SNSアプリ">
+       SNSアプリ
+      </h3>
+<p>
+<strong>
+        ユーザーの投稿
+       </strong>
+       → リアルタイム通知
+       <br/>
+<strong>
+        いいね・コメント
+       </strong>
+       → タイムライン更新
+       <br/>
+       数百万ユーザーの同時アクセスに対応
+      </p>
+</div>
+<div class="use-case-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🛒
+      </div>
+<h3 id="ECサイト">
+       ECサイト
+      </h3>
+<p>
+<strong>
+        商品購入
+       </strong>
+       → 在庫管理システム
+       <br/>
+<strong>
+        決済完了
+       </strong>
+       → 配送手配システム
+       <br/>
+       注文から発送まで自動化
+      </p>
+</div>
+<div class="use-case-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🚗
+      </div>
+<h3 id="IoT-車両追跡">
+       IoT・車両追跡
+      </h3>
+<p>
+<strong>
+        GPS位置情報
+       </strong>
+       → リアルタイム表示
+       <br/>
+<strong>
+        センサーデータ
+       </strong>
+       → 故障予測
+       <br/>
+       数千台の車両を同時監視
+      </p>
+</div>
+<div class="use-case-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       💰
+      </div>
+<h3 id="金融取引">
+       金融取引
+      </h3>
+<p>
+<strong>
+        取引データ
+       </strong>
+       → リスク分析
+       <br/>
+<strong>
+        不正検知
+       </strong>
+       → アラート送信
+       <br/>
+       ミリ秒単位での高速処理
+      </p>
+</div>
+<div class="use-case-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📊
+      </div>
+<h3 id="ログ分析">
+       ログ分析
+      </h3>
+<p>
+<strong>
+        アプリログ
+       </strong>
+       → リアルタイム分析
+       <br/>
+<strong>
+        エラー検知
+       </strong>
+       → 即座にアラート
+       <br/>
+       大量のログデータを効率処理
+      </p>
+</div>
+<div class="use-case-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🎮
+      </div>
+<h3 id="ゲーム">
+       ゲーム
+      </h3>
+<p>
+<strong>
+        プレイヤー行動
+       </strong>
+       → リアルタイム反映
+       <br/>
+<strong>
+        ランキング更新
+       </strong>
+       → 即座に配信
+       <br/>
+       世界中のプレイヤーと同期
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="インタラクティブデモ">
+     🎮 インタラクティブデモ
+    </h2>
+<div class="interactive-demo">
+<h3 id="レストランの注文システムを体験してみよう！">
+      レストランの注文システムを体験してみよう！
+     </h3>
+<p>
+      ボタンを押して、注文がどのように処理されるかを見てみましょう
+     </p>
+<div style="margin: 20px 0;">
+<button class="demo-button" onclick="sendOrder('パスタ')">
+       🍝 パスタを注文
+      </button>
+<button class="demo-button" onclick="sendOrder('サラダ')">
+       🥗 サラダを注文
+      </button>
+<button class="demo-button" onclick="sendOrder('ドリンク')">
+       🥤 ドリンクを注文
+      </button>
+<button class="demo-button" onclick="clearOrders()">
+       🗑️ リセット
+      </button>
+</div>
+<div class="demo-result" id="demoResult">
+      ここに注文の処理状況が表示されます
+     </div>
+</div>
+</div>
+<div class="section">
+<h2 id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🤔 Apache Kafkaとの違いは何？
+       <span>
+        +
+       </span>
+</div>
+<div class="faq-answer">
+<p>
+<strong>
+         Amazon MSK
+        </strong>
+        は、Apache Kafkaを
+        <strong>
+         AWSが完全管理
+        </strong>
+        してくれるサービスです。
+       </p>
+<br/>
+<p>
+<strong>
+         🏪 レストラン例：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          Apache Kafka
+         </strong>
+         = 注文システムを自分で構築・運営
+        </li>
+<li>
+<strong>
+          Amazon MSK
+         </strong>
+         = 専門業者が注文システムを運営してくれる
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         📋 Amazon MSKのメリット：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         サーバー管理が不要
+        </li>
+<li>
+         自動的にスケール
+        </li>
+<li>
+         セキュリティ設定が簡単
+        </li>
+<li>
+         監視・アラートも自動
+        </li>
+</ul>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       💰 コストはどのくらい？
+       <span>
+        +
+       </span>
+</div>
+<div class="faq-answer">
+<p>
+        使用量に応じた従量課金制です：
+       </p>
+<br/>
+<p>
+<strong>
+         💵 主な料金項目：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          ブローカー料金
+         </strong>
+         : インスタンスタイプ × 時間
+        </li>
+<li>
+<strong>
+          ストレージ料金
+         </strong>
+         : 保存データ量 × GB
+        </li>
+<li>
+<strong>
+          データ転送料金
+         </strong>
+         : リージョン間転送時のみ
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         🏪 レストラン例：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         小規模（調理台2台）: 月約$150〜
+        </li>
+<li>
+         中規模（調理台5台）: 月約$400〜
+        </li>
+<li>
+         大規模（調理台10台）: 月約$800〜
+        </li>
+</ul>
+<p style="margin-top: 15px;">
+        💡
+        <strong>
+         無料利用枠
+        </strong>
+        もあるので、まずは試してみましょう！
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🚀 どのくらいの規模まで対応できる？
+       <span>
+        +
+       </span>
+</div>
+<div class="faq-answer">
+<p>
+        Amazon MSKは
+        <strong>
+         非常に大きな規模
+        </strong>
+        まで対応可能です：
+       </p>
+<br/>
+<p>
+<strong>
+         📊 処理能力の目安：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          メッセージ数
+         </strong>
+         : 毎秒数百万件
+        </li>
+<li>
+<strong>
+          データ量
+         </strong>
+         : 毎秒数GB
+        </li>
+<li>
+<strong>
+          同時接続
+         </strong>
+         : 数千台のクライアント
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         🏪 レストラン例：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         小規模レストラン → 1日100件の注文
+        </li>
+<li>
+         チェーン店 → 1日10万件の注文
+        </li>
+<li>
+         全国チェーン → 1日数百万件の注文
+        </li>
+</ul>
+<p style="margin-top: 15px;">
+        📈
+        <strong>
+         自動スケーリング
+        </strong>
+        で需要に応じて拡張されます
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🛠️ 設定は難しい？
+       <span>
+        +
+       </span>
+</div>
+<div class="faq-answer">
+<p>
+<strong>
+         AWS管理コンソール
+        </strong>
+        から簡単に設定できます！
+       </p>
+<br/>
+<p>
+<strong>
+         📋 基本的な手順：
+        </strong>
+</p>
+<ol style="margin-left: 20px; margin-top: 10px;">
+<li>
+         クラスターの作成（数クリック）
+        </li>
+<li>
+         トピックの作成（名前を決めるだけ）
+        </li>
+<li>
+         セキュリティグループの設定
+        </li>
+<li>
+         プロデューサー・コンシューマーの接続
+        </li>
+</ol>
+<br/>
+<p>
+<strong>
+         🏪 レストラン例：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         注文システムの導入 → 数時間で完了
+        </li>
+<li>
+         スタッフの研修 → 簡単な操作方法のみ
+        </li>
+<li>
+         メンテナンス → AWS側で自動実行
+        </li>
+</ul>
+<p style="margin-top: 15px;">
+        💡
+        <strong>
+         チュートリアル
+        </strong>
+        も豊富にあるので安心です
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🔒 セキュリティは大丈夫？
+       <span>
+        +
+       </span>
+</div>
+<div class="faq-answer">
+<p>
+        Amazon MSKは
+        <strong>
+         エンタープライズレベル
+        </strong>
+        のセキュリティを提供します：
+       </p>
+<br/>
+<p>
+<strong>
+         🛡️ セキュリティ機能：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          暗号化
+         </strong>
+         : 転送時・保存時ともに暗号化
+        </li>
+<li>
+<strong>
+          認証
+         </strong>
+         : IAM、SASL/SCRAM、mTLS対応
+        </li>
+<li>
+<strong>
+          認可
+         </strong>
+         : Kafka ACLsで細かくアクセス制御
+        </li>
+<li>
+<strong>
+          ネットワーク
+         </strong>
+         : VPC内で完全に隔離
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         🏪 レストラン例：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         注文データは
+         <strong>
+          暗号化
+         </strong>
+         して保存
+        </li>
+<li>
+         スタッフは
+         <strong>
+          権限に応じて
+         </strong>
+         システムにアクセス
+        </li>
+<li>
+         お客様情報は
+         <strong>
+          外部から見えない
+         </strong>
+         ように隔離
+        </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="highlight-box">
+<h2 id="まとめ">
+      🎯 まとめ
+     </h2>
+<div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+<p>
+       👨‍💼
+       <strong>
+        プロデューサー
+       </strong>
+       = ウェイター（データを生成・送信）
+      </p>
+<p>
+       📋
+       <strong>
+        トピック
+       </strong>
+       = 料理カテゴリ（データの種類分け）
+      </p>
+<p>
+       🍳
+       <strong>
+        パーティション
+       </strong>
+       = 調理台（並列処理で高速化）
+      </p>
+<p>
+       👨‍🍳
+       <strong>
+        コンシューマー
+       </strong>
+       = シェフ（データを受信・処理）
+      </p>
+<p>
+       🏪
+       <strong>
+        Amazon MSK
+       </strong>
+       = キッチンシステム（全体を管理）
+      </p>
+<br/>
+<p>
+       この5つを組み合わせることで、
+       <strong>
+        大量のデータをリアルタイムで効率的に処理
+       </strong>
+       できます！
+      </p>
+<br/>
+<p>
+<strong>
+        🎯 初心者へのアドバイス：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        まずは小規模で試してみる → 段階的にスケールアップ
+       </li>
+<li>
+        無料利用枠を活用 → 実際に触って理解を深める
+       </li>
+<li>
+        AWSのドキュメント・チュートリアルを活用
+       </li>
+<li>
+        サポートが必要な時は → AWS技術サポートに相談
+       </li>
+</ul>
+</div>
+</div>
+</div>
+
+
+</div>
+<script>
+   let orderQueue = [];
+        let orderCounter = 0;
+
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const plusSign = element.querySelector('span');
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            plusSign.textContent = isVisible ? '+' : '−';
+            element.style.background = isVisible ? '#DC2626' : '#e55656';
+        }
+
+        function sendOrder(dish) {
+            orderCounter++;
+            const order = {
+                id: orderCounter,
+                dish: dish,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            orderQueue.push(order);
+            
+            const resultDiv = document.getElementById('demoResult');
+            const dishEmoji = {
+                'パスタ': '🍝',
+                'サラダ': '🥗',
+                'ドリンク': '🥤'
+            };
+            
+            resultDiv.innerHTML = `
+                <div style="animation: fadeInUp 0.5s ease-out;">
+                    <strong>${dishEmoji[dish]} 注文 #${order.id} を受付</strong><br>
+                    <small>${order.timestamp} - "${dish}" をキッチンシステムに送信中...</small><br>
+                    <div style="margin-top: 10px; font-size: 0.9em;">
+                        📊 トピック: ${dish}-orders → 🍳 パーティション: A${order.id % 3 + 1} → 👨‍🍳 シェフに配信
+                    </div>
+                </div>
+            `;
+
+            // 3秒後に処理完了メッセージを表示
+            setTimeout(() => {
+                resultDiv.innerHTML += `
+                    <div style="animation: fadeInUp 0.5s ease-out; margin-top: 15px; padding: 10px; background: rgba(0,184,148,0.2); border-radius: 8px;">
+                        ✅ <strong>注文 #${order.id} 処理完了</strong><br>
+                        <small>${dish} がお客様に提供されました 🎉</small>
+                    </div>
+                `;
+            }, 3000);
+        }
+
+        function clearOrders() {
+            orderQueue = [];
+            orderCounter = 0;
+            document.getElementById('demoResult').innerHTML = 'ここに注文の処理状況が表示されます';
+        }
+
+        function highlightStep(element) {
+            // Remove previous highlights
+            document.querySelectorAll('.flow-step').forEach(step => {
+                step.classList.remove('pulsing');
+                step.style.background = 'white';
+            });
+            
+            // Add highlight to clicked step
+            element.classList.add('pulsing');
+            element.style.background = 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%)';
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                element.classList.remove('pulsing');
+                element.style.background = 'white';
+            }, 3000);
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.component-card, .benefit-card, .use-case-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1) rotate(2deg)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1.05)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // ランダムなカードアニメーション
+            function randomCardAnimation() {
+                const cards = document.querySelectorAll('.component-card');
+                const randomCard = cards[Math.floor(Math.random() * cards.length)];
+                
+                randomCard.style.transform = 'scale(1.05) rotate(1deg)';
+                randomCard.style.boxShadow = '0 25px 50px rgba(255,107,107,0.3)';
+                
+                setTimeout(() => {
+                    randomCard.style.transform = 'scale(1)';
+                    randomCard.style.boxShadow = '0 20px 40px rgba(0,0,0,0.2)';
+                }, 1000);
+            }
+            
+            // 7秒ごとにランダムアニメーション実行
+            setInterval(randomCardAnimation, 7000);
+
+            // データフローアニメーション
+            function animateDataStream() {
+                const streams = document.querySelectorAll('.data-stream');
+                streams.forEach(stream => {
+                    stream.style.background = 'linear-gradient(90deg, #DC2626, #4ecdc4, #45b7d1)';
+                    stream.style.animation = 'dataFlow 2s ease-in-out';
+                });
+            }
+            
+            setInterval(animateDataStream, 5000);
+        });
+  </script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="redis_cluster_mode_infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">11</span> <span class="separator" aria-hidden="true">/</span> <span class="total">11</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

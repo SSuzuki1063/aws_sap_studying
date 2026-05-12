@@ -1,0 +1,987 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Amazon Cognito Pre Sign-up Lambda トリガー 完全ガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/cognito-pre-signup-trigger-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#たとえ話で理解しよう">🏨 たとえ話で理解しよう</a> </li><li class="toc-h3"> <a href="#Pre-Sign-up-トリガー-=-高級会員制クラブの入会審査員">🎯 Pre Sign-up トリガー = 高級会員制クラブの「入会審査員」</a> </li><li class="toc-h2"> <a href="#サインアップの流れ">📊 サインアップの流れ</a> </li><li class="toc-h3"> <a href="#ユーザーがサインアップ開始">👤 ユーザーがサインアップ開始</a> </li><li class="toc-h2"> <a href="#主な使用ケース">💡 主な使用ケース</a> </li><li class="toc-h3"> <a href="#メールドメイン制限">メールドメイン制限</a> </li><li class="toc-h2"> <a href="#イベントオブジェクトの構造">📥 イベントオブジェクトの構造</a> </li><li class="toc-h3"> <a href="#Lambdaが受け取るイベント">📋 Lambdaが受け取るイベント</a> </li><li class="toc-h2"> <a href="#レスポンスで制御できること">📤 レスポンスで制御できること</a> </li><li class="toc-h3"> <a href="#✅-autoConfirmUser">✅ autoConfirmUser</a> </li><li class="toc-h2"> <a href="#実装例Lambda関数">💻 実装例（Lambda関数）</a> </li><li class="toc-h2"> <a href="#⭐-ベストプラクティス">⭐ ベストプラクティス</a> </li><li class="toc-h3"> <a href="#✅-やるべきこと">✅ やるべきこと</a> </li><li class="toc-h2"> <a href="#⚖️-他のトリガーとの比較">⚖️ 他のトリガーとの比較</a> </li><li class="toc-h3"> <a href="#使い分けのポイント">🎯 使い分けのポイント</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li><li class="toc-h3"> <a href="#Pre-Sign-up-=-入口の門番">Pre Sign-up = 入口の門番</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> IAM &amp; 認証・認可 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Cognito Pre Signup Trigger Guide </span> </nav> <!-- ページコンテンツ (slot) -->  <!-- ヘッダー -->
+<header class="header">
+<div class="icon">
+     🚪🔐
+    </div>
+<h1>
+     Amazon Cognito
+     <br/>
+     Pre Sign-up Lambda トリガー
+    </h1>
+<p class="subtitle">
+     ユーザー登録の「門番」を理解しよう！
+    </p>
+</header>
+<!-- たとえ話セクション -->
+<section class="section analogy-section">
+<h2 class="section-title" id="たとえ話で理解しよう">
+<span class="emoji">
+      🏨
+     </span>
+<span style="color: #2e7d32;">
+      たとえ話で理解しよう
+     </span>
+</h2>
+<div class="analogy-box">
+<h3 class="analogy-title" id="Pre-Sign-up-トリガー-=-高級会員制クラブの入会審査員">
+      🎯 Pre Sign-up トリガー = 高級会員制クラブの「入会審査員」
+     </h3>
+<div class="analogy-comparison">
+<div class="analogy-item">
+<div class="icon">
+        🏰
+       </div>
+<h4>
+        会員制クラブ
+       </h4>
+<p>
+        入会希望者が来たら、
+        <br/>
+        まず
+        <strong>
+         審査員
+        </strong>
+        が
+        <br/>
+        チェックする
+       </p>
+</div>
+<div class="analogy-arrow">
+       ⇔
+      </div>
+<div class="analogy-item aws">
+<div class="icon">
+        ☁️
+       </div>
+<h4>
+        Amazon Cognito
+       </h4>
+<p>
+        ユーザー登録時に、
+        <br/>
+        まず
+        <strong>
+         Lambda関数
+        </strong>
+        が
+        <br/>
+        チェックする
+       </p>
+</div>
+</div>
+<div class="analogy-detail">
+<div class="analogy-detail-card">
+<h5>
+        🚶 入会希望者 = サインアップするユーザー
+       </h5>
+<p>
+        メールアドレスやパスワードを持って、クラブ（アプリ）に入りたい人
+       </p>
+</div>
+<div class="analogy-detail-card">
+<h5>
+        📋 入会申込書 = サインアップリクエスト
+       </h5>
+<p>
+        ユーザーが入力した情報（メール、電話番号、カスタム属性など）
+       </p>
+</div>
+<div class="analogy-detail-card">
+<h5>
+        🕵️ 審査員 = Pre Sign-up Lambda
+       </h5>
+<p>
+        申込書をチェックして「OK」か「NG」か判断する人
+       </p>
+</div>
+<div class="analogy-detail-card">
+<h5>
+        ✅ 審査基準 = Lambda内のロジック
+       </h5>
+<p>
+        「このドメインのメールだけOK」「この国からはNG」などのルール
+       </p>
+</div>
+</div>
+</div>
+</section>
+<!-- フロー図セクション -->
+<section class="section flow-section">
+<h2 class="section-title" id="サインアップの流れ">
+<span class="emoji">
+      📊
+     </span>
+<span style="color: #0277bd;">
+      サインアップの流れ
+     </span>
+</h2>
+<div class="flow-container">
+<div class="flow-step">
+<div class="flow-number">
+       1
+      </div>
+<div class="flow-card">
+<h3 id="ユーザーがサインアップ開始">
+        👤 ユーザーがサインアップ開始
+       </h3>
+<p>
+        メールアドレス、パスワード、その他の情報を入力してサインアップボタンをクリック
+       </p>
+</div>
+</div>
+<div class="flow-arrow">
+      ⬇️
+     </div>
+<div class="flow-step reverse">
+<div class="flow-number">
+       2
+      </div>
+<div class="flow-card">
+<h4>
+        ☁️ Cognitoがリクエストを受信
+       </h4>
+<p>
+        User Pool がサインアップリクエストを受け取る
+       </p>
+</div>
+</div>
+<div class="flow-arrow">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-number">
+       3
+      </div>
+<div class="flow-card flow-highlight">
+<h4>
+        🚀 Pre Sign-up Lambda が呼び出される
+       </h4>
+<p>
+        Cognitoがユーザーを作成する
+        <strong>
+         前に
+        </strong>
+        、Lambda関数が実行される。ここでカスタム検証やデータ変更が可能！
+       </p>
+</div>
+</div>
+<div class="flow-arrow">
+      ⬇️
+     </div>
+<div class="flow-step reverse">
+<div class="flow-number">
+       4
+      </div>
+<div class="flow-card">
+<h4>
+        🔀 Lambdaの判断
+       </h4>
+<p>
+<strong style="color: #4caf50;">
+         ✅ 許可
+        </strong>
+        ：サインアップ続行
+        <br/>
+<strong style="color: #f44336;">
+         ❌ 拒否
+        </strong>
+        ：エラーを返してサインアップ中止
+       </p>
+</div>
+</div>
+<div class="flow-arrow">
+      ⬇️
+     </div>
+<div class="flow-step">
+<div class="flow-number">
+       5
+      </div>
+<div class="flow-card">
+<h4>
+        📧 確認コード送信（許可された場合）
+       </h4>
+<p>
+        ユーザーにメールまたはSMSで確認コードが送信される（自動確認を設定した場合はスキップ可能）
+       </p>
+</div>
+</div>
+</div>
+</section>
+<!-- ユースケースセクション -->
+<section class="section usecase-section">
+<h2 class="section-title" id="主な使用ケース">
+<span class="emoji">
+      💡
+     </span>
+<span style="color: #c2185b;">
+      主な使用ケース
+     </span>
+</h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<div class="icon">
+       📧
+      </div>
+<h3 id="メールドメイン制限">
+       メールドメイン制限
+      </h3>
+<p>
+       特定のドメインのメールアドレスのみ登録を許可する
+      </p>
+<div class="usecase-example">
+       例：@company.com のみ許可して、社内システムへのアクセスを制限
+      </div>
+</div>
+<div class="usecase-card">
+<div class="icon">
+       🌍
+      </div>
+<h4>
+       地域・IP制限
+      </h4>
+<p>
+       特定の国や地域からの登録を許可または拒否する
+      </p>
+<div class="usecase-example">
+       例：日本国内からのアクセスのみ許可するサービス
+      </div>
+</div>
+<div class="usecase-card">
+<div class="icon">
+       ✅
+      </div>
+<h4>
+       自動確認
+      </h4>
+<p>
+       特定条件を満たすユーザーの確認をスキップする
+      </p>
+<div class="usecase-example">
+       例：信頼済みドメインからの登録は自動で確認済みにする
+      </div>
+</div>
+<div class="usecase-card">
+<div class="icon">
+       🔗
+      </div>
+<h4>
+       外部データ検証
+      </h4>
+<p>
+       外部システムと照合してユーザーを検証する
+      </p>
+<div class="usecase-example">
+       例：社員DBに存在するメールアドレスのみ登録許可
+      </div>
+</div>
+<div class="usecase-card">
+<div class="icon">
+       🚫
+      </div>
+<h4>
+       使い捨てメール拒否
+      </h4>
+<p>
+       一時メールサービスからの登録をブロックする
+      </p>
+<div class="usecase-example">
+       例：guerrillamail.com などの使い捨てメールを拒否
+      </div>
+</div>
+<div class="usecase-card">
+<div class="icon">
+       🔄
+      </div>
+<h4>
+       ユーザー属性の変更
+      </h4>
+<p>
+       登録時にユーザー属性を自動的に設定・変更する
+      </p>
+<div class="usecase-example">
+       例：メールドメインに基づいてロールを自動付与
+      </div>
+</div>
+</div>
+</section>
+<!-- イベント構造セクション -->
+<section class="section event-section">
+<h2 class="section-title" id="イベントオブジェクトの構造">
+<span class="emoji">
+      📥
+     </span>
+<span style="color: #512da8;">
+      イベントオブジェクトの構造
+     </span>
+</h2>
+<div class="event-box">
+<h3 id="Lambdaが受け取るイベント">
+      📋 Lambdaが受け取るイベント
+     </h3>
+<div class="code-block">
+<pre>{
+  <span class="code-key">"version"</span>: <span class="code-string">"1"</span>,
+  <span class="code-key">"triggerSource"</span>: <span class="code-string">"PreSignUp_SignUp"</span>,
+  <span class="code-key">"region"</span>: <span class="code-string">"ap-northeast-1"</span>,
+  <span class="code-key">"userPoolId"</span>: <span class="code-string">"ap-northeast-1_XXXXXXXX"</span>,
+  <span class="code-key">"userName"</span>: <span class="code-string">"test-user-123"</span>,
+  <span class="code-key">"callerContext"</span>: {
+    <span class="code-key">"awsSdkVersion"</span>: <span class="code-string">"aws-sdk-js-2.xxx.x"</span>,
+    <span class="code-key">"clientId"</span>: <span class="code-string">"1abc2defghijk3lmnop4qrst"</span>
+  },
+  <span class="code-key">"request"</span>: {
+    <span class="code-key">"userAttributes"</span>: {
+      <span class="code-key">"email"</span>: <span class="code-string">"user@example.com"</span>,
+      <span class="code-key">"phone_number"</span>: <span class="code-string">"+819012345678"</span>,
+      <span class="code-key">"custom:department"</span>: <span class="code-string">"Engineering"</span>
+    },
+    <span class="code-key">"validationData"</span>: { <span class="code-comment">// クライアントから送られた検証用データ</span> },
+    <span class="code-key">"clientMetadata"</span>: { <span class="code-comment">// クライアントから送られたメタデータ</span> }
+  },
+  <span class="code-key">"response"</span>: {
+    <span class="code-key">"autoConfirmUser"</span>: <span class="code-boolean">false</span>,
+    <span class="code-key">"autoVerifyPhone"</span>: <span class="code-boolean">false</span>,
+    <span class="code-key">"autoVerifyEmail"</span>: <span class="code-boolean">false</span>
+  }
+}</pre>
+</div>
+<div class="field-explanation">
+<div class="field-item">
+<span class="field-name">
+        triggerSource
+       </span>
+<span>
+        トリガーの種類。
+        <code>
+         PreSignUp_SignUp
+        </code>
+        （通常）、
+        <code>
+         PreSignUp_AdminCreateUser
+        </code>
+        （管理者作成）、
+        <code>
+         PreSignUp_ExternalProvider
+        </code>
+        （外部IdP）など
+       </span>
+</div>
+<div class="field-item">
+<span class="field-name">
+        userAttributes
+       </span>
+<span>
+        ユーザーが入力した属性（メール、電話番号、カスタム属性など）
+       </span>
+</div>
+<div class="field-item">
+<span class="field-name">
+        validationData
+       </span>
+<span>
+        クライアントから送られた検証用データ（サーバー側での検証に使用）
+       </span>
+</div>
+</div>
+</div>
+</section>
+<!-- レスポンスセクション -->
+<section class="section response-section">
+<h2 class="section-title" id="レスポンスで制御できること">
+<span class="emoji">
+      📤
+     </span>
+<span style="color: #f57c00;">
+      レスポンスで制御できること
+     </span>
+</h2>
+<div class="response-grid">
+<div class="response-card">
+<h3 id="✅-autoConfirmUser">
+       ✅ autoConfirmUser
+      </h3>
+<p>
+       ユーザーを自動的に確認済みにする
+      </p>
+<div class="response-option">
+<h4>
+        🎯 使用例
+       </h4>
+<p>
+        信頼済みドメイン（@company.com）からの登録は確認コード不要にする
+       </p>
+</div>
+</div>
+<div class="response-card">
+<h4>
+       📧 autoVerifyEmail
+      </h4>
+<p>
+       メールアドレスを自動的に検証済みにする
+      </p>
+<div class="response-option">
+<h5>
+        🎯 使用例
+       </h5>
+<p>
+        外部IdP（Google、Facebook）経由の登録時にメールを自動検証
+       </p>
+</div>
+</div>
+<div class="response-card">
+<h4>
+       📱 autoVerifyPhone
+      </h4>
+<p>
+       電話番号を自動的に検証済みにする
+      </p>
+<div class="response-option">
+<h5>
+        🎯 使用例
+       </h5>
+<p>
+        電話番号確認済みの外部サービスと連携している場合
+       </p>
+</div>
+</div>
+</div>
+<div class="event-box" style="margin-top: 25px;">
+<h4>
+      🚫 サインアップを拒否する方法
+     </h4>
+<p style="margin-bottom: 15px;">
+      Lambda関数内でエラーをスロー（throw）すると、サインアップが拒否されます
+     </p>
+<div class="code-block">
+<pre><span class="code-comment">// サインアップを拒否する例</span>
+throw new Error(<span class="code-string">"このメールドメインは登録できません"</span>);
+
+<span class="code-comment">// ユーザーにはこのエラーメッセージが表示されます</span></pre>
+</div>
+</div>
+</section>
+<!-- 実装例セクション -->
+<section class="section implementation-section">
+<h2 class="section-title" id="実装例Lambda関数">
+<span class="emoji">
+      💻
+     </span>
+<span style="color: #00695c;">
+      実装例（Lambda関数）
+     </span>
+</h2>
+<div class="impl-tabs">
+<button class="impl-tab active" onclick="showTab('domain')">
+      ドメイン制限
+     </button>
+<button class="impl-tab" onclick="showTab('auto-confirm')">
+      自動確認
+     </button>
+<button class="impl-tab" onclick="showTab('external')">
+      外部検証
+     </button>
+</div>
+<div class="impl-content active" id="domain">
+<div class="impl-box">
+<div class="impl-description">
+<strong>
+        📧 特定ドメインのみ登録を許可
+       </strong>
+<br/>
+       例：@example.com と @example.co.jp のメールアドレスのみサインアップを許可
+      </div>
+<div class="code-block">
+<pre><span class="code-comment">// Node.js Lambda 関数</span>
+exports.handler = async (event) =&gt; {
+  <span class="code-comment">// 許可するドメインのリスト</span>
+  const allowedDomains = [<span class="code-string">'example.com'</span>, <span class="code-string">'example.co.jp'</span>];
+  
+  <span class="code-comment">// ユーザーのメールアドレスを取得</span>
+  const email = event.request.userAttributes.email;
+  const domain = email.split(<span class="code-string">'@'</span>)[<span class="code-number">1</span>];
+  
+  <span class="code-comment">// ドメインチェック</span>
+  if (!allowedDomains.includes(domain)) {
+    throw new Error(<span class="code-string">`許可されていないドメインです: ${domain}`</span>);
+  }
+  
+  <span class="code-comment">// OKの場合はeventをそのまま返す</span>
+  return event;
+};</pre>
+</div>
+</div>
+</div>
+<div class="impl-content" id="auto-confirm">
+<div class="impl-box">
+<div class="impl-description">
+<strong>
+        ✅ 信頼済みドメインは自動確認
+       </strong>
+<br/>
+       例：@trusted.com のユーザーは確認コード不要で即座にアカウント有効化
+      </div>
+<div class="code-block">
+<pre><span class="code-comment">// Node.js Lambda 関数</span>
+exports.handler = async (event) =&gt; {
+  <span class="code-comment">// 信頼済みドメインのリスト</span>
+  const trustedDomains = [<span class="code-string">'trusted.com'</span>, <span class="code-string">'partner.co.jp'</span>];
+  
+  const email = event.request.userAttributes.email;
+  const domain = email.split(<span class="code-string">'@'</span>)[<span class="code-number">1</span>];
+  
+  <span class="code-comment">// 信頼済みドメインの場合は自動確認</span>
+  if (trustedDomains.includes(domain)) {
+    event.response.autoConfirmUser = <span class="code-boolean">true</span>;
+    event.response.autoVerifyEmail = <span class="code-boolean">true</span>;
+  }
+  
+  return event;
+};</pre>
+</div>
+</div>
+</div>
+<div class="impl-content" id="external">
+<div class="impl-box">
+<div class="impl-description">
+<strong>
+        🔗 外部DBと照合して検証
+       </strong>
+<br/>
+       例：社員データベースに存在するメールアドレスのみ登録を許可
+      </div>
+<div class="code-block">
+<pre><span class="code-comment">// Node.js Lambda 関数</span>
+const AWS = require(<span class="code-string">'aws-sdk'</span>);
+const dynamodb = new AWS.DynamoDB.DocumentClient();
+
+exports.handler = async (event) =&gt; {
+  const email = event.request.userAttributes.email;
+  
+  <span class="code-comment">// DynamoDBで社員データを検索</span>
+  const params = {
+    TableName: <span class="code-string">'EmployeeTable'</span>,
+    Key: { email: email }
+  };
+  
+  const result = await dynamodb.get(params).promise();
+  
+  <span class="code-comment">// 社員データが見つからない場合は拒否</span>
+  if (!result.Item) {
+    throw new Error(<span class="code-string">'このメールアドレスは登録されていません'</span>);
+  }
+  
+  <span class="code-comment">// 部署情報を自動設定</span>
+  event.request.userAttributes[<span class="code-string">'custom:department'</span>] = result.Item.department;
+  
+  return event;
+};</pre>
+</div>
+</div>
+</div>
+</section>
+<!-- ベストプラクティス -->
+<section class="section best-practice-section">
+<h2 class="section-title" id="⭐-ベストプラクティス">
+<span class="emoji">
+      ⭐
+     </span>
+<span style="color: #303f9f;">
+      ベストプラクティス
+     </span>
+</h2>
+<div class="best-practice-grid">
+<div class="best-practice-card do">
+<h3 id="✅-やるべきこと">
+       ✅ やるべきこと
+      </h3>
+<ul class="best-practice-list">
+<li>
+<span class="icon">
+         ⚡
+        </span>
+<span>
+<strong>
+          処理を高速に保つ
+         </strong>
+         - Lambdaのタイムアウトは5秒以内に設定（ユーザー体験のため）
+        </span>
+</li>
+<li>
+<span class="icon">
+         📝
+        </span>
+<span>
+<strong>
+          詳細なエラーメッセージ
+         </strong>
+         - ユーザーに分かりやすいエラーメッセージを返す
+        </span>
+</li>
+<li>
+<span class="icon">
+         📊
+        </span>
+<span>
+<strong>
+          ログを記録
+         </strong>
+         - CloudWatch Logsで全てのリクエストを記録して監査に備える
+        </span>
+</li>
+<li>
+<span class="icon">
+         🔄
+        </span>
+<span>
+<strong>
+          リトライ処理を考慮
+         </strong>
+         - 外部APIを呼ぶ場合は適切なリトライとフォールバックを実装
+        </span>
+</li>
+</ul>
+</div>
+<div class="best-practice-card dont">
+<h4>
+       ❌ 避けるべきこと
+      </h4>
+<ul class="best-practice-list">
+<li>
+<span class="icon">
+         🐌
+        </span>
+<span>
+<strong>
+          重い処理を入れる
+         </strong>
+         - 複雑な処理はPost Confirmation トリガーで行う
+        </span>
+</li>
+<li>
+<span class="icon">
+         🔓
+        </span>
+<span>
+<strong>
+          機密情報をハードコード
+         </strong>
+         - APIキーなどはSecrets Managerを使用
+        </span>
+</li>
+<li>
+<span class="icon">
+         🎭
+        </span>
+<span>
+<strong>
+          曖昧なエラーメッセージ
+         </strong>
+         - 「エラーが発生しました」だけでは不親切
+        </span>
+</li>
+<li>
+<span class="icon">
+         🚫
+        </span>
+<span>
+<strong>
+          全てを拒否する設定
+         </strong>
+         - テスト不足で本番環境で全ユーザーをブロックしないように注意
+        </span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- 比較表セクション -->
+<section class="section comparison-section">
+<h2 class="section-title" id="⚖️-他のトリガーとの比較">
+<span class="emoji">
+      ⚖️
+     </span>
+<span style="color: #5d4037;">
+      他のトリガーとの比較
+     </span>
+</h2>
+<div class="comparison-table">
+<table>
+<thead>
+<tr>
+<th>
+         トリガー
+        </th>
+<th>
+         タイミング
+        </th>
+<th>
+         主な用途
+        </th>
+<th>
+         ユーザー作成
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<span class="trigger-badge pre-signup">
+          Pre Sign-up
+         </span>
+</td>
+<td>
+         ユーザー作成
+         <strong>
+          前
+         </strong>
+</td>
+<td>
+         検証、登録制限、自動確認
+        </td>
+<td>
+         ❌ まだ作成されていない
+        </td>
+</tr>
+<tr>
+<td>
+<span class="trigger-badge post-confirm">
+          Post Confirmation
+         </span>
+</td>
+<td>
+         ユーザー確認
+         <strong>
+          後
+         </strong>
+</td>
+<td>
+         ウェルカムメール、初期設定
+        </td>
+<td>
+         ✅ 作成済み・確認済み
+        </td>
+</tr>
+<tr>
+<td>
+<span class="trigger-badge pre-auth">
+          Pre Authentication
+         </span>
+</td>
+<td>
+         認証
+         <strong>
+          前
+         </strong>
+</td>
+<td>
+         ログイン制限、追加検証
+        </td>
+<td>
+         ✅ 作成済み
+        </td>
+</tr>
+</tbody>
+</table>
+</div>
+<div style="background: white; border-radius: 15px; padding: 25px; margin-top: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+<h3 id="使い分けのポイント" style="color: #5d4037; margin-bottom: 15px;">
+      🎯 使い分けのポイント
+     </h3>
+<p style="line-height: 1.9;">
+<strong style="color: #ff9800;">
+       Pre Sign-up
+      </strong>
+      は「この人を入会させるか？」を判断する
+      <strong>
+       門番
+      </strong>
+      です。
+      <br/>
+<strong style="color: #4caf50;">
+       Post Confirmation
+      </strong>
+      は「入会完了後の手続き」を行う
+      <strong>
+       事務係
+      </strong>
+      です。
+      <br/>
+<strong style="color: #2196f3;">
+       Pre Authentication
+      </strong>
+      は「毎回のログイン時にチェック」する
+      <strong>
+       警備員
+      </strong>
+      です。
+     </p>
+</div>
+</section>
+<!-- まとめセクション -->
+<section class="section summary-section">
+<h2 class="section-title" id="まとめ">
+<span class="emoji">
+      🎓
+     </span>
+     まとめ
+    </h2>
+<div class="summary-grid">
+<div class="summary-card">
+<div class="icon">
+       🚪
+      </div>
+<h3 id="Pre-Sign-up-=-入口の門番">
+       Pre Sign-up = 入口の門番
+      </h3>
+<p>
+       ユーザー登録前にチェックして、許可/拒否を決める
+      </p>
+</div>
+<div class="summary-card">
+<div class="icon">
+       ⚡
+      </div>
+<h4>
+       サーバーレス実行
+      </h4>
+<p>
+       Lambda関数で柔軟にカスタムロジックを実装
+      </p>
+</div>
+<div class="summary-card">
+<div class="icon">
+       🔐
+      </div>
+<h4>
+       セキュリティ強化
+      </h4>
+<p>
+       ドメイン制限や外部検証でセキュリティを向上
+      </p>
+</div>
+<div class="summary-card">
+<div class="icon">
+       ✅
+      </div>
+<h4>
+       自動確認機能
+      </h4>
+<p>
+       信頼済みユーザーは確認コード不要にできる
+      </p>
+</div>
+</div>
+<div class="key-point">
+<h4>
+      🏰 覚えておこう！
+     </h4>
+<p style="font-size: 1.2em;">
+      Pre Sign-up Lambda = 会員制クラブの
+      <strong>
+       入会審査員
+      </strong>
+<br/>
+      「この人を入れていいか？」を
+      <strong>
+       登録前に
+      </strong>
+      判断する最初の砦！
+     </p>
+</div>
+</section>
+
+
+</div>
+<script>
+   function showTab(tabId) {
+            // 全てのコンテンツを非表示
+            document.querySelectorAll('.impl-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            // 全てのタブを非アクティブ
+            document.querySelectorAll('.impl-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 選択したコンテンツを表示
+            document.getElementById(tabId).classList.add('active');
+            // 選択したタブをアクティブ
+            event.target.classList.add('active');
+        }
+  </script>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>
+<script>function showTab(tabId) {
+            // 全てのコンテンツを非表示
+            document.querySelectorAll('.impl-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            // 全てのタブを非アクティブ
+            document.querySelectorAll('.impl-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 選択したコンテンツを表示
+            document.getElementById(tabId).classList.add('active');
+            // 選択したタブをアクティブ
+            event.target.classList.add('active');
+        }</script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="iam-mfa-emergency-rescue-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">12</span> <span class="separator" aria-hidden="true">/</span> <span class="total">71</span> </div> <a href="aws-cli-credentials-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>
