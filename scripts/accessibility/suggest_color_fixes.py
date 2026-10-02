@@ -5,14 +5,17 @@ WCAG 2.1 適合色の提案スクリプト
 不合格の色に対して、コントラスト比を満たす代替色を提案します。
 """
 
+
 def hex_to_rgb(hex_color):
     """16進数カラーコードをRGBタプルに変換"""
-    hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
 
 def rgb_to_hex(rgb):
     """RGBタプルを16進数カラーコードに変換"""
-    return '#{:02x}{:02x}{:02x}'.format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+    return f"#{int(rgb[0]):02x}{int(rgb[1]):02x}{int(rgb[2]):02x}"
+
 
 def relative_luminance(rgb):
     """相対輝度を計算"""
@@ -22,6 +25,7 @@ def relative_luminance(rgb):
     b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
+
 def contrast_ratio(color1, color2):
     """コントラスト比を計算"""
     lum1 = relative_luminance(hex_to_rgb(color1))
@@ -30,7 +34,8 @@ def contrast_ratio(color1, color2):
     darker = min(lum1, lum2)
     return (lighter + 0.05) / (darker + 0.05)
 
-def adjust_color_brightness(hex_color, target_ratio, bg_color='#FFFFFF', darker=True):
+
+def adjust_color_brightness(hex_color, target_ratio, bg_color="#FFFFFF", darker=True):
     """
     色の明度を調整して目標コントラスト比を達成する
 
@@ -55,6 +60,7 @@ def adjust_color_brightness(hex_color, target_ratio, bg_color='#FFFFFF', darker=
 
     return rgb_to_hex(rgb), contrast_ratio(rgb_to_hex(rgb), bg_color)
 
+
 def main():
     """不合格の色に対して代替色を提案"""
 
@@ -65,89 +71,93 @@ def main():
     # 不合格の色とその用途
     failing_colors = [
         {
-            'original': '#FF9900',
-            'bg': '#FFFFFF',
-            'usage': 'AWSオレンジ見出し・アクセント',
-            'target_ratio': 3.0,
-            'type': 'large'
+            "original": "#FF9900",
+            "bg": "#FFFFFF",
+            "usage": "AWSオレンジ見出し・アクセント",
+            "target_ratio": 3.0,
+            "type": "large",
         },
         {
-            'original': '#E5E7EB',
-            'bg': '#FFFFFF',
-            'usage': 'ボーダー (UIコンポーネント)',
-            'target_ratio': 3.0,
-            'type': 'ui'
+            "original": "#E5E7EB",
+            "bg": "#FFFFFF",
+            "usage": "ボーダー (UIコンポーネント)",
+            "target_ratio": 3.0,
+            "type": "ui",
         },
         {
-            'original': '#9CA3AF',
-            'bg': '#FFFFFF',
-            'usage': 'セカンダリテキスト (breadcrumb-separator)',
-            'target_ratio': 4.5,
-            'type': 'normal'
+            "original": "#9CA3AF",
+            "bg": "#FFFFFF",
+            "usage": "セカンダリテキスト (breadcrumb-separator)",
+            "target_ratio": 4.5,
+            "type": "normal",
         },
         {
-            'original': '#74b9ff',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html スコア表示（Good）',
-            'target_ratio': 4.5,
-            'type': 'normal'
+            "original": "#74b9ff",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html スコア表示（Good）",
+            "target_ratio": 4.5,
+            "type": "normal",
         },
         {
-            'original': '#00b894',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html 正解表示（Excellent）',
-            'target_ratio': 4.5,
-            'type': 'normal'
+            "original": "#00b894",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html 正解表示（Excellent）",
+            "target_ratio": 4.5,
+            "type": "normal",
         },
         {
-            'original': '#e17055',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html 不正解表示（Poor）',
-            'target_ratio': 4.5,
-            'type': 'normal'
+            "original": "#e17055",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html 不正解表示（Poor）",
+            "target_ratio": 4.5,
+            "type": "normal",
         },
         {
-            'original': '#fdcb6e',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html スコア表示（Fair）',
-            'target_ratio': 4.5,
-            'type': 'normal'
+            "original": "#fdcb6e",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html スコア表示（Fair）",
+            "target_ratio": 4.5,
+            "type": "normal",
         },
     ]
 
     suggestions = []
 
     for color_info in failing_colors:
-        original_color = color_info['original']
-        bg = color_info['bg']
-        usage = color_info['usage']
-        target = color_info['target_ratio']
+        original_color = color_info["original"]
+        bg = color_info["bg"]
+        usage = color_info["usage"]
+        target = color_info["target_ratio"]
 
         # 現在のコントラスト比
         current_ratio = contrast_ratio(original_color, bg)
 
         # 代替色を提案（暗くする）
-        suggested_color, new_ratio = adjust_color_brightness(original_color, target, bg, darker=True)
+        suggested_color, new_ratio = adjust_color_brightness(
+            original_color, target, bg, darker=True
+        )
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"用途: {usage}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"元の色:     {original_color}")
         print(f"現在の比:   {current_ratio:.2f}:1 ❌")
         print(f"目標比:     {target:.1f}:1")
-        print(f"-" * 80)
+        print("-" * 80)
         print(f"推奨色:     {suggested_color}")
         print(f"新しい比:   {new_ratio:.2f}:1 {'✅' if new_ratio >= target else '❌'}")
         print(f"明度変化:   {'暗く' if suggested_color < original_color else '明るく'}")
 
-        suggestions.append({
-            'usage': usage,
-            'original': original_color,
-            'suggested': suggested_color,
-            'old_ratio': current_ratio,
-            'new_ratio': new_ratio,
-            'target': target
-        })
+        suggestions.append(
+            {
+                "usage": usage,
+                "original": original_color,
+                "suggested": suggested_color,
+                "old_ratio": current_ratio,
+                "new_ratio": new_ratio,
+                "target": target,
+            }
+        )
 
     # サマリーテーブル
     print("\n" + "=" * 80)
@@ -158,7 +168,9 @@ def main():
 
     for s in suggestions:
         improvement = f"{s['old_ratio']:.1f} → {s['new_ratio']:.1f}"
-        print(f"{s['usage']:<40} {s['original']:<10} {s['suggested']:<10} {improvement:<15}")
+        print(
+            f"{s['usage']:<40} {s['original']:<10} {s['suggested']:<10} {improvement:<15}"
+        )
 
     # CSS変数形式で出力
     print("\n" + "=" * 80)
@@ -188,10 +200,12 @@ def main():
     /* Quiz Colors (WCAG 2.1 適合版) */""")
 
     for s in suggestions:
-        if 'quiz.html' in s['usage']:
-            label = s['usage'].split('（')[1].rstrip('）')
-            var_name = label.lower().replace('/', '-')
-            print(f"    --color-quiz-{var_name}: {s['suggested']};  /* ✅ {s['new_ratio']:.1f}:1 */")
+        if "quiz.html" in s["usage"]:
+            label = s["usage"].split("（")[1].rstrip("）")
+            var_name = label.lower().replace("/", "-")
+            print(
+                f"    --color-quiz-{var_name}: {s['suggested']};  /* ✅ {s['new_ratio']:.1f}:1 */"
+            )
 
     print("""}
 ```
@@ -213,6 +227,7 @@ def main():
 - Quiz.htmlのスコア表示色は全て修正が必要
 - 色だけでなく、アイコンやテキストラベルも併用することを強く推奨
 """)
+
 
 if __name__ == "__main__":
     main()

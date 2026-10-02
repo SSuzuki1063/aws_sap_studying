@@ -11,26 +11,27 @@ WCAG 2.1では見出しは1段階ずつ深くなる必要がある:
 
 import os
 import re
-import sys
-from pathlib import Path
+
 from bs4 import BeautifulSoup
+
 
 def get_html_files(base_dir: str) -> list:
     """HTMLファイルのリストを取得"""
     html_files = []
-    exclude_dirs = {'node_modules', '.git', 'venv', '.venv', 'scripts'}
+    exclude_dirs = {"node_modules", ".git", "venv", ".venv", "scripts"}
 
     for root, dirs, files in os.walk(base_dir):
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
         for file in files:
-            if file.endswith('.html'):
+            if file.endswith(".html"):
                 html_files.append(os.path.join(root, file))
 
     return html_files
 
+
 def analyze_heading_structure(soup: BeautifulSoup) -> list:
     """見出し構造を分析し、問題を検出"""
-    headings = soup.find_all(re.compile(r'^h[1-6]$'))
+    headings = soup.find_all(re.compile(r"^h[1-6]$"))
     issues = []
     last_level = 0
 
@@ -41,16 +42,19 @@ def analyze_heading_structure(soup: BeautifulSoup) -> list:
         # 最初の見出し以外で、2段階以上スキップしている場合
         if last_level > 0 and current_level > last_level + 1:
             expected_level = last_level + 1
-            issues.append({
-                'element': heading,
-                'current_level': current_level,
-                'expected_level': expected_level,
-                'text': heading.get_text(strip=True)[:50]
-            })
+            issues.append(
+                {
+                    "element": heading,
+                    "current_level": current_level,
+                    "expected_level": expected_level,
+                    "text": heading.get_text(strip=True)[:50],
+                }
+            )
 
         last_level = current_level
 
     return issues
+
 
 def fix_heading_hierarchy(html_content: str) -> tuple:
     """
@@ -59,7 +63,7 @@ def fix_heading_hierarchy(html_content: str) -> tuple:
     Returns:
         tuple: (修正後のHTML, 修正件数)
     """
-    soup = BeautifulSoup(html_content, 'html.parser')
+    soup = BeautifulSoup(html_content, "html.parser")
 
     # 全体を複数パスで修正（依存関係があるため）
     total_fixes = 0
@@ -71,9 +75,9 @@ def fix_heading_hierarchy(html_content: str) -> tuple:
             break
 
         for issue in issues:
-            element = issue['element']
-            expected_level = issue['expected_level']
-            new_tag = f'h{expected_level}'
+            element = issue["element"]
+            expected_level = issue["expected_level"]
+            new_tag = f"h{expected_level}"
 
             # 新しいタグを作成して属性とコンテンツをコピー
             new_element = soup.new_tag(new_tag)
@@ -81,7 +85,7 @@ def fix_heading_hierarchy(html_content: str) -> tuple:
 
             # 子要素をコピー
             for child in list(element.children):
-                if hasattr(child, 'extract'):
+                if hasattr(child, "extract"):
                     new_element.append(child.extract())
                 else:
                     new_element.append(str(child))
@@ -91,42 +95,41 @@ def fix_heading_hierarchy(html_content: str) -> tuple:
 
     return str(soup), total_fixes
 
+
 def process_file(filepath: str, dry_run: bool = True) -> dict:
     """単一ファイルを処理"""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             original_content = f.read()
 
         fixed_content, fix_count = fix_heading_hierarchy(original_content)
 
         if fix_count > 0 and not dry_run:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write(fixed_content)
 
-        return {
-            'filepath': filepath,
-            'fixes': fix_count,
-            'success': True
-        }
+        return {"filepath": filepath, "fixes": fix_count, "success": True}
 
-    except Exception as e:
-        return {
-            'filepath': filepath,
-            'fixes': 0,
-            'success': False,
-            'error': str(e)
-        }
+    except Exception as e:  # noqa: BLE001  想定外の例外も報告して続行する
+        return {"filepath": filepath, "fixes": 0, "success": False, "error": str(e)}
+
 
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='見出し階層スキップを修正')
-    parser.add_argument('--apply', action='store_true', help='実際に修正を適用（デフォルトはドライラン）')
-    parser.add_argument('--file', type=str, help='特定のファイルのみ処理')
+    parser = argparse.ArgumentParser(description="見出し階層スキップを修正")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="実際に修正を適用（デフォルトはドライラン）",
+    )
+    parser.add_argument("--file", type=str, help="特定のファイルのみ処理")
     args = parser.parse_args()
 
     dry_run = not args.apply
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    base_dir = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
 
     print("=" * 70)
     print("見出し階層修正スクリプト")
@@ -145,10 +148,10 @@ def main():
     for filepath in files:
         result = process_file(filepath, dry_run)
 
-        if result['fixes'] > 0:
+        if result["fixes"] > 0:
             rel_path = os.path.relpath(filepath, base_dir)
             print(f"  📄 {rel_path}: {result['fixes']}件の修正")
-            total_fixes += result['fixes']
+            total_fixes += result["fixes"]
             fixed_files += 1
 
     print()
@@ -162,5 +165,6 @@ def main():
 
     print("=" * 70)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

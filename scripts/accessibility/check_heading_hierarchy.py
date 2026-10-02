@@ -10,19 +10,20 @@ WCAG 2.1 達成基準:
 - 2.4.6 見出し及びラベル (レベルAA)
 """
 
-import os
 import re
+import sys
 from pathlib import Path
-from collections import defaultdict
+
 
 def extract_headings(html_content):
     """HTMLコンテンツから見出しタグを抽出"""
     # h1-h6タグを抽出（タグの内容も取得）
-    heading_pattern = r'<h([1-6])[^>]*>(.*?)</h\1>'
+    heading_pattern = r"<h([1-6])[^>]*>(.*?)</h\1>"
     headings = re.findall(heading_pattern, html_content, re.IGNORECASE | re.DOTALL)
 
     # (レベル, テキスト内容) のリストを返す
     return [(int(level), text.strip()[:50]) for level, text in headings]
+
 
 def check_heading_hierarchy(headings):
     """
@@ -59,13 +60,19 @@ def check_heading_hierarchy(headings):
 
     return errors, warnings
 
+
 def scan_directory(directory):
     """ディレクトリ内の全HTMLファイルをスキャン"""
-    html_files = list(Path(directory).rglob('*.html'))
+    html_files = list(Path(directory).rglob("*.html"))
 
     # 除外するファイル
-    exclude_files = {'index.html', 'quiz.html', 'table-of-contents.html',
-                     'home.html', 'knowledge-base.html'}
+    exclude_files = {
+        "index.html",
+        "quiz.html",
+        "table-of-contents.html",
+        "home.html",
+        "knowledge-base.html",
+    }
 
     results = []
 
@@ -76,9 +83,9 @@ def scan_directory(directory):
 
         # HTMLコンテンツを読み込み
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
             print(f"⚠️  読み込みエラー: {file_path} - {e}")
             continue
 
@@ -90,14 +97,17 @@ def scan_directory(directory):
 
         # 結果を記録
         if errors or warnings:
-            results.append({
-                'file': str(file_path),
-                'headings': headings,
-                'errors': errors,
-                'warnings': warnings
-            })
+            results.append(
+                {
+                    "file": str(file_path),
+                    "headings": headings,
+                    "errors": errors,
+                    "warnings": warnings,
+                }
+            )
 
     return results
+
 
 def print_results(results):
     """検証結果を表示"""
@@ -106,14 +116,16 @@ def print_results(results):
     print("=" * 80)
 
     if not results:
-        print("\n✅ 問題は見つかりませんでした。全てのHTMLファイルの見出し階層は正しいです。")
+        print(
+            "\n✅ 問題は見つかりませんでした。全てのHTMLファイルの見出し階層は正しいです。"
+        )
         return
 
     # エラーと警告をカウント
-    total_errors = sum(len(r['errors']) for r in results)
-    total_warnings = sum(len(r['warnings']) for r in results)
+    total_errors = sum(len(r["errors"]) for r in results)
+    total_warnings = sum(len(r["warnings"]) for r in results)
 
-    print(f"\n検証結果サマリー:")
+    print("\n検証結果サマリー:")
     print(f"  問題のあるファイル: {len(results)}")
     print(f"  エラー総数: {total_errors}")
     print(f"  警告総数: {total_warnings}")
@@ -126,20 +138,20 @@ def print_results(results):
 
         # 見出し構造を表示
         print("\n見出し構造:")
-        for level, text in result['headings']:
+        for level, text in result["headings"]:
             indent = "  " * (level - 1)
             print(f"{indent}h{level}: {text}")
 
         # エラーを表示
-        if result['errors']:
+        if result["errors"]:
             print(f"\n🔴 エラー ({len(result['errors'])}件):")
-            for error in result['errors']:
+            for error in result["errors"]:
                 print(f"  {error}")
 
         # 警告を表示
-        if result['warnings']:
+        if result["warnings"]:
             print(f"\n🟡 警告 ({len(result['warnings'])}件):")
-            for warning in result['warnings']:
+            for warning in result["warnings"]:
                 print(f"  {warning}")
 
     # 推奨アクション
@@ -172,6 +184,7 @@ WCAG 2.1 関連基準:
 - 2.4.6 見出し及びラベル (レベルAA)
 """)
 
+
 def main():
     """メイン処理"""
     # リポジトリルートから実行されることを想定
@@ -179,18 +192,18 @@ def main():
 
     # 検証対象ディレクトリ
     directories = [
-        'networking',
-        'security-governance',
-        'compute-applications',
-        'content-delivery-dns',
-        'development-deployment',
-        'storage-database',
-        'migration',
-        'analytics-bigdata',
-        'organizational-complexity',
-        'continuous-improvement',
-        'cost-control',
-        'new-solutions'
+        "networking",
+        "security-governance",
+        "compute-applications",
+        "content-delivery-dns",
+        "development-deployment",
+        "storage-database",
+        "migration",
+        "analytics-bigdata",
+        "organizational-complexity",
+        "continuous-improvement",
+        "cost-control",
+        "new-solutions",
     ]
 
     all_results = []
@@ -204,10 +217,11 @@ def main():
     print_results(all_results)
 
     # 終了コード
-    if any(r['errors'] for r in all_results):
-        exit(1)  # エラーがある場合は1で終了
+    if any(r["errors"] for r in all_results):
+        sys.exit(1)  # エラーがある場合は1で終了
     else:
-        exit(0)  # 問題がない場合は0で終了
+        sys.exit(0)  # 問題がない場合は0で終了
+
 
 if __name__ == "__main__":
     main()

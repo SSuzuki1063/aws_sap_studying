@@ -15,31 +15,42 @@ Usage:
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 
 
 class Colors:
-    RESET  = "\033[0m"
-    GREEN  = "\033[92m"
+    RESET = "\033[0m"
+    GREEN = "\033[92m"
     YELLOW = "\033[93m"
-    RED    = "\033[91m"
-    CYAN   = "\033[96m"
+    RED = "\033[91m"
+    CYAN = "\033[96m"
 
-def ok(msg):   print(f"{Colors.GREEN}✓{Colors.RESET} {msg}")
-def warn(msg): print(f"{Colors.YELLOW}⚠{Colors.RESET}  {msg}")
-def err(msg):  print(f"{Colors.RED}✗{Colors.RESET} {msg}", file=sys.stderr)
-def info(msg): print(f"{Colors.CYAN}→{Colors.RESET} {msg}")
+
+def ok(msg):
+    print(f"{Colors.GREEN}✓{Colors.RESET} {msg}")
+
+
+def warn(msg):
+    print(f"{Colors.YELLOW}⚠{Colors.RESET}  {msg}")
+
+
+def err(msg):
+    print(f"{Colors.RED}✗{Colors.RESET} {msg}", file=sys.stderr)
+
+
+def info(msg):
+    print(f"{Colors.CYAN}→{Colors.RESET} {msg}")
 
 
 class ConceptIndexGenerator:
     """concepts/ を走査して concept-index.json と search-index.json を生成する。"""
 
     def __init__(self):
-        self.repo_root    = Path(__file__).parent.parent.parent
+        self.repo_root = Path(__file__).parent.parent.parent
         self.concepts_dir = self.repo_root / "concepts"
-        self.errors       = []
-        self.warnings     = []
+        self.errors = []
+        self.warnings = []
 
     def _iter_source_files(self):
         for subdir in ("axes", "domains", "services"):
@@ -63,13 +74,20 @@ class ConceptIndexGenerator:
                 self.errors.append(f"{path.name}: 必須フィールド '{f}' が存在しません")
 
     def _validate_id_prefix(self, data, path):
-        prefixes = {"axis": "axis-", "domain": "dom-", "service": "svc-",
-                    "concept": "con-", "keyword": "kw-"}
+        prefixes = {
+            "axis": "axis-",
+            "domain": "dom-",
+            "service": "svc-",
+            "concept": "con-",
+            "keyword": "kw-",
+        }
         ntype = data.get("type", "")
-        nid   = data.get("id", "")
-        exp   = prefixes.get(ntype, "")
+        nid = data.get("id", "")
+        exp = prefixes.get(ntype, "")
         if exp and not nid.startswith(exp):
-            self.errors.append(f"{path.name}: ID '{nid}' は '{exp}' で始まる必要があります")
+            self.errors.append(
+                f"{path.name}: ID '{nid}' は '{exp}' で始まる必要があります"
+            )
 
     def _validate_crosslinks(self, data, path, all_ids):
         for cl in data.get("crosslinks", []):
@@ -86,14 +104,14 @@ class ConceptIndexGenerator:
 
     def _concept_index_entry(self, data, rel_file=""):
         entry = {
-            "id":          data.get("id", ""),
-            "layer":       data.get("layer", -1),
-            "type":        data.get("type", ""),
-            "name_ja":     data.get("name_ja", ""),
-            "name_en":     data.get("name_en", ""),
-            "axis_tags":   data.get("axis_tags", []),
+            "id": data.get("id", ""),
+            "layer": data.get("layer", -1),
+            "type": data.get("type", ""),
+            "name_ja": data.get("name_ja", ""),
+            "name_en": data.get("name_en", ""),
+            "axis_tags": data.get("axis_tags", []),
             "sap_domains": data.get("sap_domains", []),
-            "tags":        data.get("tags", []),
+            "tags": data.get("tags", []),
         }
         if data.get("type") == "service":
             if rel_file:
@@ -104,16 +122,16 @@ class ConceptIndexGenerator:
 
     def _search_entry(self, data):
         return {
-            "id":             data.get("id", ""),
-            "layer":          data.get("layer", -1),
-            "type":           data.get("type", ""),
-            "name_ja":        data.get("name_ja", ""),
-            "name_en":        data.get("name_en", ""),
+            "id": data.get("id", ""),
+            "layer": data.get("layer", -1),
+            "type": data.get("type", ""),
+            "name_ja": data.get("name_ja", ""),
+            "name_en": data.get("name_en", ""),
             "description_ja": data.get("description_ja", ""),
-            "sap_tip":        data.get("sap_tip", ""),
-            "axis_tags":      data.get("axis_tags", []),
-            "sap_domains":    data.get("sap_domains", []),
-            "tags":           data.get("tags", []),
+            "sap_tip": data.get("sap_tip", ""),
+            "axis_tags": data.get("axis_tags", []),
+            "sap_domains": data.get("sap_domains", []),
+            "tags": data.get("tags", []),
         }
 
     def _expand_service(self, svc, ci_entries, sr_entries):
@@ -129,7 +147,7 @@ class ConceptIndexGenerator:
 
         ci_entries = []
         sr_entries = []
-        all_ids    = set()
+        all_ids = set()
 
         source_files = list(self._iter_source_files())
 
@@ -182,16 +200,22 @@ class ConceptIndexGenerator:
                 warn(f"  • {w}")
 
         if dry_run:
-            info(f"[Dry-run] concept-index: {len(ci_entries)} ノード, search-index: {len(sr_entries)} エントリ")
+            info(
+                f"[Dry-run] concept-index: {len(ci_entries)} ノード, search-index: {len(sr_entries)} エントリ"
+            )
             ok("Dry-run 完了（ファイル書き込みなし）")
             return True
 
-        ci_json = json.dumps({
-            "version":     "1.0.0",
-            "generated":   date.today().isoformat(),
-            "total_nodes": len(ci_entries),
-            "nodes":       ci_entries,
-        }, ensure_ascii=False, indent=2)
+        ci_json = json.dumps(
+            {
+                "version": "1.0.0",
+                "generated": datetime.now().astimezone().date().isoformat(),
+                "total_nodes": len(ci_entries),
+                "nodes": ci_entries,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
         sr_json = json.dumps(sr_entries, ensure_ascii=False, indent=2)
 
         (self.concepts_dir / "concept-index.json").write_text(ci_json, encoding="utf-8")
@@ -214,10 +238,14 @@ def main():
   python3 scripts/concept_management/generate_concept_index.py --dry-run
         """,
     )
-    parser.add_argument("--validate", action="store_true",
-                        help="ID一意性・必須フィールド・crosslinksターゲット存在確認")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="ファイルを書き込まずに走査結果のみ表示")
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="ID一意性・必須フィールド・crosslinksターゲット存在確認",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="ファイルを書き込まずに走査結果のみ表示"
+    )
     args = parser.parse_args()
 
     gen = ConceptIndexGenerator()
