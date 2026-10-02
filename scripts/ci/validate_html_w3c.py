@@ -8,6 +8,8 @@ PR modeでは変更されたHTMLファイルのみを検証します。
 Usage:
     python3 scripts/ci/validate_html_w3c.py              # 全HTMLファイル
     python3 scripts/ci/validate_html_w3c.py --pr-mode    # 変更されたファイルのみ
+    python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
+                                                         # 変更されたページのビルド出力
 
 Requirements:
     pip install requests beautifulsoup4
@@ -18,6 +20,7 @@ Exit codes:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -37,21 +40,24 @@ class Colors:
     END = "\033[0m"
 
 
-def get_modified_html_files():
+ASTRO_PAGES_PREFIX = "src/pages/"
+
+
+def get_changed_files() -> list[str]:
     """
-    Gitで変更されたHTMLファイルのリストを取得（PR mode用）
+    Gitで変更されたファイルのリストを取得（PR mode用）
+
+    GitHub Actions の PR では GITHUB_BASE_REF (マージ先ブランチ) との差分を使う。
     """
+    base_ref = os.environ.get("GITHUB_BASE_REF") or "gh-pages"
     try:
         # Get changed files between current branch and base branch
         result = subprocess.run(
-            ["git", "diff", "--name-only", "origin/gh-pages...HEAD"],
+            ["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"],
             capture_output=True,
             text=True,
             check=True,
         )
-        files = result.stdout.strip().split("\n")
-        html_files = [f for f in files if f.endswith(".html") and Path(f).exists()]
-        return html_files
     except subprocess.CalledProcessError:
         # Fallback: get all modified files in working directory
         try:
@@ -61,11 +67,43 @@ def get_modified_html_files():
                 text=True,
                 check=True,
             )
-            files = result.stdout.strip().split("\n")
-            html_files = [f for f in files if f.endswith(".html") and Path(f).exists()]
-            return html_files
         except (OSError, subprocess.CalledProcessError):
             return []
+    return [f for f in result.stdout.strip().split("\n") if f]
+
+
+def to_built_html(changed_file: str) -> str | None:
+    """
+    変更されたファイルを、ビルド出力内のHTMLパスに対応付ける
+
+    src/pages/networking/foo.astro → networking/foo.html (astro の build.format は 'file')
+    """
+    if changed_file.endswith(".html"):
+        return changed_file
+    if changed_file.startswith(ASTRO_PAGES_PREFIX) and changed_file.endswith(".astro"):
+        return changed_file[len(ASTRO_PAGES_PREFIX) : -len(".astro")] + ".html"
+    return None
+
+
+def get_modified_html_files(base_dir: Path, map_astro_pages: bool) -> list[str]:
+    """
+    変更されたファイルのうち、base_dir 配下に存在するHTMLを返す（PR mode用）
+
+    map_astro_pages が真なら、変更された .astro ページをビルド出力のHTMLに対応付ける。
+    """
+    html_files = []
+    for changed_file in get_changed_files():
+        if map_astro_pages:
+            candidate = to_built_html(changed_file)
+        else:
+            candidate = changed_file if changed_file.endswith(".html") else None
+        if (
+            candidate
+            and (base_dir / candidate).exists()
+            and candidate not in html_files
+        ):
+            html_files.append(candidate)
+    return html_files
 
 
 def get_all_html_files(repo_root):
@@ -156,11 +194,18 @@ def main():
         metavar="FILE",
         help="Validate specific files by path (space-separated)",
     )
+    parser.add_argument(
+        "--base-dir",
+        metavar="DIR",
+        help="Directory containing the HTML to validate, e.g. dist (default: repo root)",
+    )
     args = parser.parse_args()
 
     # リポジトリルートに移動
     script_dir = Path(__file__).parent
     repo_root = script_dir.parent.parent
+    # 検証対象のHTMLを探すディレクトリ（--base-dir dist ならビルド出力）
+    base_dir = (repo_root / args.base_dir).resolve() if args.base_dir else repo_root
 
     print(f"\n{Colors.BOLD}{'=' * 70}{Colors.END}")
     print(f"{Colors.BOLD}🔍 W3C HTML Validation{Colors.END}")
@@ -172,7 +217,7 @@ def main():
             f"{Colors.BLUE}Mode: Specific files ({len(args.files)} files){Colors.END}"
         )
         html_files = [
-            f for f in args.files if Path(repo_root / f).exists() or Path(f).exists()
+            f for f in args.files if Path(base_dir / f).exists() or Path(f).exists()
         ]
         if not html_files:
             print(
@@ -182,7 +227,9 @@ def main():
             sys.exit(1)
     elif args.pr_mode:
         print(f"{Colors.BLUE}Mode: PR (modified files only){Colors.END}")
-        html_files = get_modified_html_files()
+        html_files = get_modified_html_files(
+            base_dir, map_astro_pages=bool(args.base_dir)
+        )
         if not html_files:
             print(
                 f"{Colors.YELLOW}⚠ No modified HTML files found. Skipping validation.{Colors.END}"
@@ -191,7 +238,7 @@ def main():
             sys.exit(0)
     else:
         print(f"{Colors.BLUE}Mode: Full (all HTML files){Colors.END}")
-        html_files = get_all_html_files(repo_root)
+        html_files = get_all_html_files(base_dir)
 
     print(f"Files to validate: {len(html_files)}\n")
 
@@ -208,7 +255,7 @@ def main():
     for i, file_path in enumerate(html_files, 1):
         print(f"[{i}/{total_files}] Validating: {file_path}...", end=" ")
 
-        is_valid, errors, warnings = validate_html_w3c(repo_root / file_path)
+        is_valid, errors, warnings = validate_html_w3c(base_dir / file_path)
 
         if is_valid:
             print(f"{Colors.GREEN}✓{Colors.END}")
