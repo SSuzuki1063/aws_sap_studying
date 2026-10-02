@@ -6,14 +6,13 @@ new_html/ ディレクトリ内のHTMLファイルを自動的に分析し、
 適切なカテゴリディレクトリに配置してindex.htmlを更新します。
 """
 
-import os
-import re
-import json
-import shutil
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional
-from html.parser import HTMLParser
 import argparse
+import re
+import shutil
+import sys
+from html.parser import HTMLParser
+from pathlib import Path
+from typing import ClassVar
 
 
 class HTMLTitleParser(HTMLParser):
@@ -49,83 +48,170 @@ class HTMLIntegrator:
     """HTMLファイル統合の自動化クラス"""
 
     # カテゴリマッピング（キーワード → カテゴリディレクトリ）
-    CATEGORY_MAPPINGS = {
+    CATEGORY_MAPPINGS: ClassVar[dict[str, dict]] = {
         "security-governance": {
             "keywords": [
-                "iam", "cognito", "scp", "organizations", "config", "control tower",
-                "guardrails", "cmk", "kms", "暗号", "認証", "認可", "セキュリティ",
-                "ガバナンス", "waf", "shield", "セキュリティ監視", "脅威検知"
+                "iam",
+                "cognito",
+                "scp",
+                "organizations",
+                "config",
+                "control tower",
+                "guardrails",
+                "cmk",
+                "kms",
+                "暗号",
+                "認証",
+                "認可",
+                "セキュリティ",
+                "ガバナンス",
+                "waf",
+                "shield",
+                "セキュリティ監視",
+                "脅威検知",
             ],
             "section": "Organizations & ガバナンス",
-            "icon": "🏢"
+            "icon": "🏢",
         },
         "compute-applications": {
             "keywords": [
-                "ec2", "auto scaling", "autoscaling", "lambda", "ecs", "fargate",
-                "alb", "elb", "sqs", "sns", "インスタンス", "コンピュート",
-                "アプリケーション", "ロードバランシング", "スケーリング", "lifecycle",
-                "warm pool", "patch manager", "systems manager"
+                "ec2",
+                "auto scaling",
+                "autoscaling",
+                "lambda",
+                "ecs",
+                "fargate",
+                "alb",
+                "elb",
+                "sqs",
+                "sns",
+                "インスタンス",
+                "コンピュート",
+                "アプリケーション",
+                "ロードバランシング",
+                "スケーリング",
+                "lifecycle",
+                "warm pool",
+                "patch manager",
+                "systems manager",
             ],
             "section": "Auto Scaling & ロードバランシング",
-            "icon": "⚖️"
+            "icon": "⚖️",
         },
         "content-delivery-dns": {
             "keywords": [
-                "cloudfront", "route53", "dns", "global accelerator", "cdn",
-                "コンテンツ配信", "キャッシュ", "https", "ssl", "tls", "証明書"
+                "cloudfront",
+                "route53",
+                "dns",
+                "global accelerator",
+                "cdn",
+                "コンテンツ配信",
+                "キャッシュ",
+                "https",
+                "ssl",
+                "tls",
+                "証明書",
             ],
             "section": "CloudFront & コンテンツ配信",
-            "icon": "⚡"
+            "icon": "⚡",
         },
         "networking": {
             "keywords": [
-                "vpc", "direct connect", "vpn", "transit gateway", "tgw",
-                "privatelink", "eni", "eip", "nat", "ネットワーク", "接続"
+                "vpc",
+                "direct connect",
+                "vpn",
+                "transit gateway",
+                "tgw",
+                "privatelink",
+                "eni",
+                "eip",
+                "nat",
+                "ネットワーク",
+                "接続",
             ],
             "section": "VPC & ネットワーク基礎",
-            "icon": "🏗️"
+            "icon": "🏗️",
         },
         "storage-database": {
             "keywords": [
-                "s3", "ebs", "efs", "fsx", "rds", "aurora", "dynamodb", "redshift",
-                "elasticache", "ストレージ", "データベース", "キャッシング"
+                "s3",
+                "ebs",
+                "efs",
+                "fsx",
+                "rds",
+                "aurora",
+                "dynamodb",
+                "redshift",
+                "elasticache",
+                "ストレージ",
+                "データベース",
+                "キャッシング",
             ],
             "section": "S3 & オブジェクトストレージ",
-            "icon": "🪣"
+            "icon": "🪣",
         },
         "development-deployment": {
             "keywords": [
-                "cloudformation", "cdk", "sam", "codepipeline", "codedeploy",
-                "eventbridge", "api gateway", "appsync", "開発", "デプロイ",
-                "iac", "ci/cd"
+                "cloudformation",
+                "cdk",
+                "sam",
+                "codepipeline",
+                "codedeploy",
+                "eventbridge",
+                "api gateway",
+                "appsync",
+                "開発",
+                "デプロイ",
+                "iac",
+                "ci/cd",
             ],
             "section": "IaC & CloudFormation",
-            "icon": "📜"
+            "icon": "📜",
         },
         "migration-transfer": {
             "keywords": [
-                "dms", "migration hub", "sct", "移行", "マイグレーション",
-                "dr", "ディザスタリカバリ", "disaster recovery"
+                "dms",
+                "migration hub",
+                "sct",
+                "移行",
+                "マイグレーション",
+                "dr",
+                "ディザスタリカバリ",
+                "disaster recovery",
             ],
             "section": "DMS & データ移行",
-            "icon": "🔄"
+            "icon": "🔄",
         },
         "organizational-complexity": {
             "keywords": [
-                "ram", "resource access manager", "service catalog", "stacksets",
-                "cfct", "組織", "マルチアカウント", "共有"
+                "ram",
+                "resource access manager",
+                "service catalog",
+                "stacksets",
+                "cfct",
+                "組織",
+                "マルチアカウント",
+                "共有",
             ],
             "section": "Organizations & ガバナンス",
-            "icon": "🏢"
+            "icon": "🏢",
         },
         "continuous-improvement": {
             "keywords": [
-                "cloudwatch", "cloudtrail", "systems manager", "ssm", "x-ray",
-                "運用", "監視", "改善", "パッチ", "ハイブリッド"
+                "cloudwatch",
+                "cloudtrail",
+                "systems manager",
+                "ssm",
+                "x-ray",
+                "運用",
+                "監視",
+                "改善",
+                "パッチ",
+                "ハイブリッド",
             ],
             "section": "システム運用 & パッチ管理",
-            "icon": "🔧"
-        }
+            "icon": "🔧",
+        },
     }
 
     def __init__(self, source_dir: str = "new_html", dry_run: bool = False):
@@ -133,12 +219,12 @@ class HTMLIntegrator:
         self.dry_run = dry_run
         self.repo_root = Path(__file__).parent
         self.index_html = self.repo_root / "index.html"
-        self.moved_files: List[Dict] = []
+        self.moved_files: list[dict] = []
 
-    def analyze_html_file(self, file_path: Path) -> Dict:
+    def analyze_html_file(self, file_path: Path) -> dict:
         """HTMLファイルを分析してメタデータを抽出"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             parser = HTMLTitleParser()
@@ -154,13 +240,13 @@ class HTMLIntegrator:
                 "h1": parser.h1_text,
                 "keywords": keywords,
                 "size": file_path.stat().st_size,
-                "lines": len(content.splitlines())
+                "lines": len(content.splitlines()),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  想定外の例外も報告して続行する
             print(f"⚠️  ファイル分析エラー {file_path.name}: {e}")
             return None
 
-    def _extract_keywords(self, text: str) -> List[str]:
+    def _extract_keywords(self, text: str) -> list[str]:
         """テキストからAWS関連キーワードを抽出"""
         keywords = []
         all_keywords = set()
@@ -174,7 +260,7 @@ class HTMLIntegrator:
 
         return keywords
 
-    def determine_category(self, metadata: Dict) -> Tuple[str, str, str]:
+    def determine_category(self, metadata: dict) -> tuple[str, str, str]:
         """
         メタデータからカテゴリを判定
         Returns: (category_dir, section_name, icon)
@@ -199,7 +285,7 @@ class HTMLIntegrator:
         # デフォルト: compute-applications
         return "compute-applications", "コンテナ & アプリケーション統合", "📦"
 
-    def move_file(self, source: Path, category: str) -> Optional[Path]:
+    def move_file(self, source: Path, category: str) -> Path | None:
         """ファイルを適切なカテゴリディレクトリに移動"""
         dest_dir = self.repo_root / category
         dest_file = dest_dir / source.name
@@ -222,14 +308,14 @@ class HTMLIntegrator:
 
         return dest_file
 
-    def update_index_html(self, files_info: List[Dict]) -> bool:
+    def update_index_html(self, files_info: list[dict]) -> bool:
         """index.htmlを更新して新しいリソースを追加"""
         if not self.index_html.exists():
             print("❌ index.html が見つかりません")
             return False
 
         try:
-            with open(self.index_html, 'r', encoding='utf-8') as f:
+            with open(self.index_html, "r", encoding="utf-8") as f:
                 content = f.read()
 
             original_content = content
@@ -249,14 +335,14 @@ class HTMLIntegrator:
                 # セクションを見つけて更新
                 pattern = rf'(<h2><span class="section-icon">[^<]+</span>{re.escape(section_name)}<span class="resource-count">)(\d+)(</span></h2>\s*<ul class="resource-list">)'
 
-                def replace_section(match):
+                def replace_section(match, files=files):
                     current_count = int(match.group(2))
                     new_count = current_count + len(files)
 
                     # 新しいリソース項目を追加
                     new_items = ""
                     for file_info in files:
-                        rel_path = f'{file_info["category"]}/{file_info["filename"]}'
+                        rel_path = f"{file_info['category']}/{file_info['filename']}"
                         new_items += f'\n                        <li><a href="{rel_path}">{file_info["title"]}</a></li>'
 
                     return match.group(1) + str(new_count) + match.group(3) + new_items
@@ -266,26 +352,28 @@ class HTMLIntegrator:
                 # 大カテゴリのリソースカウントも更新
                 major_category_pattern = rf'(<div id="[^"]*{category}[^"]*" class="major-category">.*?<span class="resource-count">)(\d+)(</span>)'
 
-                def update_major_count(match):
+                def update_major_count(match, files=files):
                     current_count = int(match.group(2))
                     new_count = current_count + len(files)
                     return match.group(1) + str(new_count) + match.group(3)
 
-                content = re.sub(major_category_pattern, update_major_count, content, flags=re.DOTALL)
+                content = re.sub(
+                    major_category_pattern, update_major_count, content, flags=re.DOTALL
+                )
 
             if content != original_content:
                 if not self.dry_run:
-                    with open(self.index_html, 'w', encoding='utf-8') as f:
+                    with open(self.index_html, "w", encoding="utf-8") as f:
                         f.write(content)
-                    print(f"✅ index.html 更新完了")
+                    print("✅ index.html 更新完了")
                 else:
-                    print(f"[DRY RUN] index.html を更新")
+                    print("[DRY RUN] index.html を更新")
                 return True
             else:
                 print("⚠️  index.html の更新箇所が見つかりませんでした")
                 return False
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  想定外の例外も報告して続行する
             print(f"❌ index.html 更新エラー: {e}")
             return False
 
@@ -325,17 +413,19 @@ class HTMLIntegrator:
             # ファイル移動
             dest_file = self.move_file(html_file, category)
 
-            files_info.append({
-                "filename": html_file.name,
-                "title": metadata["title"],
-                "category": category,
-                "section": section,
-                "icon": icon,
-                "dest": str(dest_file) if dest_file else None
-            })
+            files_info.append(
+                {
+                    "filename": html_file.name,
+                    "title": metadata["title"],
+                    "category": category,
+                    "section": section,
+                    "icon": icon,
+                    "dest": str(dest_file) if dest_file else None,
+                }
+            )
 
         print("\n" + "=" * 80)
-        print(f"\n📋 統合サマリー:")
+        print("\n📋 統合サマリー:")
         print(f"   ✅ 処理ファイル数: {len(files_info)}")
 
         category_counts = {}
@@ -347,7 +437,7 @@ class HTMLIntegrator:
             print(f"   • {category}: {count}個")
 
         # index.html更新
-        print(f"\n📝 index.html を更新中...")
+        print("\n📝 index.html を更新中...")
         if self.update_index_html(files_info):
             print("✅ 統合完了！")
         else:
@@ -375,19 +465,21 @@ def main():
 
   # カスタムソースディレクトリを指定
   python3 integrate_new_html.py --source custom_html/
-        """
+        """,
     )
 
     parser.add_argument(
-        "--source", "-s",
+        "--source",
+        "-s",
         default="new_html",
-        help="統合元のディレクトリ（デフォルト: new_html）"
+        help="統合元のディレクトリ（デフォルト: new_html）",
     )
 
     parser.add_argument(
-        "--dry-run", "-d",
+        "--dry-run",
+        "-d",
         action="store_true",
-        help="ドライラン: 実際の変更を行わず、処理内容を表示"
+        help="ドライラン: 実際の変更を行わず、処理内容を表示",
     )
 
     args = parser.parse_args()
@@ -413,4 +505,4 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

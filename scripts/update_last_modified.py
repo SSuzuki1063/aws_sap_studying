@@ -11,10 +11,12 @@ index.htmlに最終更新日（Gitの最終コミット日時）を自動的に�
     - 日付フォーマット: YYYY/MM/DD
 """
 
-import subprocess
-import re
 import os
+import re
+import subprocess
+import sys
 from datetime import datetime
+
 
 def get_git_last_commit_date():
     """
@@ -26,26 +28,27 @@ def get_git_last_commit_date():
     try:
         # Gitの最終コミット日時を取得（ISO 8601形式）
         result = subprocess.run(
-            ['git', 'log', '-1', '--format=%cI'],
+            ["git", "log", "-1", "--format=%cI"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
 
         # ISO 8601形式の日付文字列をパース
         commit_date_str = result.stdout.strip()
-        commit_date = datetime.fromisoformat(commit_date_str.replace('Z', '+00:00'))
+        commit_date = datetime.fromisoformat(commit_date_str.replace("Z", "+00:00"))
 
         # YYYY/MM/DD形式にフォーマット
-        formatted_date = commit_date.strftime('%Y/%m/%d')
+        formatted_date = commit_date.strftime("%Y/%m/%d")
 
         return formatted_date
     except subprocess.CalledProcessError as e:
         print(f"Error: Gitコマンドの実行に失敗しました: {e}")
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  想定外の例外も報告して続行する
         print(f"Error: 日付の取得に失敗しました: {e}")
         return None
+
 
 def update_index_html(last_commit_date):
     """
@@ -57,7 +60,7 @@ def update_index_html(last_commit_date):
     Returns:
         bool: 成功した場合True、失敗した場合False
     """
-    index_html_path = 'index.html'
+    index_html_path = "index.html"
 
     if not os.path.exists(index_html_path):
         print(f"Error: {index_html_path}が見つかりません")
@@ -65,7 +68,7 @@ def update_index_html(last_commit_date):
 
     try:
         # index.htmlを読み込み
-        with open(index_html_path, 'r', encoding='utf-8') as f:
+        with open(index_html_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # プレースホルダーを置換
@@ -88,13 +91,14 @@ def update_index_html(last_commit_date):
             print(f"プレースホルダーを置換しました: {last_commit_date}")
 
         # index.htmlに書き込み
-        with open(index_html_path, 'w', encoding='utf-8') as f:
+        with open(index_html_path, "w", encoding="utf-8") as f:
             f.write(content)
 
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  想定外の例外も報告して続行する
         print(f"Error: ファイルの更新に失敗しました: {e}")
         return False
+
 
 def main():
     """メイン処理"""
@@ -127,5 +131,6 @@ def main():
         print("\n❌ エラー: index.htmlの更新に失敗しました")
         return 1
 
-if __name__ == '__main__':
-    exit(main())
+
+if __name__ == "__main__":
+    sys.exit(main())

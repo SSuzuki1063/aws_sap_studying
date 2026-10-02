@@ -13,20 +13,21 @@ Exit codes:
     1: Integrity issues found
 """
 
+import os
 import re
 import sys
-import os
 from pathlib import Path
 
 
 class Colors:
     """ターミナル出力用のカラーコード"""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
+
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
 
 
 def extract_resources_from_data_js(file_path):
@@ -34,7 +35,7 @@ def extract_resources_from_data_js(file_path):
     data.js からリソース情報を抽出
     Returns: List of dict with {title, href}
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     resources = []
@@ -45,11 +46,7 @@ def extract_resources_from_data_js(file_path):
     matches = re.findall(pattern, content)
 
     for title, href in matches:
-        resources.append({
-            'title': title,
-            'href': href,
-            'source': 'data.js'
-        })
+        resources.append({"title": title, "href": href, "source": "data.js"})
 
     return resources
 
@@ -59,7 +56,7 @@ def extract_search_data_from_index_js(file_path):
     index.js から searchData を抽出
     Returns: List of dict with {title, category, file}
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     search_entries = []
@@ -69,13 +66,15 @@ def extract_search_data_from_index_js(file_path):
     pattern = r"\{\s*title:\s*['\"]([^'\"]+)['\"]\s*,\s*category:\s*['\"]([^'\"]+)['\"]\s*,\s*file:\s*['\"]([^'\"]+)['\"]\s*\}"
     matches = re.findall(pattern, content)
 
-    for title, category, file_path in matches:
-        search_entries.append({
-            'title': title,
-            'category': category,
-            'file': file_path,
-            'source': 'index.js'
-        })
+    for title, category, entry_path in matches:
+        search_entries.append(
+            {
+                "title": title,
+                "category": category,
+                "file": entry_path,
+                "source": "index.js",
+            }
+        )
 
     return search_entries
 
@@ -89,10 +88,10 @@ def check_integrity(data_resources, search_entries):
     print(f"{Colors.BOLD}{'=' * 70}{Colors.END}\n")
 
     # data.js のリソース一覧を作成（hrefベース）
-    data_hrefs = {r['href']: r for r in data_resources}
+    data_hrefs = {r["href"]: r for r in data_resources}
 
     # index.js の検索データ一覧を作成（fileベース）
-    search_files = {s['file']: s for s in search_entries}
+    search_files = {s["file"]: s for s in search_entries}
 
     print(f"📄 data.js resources: {len(data_hrefs)}")
     print(f"🔍 index.js searchData entries: {len(search_entries)}\n")
@@ -100,7 +99,9 @@ def check_integrity(data_resources, search_entries):
     issues = []
 
     # data.js にあるが index.js にないリソースをチェック
-    print(f"{Colors.BLUE}Checking: data.js resources exist in index.js searchData...{Colors.END}")
+    print(
+        f"{Colors.BLUE}Checking: data.js resources exist in index.js searchData...{Colors.END}"
+    )
     missing_in_search = []
 
     for href, resource in data_hrefs.items():
@@ -109,7 +110,9 @@ def check_integrity(data_resources, search_entries):
             issues.append(f"❌ Missing in index.js: {resource['title']} ({href})")
 
     if missing_in_search:
-        print(f"{Colors.RED}✗ Found {len(missing_in_search)} resources in data.js NOT in index.js:{Colors.END}")
+        print(
+            f"{Colors.RED}✗ Found {len(missing_in_search)} resources in data.js NOT in index.js:{Colors.END}"
+        )
         for resource in missing_in_search:
             print(f"  • {resource['title']} → {resource['href']}")
     else:
@@ -118,7 +121,9 @@ def check_integrity(data_resources, search_entries):
     print()
 
     # index.js にあるが data.js にないリソースをチェック（警告のみ）
-    print(f"{Colors.BLUE}Checking: index.js searchData exists in data.js...{Colors.END}")
+    print(
+        f"{Colors.BLUE}Checking: index.js searchData exists in data.js...{Colors.END}"
+    )
     missing_in_data = []
 
     for file_path, entry in search_files.items():
@@ -126,7 +131,9 @@ def check_integrity(data_resources, search_entries):
             missing_in_data.append(entry)
 
     if missing_in_data:
-        print(f"{Colors.YELLOW}⚠ Found {len(missing_in_data)} entries in index.js NOT in data.js (warning only):{Colors.END}")
+        print(
+            f"{Colors.YELLOW}⚠ Found {len(missing_in_data)} entries in index.js NOT in data.js (warning only):{Colors.END}"
+        )
         for entry in missing_in_data[:5]:  # Show first 5
             print(f"  • {entry['title']} → {entry['file']}")
         if len(missing_in_data) > 5:
@@ -143,7 +150,9 @@ def check_integrity(data_resources, search_entries):
         print(f"\n{Colors.RED}Critical issues found:{Colors.END}")
         for issue in issues:
             print(f"  {issue}")
-        print(f"\n{Colors.YELLOW}💡 Fix: Add missing resources to index.js searchData array{Colors.END}")
+        print(
+            f"\n{Colors.YELLOW}💡 Fix: Add missing resources to index.js searchData array{Colors.END}"
+        )
         print(f"{Colors.BOLD}{'=' * 70}{Colors.END}\n")
         return False
     else:
@@ -160,8 +169,8 @@ def main():
     repo_root = script_dir.parent.parent
     os.chdir(repo_root)
 
-    data_js_path = repo_root / 'public' / 'data.js'
-    index_js_path = repo_root / 'public' / 'index.js'
+    data_js_path = repo_root / "public" / "data.js"
+    index_js_path = repo_root / "public" / "index.js"
 
     # ファイル存在チェック
     if not data_js_path.exists():
@@ -186,5 +195,5 @@ def main():
     sys.exit(0 if success else 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

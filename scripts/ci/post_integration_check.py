@@ -12,7 +12,7 @@ AWS SAP 学習リソース 統合後検証スクリプト
 import re
 import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import ClassVar
 
 
 class PostIntegrationChecker:
@@ -23,99 +23,99 @@ class PostIntegrationChecker:
     TOC_PATTERN = r'class="(sidebar-toc|page-toc|toc-list)'
 
     # チェック対象ディレクトリ
-    CATEGORY_DIRS = [
-        'networking',
-        'security-governance',
-        'compute-applications',
-        'content-delivery-dns',
-        'development-deployment',
-        'storage-database',
-        'migration',
-        'analytics-bigdata',
-        'organizational-complexity',
-        'continuous-improvement',
-        'cost-control',
-        'new-solutions'
+    CATEGORY_DIRS: ClassVar[list[str]] = [
+        "networking",
+        "security-governance",
+        "compute-applications",
+        "content-delivery-dns",
+        "development-deployment",
+        "storage-database",
+        "migration",
+        "analytics-bigdata",
+        "organizational-complexity",
+        "continuous-improvement",
+        "cost-control",
+        "new-solutions",
     ]
 
     def __init__(self, verbose: bool = False):
         self.repo_root = Path(__file__).parent.parent.parent
         self.verbose = verbose
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
         self.passed = 0
         self.failed = 0
 
     def check_shared_css(self, file_path: Path) -> bool:
         """共有CSSリンクの存在確認"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return bool(re.search(self.SHARED_CSS_PATTERN, content))
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return False
 
     def check_breadcrumb(self, file_path: Path) -> bool:
         """ブレッドクラムの存在確認"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return bool(re.search(self.BREADCRUMB_PATTERN, content))
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return False
 
     def check_toc(self, file_path: Path) -> bool:
         """TOCの存在確認"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return bool(re.search(self.TOC_PATTERN, content))
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return False
 
     def get_html_title(self, file_path: Path) -> str:
         """HTMLファイルからタイトルを取得"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            match = re.search(r'<title>([^<]+)</title>', content)
+            match = re.search(r"<title>([^<]+)</title>", content)
             return match.group(1) if match else file_path.stem
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return file_path.stem
 
     def check_data_js_entry(self, rel_path: str) -> bool:
         """data.jsにリソースが登録されているか確認"""
         data_js_path = self.repo_root / "data.js"
         try:
-            with open(data_js_path, 'r', encoding='utf-8') as f:
+            with open(data_js_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return rel_path in content
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return False
 
     def check_index_js_entry(self, rel_path: str) -> bool:
         """index.jsのsearchDataにリソースが登録されているか確認"""
         index_js_path = self.repo_root / "index.js"
         try:
-            with open(index_js_path, 'r', encoding='utf-8') as f:
+            with open(index_js_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return rel_path in content
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return False
 
-    def check_file(self, file_path: Path, category: str) -> Dict:
+    def check_file(self, file_path: Path, category: str) -> dict:
         """単一ファイルの検証"""
         rel_path = f"{category}/{file_path.name}"
         title = self.get_html_title(file_path)
 
         results = {
-            'file': rel_path,
-            'title': title,
-            'shared_css': self.check_shared_css(file_path),
-            'breadcrumb': self.check_breadcrumb(file_path),
-            'toc': self.check_toc(file_path),
-            'data_js': self.check_data_js_entry(rel_path),
-            'index_js': self.check_index_js_entry(rel_path)
+            "file": rel_path,
+            "title": title,
+            "shared_css": self.check_shared_css(file_path),
+            "breadcrumb": self.check_breadcrumb(file_path),
+            "toc": self.check_toc(file_path),
+            "data_js": self.check_data_js_entry(rel_path),
+            "index_js": self.check_index_js_entry(rel_path),
         }
 
         return results
@@ -143,16 +143,16 @@ class PostIntegrationChecker:
                 results = self.check_file(html_file, category)
                 all_results.append(results)
 
-                if not results['shared_css']:
-                    missing_css.append(results['file'])
-                if not results['breadcrumb']:
-                    missing_breadcrumb.append(results['file'])
-                if not results['toc']:
-                    missing_toc.append(results['file'])
-                if not results['data_js']:
-                    missing_data_js.append(results['file'])
-                if not results['index_js']:
-                    missing_index_js.append(results['file'])
+                if not results["shared_css"]:
+                    missing_css.append(results["file"])
+                if not results["breadcrumb"]:
+                    missing_breadcrumb.append(results["file"])
+                if not results["toc"]:
+                    missing_toc.append(results["file"])
+                if not results["data_js"]:
+                    missing_data_js.append(results["file"])
+                if not results["index_js"]:
+                    missing_index_js.append(results["file"])
 
         # 結果表示
         total_files = len(all_results)
@@ -169,7 +169,7 @@ class PostIntegrationChecker:
                     print(f"│    ... 他 {len(missing_css) - 10} ファイル")
             self.errors.append(f"共有CSSリンク欠落: {len(missing_css)} ファイル")
         else:
-            print(f"│ ✅ すべてのファイルに共有CSSリンクあり")
+            print("│ ✅ すべてのファイルに共有CSSリンクあり")
         print("└─────────────────────────────────────────────────────────────┘")
 
         # ブレッドクラム
@@ -179,9 +179,11 @@ class PostIntegrationChecker:
             if self.verbose:
                 for f in missing_breadcrumb[:10]:
                     print(f"│    - {f}")
-            self.warnings.append(f"ブレッドクラム欠落: {len(missing_breadcrumb)} ファイル")
+            self.warnings.append(
+                f"ブレッドクラム欠落: {len(missing_breadcrumb)} ファイル"
+            )
         else:
-            print(f"│ ✅ すべてのファイルにブレッドクラムあり")
+            print("│ ✅ すべてのファイルにブレッドクラムあり")
         print("└─────────────────────────────────────────────────────────────┘")
 
         # TOC
@@ -193,7 +195,7 @@ class PostIntegrationChecker:
                     print(f"│    - {f}")
             self.warnings.append(f"TOC欠落: {len(missing_toc)} ファイル")
         else:
-            print(f"│ ✅ すべてのファイルにTOCあり")
+            print("│ ✅ すべてのファイルにTOCあり")
         print("└─────────────────────────────────────────────────────────────┘")
 
         # data.js
@@ -207,7 +209,7 @@ class PostIntegrationChecker:
                     print(f"│    ... 他 {len(missing_data_js) - 20} ファイル")
             self.errors.append(f"data.js未登録: {len(missing_data_js)} ファイル")
         else:
-            print(f"│ ✅ すべてのファイルがdata.jsに登録済み")
+            print("│ ✅ すべてのファイルがdata.jsに登録済み")
         print("└─────────────────────────────────────────────────────────────┘")
 
         # index.js
@@ -221,7 +223,7 @@ class PostIntegrationChecker:
                     print(f"│    ... 他 {len(missing_index_js) - 20} ファイル")
             self.errors.append(f"index.js未登録: {len(missing_index_js)} ファイル")
         else:
-            print(f"│ ✅ すべてのファイルがindex.js searchDataに登録済み")
+            print("│ ✅ すべてのファイルがindex.js searchDataに登録済み")
         print("└─────────────────────────────────────────────────────────────┘")
 
         # サマリー
@@ -254,14 +256,10 @@ def main():
 
   # 詳細表示
   python3 post_integration_check.py --verbose
-        """
+        """,
     )
 
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="詳細な出力を表示"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="詳細な出力を表示")
 
     args = parser.parse_args()
 

@@ -8,10 +8,12 @@ WCAG 2.1 レベルAA（4.5:1）およびレベルAAA（7:1）に適合してい�
 参考: https://www.w3.org/TR/WCAG21/#contrast-minimum
 """
 
+
 def hex_to_rgb(hex_color):
     """16進数カラーコードをRGBタプルに変換"""
-    hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
 
 def relative_luminance(rgb):
     """
@@ -29,6 +31,7 @@ def relative_luminance(rgb):
     # 相対輝度を計算
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
+
 def contrast_ratio(color1, color2):
     """
     2つの色のコントラスト比を計算
@@ -42,6 +45,7 @@ def contrast_ratio(color1, color2):
     darker = min(lum1, lum2)
 
     return (lighter + 0.05) / (darker + 0.05)
+
 
 def check_compliance(ratio, text_type="normal"):
     """
@@ -66,11 +70,12 @@ def check_compliance(ratio, text_type="normal"):
     aaa_pass = ratio >= aaa_required if aaa_required else False
 
     return {
-        'aa': aa_pass,
-        'aaa': aaa_pass,
-        'aa_required': aa_required,
-        'aaa_required': aaa_required
+        "aa": aa_pass,
+        "aaa": aaa_pass,
+        "aa_required": aa_required,
+        "aaa_required": aaa_required,
     }
+
 
 def format_result(fg, bg, usage, text_type="normal"):
     """結果を整形して表示"""
@@ -78,22 +83,29 @@ def format_result(fg, bg, usage, text_type="normal"):
     compliance = check_compliance(ratio, text_type)
 
     # 結果の絵文字
-    aa_emoji = "✅" if compliance['aa'] else "❌"
-    aaa_emoji = "✅" if compliance['aaa'] else ("❌" if compliance['aaa_required'] else "➖")
+    aa_emoji = "✅" if compliance["aa"] else "❌"
+    aaa_emoji = (
+        "✅" if compliance["aaa"] else ("❌" if compliance["aaa_required"] else "➖")
+    )
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"前景色: {fg} | 背景色: {bg}")
     print(f"用途: {usage}")
     print(f"テキストタイプ: {text_type}")
-    print(f"-" * 80)
+    print("-" * 80)
     print(f"コントラスト比: {ratio:.2f}:1")
-    print(f"レベルAA  (≥{compliance['aa_required']:.1f}:1): {aa_emoji} {'PASS' if compliance['aa'] else 'FAIL'}")
-    if compliance['aaa_required']:
-        print(f"レベルAAA (≥{compliance['aaa_required']:.1f}:1): {aaa_emoji} {'PASS' if compliance['aaa'] else 'FAIL'}")
+    print(
+        f"レベルAA  (≥{compliance['aa_required']:.1f}:1): {aa_emoji} {'PASS' if compliance['aa'] else 'FAIL'}"
+    )
+    if compliance["aaa_required"]:
+        print(
+            f"レベルAAA (≥{compliance['aaa_required']:.1f}:1): {aaa_emoji} {'PASS' if compliance['aaa'] else 'FAIL'}"
+        )
     else:
-        print(f"レベルAAA: ➖ (要件なし)")
+        print("レベルAAA: ➖ (要件なし)")
 
-    return compliance['aa']
+    return compliance["aa"]
+
 
 def main():
     """メイン処理: 全ての色の組み合わせを検証"""
@@ -106,92 +118,92 @@ def main():
     # index.htmlで使用されている色の組み合わせ (2025年更新: WCAG 2.1 AA準拠色)
     index_colors = [
         {
-            'fg': '#374151',
-            'bg': '#F9FAFB',
-            'usage': 'リソースリストのリンクテキスト (resource-list a)',
-            'type': 'normal'
+            "fg": "#374151",
+            "bg": "#F9FAFB",
+            "usage": "リソースリストのリンクテキスト (resource-list a)",
+            "type": "normal",
         },
         {
-            'fg': '#6B7280',
-            'bg': '#FFFFFF',
-            'usage': '統計ラベル (stat-label) - WCAG 2.1適合: 4.83:1',
-            'type': 'normal'
+            "fg": "#6B7280",
+            "bg": "#FFFFFF",
+            "usage": "統計ラベル (stat-label) - WCAG 2.1適合: 4.83:1",
+            "type": "normal",
         },
         {
-            'fg': '#dc7600',
-            'bg': '#FFFFFF',
-            'usage': 'AWSオレンジ見出し・アクセント（アクセシブル版）- WCAG 2.1適合: 3.17:1',
-            'type': 'large'
+            "fg": "#dc7600",
+            "bg": "#FFFFFF",
+            "usage": "AWSオレンジ見出し・アクセント（アクセシブル版）- WCAG 2.1適合: 3.17:1",
+            "type": "large",
         },
         {
-            'fg': '#232F3E',
-            'bg': '#F9FAFB',
-            'usage': 'メインテキスト・見出し',
-            'type': 'large'
+            "fg": "#232F3E",
+            "bg": "#F9FAFB",
+            "usage": "メインテキスト・見出し",
+            "type": "large",
         },
         {
-            'fg': '#909296',
-            'bg': '#FFFFFF',
-            'usage': 'ボーダー (UIコンポーネント) - WCAG 2.1適合: 3.12:1',
-            'type': 'ui'
+            "fg": "#909296",
+            "bg": "#FFFFFF",
+            "usage": "ボーダー (UIコンポーネント) - WCAG 2.1適合: 3.12:1",
+            "type": "ui",
         },
         {
-            'fg': '#6B7280',
-            'bg': '#FFFFFF',
-            'usage': 'セカンダリテキスト - WCAG 2.1適合: 4.83:1',
-            'type': 'normal'
+            "fg": "#6B7280",
+            "bg": "#FFFFFF",
+            "usage": "セカンダリテキスト - WCAG 2.1適合: 4.83:1",
+            "type": "normal",
         },
         {
-            'fg': '#FFFFFF',
-            'bg': '#dc7600',
-            'usage': '白文字on AWSオレンジ (ボタン、バッジ) - WCAG 2.1適合: 3.17:1',
-            'type': 'large'
+            "fg": "#FFFFFF",
+            "bg": "#dc7600",
+            "usage": "白文字on AWSオレンジ (ボタン、バッジ) - WCAG 2.1適合: 3.17:1",
+            "type": "large",
         },
         {
-            'fg': '#FFFFFF',
-            'bg': '#232F3E',
-            'usage': '白文字on AWSダーク (ヘッダー)',
-            'type': 'large'
+            "fg": "#FFFFFF",
+            "bg": "#232F3E",
+            "usage": "白文字on AWSダーク (ヘッダー)",
+            "type": "large",
         },
     ]
 
     # quiz.htmlで使用されている色の組み合わせ (2025年更新: WCAG 2.1 AA準拠色)
     quiz_colors = [
         {
-            'fg': '#2c3e50',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html メインテキスト',
-            'type': 'normal'
+            "fg": "#2c3e50",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html メインテキスト",
+            "type": "normal",
         },
         {
-            'fg': '#4a5568',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html セカンダリテキスト',
-            'type': 'normal'
+            "fg": "#4a5568",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html セカンダリテキスト",
+            "type": "normal",
         },
         {
-            'fg': '#3378be',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html スコア表示（Good）- WCAG 2.1適合: 4.59:1',
-            'type': 'normal'
+            "fg": "#3378be",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html スコア表示（Good）- WCAG 2.1適合: 4.59:1",
+            "type": "normal",
         },
         {
-            'fg': '#008662',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html 正解表示（Excellent）- WCAG 2.1適合: 4.58:1',
-            'type': 'normal'
+            "fg": "#008662",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html 正解表示（Excellent）- WCAG 2.1適合: 4.58:1",
+            "type": "normal",
         },
         {
-            'fg': '#c35237',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html 不正解表示（Poor）- WCAG 2.1適合: 4.58:1',
-            'type': 'normal'
+            "fg": "#c35237",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html 不正解表示（Poor）- WCAG 2.1適合: 4.58:1",
+            "type": "normal",
         },
         {
-            'fg': '#9e6c0f',
-            'bg': '#FFFFFF',
-            'usage': 'quiz.html スコア表示（Fair）- WCAG 2.1適合: 4.56:1',
-            'type': 'normal'
+            "fg": "#9e6c0f",
+            "bg": "#FFFFFF",
+            "usage": "quiz.html スコア表示（Fair）- WCAG 2.1適合: 4.56:1",
+            "type": "normal",
         },
     ]
 
@@ -202,10 +214,7 @@ def main():
     index_results = []
     for color_set in index_colors:
         result = format_result(
-            color_set['fg'],
-            color_set['bg'],
-            color_set['usage'],
-            color_set['type']
+            color_set["fg"], color_set["bg"], color_set["usage"], color_set["type"]
         )
         index_results.append(result)
 
@@ -216,10 +225,7 @@ def main():
     quiz_results = []
     for color_set in quiz_colors:
         result = format_result(
-            color_set['fg'],
-            color_set['bg'],
-            color_set['usage'],
-            color_set['type']
+            color_set["fg"], color_set["bg"], color_set["usage"], color_set["type"]
         )
         quiz_results.append(result)
 
@@ -242,7 +248,9 @@ def main():
     elif pass_rate >= 80:
         print("\n🟡 大部分の色の組み合わせが適合していますが、一部修正が必要です。")
     else:
-        print("\n❌ 多くの色の組み合わせがWCAG 2.1 レベルAAに適合していません。修正が必要です。")
+        print(
+            "\n❌ 多くの色の組み合わせがWCAG 2.1 レベルAAに適合していません。修正が必要です。"
+        )
 
     print("\n" + "=" * 80)
     print("推奨アクション")
@@ -258,6 +266,7 @@ WCAG 2.1 レベルAA要件:
 - 大きいテキスト (18pt以上 or 14pt太字以上): 3:1以上
 - UIコンポーネント: 3:1以上
 """)
+
 
 if __name__ == "__main__":
     main()
