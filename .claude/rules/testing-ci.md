@@ -42,6 +42,7 @@ Tests in `tests/e2e/` organized by concern: `interaction/`, `navigation/`, `link
 | `qa-unified.yml` | PR to master/gh-pages (CSS/src/public/tests changes) | W3C HTML + CSS validation (static), then Playwright + CSS runtime |
 | `playwright-e2e.yml` | push to master / PR (src/public/tests changes) | Full E2E across chromium/firefox/webkit/mobile-chrome |
 | `pr-quality-check.yml` | PR to master/gh-pages (src/public/scripts changes) | CSS validation + link checks |
+| `security-scan.yml` | push to master / PR / manual | gitleaks over full history (false positives → `.gitleaksignore`) + Semgrep, fails on ERROR severity |
 
 ## Pre-Commit Hooks
 
