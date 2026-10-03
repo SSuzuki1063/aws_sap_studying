@@ -1,0 +1,1332 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Kinesis Data Firehose 高度機能完全図解
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/kinesis_firehose_infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#Kinesis-Data-Firehose-とは？">🎯 Kinesis Data Firehose とは？</a> </li><li class="toc-h3"> <a href="#たとえ話-最新式の製品仕分け工場">🏭 たとえ話：最新式の製品仕分け工場</a> </li><li class="toc-h3"> <a href="#Data-Firehose-処理フロー全体図">📊 Data Firehose 処理フロー全体図</a> </li><li class="toc-h2"> <a href="#動的パーティショニング詳細図解">📂 動的パーティショニング詳細図解</a> </li><li class="toc-h3"> <a href="#たとえ話-AI図書館司書の自動分類システム">📚 たとえ話：AI図書館司書の自動分類システム</a> </li><li class="toc-h3"> <a href="#パーティショニング-Before-&#38;amp;-After">🔄 パーティショニング Before &amp; After</a> </li><li class="toc-h2"> <a href="#列指向フォーマットParquet-ORC詳細解説">📊 列指向フォーマット（Parquet / ORC）詳細解説</a> </li><li class="toc-h3"> <a href="#️-たとえ話-倉庫の効率的な商品保管方法">🗄️ たとえ話：倉庫の効率的な商品保管方法</a> </li><li class="toc-h3"> <a href="#フォーマット比較詳細">📋 フォーマット比較詳細</a> </li><li class="toc-h3"> <a href="#データ構造の内部比較">🔍 データ構造の内部比較</a> </li><li class="toc-h2"> <a href="#Glue-パーティション射影-詳細メカニズム">🎯 Glue パーティション射影 詳細メカニズム</a> </li><li class="toc-h3"> <a href="#️-たとえ話-AI図書館カタログシステム">🗂️ たとえ話：AI図書館カタログシステム</a> </li><li class="toc-h3"> <a href="#パーティション射影の動作原理">🧠 パーティション射影の動作原理</a> </li><li class="toc-h2"> <a href="#パフォーマンス-&#38;amp;-コスト効果の実測値">📈 パフォーマンス &amp; コスト効果の実測値</a> </li><li class="toc-h3"> <a href="#実際の改善効果大手EC企業での事例">🏆 実際の改善効果（大手EC企業での事例）</a> </li><li class="toc-h3"> <a href="#年間コスト削減の内訳">💹 年間コスト削減の内訳</a> </li><li class="toc-h2"> <a href="#実際のユースケース詳細">💼 実際のユースケース詳細</a> </li><li class="toc-h3"> <a href="#業界別活用事例">🎯 業界別活用事例</a> </li><li class="toc-h2"> <a href="#️-実装ガイド詳細">🛠️ 実装ガイド詳細</a> </li><li class="toc-h3"> <a href="#ステップバイステップ実装">🚀 ステップバイステップ実装</a> </li><li class="toc-h2"> <a href="#⚠️-トラブルシューティング-&#38;amp;-ベストプラクティス">⚠️ トラブルシューティング &amp; ベストプラクティス</a> </li><li class="toc-h3"> <a href="#よくある問題と解決方法">🔧 よくある問題と解決方法</a> </li><li class="toc-h3"> <a href="#今すぐ始めよう！">🚀 今すぐ始めよう！</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> 分析・運用・クイズ </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> データ分析 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Kinesis Firehose Infographic </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>
+     🚀 Kinesis Data Firehose
+    </h1>
+
+<p>
+     動的パーティショニング・列指向フォーマット・Glue パーティション射影 完全図解
+    </p>
+</div>
+<div class="section">
+<h2 id="Kinesis-Data-Firehose-とは？">
+     🎯 Kinesis Data Firehose とは？
+    </h2>
+<div class="analogy-box">
+<h3 id="たとえ話-最新式の製品仕分け工場">
+      🏭 たとえ話：最新式の製品仕分け工場
+     </h3>
+<p>
+<strong>
+       想像してください：
+      </strong>
+      あなたが運営する工場には、毎分数千個の製品が流れてきます。従来なら作業員が手作業で一つ一つ分類し、倉庫の適切な場所に保管していました。
+     </p>
+<p>
+<strong>
+       Kinesis Data Firehose は：
+      </strong>
+      AI搭載の自動仕分けシステムです。製品の特徴を自動で判別し、最適な保管形式で、適切な倉庫区画に効率的に格納してくれます！
+     </p>
+</div>
+<div class="data-flow-diagram">
+<h3 id="Data-Firehose-処理フロー全体図" style="text-align: center; margin-bottom: 30px; color: #2c3e50;">
+      📊 Data Firehose 処理フロー全体図
+     </h3>
+<div class="flow-container">
+<div class="data-source">
+       📱 リアルタイムデータソース
+       <br/>
+<small>
+        ログ・イベント・メトリクス・IoTデータ
+       </small>
+<br/>
+<small style="opacity: 0.8;">
+        毎秒数千〜数万レコード
+       </small>
+</div>
+<div class="flow-arrow">
+       ⬇️
+      </div>
+<div class="firehose-processing">
+       🔄 Kinesis Data Firehose
+       <br/>
+<small>
+        • データ変換・圧縮
+       </small>
+<br/>
+<small>
+        • 動的パーティショニング
+       </small>
+<br/>
+<small>
+        • 列指向フォーマット変換
+       </small>
+</div>
+<div class="flow-arrow">
+       ⬇️
+      </div>
+<div class="s3-storage">
+       🗃️ Amazon S3 最適化ストレージ
+       <br/>
+<small>
+        パーティション別・列指向・圧縮済み
+       </small>
+<br/>
+<small style="opacity: 0.8;">
+        高速クエリ・低コスト実現
+       </small>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="動的パーティショニング詳細図解">
+     📂 動的パーティショニング詳細図解
+    </h2>
+<div class="analogy-box">
+<h3 id="たとえ話-AI図書館司書の自動分類システム">
+      📚 たとえ話：AI図書館司書の自動分類システム
+     </h3>
+<p>
+<strong>
+       従来の図書館：
+      </strong>
+      すべての本を入荷順に一つの大きな書庫に保管
+     </p>
+<p>
+<strong>
+       AI図書館司書：
+      </strong>
+      本の内容を瞬時に分析し、ジャンル・著者・出版年別に自動で適切な書棚に分類配置
+     </p>
+<p>
+<strong>
+       メリット：
+      </strong>
+      特定の本を探すとき、全書庫を探す必要がなく、該当する書棚だけを確認すれば見つかる！
+     </p>
+</div>
+<div class="partitioning-demo">
+<h3 id="パーティショニング-Before-&amp;-After" style="margin-bottom: 30px;">
+      🔄 パーティショニング Before &amp; After
+     </h3>
+<div class="before-after">
+<div class="before-box">
+<h4>
+        ❌ 従来の静的パーティショニング
+       </h4>
+<div class="file-structure">
+        s3://my-bucket/
+        <br/>
+        ├── 2024/01/01/
+        <br/>
+        │   └── firehose_output.json (混在データ)
+        <br/>
+        ├── 2024/01/02/
+        <br/>
+        │   └── firehose_output.json (混在データ)
+        <br/>
+        └── 2024/01/03/
+        <br/>
+        └── firehose_output.json (混在データ)
+       </div>
+<p>
+<strong>
+         問題点：
+        </strong>
+</p>
+<ul style="margin-top: 15px;">
+<li>
+         地域別クエリでも全ファイルスキャン
+        </li>
+<li>
+         不要なデータ読み取りでコスト増
+        </li>
+<li>
+         クエリ時間が長い
+        </li>
+</ul>
+</div>
+<div class="after-box">
+<h4>
+        ✅ 動的パーティショニング
+       </h4>
+<div class="file-structure">
+        s3://my-bucket/
+        <br/>
+        ├── region=us-east-1/year=2024/month=01/
+        <br/>
+        │   └── optimized_data.parquet
+        <br/>
+        ├── region=us-west-2/year=2024/month=01/
+        <br/>
+        │   └── optimized_data.parquet
+        <br/>
+        ├── region=ap-northeast-1/year=2024/month=01/
+        <br/>
+        │   └── optimized_data.parquet
+        <br/>
+        └── region=eu-west-1/year=2024/month=01/
+        <br/>
+        └── optimized_data.parquet
+       </div>
+<p>
+<strong>
+         メリット：
+        </strong>
+</p>
+<ul style="margin-top: 15px;">
+<li>
+         地域別クエリで該当ファイルのみ読み取り
+        </li>
+<li>
+         データスキャン量90%削減
+        </li>
+<li>
+         クエリ時間大幅短縮
+        </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="列指向フォーマットParquet-ORC詳細解説">
+     📊 列指向フォーマット（Parquet / ORC）詳細解説
+    </h2>
+<div class="analogy-box">
+<h3 id="️-たとえ話-倉庫の効率的な商品保管方法">
+      🗄️ たとえ話：倉庫の効率的な商品保管方法
+     </h3>
+<p>
+<strong>
+       行指向（従来）：
+      </strong>
+      商品を顧客の注文単位でまとめて保管。「田中さんの注文：りんご、牛乳、パン」を一つの箱に
+     </p>
+<p>
+<strong>
+       列指向（最適化）：
+      </strong>
+      商品の種類別に保管。「りんご倉庫」「牛乳倉庫」「パン倉庫」に分けて保管
+     </p>
+<p>
+<strong>
+       効果：
+      </strong>
+      「りんごの売上だけ知りたい」とき、りんご倉庫だけ確認すれば済む！
+     </p>
+</div>
+<div class="format-comparison">
+<h3 id="フォーマット比較詳細" style="text-align: center; margin-bottom: 30px; color: #2c3e50;">
+      📋 フォーマット比較詳細
+     </h3>
+<div class="format-grid">
+<div class="format-box">
+<span class="format-icon">
+        📄
+       </span>
+<h4>
+        JSON（行指向）
+       </h4>
+<p>
+<strong>
+         特徴：
+        </strong>
+        人間が読みやすい
+       </p>
+<p>
+<strong>
+         サイズ：
+        </strong>
+        100MB
+       </p>
+<p>
+<strong>
+         圧縮率：
+        </strong>
+        低
+       </p>
+<p>
+<strong>
+         クエリ速度：
+        </strong>
+        遅い
+       </p>
+<p>
+<strong>
+         用途：
+        </strong>
+        開発・デバッグ
+       </p>
+</div>
+<div class="format-box">
+<span class="format-icon">
+        🗂️
+       </span>
+<h4>
+        Parquet（列指向）
+       </h4>
+<p>
+<strong>
+         特徴：
+        </strong>
+        分析に最適化
+       </p>
+<p>
+<strong>
+         サイズ：
+        </strong>
+        15MB
+       </p>
+<p>
+<strong>
+         圧縮率：
+        </strong>
+        非常に高い
+       </p>
+<p>
+<strong>
+         クエリ速度：
+        </strong>
+        高速
+       </p>
+<p>
+<strong>
+         用途：
+        </strong>
+        データ分析・ML
+       </p>
+</div>
+<div class="format-box">
+<span class="format-icon">
+        🗃️
+       </span>
+<h4>
+        ORC（列指向）
+       </h4>
+<p>
+<strong>
+         特徴：
+        </strong>
+        Hive/Spark最適化
+       </p>
+<p>
+<strong>
+         サイズ：
+        </strong>
+        12MB
+       </p>
+<p>
+<strong>
+         圧縮率：
+        </strong>
+        最高
+       </p>
+<p>
+<strong>
+         クエリ速度：
+        </strong>
+        最高速
+       </p>
+<p>
+<strong>
+         用途：
+        </strong>
+        ビッグデータ処理
+       </p>
+</div>
+</div>
+</div>
+<div class="data-structure-demo">
+<h3 id="データ構造の内部比較" style="text-align: center; margin-bottom: 30px; color: #2c3e50;">
+      🔍 データ構造の内部比較
+     </h3>
+<div class="structure-comparison">
+<div class="structure-box row-oriented">
+<h4>
+        📄 行指向ストレージ（JSON）
+       </h4>
+<table class="data-table">
+<tr>
+<th>
+          行1
+         </th>
+<td>
+          田中
+         </td>
+<td>
+          28
+         </td>
+<td>
+          東京
+         </td>
+<td>
+          50000
+         </td>
+</tr>
+<tr>
+<th>
+          行2
+         </th>
+<td>
+          佐藤
+         </td>
+<td>
+          35
+         </td>
+<td>
+          大阪
+         </td>
+<td>
+          60000
+         </td>
+</tr>
+<tr>
+<th>
+          行3
+         </th>
+<td>
+          鈴木
+         </td>
+<td>
+          42
+         </td>
+<td>
+          名古屋
+         </td>
+<td>
+          55000
+         </td>
+</tr>
+<tr>
+<th>
+          行4
+         </th>
+<td>
+          高橋
+         </td>
+<td>
+          29
+         </td>
+<td>
+          福岡
+         </td>
+<td>
+          48000
+         </td>
+</tr>
+</table>
+<p>
+<strong>
+         保存方法：
+        </strong>
+        行ごとにまとめて保存
+       </p>
+<p>
+<strong>
+         問題：
+        </strong>
+        年齢だけ知りたくても全データ読み取り
+       </p>
+</div>
+<div class="structure-box column-oriented">
+<h4>
+        🗂️ 列指向ストレージ（Parquet）
+       </h4>
+<table class="data-table">
+<tr>
+<th>
+          名前列
+         </th>
+<td>
+          田中
+         </td>
+<td>
+          佐藤
+         </td>
+<td>
+          鈴木
+         </td>
+<td>
+          高橋
+         </td>
+</tr>
+<tr>
+<th>
+          年齢列
+         </th>
+<td>
+          28
+         </td>
+<td>
+          35
+         </td>
+<td>
+          42
+         </td>
+<td>
+          29
+         </td>
+</tr>
+<tr>
+<th>
+          地域列
+         </th>
+<td>
+          東京
+         </td>
+<td>
+          大阪
+         </td>
+<td>
+          名古屋
+         </td>
+<td>
+          福岡
+         </td>
+</tr>
+<tr>
+<th>
+          給与列
+         </th>
+<td>
+          50000
+         </td>
+<td>
+          60000
+         </td>
+<td>
+          55000
+         </td>
+<td>
+          48000
+         </td>
+</tr>
+</table>
+<p>
+<strong>
+         保存方法：
+        </strong>
+        列ごとに分けて保存・圧縮
+       </p>
+<p>
+<strong>
+         メリット：
+        </strong>
+        年齢列だけ読み取り可能
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="Glue-パーティション射影-詳細メカニズム">
+     🎯 Glue パーティション射影 詳細メカニズム
+    </h2>
+<div class="analogy-box">
+<h3 id="️-たとえ話-AI図書館カタログシステム">
+      🗂️ たとえ話：AI図書館カタログシステム
+     </h3>
+<p>
+<strong>
+       従来の図書館：
+      </strong>
+      新しい本が入るたびに司書が手動でカタログカードを作成・分類
+     </p>
+<p>
+<strong>
+       パーティション射影：
+      </strong>
+      本のタイトルから自動で「出版年」「ジャンル」「著者」を推測し、カタログを自動生成
+     </p>
+<p>
+<strong>
+       革新的な点：
+      </strong>
+      実際にカタログを確認しなくても、ルールベースで瞬時に本の場所を特定！
+     </p>
+</div>
+<div class="partition-projection">
+<h3 id="パーティション射影の動作原理" style="margin-bottom: 30px;">
+      🧠 パーティション射影の動作原理
+     </h3>
+<div class="projection-process">
+<div class="projection-step" data-step="1">
+<h4>
+        📁 パーティション構造の定義
+       </h4>
+<p>
+        S3のフォルダ構造からパターンを認識：
+        <code>
+         region=*/year=*/month=*/day=*
+        </code>
+</p>
+</div>
+<div class="projection-step" data-step="2">
+<h4>
+        🧮 射影ルールの設定
+       </h4>
+<p>
+        Glue テーブルで射影タイプを定義：
+       </p>
+<ul style="margin-top: 10px;">
+<li>
+<strong>
+          enum:
+         </strong>
+         region（us-east-1, us-west-2, ap-northeast-1）
+        </li>
+<li>
+<strong>
+          integer:
+         </strong>
+         year（2020〜2024）
+        </li>
+<li>
+<strong>
+          integer:
+         </strong>
+         month（1〜12）
+        </li>
+<li>
+<strong>
+          integer:
+         </strong>
+         day（1〜31）
+        </li>
+</ul>
+</div>
+<div class="projection-step" data-step="3">
+<h4>
+        ⚡ クエリ時の自動解決
+       </h4>
+<p>
+<code>
+         WHERE region='us-east-1' AND year=2024
+        </code>
+        のクエリ時に、Glueが自動でパス
+        <code>
+         s3://bucket/region=us-east-1/year=2024/
+        </code>
+        を生成
+       </p>
+</div>
+<div class="projection-step" data-step="4">
+<h4>
+        🚀 直接データアクセス
+       </h4>
+<p>
+        メタデータ確認不要でS3から直接データ読み取り。従来の1000倍高速化を実現
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="パフォーマンス-&amp;-コスト効果の実測値">
+     📈 パフォーマンス &amp; コスト効果の実測値
+    </h2>
+<div class="performance-metrics">
+<h3 id="実際の改善効果大手EC企業での事例" style="margin-bottom: 30px; text-align: center;">
+      🏆 実際の改善効果（大手EC企業での事例）
+     </h3>
+<div class="metrics-grid">
+<div class="metric-card">
+<h4>
+        ⏱️ クエリ時間短縮
+       </h4>
+<div class="metric-value">
+        95%
+       </div>
+<p>
+        平均クエリ時間
+       </p>
+<p>
+        45分 → 2分15秒
+       </p>
+</div>
+<div class="metric-card">
+<h4>
+        💾 ストレージ削減
+       </h4>
+<div class="metric-value">
+        85%
+       </div>
+<p>
+        データサイズ
+       </p>
+<p>
+        1.2TB → 180GB
+       </p>
+</div>
+<div class="metric-card">
+<h4>
+        💰 コスト削減
+       </h4>
+<div class="metric-value">
+        78%
+       </div>
+<p>
+        月額費用
+       </p>
+<p>
+        $15,000 → $3,300
+       </p>
+</div>
+<div class="metric-card">
+<h4>
+        📊 スキャン量削減
+       </h4>
+<div class="metric-value">
+        92%
+       </div>
+<p>
+        読み取りデータ量
+       </p>
+<p>
+        10GB → 800MB
+       </p>
+</div>
+</div>
+</div>
+<div class="cost-savings">
+<h3 id="年間コスト削減の内訳" style="margin-bottom: 30px;">
+      💹 年間コスト削減の内訳
+     </h3>
+<div class="savings-grid">
+<div class="savings-card">
+<h4>
+        🗄️ S3ストレージ費用
+       </h4>
+<div class="savings-percentage">
+        -85%
+       </div>
+<p>
+        年間 $36,000 → $5,400
+       </p>
+<p>
+<strong>
+         削減額: $30,600
+        </strong>
+</p>
+</div>
+<div class="savings-card">
+<h4>
+        🔍 クエリ処理費用
+       </h4>
+<div class="savings-percentage">
+        -92%
+       </div>
+<p>
+        年間 $24,000 → $1,920
+       </p>
+<p>
+<strong>
+         削減額: $22,080
+        </strong>
+</p>
+</div>
+<div class="savings-card">
+<h4>
+        📡 データ転送費用
+       </h4>
+<div class="savings-percentage">
+        -70%
+       </div>
+<p>
+        年間 $12,000 → $3,600
+       </p>
+<p>
+<strong>
+         削減額: $8,400
+        </strong>
+</p>
+</div>
+<div class="savings-card">
+<h4>
+        👥 運用人件費
+       </h4>
+<div class="savings-percentage">
+        -60%
+       </div>
+<p>
+        年間 $120,000 → $48,000
+       </p>
+<p>
+<strong>
+         削減額: $72,000
+        </strong>
+</p>
+</div>
+</div>
+<div style="background: rgba(255, 255, 255, 0.2); padding: 25px; border-radius: 15px; margin-top: 30px;">
+<h4 style="text-align: center; font-size: 1.5em;">
+       🎯 年間総削減額
+      </h4>
+<p style="text-align: center; font-size: 3em; font-weight: bold; color: #00ff88;">
+       $133,080
+      </p>
+<p style="text-align: center; font-size: 1.2em;">
+       投資回収期間：3ヶ月
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実際のユースケース詳細">
+     💼 実際のユースケース詳細
+    </h2>
+<div class="use-cases">
+<h3 id="業界別活用事例" style="margin-bottom: 30px; text-align: center;">
+      🎯 業界別活用事例
+     </h3>
+<div class="use-case-grid">
+<div class="use-case">
+<span class="use-case-icon">
+        🛒
+       </span>
+<h4>
+        Eコマース：リアルタイム分析
+       </h4>
+<p>
+<strong>
+         データ：
+        </strong>
+        クリックストリーム、購入履歴、在庫変動
+       </p>
+<p>
+<strong>
+         パーティション：
+        </strong>
+        地域・時間・カテゴリ別
+       </p>
+<p>
+<strong>
+         効果：
+        </strong>
+        リアルタイム在庫最適化、パーソナライゼーション
+       </p>
+<p>
+<strong>
+         成果：
+        </strong>
+        売上15%向上、在庫コスト30%削減
+       </p>
+</div>
+<div class="use-case">
+<span class="use-case-icon">
+        🏥
+       </span>
+<h4>
+        ヘルスケア：患者データ分析
+       </h4>
+<p>
+<strong>
+         データ：
+        </strong>
+        バイタル記録、診療履歴、検査結果
+       </p>
+<p>
+<strong>
+         パーティション：
+        </strong>
+        病院・診療科・日付別
+       </p>
+<p>
+<strong>
+         効果：
+        </strong>
+        疾患パターン分析、治療効果測定
+       </p>
+<p>
+<strong>
+         成果：
+        </strong>
+        診断精度20%向上、コスト40%削減
+       </p>
+</div>
+<div class="use-case">
+<span class="use-case-icon">
+        🚗
+       </span>
+<h4>
+        IoT：車両テレマティクス
+       </h4>
+<p>
+<strong>
+         データ：
+        </strong>
+        位置情報、燃費、運転パターン
+       </p>
+<p>
+<strong>
+         パーティション：
+        </strong>
+        車両ID・地域・時間別
+       </p>
+<p>
+<strong>
+         効果：
+        </strong>
+        予防メンテナンス、ルート最適化
+       </p>
+<p>
+<strong>
+         成果：
+        </strong>
+        故障率50%減、燃費25%改善
+       </p>
+</div>
+<div class="use-case">
+<span class="use-case-icon">
+        📺
+       </span>
+<h4>
+        メディア：視聴行動分析
+       </h4>
+<p>
+<strong>
+         データ：
+        </strong>
+        視聴履歴、エンゲージメント、デバイス情報
+       </p>
+<p>
+<strong>
+         パーティション：
+        </strong>
+        地域・デバイス・コンテンツ別
+       </p>
+<p>
+<strong>
+         効果：
+        </strong>
+        コンテンツ推薦、配信最適化
+       </p>
+<p>
+<strong>
+         成果：
+        </strong>
+        視聴時間35%増、解約率60%減
+       </p>
+</div>
+<div class="use-case">
+<span class="use-case-icon">
+        🏭
+       </span>
+<h4>
+        製造業：品質管理
+       </h4>
+<p>
+<strong>
+         データ：
+        </strong>
+        センサーデータ、品質検査結果、生産ライン状況
+       </p>
+<p>
+<strong>
+         パーティション：
+        </strong>
+        工場・ライン・時間別
+       </p>
+<p>
+<strong>
+         効果：
+        </strong>
+        不良品予測、設備最適化
+       </p>
+<p>
+<strong>
+         成果：
+        </strong>
+        不良率80%減、稼働率15%向上
+       </p>
+</div>
+<div class="use-case">
+<span class="use-case-icon">
+        💰
+       </span>
+<h4>
+        金融：リスク分析
+       </h4>
+<p>
+<strong>
+         データ：
+        </strong>
+        取引履歴、市場データ、顧客行動
+       </p>
+<p>
+<strong>
+         パーティション：
+        </strong>
+        地域・商品・リスクレベル別
+       </p>
+<p>
+<strong>
+         効果：
+        </strong>
+        不正検知、信用リスク評価
+       </p>
+<p>
+<strong>
+         成果：
+        </strong>
+        不正検知精度95%、審査時間70%短縮
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="️-実装ガイド詳細">
+     🛠️ 実装ガイド詳細
+    </h2>
+<div class="implementation-guide">
+<h3 id="ステップバイステップ実装" style="margin-bottom: 30px; text-align: center;">
+      🚀 ステップバイステップ実装
+     </h3>
+<div class="guide-steps">
+<div class="guide-step">
+<div class="step-number">
+        1
+       </div>
+<h4>
+        Firehose 配信ストリーム作成
+       </h4>
+<p>
+        動的パーティショニングを有効化し、パーティションキーを設定
+       </p>
+<div class="code-example">
+        パーティションキー例:
+        <br/>
+        region: .region
+        <br/>
+        year: !{timestamp:yyyy}
+        <br/>
+        month: !{timestamp:MM}
+        <br/>
+        day: !{timestamp:dd}
+       </div>
+</div>
+<div class="guide-step">
+<div class="step-number">
+        2
+       </div>
+<h4>
+        出力フォーマット設定
+       </h4>
+<p>
+        Parquet形式を選択し、圧縮方式（GZIP/Snappy）を設定
+       </p>
+<div class="code-example">
+        {
+        <br/>
+        "OutputFormat": "Parquet",
+        <br/>
+        "Compression": "GZIP",
+        <br/>
+        "RowGroupSize": 128
+        <br/>
+        }
+       </div>
+</div>
+<div class="guide-step">
+<div class="step-number">
+        3
+       </div>
+<h4>
+        Glue テーブル作成
+       </h4>
+<p>
+        データカタログにテーブルを作成し、パーティション射影を設定
+       </p>
+<div class="code-example">
+        テーブルプロパティ:
+        <br/>
+        projection.enabled: true
+        <br/>
+        projection.region.type: enum
+        <br/>
+        projection.year.type: integer
+        <br/>
+        projection.year.range: 2020,2030
+       </div>
+</div>
+<div class="guide-step">
+<div class="step-number">
+        4
+       </div>
+<h4>
+        射影パラメータ詳細設定
+       </h4>
+<p>
+        各パーティションの射影ルールを定義
+       </p>
+<div class="code-example">
+        projection.region.values:
+        <br/>
+        us-east-1,us-west-2,ap-northeast-1
+        <br/>
+<br/>
+        projection.month.range: 1,12
+        <br/>
+        projection.day.range: 1,31
+       </div>
+</div>
+<div class="guide-step">
+<div class="step-number">
+        5
+       </div>
+<h4>
+        データ変換設定（オプション）
+       </h4>
+<p>
+        Lambda関数でデータ前処理や形式変換を実行
+       </p>
+<div class="code-example">
+        def lambda_handler(event, context):
+        <br/>
+        # データ正規化
+        <br/>
+        # PII情報マスキング
+        <br/>
+        # 列追加・削除
+        <br/>
+        return transformed_records
+       </div>
+</div>
+<div class="guide-step">
+<div class="step-number">
+        6
+       </div>
+<h4>
+        監視・アラート設定
+       </h4>
+<p>
+        CloudWatchでメトリクス監視とアラート設定
+       </p>
+<div class="code-example">
+        監視項目:
+        <br/>
+        • 配信成功率
+        <br/>
+        • エラー率
+        <br/>
+        • データ変換時間
+        <br/>
+        • S3配信レイテンシ
+       </div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="⚠️-トラブルシューティング-&amp;-ベストプラクティス">
+     ⚠️ トラブルシューティング &amp; ベストプラクティス
+    </h2>
+<div class="troubleshooting">
+<h3 id="よくある問題と解決方法" style="margin-bottom: 30px;">
+      🔧 よくある問題と解決方法
+     </h3>
+<div class="trouble-grid">
+<div class="trouble-item">
+<h4>
+        ❌ パーティション射影が動作しない
+       </h4>
+<p>
+<strong>
+         症状：
+        </strong>
+        クエリが全パーティションをスキャン
+       </p>
+<p>
+<strong>
+         原因：
+        </strong>
+        射影設定の不備
+       </p>
+<p>
+<strong>
+         解決方法：
+        </strong>
+</p>
+<ul style="margin-top: 10px;">
+<li>
+         Glueテーブルプロパティで projection.enabled=true 確認
+        </li>
+<li>
+         S3のフォルダ構造とプロパティの一致確認
+        </li>
+<li>
+         データ型の整合性確認（integer/enum/date）
+        </li>
+</ul>
+</div>
+<div class="trouble-item">
+<h4>
+        ⚡ Parquet変換エラー
+       </h4>
+<p>
+<strong>
+         症状：
+        </strong>
+        データ配信が失敗する
+       </p>
+<p>
+<strong>
+         原因：
+        </strong>
+        スキーマ不整合
+       </p>
+<p>
+<strong>
+         解決方法：
+        </strong>
+</p>
+<ul style="margin-top: 10px;">
+<li>
+         Glue Schemaレジストリでスキーマ管理
+        </li>
+<li>
+         データ変換でのスキーマ検証追加
+        </li>
+<li>
+         エラーレコードのS3別保存設定
+        </li>
+</ul>
+</div>
+<div class="trouble-item">
+<h4>
+        🚫 動的パーティショニング失敗
+       </h4>
+<p>
+<strong>
+         症状：
+        </strong>
+        すべてのデータが同じフォルダに
+       </p>
+<p>
+<strong>
+         原因：
+        </strong>
+        パーティションキーの設定ミス
+       </p>
+<p>
+<strong>
+         解決方法：
+        </strong>
+</p>
+<ul style="margin-top: 10px;">
+<li>
+         JSONPathの文法確認
+        </li>
+<li>
+         入力データにパーティションキー存在確認
+        </li>
+<li>
+         デフォルトパーティション設定追加
+        </li>
+</ul>
+</div>
+<div class="trouble-item">
+<h4>
+        💸 予想以上のコスト発生
+       </h4>
+<p>
+<strong>
+         症状：
+        </strong>
+        S3・クエリ費用が高額
+       </p>
+<p>
+<strong>
+         原因：
+        </strong>
+        パーティション戦略の問題
+       </p>
+<p>
+<strong>
+         解決方法：
+        </strong>
+</p>
+<ul style="margin-top: 10px;">
+<li>
+         小さすぎるパーティションの統合
+        </li>
+<li>
+         アクセス頻度に基づくパーティション設計
+        </li>
+<li>
+         S3 Intelligent-Tiering有効化
+        </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div style="text-align: center; margin-top: 60px; padding: 50px; background: linear-gradient(135deg, #6c5ce7, #7E22CE); border-radius: 25px; color: white;">
+<h3 id="今すぐ始めよう！" style="font-size: 2.5em; margin-bottom: 25px;">
+     🚀 今すぐ始めよう！
+    </h3>
+<p style="font-size: 1.4em; opacity: 0.95; margin-bottom: 25px;">
+     動的パーティショニング + 列指向フォーマット + パーティション射影
+    </p>
+<div style="background: rgba(255, 255, 255, 0.2); padding: 30px; border-radius: 20px; backdrop-filter: blur(15px);">
+<h4 style="margin-bottom: 15px; font-size: 1.3em;">
+      ⚡ 実装すれば即座に実現
+     </h4>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+<div>
+<div style="font-size: 2em; font-weight: bold; color: #00ff88;">
+        95%
+       </div>
+<div>
+        クエリ時間短縮
+       </div>
+</div>
+<div>
+<div style="font-size: 2em; font-weight: bold; color: #00ff88;">
+        85%
+       </div>
+<div>
+        ストレージ削減
+       </div>
+</div>
+<div>
+<div style="font-size: 2em; font-weight: bold; color: #00ff88;">
+        78%
+       </div>
+<div>
+        コスト削減
+       </div>
+</div>
+</div>
+</div>
+</div>
+
+
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="kinesis-infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">6</span> <span class="separator" aria-hidden="true">/</span> <span class="total">15</span> </div> <a href="redshift_scaling_infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

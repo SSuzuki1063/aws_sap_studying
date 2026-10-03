@@ -1,0 +1,567 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Lambda 予約済み同時実行数とは？
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/lambda_reserved_concurrency_infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#️-レストランの席予約システムに例えると...">🍽️ レストランの席予約システムに例えると...</a> </li><li class="toc-h3"> <a href="#通常のレストラン設定なし">🏪 通常のレストラン（設定なし）</a> </li><li class="toc-h3"> <a href="#予約席ありレストラン設定あり">🏪 予約席ありレストラン（設定あり）</a> </li><li class="toc-h2"> <a href="#Lambda-での実際の仕組み">📊 Lambda での実際の仕組み</a> </li><li class="toc-h2"> <a href="#Reserved-Concurrency-vs-Provisioned-Concurrency">🔄 Reserved Concurrency vs Provisioned Concurrency</a> </li><li class="toc-h3"> <a href="#Reserved-Concurrency">📋 Reserved Concurrency</a> </li><li class="toc-h3"> <a href="#⚡-Provisioned-Concurrency">⚡ Provisioned Concurrency</a> </li><li class="toc-h2"> <a href="#コストと用途の比較">💰 コストと用途の比較</a> </li><li class="toc-h3"> <a href="#まとめ">🚀 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> コスト最適化 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>
+     🚀 AWS Lambda 予約済み同時実行数
+    </h1>
+
+<p>
+     レストランの席予約システムで理解しよう！
+    </p>
+</div>
+<div class="content">
+<div class="analogy-section">
+<h2 class="analogy-title" id="️-レストランの席予約システムに例えると...">
+<span>
+       🍽️
+      </span>
+      レストランの席予約システムに例えると...
+     </h2>
+<div class="restaurant-visual">
+<div class="restaurant-side">
+<h3 id="通常のレストラン設定なし" style="color: #2c3e50; margin-bottom: 15px;">
+        🏪 通常のレストラン（設定なし）
+       </h3>
+<p style="margin-bottom: 15px; font-size: 0.9rem;">
+        全ての席が早い者勝ち！
+       </p>
+<div class="seats-grid">
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat available">
+         🪑
+        </div>
+<div class="seat available">
+         🪑
+        </div>
+</div>
+<p style="font-size: 0.9rem; color: #7f8c8d;">
+        人気のお客さんが来ると、他の人は席に座れない可能性が...
+       </p>
+</div>
+<div class="restaurant-side">
+<h3 id="予約席ありレストラン設定あり" style="color: #2c3e50; margin-bottom: 15px;">
+        🏪 予約席ありレストラン（設定あり）
+       </h3>
+<p style="margin-bottom: 15px; font-size: 0.9rem;">
+        重要なお客さん用に席を確保！
+       </p>
+<div class="seats-grid">
+<div class="seat reserved">
+         📋
+        </div>
+<div class="seat reserved">
+         📋
+        </div>
+<div class="seat reserved">
+         📋
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat occupied">
+         👤
+        </div>
+<div class="seat available">
+         🪑
+        </div>
+<div class="seat available">
+         🪑
+        </div>
+<div class="seat available">
+         🪑
+        </div>
+</div>
+<p style="font-size: 0.9rem; color: #7f8c8d;">
+        重要なお客さんは必ず席を確保できる！
+       </p>
+</div>
+</div>
+<div class="legend">
+<div class="legend-item">
+<div class="legend-color available" style="background: #15803D; border-color: #15803D;">
+</div>
+<span>
+        空席（利用可能）
+       </span>
+</div>
+<div class="legend-item">
+<div class="legend-color reserved" style="background: #3498db; border-color: #2980b9;">
+</div>
+<span>
+        予約席（確保済み）
+       </span>
+</div>
+<div class="legend-item">
+<div class="legend-color occupied" style="background: #e74c3c; border-color: #c0392b;">
+</div>
+<span>
+        使用中
+       </span>
+</div>
+</div>
+</div>
+<div class="highlight">
+<span class="highlight-icon">
+      💡
+     </span>
+<strong>
+      つまり...
+     </strong>
+     Lambda の予約済み同時実行数とは、特定のLambda関数が「必ず使える実行枠」を事前に確保しておく仕組みです！
+    </div>
+<div class="concept-section">
+<h2 id="Lambda-での実際の仕組み" style="color: #2c3e50; margin-bottom: 20px;">
+      📊 Lambda での実際の仕組み
+     </h2>
+<div class="comparison-table">
+<table>
+<thead>
+<tr>
+<th>
+          項目
+         </th>
+<th>
+          レストランの例
+         </th>
+<th>
+          Lambda の実際
+         </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+           席 / 実行環境
+          </strong>
+</td>
+<td>
+          レストランの席
+         </td>
+<td>
+          Lambda の同時実行環境
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           お客さん
+          </strong>
+</td>
+<td>
+          レストランのお客さん
+         </td>
+<td>
+          Lambda へのリクエスト
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           予約席
+          </strong>
+</td>
+<td>
+          VIP客用の確保された席
+         </td>
+<td>
+          特定関数用の予約済み同時実行数
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           総席数
+          </strong>
+</td>
+<td>
+          レストランの総席数（50席）
+         </td>
+<td>
+          AWSアカウントの同時実行上限（1000など）
+         </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="concept-grid">
+<div class="concept-card benefit">
+<div class="card-icon">
+       ✅
+      </div>
+<div class="card-title">
+       メリット
+      </div>
+<ul style="margin-left: 20px;">
+<li>
+<strong>
+         確実な実行保証
+        </strong>
+<br/>
+        重要な関数が必ず動く
+       </li>
+<li>
+<strong>
+         予測可能な性能
+        </strong>
+<br/>
+        レスポンス時間が安定
+       </li>
+<li>
+<strong>
+         他関数の影響を回避
+        </strong>
+<br/>
+        リソース競合を防止
+       </li>
+</ul>
+</div>
+<div class="concept-card caution">
+<div class="card-icon">
+       ⚠️
+      </div>
+<div class="card-title">
+       注意点
+      </div>
+<ul style="margin-left: 20px;">
+<li>
+<strong>
+         コスト増加の可能性
+        </strong>
+<br/>
+        使わない分も確保される
+       </li>
+<li>
+<strong>
+         全体の上限は変わらない
+        </strong>
+<br/>
+        他の関数が使える枠が減る
+       </li>
+<li>
+<strong>
+         適切な設定が重要
+        </strong>
+<br/>
+        過剰確保は無駄になる
+       </li>
+</ul>
+</div>
+<div class="concept-card setting">
+<div class="card-icon">
+       ⚙️
+      </div>
+<div class="card-title">
+       設定方法
+      </div>
+<ul style="margin-left: 20px;">
+<li>
+<strong>
+         AWS Console
+        </strong>
+<br/>
+        Lambda関数の設定から
+       </li>
+<li>
+<strong>
+         AWS CLI
+        </strong>
+<br/>
+        put-provisioned-concurrency-config
+       </li>
+<li>
+<strong>
+         CloudFormation
+        </strong>
+<br/>
+        IaCで管理も可能
+       </li>
+</ul>
+</div>
+</div>
+<div class="concept-section">
+<h2 id="Reserved-Concurrency-vs-Provisioned-Concurrency" style="color: #2c3e50; margin-bottom: 20px;">
+      🔄 Reserved Concurrency vs Provisioned Concurrency
+     </h2>
+<p style="margin-bottom: 30px; font-size: 1.1rem; color: #5d6d7e;">
+      よく混同される2つの機能ですが、実は
+      <strong>
+       全く違う目的
+      </strong>
+      の機能です！
+     </p>
+<div class="restaurant-visual">
+<div class="restaurant-side">
+<h3 id="Reserved-Concurrency" style="color: #e74c3c; margin-bottom: 15px;">
+        📋 Reserved Concurrency
+       </h3>
+<p style="margin-bottom: 15px; font-size: 0.9rem; font-weight: bold;">
+        「席を確保」= 実行枠の上限設定
+       </p>
+<div style="background: #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+<span style="font-size: 1.5rem;">
+          🏃‍♂️
+         </span>
+<span style="font-weight: bold;">
+          お客さんが来てから席の準備開始
+         </span>
+</div>
+<div style="font-size: 0.9rem; color: #2d3436;">
+         席は確保されているが、テーブルセッティングに時間がかかる
+        </div>
+</div>
+<div class="seats-grid" style="grid-template-columns: repeat(3, 1fr);">
+<div class="seat reserved">
+         📋
+        </div>
+<div class="seat reserved">
+         📋
+        </div>
+<div class="seat reserved">
+         📋
+        </div>
+</div>
+<ul style="font-size: 0.9rem; margin-left: 20px; color: #2d3436;">
+<li>
+         実行枠の上限を設定
+        </li>
+<li>
+         他の関数からリソースを保護
+        </li>
+<li>
+         コールドスタートは発生する
+        </li>
+</ul>
+</div>
+<div class="restaurant-side">
+<h3 id="⚡-Provisioned-Concurrency" style="color: #008662; margin-bottom: 15px;">
+        ⚡ Provisioned Concurrency
+       </h3>
+<p style="margin-bottom: 15px; font-size: 0.9rem; font-weight: bold;">
+        「席の事前準備」= 実行環境の事前起動
+       </p>
+<div style="background: #a8f5e5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+<span style="font-size: 1.5rem;">
+          ✨
+         </span>
+<span style="font-weight: bold;">
+          お客さんが来る前に席の準備完了
+         </span>
+</div>
+<div style="font-size: 0.9rem; color: #2d3436;">
+         テーブルセッティング済み、すぐに座れる
+        </div>
+</div>
+<div class="seats-grid" style="grid-template-columns: repeat(3, 1fr);">
+<div class="seat" style="background: #008662; border-color: #00a085; color: white;">
+         ⚡
+        </div>
+<div class="seat" style="background: #008662; border-color: #00a085; color: white;">
+         ⚡
+        </div>
+<div class="seat" style="background: #008662; border-color: #00a085; color: white;">
+         ⚡
+        </div>
+</div>
+<ul style="font-size: 0.9rem; margin-left: 20px; color: #2d3436;">
+<li>
+         実行環境を事前に起動
+        </li>
+<li>
+         コールドスタートを完全回避
+        </li>
+<li>
+         レスポンス時間が最速・最安定
+        </li>
+</ul>
+</div>
+</div>
+<div style="background: #e8f4f8; border-left: 4px solid #3498db; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+<span style="font-size: 1.5rem;">
+        🔗
+       </span>
+<strong style="color: #2c3e50;">
+        2つの機能は組み合わせ可能！
+       </strong>
+</div>
+<p style="color: #34495e; margin-bottom: 10px;">
+       Reserved Concurrency で実行枠を確保し、その中の一部をProvisioned Concurrency で事前起動することができます。
+      </p>
+<div style="background: white; padding: 15px; border-radius: 8px; font-size: 0.9rem;">
+<strong>
+        例：
+       </strong>
+       Reserved Concurrency = 10、Provisioned Concurrency = 3
+       <br/>
+       → 10個の確保された実行枠のうち、3個は常時起動済み
+      </div>
+</div>
+</div>
+<div class="concept-section">
+<h2 id="コストと用途の比較" style="color: #2c3e50; margin-bottom: 20px;">
+      💰 コストと用途の比較
+     </h2>
+<div class="comparison-table">
+<table>
+<thead>
+<tr>
+<th>
+          項目
+         </th>
+<th>
+          Reserved Concurrency
+         </th>
+<th>
+          Provisioned Concurrency
+         </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+           主な目的
+          </strong>
+</td>
+<td>
+          実行枠の確保・制限
+         </td>
+<td>
+          コールドスタートの回避
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           コスト
+          </strong>
+</td>
+<td>
+          無料（実行時のみ課金）
+         </td>
+<td>
+          有料（常時課金）
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           レスポンス時間
+          </strong>
+</td>
+<td>
+          コールドスタート有り
+         </td>
+<td>
+          常に高速
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           適用場面
+          </strong>
+</td>
+<td>
+          リソース保護、スロットリング
+         </td>
+<td>
+          リアルタイムAPI、即応性重視
+         </td>
+</tr>
+<tr>
+<td>
+<strong>
+           設定の複雑さ
+          </strong>
+</td>
+<td>
+          シンプル
+         </td>
+<td>
+          やや複雑（バージョン管理等）
+         </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="highlight">
+<span class="highlight-icon">
+      🎯
+     </span>
+<strong>
+      いつ使う？
+     </strong>
+     Reserved Concurrency はリソース保護、Provisioned Concurrency は性能最適化。目的に応じて使い分けや組み合わせを検討しましょう。
+    </div>
+<div style="background: #2c3e50; color: white; padding: 30px; border-radius: 15px; text-align: center; margin-top: 40px;">
+<h3 id="まとめ" style="margin-bottom: 15px;">
+      🚀 まとめ
+     </h3>
+<p style="font-size: 1.1rem; line-height: 1.8;">
+      Lambda の予約済み同時実行数は、レストランの予約席のように
+      <br/>
+<strong>
+       「重要な処理のために実行環境を事前確保する機能」
+      </strong>
+      です。
+      <br/>
+      適切に設定することで、安定したサービス提供が可能になります！
+     </p>
+</div>
+</div>
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">1</span> <span class="separator" aria-hidden="true">/</span> <span class="total">1</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

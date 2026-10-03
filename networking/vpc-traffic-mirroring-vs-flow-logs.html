@@ -1,0 +1,1258 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   VPCトラフィックミラーリング vs VPC Flow Logs - 使い分けガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#結論ファースト-30秒でわかるまとめ">🎯 結論ファースト：30秒でわかるまとめ</a> </li><li class="toc-h2"> <a href="#たとえ話-オフィスビルのセキュリティで理解しよう">🏢 たとえ話：オフィスビルのセキュリティで理解しよう</a> </li><li class="toc-h3"> <a href="#防犯カメラ映像録画">防犯カメラ（映像録画）</a> </li><li class="toc-h3"> <a href="#入退室記録ノート">入退室記録ノート</a> </li><li class="toc-h3"> <a href="#たとえ話-→-AWSへの対応表">🔄 たとえ話 → AWSへの対応表</a> </li><li class="toc-h2"> <a href="#️-仕組みの図解-データの流れを見てみよう">🏗️ 仕組みの図解：データの流れを見てみよう</a> </li><li class="toc-h3"> <a href="#トラフィックミラーリングの流れ">📹 トラフィックミラーリングの流れ</a> </li><li class="toc-h3"> <a href="#VPC-Flow-Logs-の流れ">📋 VPC Flow Logs の流れ</a> </li><li class="toc-h2"> <a href="#ユースケース-どんな場面で使う？">🎯 ユースケース：どんな場面で使う？</a> </li><li class="toc-h3"> <a href="#トラフィックミラーリングが適する場面">📹 トラフィックミラーリングが適する場面</a> </li><li class="toc-h3"> <a href="#VPC-Flow-Logs-が適する場面">📋 VPC Flow Logs が適する場面</a> </li><li class="toc-h2"> <a href="#使い分け判断フロー">🧭 使い分け判断フロー</a> </li><li class="toc-h2"> <a href="#詳細比較テーブル">📊 詳細比較テーブル</a> </li><li class="toc-h2"> <a href="#⚠️-運用時の注意ポイント">⚠️ 運用時の注意ポイント</a> </li><li class="toc-h3"> <a href="#コストに関する注意">💰 コストに関する注意</a> </li><li class="toc-h3"> <a href="#セットアップに関する注意">🔧 セットアップに関する注意</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li><li class="toc-h3"> <a href="#トラフィックミラーリング">📹 トラフィックミラーリング</a> </li><li class="toc-h3"> <a href="#VPC-Flow-Logs">📋 VPC Flow Logs</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> ネットワーキング </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <style>/* ========================================
+       リセット・基本設定
+       ======================================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 20px;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8f9fb;
+      color: #374151;
+      line-height: 1.7;
+      padding: 0;
+            padding-top: 70px;}
+
+    /* ========================================
+       ヘッダー
+       ======================================== */
+    .page-header {
+      background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+      padding: 3rem 2rem 2.5rem;
+      text-align: center;
+      color: #fff;
+    }
+
+    .page-header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .page-badge {
+      display: inline-block;
+      background: rgba(255, 153, 0, 0.2);
+      color: #FF9900;
+      font-weight: 700;
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+      margin-bottom: 0.8rem;
+    }
+
+    .page-header-sub {
+      color: #d1d5db;
+      font-size: 1rem;
+    }
+
+    /* ========================================
+       メインコンテナ
+       ======================================== */
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    /* ========================================
+       結論ファースト
+       ======================================== */
+    .conclusion-box {
+      background: #fff;
+      border: 2px solid #FF9900;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 4px 20px rgba(255, 153, 0, 0.08);
+    }
+
+    .conclusion-box h2 {
+      font-size: 1.3rem;
+      color: #232F3E;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #FF9900;
+    }
+
+    .conclusion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .conclusion-card {
+      padding: 1.2rem;
+      border-radius: 12px;
+    }
+
+    .conclusion-card-mirror {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+    }
+
+    .conclusion-card-flow {
+      background: #f0fdf4;
+      border-left: 4px solid #22c55e;
+    }
+
+    .conclusion-card-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .conclusion-card-mirror .conclusion-card-title {
+      color: #1e40af;
+    }
+
+    .conclusion-card-flow .conclusion-card-title {
+      color: #15803d;
+    }
+
+    .conclusion-card p {
+      color: #374151;
+    }
+
+    .conclusion-oneliner {
+      text-align: center;
+      margin-top: 1.2rem;
+      padding: 1rem;
+      background: #fef3c7;
+      border-radius: 10px;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    /* ========================================
+       セクション共通
+       ======================================== */
+    .section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      color: #232F3E;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #FF9900;
+    }
+
+    .section h3 {
+      font-size: 1.1rem;
+      color: #374151;
+      margin-bottom: 0.8rem;
+      margin-top: 1.2rem;
+    }
+
+    .section p {
+      margin-bottom: 0.8rem;
+    }
+
+    /* ========================================
+       たとえ話セクション
+       ======================================== */
+    .analogy-intro {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #f9fafb;
+      border-radius: 12px;
+    }
+
+    .analogy-intro p {
+      color: #6b7280;
+      margin-bottom: 0;
+    }
+
+    .analogy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .analogy-card {
+      background: #f9fafb;
+      border-radius: 14px;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    .analogy-card-mirror {
+      border: 2px solid #bfdbfe;
+    }
+
+    .analogy-card-flow {
+      border: 2px solid #bbf7d0;
+    }
+
+    .analogy-icon {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .analogy-card h3 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 0.4rem;
+    }
+
+    .analogy-card-mirror h3 {
+      color: #1e40af;
+    }
+
+    .analogy-card-flow h3 {
+      color: #15803d;
+    }
+
+    .analogy-label {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 8px;
+      display: block;
+    }
+
+    .analogy-card-mirror .analogy-label {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .analogy-card-flow .analogy-label {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .analogy-detail-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .analogy-detail-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+
+    .analogy-detail-list li:last-child {
+      border-bottom: none;
+    }
+
+    .analogy-emoji {
+      flex-shrink: 0;
+    }
+
+    /* ========================================
+       対応表（たとえ話 → AWS）
+       ======================================== */
+    .mapping-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .mapping-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 1rem;
+    }
+
+    .mapping-table thead th {
+      padding: 0.9rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .mapping-table thead th:first-child {
+      background: #6b7280;
+    }
+
+    .mapping-table thead th:nth-child(2) {
+      background: #2563eb;
+    }
+
+    .mapping-table thead th:nth-child(3) {
+      background: #16a34a;
+    }
+
+    .mapping-table tbody td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    .mapping-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .mapping-table tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    /* ========================================
+       SVG図解
+       ======================================== */
+    .diagram-wrapper {
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+
+    .diagram-wrapper svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* ========================================
+       仕組み比較
+       ======================================== */
+    .mechanism-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .mechanism-card {
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+
+    .mechanism-card-mirror {
+      background: #eff6ff;
+      border: 2px solid #bfdbfe;
+    }
+
+    .mechanism-card-flow {
+      background: #f0fdf4;
+      border: 2px solid #bbf7d0;
+    }
+
+    .mechanism-card h3 {
+      margin-top: 0;
+    }
+
+    .mechanism-card-mirror h3 {
+      color: #1e40af;
+    }
+
+    .mechanism-card-flow h3 {
+      color: #15803d;
+    }
+
+    .mechanism-item {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+      padding: 0.5rem 0;
+      border-bottom: 1px dashed #d1d5db;
+    }
+
+    .mechanism-item:last-child {
+      border-bottom: none;
+    }
+
+    .mechanism-key {
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 6rem;
+    }
+
+    .mechanism-card-mirror .mechanism-key {
+      color: #1e40af;
+    }
+
+    .mechanism-card-flow .mechanism-key {
+      color: #15803d;
+    }
+
+    /* ========================================
+       ユースケース
+       ======================================== */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .usecase-card {
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+
+    .usecase-card-mirror {
+      background: #eff6ff;
+      border: 2px solid #bfdbfe;
+    }
+
+    .usecase-card-flow {
+      background: #f0fdf4;
+      border: 2px solid #bbf7d0;
+    }
+
+    .usecase-card h3 {
+      margin-top: 0;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .usecase-card-mirror h3 {
+      color: #1e40af;
+    }
+
+    .usecase-card-flow h3 {
+      color: #15803d;
+    }
+
+    .usecase-item {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .usecase-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .usecase-item-title {
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .usecase-item p {
+      color: #6b7280;
+      margin-bottom: 0;
+    }
+
+    /* ========================================
+       判断フローチャート
+       ======================================== */
+    .flowchart-wrapper {
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+
+    .flowchart-wrapper svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* ========================================
+       比較テーブル
+       ======================================== */
+    .compare-table-wrapper {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 1rem;
+    }
+
+    .compare-table thead th {
+      padding: 0.9rem 1rem;
+      font-weight: 700;
+      text-align: left;
+      color: #fff;
+    }
+
+    .compare-table thead th:first-child {
+      background: #374151;
+      width: 20%;
+    }
+
+    .compare-table thead th:nth-child(2) {
+      background: #2563eb;
+      width: 40%;
+    }
+
+    .compare-table thead th:nth-child(3) {
+      background: #16a34a;
+      width: 40%;
+    }
+
+    .compare-table tbody td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    .compare-table tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .compare-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .compare-table tbody td:first-child {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    /* ========================================
+       注意事項セクション
+       ======================================== */
+    .notice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .notice-card {
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+
+    .notice-card-cost {
+      background: #fef3c7;
+      border: 2px solid #fbbf24;
+    }
+
+    .notice-card-setup {
+      background: #fce7f3;
+      border: 2px solid #f472b6;
+    }
+
+    .notice-card h3 {
+      margin-top: 0;
+    }
+
+    .notice-card-cost h3 {
+      color: #92400e;
+    }
+
+    .notice-card-setup h3 {
+      color: #9d174d;
+    }
+
+    /* ========================================
+       まとめセクション
+       ======================================== */
+    .summary-box {
+      background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    .summary-box h2 {
+      color: #FF9900;
+      border-bottom-color: #FF9900;
+      font-size: 1.3rem;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #FF9900;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .summary-card {
+      padding: 1.2rem;
+      border-radius: 12px;
+    }
+
+    .summary-card-mirror {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .summary-card-flow {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .summary-card h3 {
+      margin-top: 0;
+    }
+
+    .summary-card-mirror h3 {
+      color: #93c5fd;
+    }
+
+    .summary-card-flow h3 {
+      color: #86efac;
+    }
+
+    .summary-card p {
+      color: #d1d5db;
+    }
+
+    .summary-final {
+      text-align: center;
+      padding: 1rem;
+      background: rgba(255, 153, 0, 0.15);
+      border-radius: 10px;
+      color: #FF9900;
+      font-weight: 600;
+    }
+
+    /* ========================================
+       フッター
+       ======================================== */
+    .page-footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: #9ca3af;
+      font-size: 0.85rem;
+    }
+
+    /* ========================================
+       レスポンシブ
+       ======================================== */
+    @media (max-width: 768px) {
+      html {
+        font-size: 18px;
+      }
+
+      .page-header {
+        padding: 2rem 1rem;
+      }
+
+      .page-header h1 {
+        font-size: 1.4rem;
+      }
+
+      .container {
+        padding: 1.2rem 1rem 2rem;
+      }
+
+      .conclusion-grid,
+      .analogy-grid,
+      .mechanism-grid,
+      .usecase-grid,
+      .notice-grid,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section {
+        padding: 1.5rem;
+      }
+
+      .mapping-table,
+      .compare-table {
+        font-size: 0.9rem;
+      }
+    }</style>
+<!-- ========================================
+         結論ファースト
+         ======================================== -->
+    <section class="conclusion-box" aria-label="結論サマリー">
+      <h2 id="結論ファースト-30秒でわかるまとめ">🎯 結論ファースト：30秒でわかるまとめ</h2>
+      <div class="conclusion-grid">
+        <div class="conclusion-card conclusion-card-mirror">
+          <div class="conclusion-card-title">📹 トラフィックミラーリング</div>
+          <p>パケットの<strong>中身（ペイロード）まで丸ごとコピー</strong>して分析ツールに送る。マルウェアの検出や詳細なフォレンジック調査に使う<strong>「ディープ分析」</strong>機能。</p>
+        </div>
+        <div class="conclusion-card conclusion-card-flow">
+          <div class="conclusion-card-title">📋 VPC Flow Logs</div>
+          <p>通信の<strong>メタデータ（誰が・どこへ・いつ）だけ</strong>を記録する。日常的なトラフィック監視やセキュリティグループのトラブルシューティングに使う<strong>「概要ログ」</strong>機能。</p>
+        </div>
+      </div>
+      <div class="conclusion-oneliner">💡 中身を見たいなら「ミラーリング」、通信記録を残したいなら「Flow Logs」</div>
+    </section>
+
+    <!-- ========================================
+         たとえ話セクション
+         ======================================== -->
+    <section class="section" aria-label="たとえ話で理解する">
+      <h2 id="たとえ話-オフィスビルのセキュリティで理解しよう">🏢 たとえ話：オフィスビルのセキュリティで理解しよう</h2>
+
+      <div class="analogy-intro">
+        <p>VPCトラフィックミラーリングとVPC Flow Logsの違いは、<br>オフィスビルの<strong>「防犯カメラ」</strong>と<strong>「入退室記録ノート」</strong>の違いに似ています。</p>
+      </div>
+
+      <div class="analogy-grid">
+        <!-- ミラーリング = 防犯カメラ -->
+        <div class="analogy-card analogy-card-mirror">
+          <div class="analogy-icon" aria-hidden="true">📹</div>
+          <h3 id="防犯カメラ映像録画">防犯カメラ（映像録画）</h3>
+          <span class="analogy-label">= トラフィックミラーリング</span>
+          <ul class="analogy-detail-list">
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">🎬</span>
+              <span>人の<strong>動き・持ち物・表情まで</strong>すべて映像で記録</span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">📦</span>
+              <span>「何を持ち込んだか」の<strong>中身まで確認</strong>できる</span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">🔍</span>
+              <span>不審な行動の<strong>詳細な分析</strong>が可能</span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">💰</span>
+              <span>設備費・保管費が<strong>高い</strong>（大量データ）</span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">🎯</span>
+              <span>重要エリアに<strong>絞って設置</strong>するのが現実的</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Flow Logs = 入退室記録ノート -->
+        <div class="analogy-card analogy-card-flow">
+          <div class="analogy-icon" aria-hidden="true">📋</div>
+          <h3 id="入退室記録ノート">入退室記録ノート</h3>
+          <span class="analogy-label">= VPC Flow Logs</span>
+          <ul class="analogy-detail-list">
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">📝</span>
+              <span>「誰が・いつ・どの部屋に」入退室したかの<strong>記録だけ</strong></span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">📦</span>
+              <span>持ち物の<strong>中身は記録しない</strong></span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">📊</span>
+              <span><strong>傾向分析</strong>や「許可/拒否」の確認に便利</span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">💰</span>
+              <span>コストが<strong>安い</strong>（テキストログのみ）</span>
+            </li>
+            <li>
+              <span class="analogy-emoji" aria-hidden="true">🏢</span>
+              <span>ビル全体に<strong>広く導入</strong>しやすい</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- たとえ対応表 -->
+      <h3 id="たとえ話-→-AWSへの対応表">🔄 たとえ話 → AWSへの対応表</h3>
+      <div class="mapping-table-wrapper">
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th scope="col">オフィスビルのたとえ</th>
+              <th scope="col">📹 トラフィックミラーリング</th>
+              <th scope="col">📋 VPC Flow Logs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>記録するもの</td>
+              <td>映像（すべての動き）→ パケット全体（ヘッダー＋ペイロード）</td>
+              <td>入退室ノート（名前・時刻）→ メタデータ（IP・ポート・バイト数）</td>
+            </tr>
+            <tr>
+              <td>設置場所</td>
+              <td>特定フロアのカメラ → ENI（EC2・NLB等）</td>
+              <td>全館の入退室システム → VPC / サブネット / ENI</td>
+            </tr>
+            <tr>
+              <td>録画の送り先</td>
+              <td>警備室のモニター → NLB / ENI / GLBエンドポイント</td>
+              <td>記録簿の保管庫 → CloudWatch / S3 / Firehose</td>
+            </tr>
+            <tr>
+              <td>フィルタ</td>
+              <td>「3階のエレベーター前だけ録画」→ プロトコル / ポート / IP</td>
+              <td>「許可された入室だけ記録」→ ACCEPT / REJECT フィルタ</td>
+            </tr>
+            <tr>
+              <td>コスト感</td>
+              <td>高い（大容量映像ストレージ）</td>
+              <td>安い（テキストログのみ）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================
+         アーキテクチャ図解
+         ======================================== -->
+    <section class="section" aria-label="仕組みの図解">
+      <h2 id="️-仕組みの図解-データの流れを見てみよう">🏗️ 仕組みの図解：データの流れを見てみよう</h2>
+
+      <div class="mechanism-grid">
+        <!-- トラフィックミラーリングの仕組み -->
+        <div class="mechanism-card mechanism-card-mirror">
+          <h3 id="トラフィックミラーリングの流れ">📹 トラフィックミラーリングの流れ</h3>
+          <div class="diagram-wrapper">
+            <svg role="img" aria-label="トラフィックミラーリングのアーキテクチャ図。EC2のENIからパケットのコピーが作られ、フィルタを通してNLBに送られ、セキュリティ分析ツールで解析される流れ" viewBox="0 0 400 360" width="400" height="360" xmlns="http://www.w3.org/2000/svg">
+              <!-- 背景 -->
+              <rect x="0" y="0" width="400" height="360" rx="12" fill="#f0f7ff"/>
+
+              <!-- EC2 インスタンス -->
+              <rect x="30" y="25" width="150" height="65" rx="10" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+              <text x="105" y="52" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">🖥️ EC2 インスタンス</text>
+              <text x="105" y="74" text-anchor="middle" font-size="12" fill="#6b7280">ミラーソース（ENI）</text>
+
+              <!-- 実トラフィック -->
+              <rect x="220" y="25" width="150" height="65" rx="10" fill="#fff" stroke="#9ca3af" stroke-width="2"/>
+              <text x="295" y="52" text-anchor="middle" font-size="14" font-weight="700" fill="#374151">🌐 通信先</text>
+              <text x="295" y="74" text-anchor="middle" font-size="12" fill="#6b7280">実際のトラフィック</text>
+              <line x1="180" y1="57" x2="220" y2="57" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow-gray-m)"/>
+
+              <!-- コピー矢印 -->
+              <line x1="105" y1="90" x2="105" y2="130" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="6 4"/>
+              <text x="145" y="115" font-size="11" fill="#2563eb" font-weight="600">パケットのコピー</text>
+
+              <!-- ミラーフィルタ -->
+              <rect x="40" y="130" width="130" height="50" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+              <text x="105" y="152" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">🔧 ミラーフィルタ</text>
+              <text x="105" y="170" text-anchor="middle" font-size="11" fill="#6b7280">ポート/IP/プロトコル</text>
+
+              <!-- 矢印 -->
+              <line x1="105" y1="180" x2="105" y2="210" stroke="#2563eb" stroke-width="2.5"/>
+
+              <!-- ミラーターゲット -->
+              <rect x="20" y="210" width="170" height="50" rx="10" fill="#bfdbfe" stroke="#2563eb" stroke-width="2"/>
+              <text x="105" y="232" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">🎯 ミラーターゲット</text>
+              <text x="105" y="250" text-anchor="middle" font-size="11" fill="#1e40af">NLB / ENI / GLBエンドポイント</text>
+
+              <!-- 矢印 -->
+              <line x1="105" y1="260" x2="105" y2="290" stroke="#2563eb" stroke-width="2.5"/>
+
+              <!-- 分析ツール -->
+              <rect x="10" y="290" width="190" height="55" rx="10" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+              <text x="105" y="314" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">🔬 セキュリティ分析ツール</text>
+              <text x="105" y="334" text-anchor="middle" font-size="11" fill="#bfdbfe">Suricata / Zeek / IDS/IPS</text>
+
+              <!-- 右側：取得データ -->
+              <rect x="220" y="130" width="160" height="215" rx="10" fill="#fff" stroke="#bfdbfe" stroke-width="1.5"/>
+              <text x="300" y="155" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">取得できるデータ</text>
+              <line x1="235" y1="165" x2="365" y2="165" stroke="#e5e7eb" stroke-width="1"/>
+              <text x="235" y="188" font-size="11" fill="#374151">✅ IPヘッダー情報</text>
+              <text x="235" y="210" font-size="11" fill="#374151">✅ TCPヘッダー情報</text>
+              <text x="235" y="232" font-size="11" fill="#374151">✅ HTTPヘッダー</text>
+              <text x="235" y="254" font-size="11" fill="#2563eb" font-weight="700">✅ ペイロード（中身）</text>
+              <text x="235" y="276" font-size="11" fill="#374151">✅ DNS クエリ内容</text>
+              <text x="235" y="298" font-size="11" fill="#374151">✅ SQLインジェクション検出</text>
+              <text x="235" y="320" font-size="11" fill="#374151">✅ マルウェア通信パターン</text>
+
+              <!-- マーカー定義 -->
+              <defs>
+                <marker id="arrow-gray-m" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" fill="#9ca3af"/>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+        </div>
+
+        <!-- VPC Flow Logs の仕組み -->
+        <div class="mechanism-card mechanism-card-flow">
+          <h3 id="VPC-Flow-Logs-の流れ">📋 VPC Flow Logs の流れ</h3>
+          <div class="diagram-wrapper">
+            <svg role="img" aria-label="VPC Flow Logsのアーキテクチャ図。VPC内のENIからメタデータが収集され、CloudWatch LogsやS3に保存されて分析される流れ" viewBox="0 0 400 360" width="400" height="360" xmlns="http://www.w3.org/2000/svg">
+              <!-- 背景 -->
+              <rect x="0" y="0" width="400" height="360" rx="12" fill="#f0fdf4"/>
+
+              <!-- VPC全体 -->
+              <rect x="15" y="15" width="180" height="160" rx="12" fill="#fff" stroke="#22c55e" stroke-width="2" stroke-dasharray="6 4"/>
+              <text x="105" y="38" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d">🌐 VPC</text>
+
+              <!-- ENIたち -->
+              <rect x="30" y="50" width="65" height="45" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
+              <text x="62" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">🖥️ EC2</text>
+              <text x="62" y="85" text-anchor="middle" font-size="10" fill="#6b7280">ENI-1</text>
+
+              <rect x="115" y="50" width="65" height="45" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
+              <text x="147" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">🖥️ EC2</text>
+              <text x="147" y="85" text-anchor="middle" font-size="10" fill="#6b7280">ENI-2</text>
+
+              <rect x="30" y="110" width="65" height="45" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
+              <text x="62" y="128" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">⚖️ ALB</text>
+              <text x="62" y="145" text-anchor="middle" font-size="10" fill="#6b7280">ENI-3</text>
+
+              <rect x="115" y="110" width="65" height="45" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
+              <text x="147" y="128" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">🗄️ RDS</text>
+              <text x="147" y="145" text-anchor="middle" font-size="10" fill="#6b7280">ENI-4</text>
+
+              <!-- メタデータ収集 -->
+              <text x="105" y="195" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="600">メタデータ自動収集 ↓</text>
+
+              <!-- Flow Log レコード -->
+              <rect x="15" y="205" width="180" height="70" rx="10" fill="#bbf7d0" stroke="#22c55e" stroke-width="2"/>
+              <text x="105" y="228" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">📝 Flow Log レコード</text>
+              <text x="105" y="248" text-anchor="middle" font-size="10" fill="#374151">src-ip dst-ip port protocol</text>
+              <text x="105" y="264" text-anchor="middle" font-size="10" fill="#374151">packets bytes ACCEPT/REJECT</text>
+
+              <!-- 矢印 -->
+              <line x1="105" y1="275" x2="105" y2="300" stroke="#22c55e" stroke-width="2.5"/>
+
+              <!-- 出力先（3つ均等） -->
+              <rect x="5" y="300" width="118" height="45" rx="8" fill="#16a34a"/>
+              <text x="64" y="320" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">☁️ CloudWatch</text>
+              <text x="64" y="337" text-anchor="middle" font-size="10" fill="#bbf7d0">Logs</text>
+
+              <rect x="133" y="300" width="66" height="45" rx="8" fill="#16a34a"/>
+              <text x="166" y="320" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">🪣 S3</text>
+              <text x="166" y="337" text-anchor="middle" font-size="10" fill="#bbf7d0">Bucket</text>
+
+              <!-- 右側：取得データ -->
+              <rect x="215" y="15" width="170" height="330" rx="10" fill="#fff" stroke="#bbf7d0" stroke-width="1.5"/>
+              <text x="300" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d">取得できるデータ</text>
+              <line x1="230" y1="50" x2="370" y2="50" stroke="#e5e7eb" stroke-width="1"/>
+              <text x="230" y="73" font-size="11" fill="#374151">✅ 送信元 IP</text>
+              <text x="230" y="95" font-size="11" fill="#374151">✅ 宛先 IP</text>
+              <text x="230" y="117" font-size="11" fill="#374151">✅ 送信元ポート</text>
+              <text x="230" y="139" font-size="11" fill="#374151">✅ 宛先ポート</text>
+              <text x="230" y="161" font-size="11" fill="#374151">✅ プロトコル番号</text>
+              <text x="230" y="183" font-size="11" fill="#374151">✅ パケット数</text>
+              <text x="230" y="205" font-size="11" fill="#374151">✅ バイト数</text>
+              <text x="230" y="227" font-size="11" fill="#374151">✅ タイムスタンプ</text>
+              <text x="230" y="249" font-size="11" fill="#374151">✅ ACCEPT / REJECT</text>
+              <text x="230" y="271" font-size="11" fill="#374151">✅ VPC / サブネット ID</text>
+              <line x1="230" y1="285" x2="370" y2="285" stroke="#e5e7eb" stroke-width="1"/>
+              <text x="230" y="308" font-size="11" fill="#dc2626" font-weight="700">❌ ペイロード（中身）</text>
+              <text x="230" y="330" font-size="11" fill="#dc2626" font-weight="700">❌ HTTPリクエスト内容</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         ユースケース
+         ======================================== -->
+    <section class="section" aria-label="ユースケース比較">
+      <h2 id="ユースケース-どんな場面で使う？">🎯 ユースケース：どんな場面で使う？</h2>
+
+      <div class="usecase-grid">
+        <!-- ミラーリングのユースケース -->
+        <div class="usecase-card usecase-card-mirror">
+          <h3 id="トラフィックミラーリングが適する場面">📹 トラフィックミラーリングが適する場面</h3>
+          <div class="usecase-item">
+            <div class="usecase-item-title">🦠 マルウェア・不正通信の検出</div>
+            <p>パケットの中身を分析し、既知のマルウェアシグネチャや不審なパターンを検出する</p>
+          </div>
+          <div class="usecase-item">
+            <div class="usecase-item-title">🔬 フォレンジック調査</div>
+            <p>セキュリティインシデント発生後に、通信内容を詳細に調査して攻撃手法を特定する</p>
+          </div>
+          <div class="usecase-item">
+            <div class="usecase-item-title">🛡️ IDS/IPS（侵入検知/防御）</div>
+            <p>SuricataやZeekなどのツールにミラーパケットを送り、リアルタイムで脅威を検知する</p>
+          </div>
+          <div class="usecase-item">
+            <div class="usecase-item-title">🐛 アプリケーションのデバッグ</div>
+            <p>実際の通信内容を見て、APIリクエスト/レスポンスの問題を特定する</p>
+          </div>
+        </div>
+
+        <!-- Flow Logs のユースケース -->
+        <div class="usecase-card usecase-card-flow">
+          <h3 id="VPC-Flow-Logs-が適する場面">📋 VPC Flow Logs が適する場面</h3>
+          <div class="usecase-item">
+            <div class="usecase-item-title">🔒 セキュリティグループの検証</div>
+            <p>「REJECT」されたトラフィックを確認し、セキュリティグループやNACLの設定ミスを発見する</p>
+          </div>
+          <div class="usecase-item">
+            <div class="usecase-item-title">📊 トラフィックの傾向分析</div>
+            <p>どのIPアドレス間でどれくらいの通信が発生しているか、傾向を可視化する</p>
+          </div>
+          <div class="usecase-item">
+            <div class="usecase-item-title">📜 コンプライアンス・監査対応</div>
+            <p>「いつ・誰が・どこに通信した」の記録を保持し、監査要件を満たす</p>
+          </div>
+          <div class="usecase-item">
+            <div class="usecase-item-title">🔧 接続トラブルシューティング</div>
+            <p>「EC2に接続できない」問題の原因が、セキュリティグループかNACLか特定する</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         判断フローチャート
+         ======================================== -->
+    <section class="section" aria-label="使い分け判断フロー">
+      <h2 id="使い分け判断フロー">🧭 使い分け判断フロー</h2>
+      <p>「どちらを使えばいいか迷ったら」このフローで判断できます。</p>
+
+      <div class="flowchart-wrapper">
+        <svg role="img" aria-label="使い分け判断フローチャート。パケットの中身を見る必要があるかの質問から始まり、ミラーリングかFlow Logsのどちらが適切かを判断するフロー図" viewBox="0 0 720 480" width="720" height="480" xmlns="http://www.w3.org/2000/svg">
+          <!-- 背景 -->
+          <rect x="0" y="0" width="720" height="480" rx="16" fill="#f9fafb"/>
+
+          <!-- Q1: パケットの中身が必要？ -->
+          <polygon points="360,20 540,70 360,120 180,70" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+          <text x="360" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">パケットの中身</text>
+          <text x="360" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">（ペイロード）が必要？</text>
+
+          <!-- YES -->
+          <line x1="540" y1="70" x2="620" y2="70" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="575" y="60" font-size="12" fill="#2563eb" font-weight="700">Yes</text>
+          <rect x="580" y="45" width="130" height="50" rx="10" fill="#2563eb"/>
+          <text x="645" y="67" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">📹 ミラーリング</text>
+          <text x="645" y="85" text-anchor="middle" font-size="11" fill="#bfdbfe">ディープ分析</text>
+
+          <!-- NO → Q2 -->
+          <line x1="360" y1="120" x2="360" y2="165" stroke="#374151" stroke-width="2"/>
+          <text x="380" y="145" font-size="12" fill="#374151" font-weight="700">No</text>
+
+          <!-- Q2: リアルタイム脅威検知？ -->
+          <polygon points="360,165 520,210 360,255 200,210" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+          <text x="360" y="205" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">リアルタイムの</text>
+          <text x="360" y="223" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">脅威検知が必要？</text>
+
+          <!-- YES -->
+          <line x1="520" y1="210" x2="620" y2="210" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="565" y="200" font-size="12" fill="#2563eb" font-weight="700">Yes</text>
+          <rect x="580" y="185" width="130" height="50" rx="10" fill="#2563eb"/>
+          <text x="645" y="207" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">📹 ミラーリング</text>
+          <text x="645" y="225" text-anchor="middle" font-size="11" fill="#bfdbfe">IDS/IPS連携</text>
+
+          <!-- NO → Q3 -->
+          <line x1="360" y1="255" x2="360" y2="300" stroke="#374151" stroke-width="2"/>
+          <text x="380" y="280" font-size="12" fill="#374151" font-weight="700">No</text>
+
+          <!-- Q3: 通信パターン・傾向把握？ -->
+          <polygon points="360,300 530,345 360,390 190,345" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+          <text x="360" y="340" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">通信パターン・傾向の</text>
+          <text x="360" y="358" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">把握で十分？</text>
+
+          <!-- YES -->
+          <line x1="190" y1="345" x2="115" y2="345" stroke="#16a34a" stroke-width="2.5"/>
+          <text x="155" y="335" font-size="12" fill="#16a34a" font-weight="700">Yes</text>
+          <rect x="10" y="320" width="130" height="50" rx="10" fill="#16a34a"/>
+          <text x="75" y="342" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">📋 Flow Logs</text>
+          <text x="75" y="360" text-anchor="middle" font-size="11" fill="#bbf7d0">コスト効率◎</text>
+
+          <!-- NO → 両方 -->
+          <line x1="360" y1="390" x2="360" y2="430" stroke="#374151" stroke-width="2"/>
+          <text x="380" y="415" font-size="12" fill="#374151" font-weight="700">No（両方必要）</text>
+
+          <rect x="270" y="430" width="180" height="42" rx="10" fill="#7c3aed"/>
+          <text x="360" y="456" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">📹📋 両方を併用</text>
+
+          <!-- 左側補足 -->
+          <rect x="10" y="400" width="190" height="70" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
+          <text x="105" y="422" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d">💡 多くの場合</text>
+          <text x="105" y="442" text-anchor="middle" font-size="11" fill="#374151">まずはFlow Logsから始めて</text>
+          <text x="105" y="460" text-anchor="middle" font-size="11" fill="#374151">必要に応じてミラーリング追加</text>
+
+          <!-- 右側補足 -->
+          <rect x="520" y="280" width="190" height="70" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+          <text x="615" y="302" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">⚠️ ミラーリングの注意</text>
+          <text x="615" y="322" text-anchor="middle" font-size="11" fill="#374151">Nitroベースの</text>
+          <text x="615" y="342" text-anchor="middle" font-size="11" fill="#374151">インスタンスタイプが必要</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ========================================
+         詳細比較テーブル
+         ======================================== -->
+    <section class="section" aria-label="詳細比較">
+      <h2 id="詳細比較テーブル">📊 詳細比較テーブル</h2>
+      <div class="compare-table-wrapper">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th scope="col">比較項目</th>
+              <th scope="col">📹 トラフィックミラーリング</th>
+              <th scope="col">📋 VPC Flow Logs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>取得データ</td>
+              <td>パケット全体（ヘッダー＋ペイロード）</td>
+              <td>メタデータのみ（ヘッダー情報に基づく）</td>
+            </tr>
+            <tr>
+              <td>対象レベル</td>
+              <td>ENI（EC2・NLB単位）</td>
+              <td>VPC / サブネット / ENI</td>
+            </tr>
+            <tr>
+              <td>データ送信先</td>
+              <td>NLB / ENI / Gateway LBエンドポイント</td>
+              <td>CloudWatch Logs / S3 / Firehose</td>
+            </tr>
+            <tr>
+              <td>フィルタリング</td>
+              <td>プロトコル / ポート / IPアドレス</td>
+              <td>ACCEPT / REJECT / カスタムフォーマット</td>
+            </tr>
+            <tr>
+              <td>コスト</td>
+              <td>高い（大容量データ転送＋分析基盤が必要）</td>
+              <td>安い（ログストレージ料金のみ）</td>
+            </tr>
+            <tr>
+              <td>セットアップ</td>
+              <td>中〜高（分析ツールの構築も必要）</td>
+              <td>低い（数クリックで有効化）</td>
+            </tr>
+            <tr>
+              <td>代表的な用途</td>
+              <td>IDS/IPS、フォレンジック、マルウェア検出</td>
+              <td>監査、トラブルシュート、傾向分析</td>
+            </tr>
+            <tr>
+              <td>制限事項</td>
+              <td>Nitroベースのインスタンスが必要</td>
+              <td>パケット中身は見えない</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================
+         運用時の注意点
+         ======================================== -->
+    <section class="section" aria-label="運用上の注意">
+      <h2 id="⚠️-運用時の注意ポイント">⚠️ 運用時の注意ポイント</h2>
+
+      <div class="notice-grid">
+        <div class="notice-card notice-card-cost">
+          <h3 id="コストに関する注意">💰 コストに関する注意</h3>
+          <p><strong>トラフィックミラーリング</strong>はパケット全体をコピーするため、大量のデータ転送が発生します。本番環境の全トラフィックをミラーリングすると、コストが急増する可能性があります。</p>
+          <p>対策として、ミラーフィルタで対象を特定のポートやプロトコルに絞ったり、重要なインスタンスのみに適用するのが現実的です。</p>
+          <p><strong>Flow Logs</strong>はテキストベースのログなので比較的安価ですが、VPC全体に有効化すると保管コストが蓄積します。S3のライフサイクルポリシーで古いログの自動削除を設定しましょう。</p>
+        </div>
+        <div class="notice-card notice-card-setup">
+          <h3 id="セットアップに関する注意">🔧 セットアップに関する注意</h3>
+          <p><strong>トラフィックミラーリング</strong>は、ミラー先の分析ツール（Suricata、Zeek等）を自分で構築・運用する必要があります。AWSはパケットのコピーを届けるまでが役割で、分析は利用者側の責任です。</p>
+          <p>また、<strong>Nitroベースのインスタンスタイプ</strong>が必要です。旧世代のインスタンス（t2、m4等）ではミラーリングが使えません。</p>
+          <p><strong>Flow Logs</strong>はAWSコンソールから数クリックで有効化でき、CloudWatch LogsやS3にそのまま保存できるため導入ハードルは低いです。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         まとめ
+         ======================================== -->
+    <section class="summary-box" aria-label="まとめ">
+      <h2 id="まとめ">🎓 まとめ</h2>
+      <div class="summary-grid">
+        <div class="summary-card summary-card-mirror">
+          <h3 id="トラフィックミラーリング">📹 トラフィックミラーリング</h3>
+          <p>パケットの中身まで丸ごと分析する「防犯カメラ」。IDS/IPSやフォレンジック調査に使う高度なセキュリティ機能。コストと構築の手間は大きいが、ディープな脅威分析が可能。</p>
+        </div>
+        <div class="summary-card summary-card-flow">
+          <h3 id="VPC-Flow-Logs">📋 VPC Flow Logs</h3>
+          <p>通信の概要を記録する「入退室ノート」。トラフィック監視・トラブルシューティング・コンプライアンスの基本ツール。安価で導入が簡単。まず最初に有効化すべき機能。</p>
+        </div>
+      </div>
+      <div class="summary-final">
+        🏆 ベストプラクティス：まず Flow Logs を全VPCに有効化し、高度なセキュリティ要件があるワークロードにのみミラーリングを追加する
+      </div>
+    </section>
+
+  </main>
+
+  <!-- フッター -->
+  <footer class="page-footer">
+    <p>AWS SAP 学習リソース — VPCトラフィックミラーリング vs VPC Flow Logs 使い分けガイド</p>
+  </footer>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>
+<script src="/aws_sap_studying/js/mobile-nav.js"></script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">1</span> <span class="separator" aria-hidden="true">/</span> <span class="total">1</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

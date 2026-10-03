@@ -1,0 +1,1212 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   AWS SCT &amp;amp; DMS データベース移行を図書館の引っ越しで理解しよう
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/aws_database_migration_infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#️-古い図書館-➡️-引っ越し-➡️-️-新しい図書館">🏛️ 古い図書館 ➡️ 📦 引っ越し ➡️ 🏛️ 新しい図書館</a> </li><li class="toc-h2"> <a href="#データベース移行って何？">🤔 データベース移行って何？</a> </li><li class="toc-h3"> <a href="#簡単に言うと...">📝 簡単に言うと...</a> </li><li class="toc-h3"> <a href="#日常生活の例">📚 日常生活の例</a> </li><li class="toc-h3"> <a href="#AWSの世界">💾 AWSの世界</a> </li><li class="toc-h2"> <a href="#3つの重要な要素を図書館で理解">📚 3つの重要な要素を図書館で理解</a> </li><li class="toc-h3"> <a href="#AWS-SCT=-設計図作成サービス">AWS SCT = 設計図作成サービス</a> </li><li class="toc-h3"> <a href="#AWS-DMS=-引っ越し業者">AWS DMS = 引っ越し業者</a> </li><li class="toc-h3"> <a href="#最小ダウンタイム=-休館時間最小化">最小ダウンタイム = 休館時間最小化</a> </li><li class="toc-h2"> <a href="#移行の流れを図で見てみよう">🔄 移行の流れを図で見てみよう</a> </li><li class="toc-h3"> <a href="#古い図書館">古い図書館</a> </li><li class="toc-h3"> <a href="#設計図作成">設計図作成</a> </li><li class="toc-h3"> <a href="#引っ越し実行">引っ越し実行</a> </li><li class="toc-h3"> <a href="#新しい図書館">新しい図書館</a> </li><li class="toc-h3"> <a href="#データの流れ">📊 データの流れ</a> </li><li class="toc-h2"> <a href="#詳細な移行手順図書館引っ越し版">📋 詳細な移行手順（図書館引っ越し版）</a> </li><li class="toc-h3"> <a href="#現状調査Assessment">📊 現状調査（Assessment）</a> </li><li class="toc-h3"> <a href="#設計図作成Schema-Conversion">📐 設計図作成（Schema Conversion）</a> </li><li class="toc-h3"> <a href="#️-新図書館建設Target-DB-Setup">🏗️ 新図書館建設（Target DB Setup）</a> </li><li class="toc-h3"> <a href="#初期引っ越しFull-Load">📦 初期引っ越し（Full Load）</a> </li><li class="toc-h3"> <a href="#継続同期CDC---Change-Data-Capture">🔄 継続同期（CDC - Change Data Capture）</a> </li><li class="toc-h3"> <a href="#✅-検証とテストValidation">✅ 検証とテスト（Validation）</a> </li><li class="toc-h3"> <a href="#切り替えCutover">🔄 切り替え（Cutover）</a> </li><li class="toc-h3"> <a href="#完了-監視Post-Migration">🏁 完了・監視（Post-Migration）</a> </li><li class="toc-h2"> <a href="#⏰-ダウンタイム最小化の仕組み">⏰ ダウンタイム最小化の仕組み</a> </li><li class="toc-h3"> <a href="#移行タイムライン">📅 移行タイムライン</a> </li><li class="toc-h3"> <a href="#ダウンタイム最小化のポイント">🎯 ダウンタイム最小化のポイント</a> </li><li class="toc-h2"> <a href="#対応データベース種類">📊 対応データベース種類</a> </li><li class="toc-h3"> <a href="#移行元古い図書館">📤 移行元（古い図書館）</a> </li><li class="toc-h3"> <a href="#移行先新しい図書館">📥 移行先（新しい図書館）</a> </li><li class="toc-h3"> <a href="#人気の移行パターン">💡 人気の移行パターン</a> </li><li class="toc-h2"> <a href="#❓-よくある質問">❓ よくある質問</a> </li><li class="toc-h2"> <a href="#✨-SCT-+-DMS-の最大のメリット">✨ SCT + DMS の最大のメリット</a> </li><li class="toc-h3"> <a href="#最小ダウンタイム">最小ダウンタイム</a> </li><li class="toc-h3"> <a href="#高い成功率">高い成功率</a> </li><li class="toc-h3"> <a href="#自動化">自動化</a> </li><li class="toc-h3"> <a href="#コスト削減">コスト削減</a> </li><li class="toc-h3"> <a href="#詳細な分析">詳細な分析</a> </li><li class="toc-h3"> <a href="#安全性">安全性</a> </li><li class="toc-h2"> <a href="#まとめ">🎯 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> 移行・転送 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <header class="header">
+<h1>
+     📚 AWS SCT &amp; DMS
+    </h1>
+
+<p>
+     図書館の引っ越しで理解するデータベース移行
+    </p>
+<div class="intro-analogy">
+<h2 id="️-古い図書館-➡️-引っ越し-➡️-️-新しい図書館">
+      🏛️ 古い図書館 ➡️ 📦 引っ越し ➡️ 🏛️ 新しい図書館
+     </h2>
+<p>
+      AWS SCTとDMSを使ったデータベース移行を、図書館の引っ越しで分かりやすく説明します！
+     </p>
+</div>
+</header>
+<div class="section">
+<h2 id="データベース移行って何？">
+     🤔 データベース移行って何？
+    </h2>
+<div class="highlight-box">
+<h3 id="簡単に言うと...">
+      📝 簡単に言うと...
+     </h3>
+<p style="font-size: 1.2em; margin-top: 15px;">
+<strong>
+       古いデータベース
+      </strong>
+      から
+      <strong>
+       新しいデータベース
+      </strong>
+      に、
+                    データを
+      <strong>
+       安全に・最短時間で
+      </strong>
+      お引っ越しすることです
+     </p>
+</div>
+<div class="comparison-table">
+<div class="comparison-side everyday-side">
+<h3 id="日常生活の例">
+       📚 日常生活の例
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         古い図書館
+        </strong>
+        から
+        <strong>
+         新しい図書館
+        </strong>
+        に
+        <br/>
+        全ての本を
+        <strong>
+         正確
+        </strong>
+        に移動したい
+       </p>
+<br/>
+<p>
+        👆 でも図書館は
+        <strong>
+         営業を続けたい
+        </strong>
+        ...
+        <br/>
+        📦
+        <strong>
+         段階的引っ越し
+        </strong>
+        で解決！
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="AWSの世界">
+       💾 AWSの世界
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         Oracle DB
+        </strong>
+        から
+        <strong>
+         PostgreSQL
+        </strong>
+        に
+        <br/>
+        全てのデータを
+        <strong>
+         正確
+        </strong>
+        に移行したい
+       </p>
+<br/>
+<p>
+        👆 でもシステムは
+        <strong>
+         稼働を続けたい
+        </strong>
+        ...
+        <br/>
+        🔄
+        <strong>
+         最小ダウンタイム移行
+        </strong>
+        で解決！
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="3つの重要な要素を図書館で理解">
+     📚 3つの重要な要素を図書館で理解
+    </h2>
+<div class="analogy-cards">
+<div class="analogy-card">
+<div class="analogy-icon">
+       📐
+      </div>
+<h3 id="AWS-SCT=-設計図作成サービス">
+       AWS SCT
+       <br/>
+       = 設計図作成サービス
+      </h3>
+<p>
+<strong>
+        古い図書館の本棚配置
+       </strong>
+       を調べて、
+       <br/>
+       新しい図書館用の
+       <strong>
+        設計図
+       </strong>
+       を作成します。
+       <br/>
+       本の種類や分類方法の違いも自動で調整！
+      </p>
+<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        具体例:
+       </strong>
+       Oracle → PostgreSQL
+       <br/>
+<strong>
+        変換:
+       </strong>
+       データ型・関数・制約の自動調整
+      </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+       🚚
+      </div>
+<h3 id="AWS-DMS=-引っ越し業者">
+       AWS DMS
+       <br/>
+       = 引っ越し業者
+      </h3>
+<p>
+<strong>
+        実際に本を運ぶ
+       </strong>
+       プロの業者です。
+       <br/>
+       図書館が営業中でも、
+       <strong>
+        段階的に本を移動
+       </strong>
+       し、
+       <br/>
+       新しい本も
+       <strong>
+        リアルタイムで同期
+       </strong>
+       します。
+      </p>
+<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        特徴:
+       </strong>
+       初期コピー + 継続同期
+       <br/>
+<strong>
+        ダウンタイム:
+       </strong>
+       数分〜数時間
+      </div>
+</div>
+<div class="analogy-card">
+<div class="analogy-icon">
+       ⚡
+      </div>
+<h3 id="最小ダウンタイム=-休館時間最小化">
+       最小ダウンタイム
+       <br/>
+       = 休館時間最小化
+      </h3>
+<p>
+<strong>
+        図書館をほとんど閉めずに
+       </strong>
+       引っ越し完了！
+       <br/>
+       利用者は普段通り本を借りることができ、
+       <br/>
+<strong>
+        気づかないうちに移行完了
+       </strong>
+       です。
+      </p>
+<div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        効果:
+       </strong>
+       ビジネス影響最小限
+       <br/>
+<strong>
+        継続性:
+       </strong>
+       サービス停止なし
+      </div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="移行の流れを図で見てみよう">
+     🔄 移行の流れを図で見てみよう
+    </h2>
+<div class="simple-diagram">
+<div class="diagram-row">
+<div class="diagram-item old-library">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🏛️
+       </div>
+<h3 id="古い図書館">
+        古い図書館
+       </h3>
+<p>
+<strong>
+         既存のデータベース
+        </strong>
+</p>
+<small>
+        Oracle、SQL Server
+        <br/>
+        MySQL など
+       </small>
+</div>
+<div class="connection-arrow arrow-1">
+</div>
+<div class="diagram-item sct-service">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        📐
+       </div>
+<h3 id="設計図作成">
+        設計図作成
+       </h3>
+<p>
+<strong>
+         AWS SCT
+        </strong>
+</p>
+<small>
+        スキーマ変換
+        <br/>
+        互換性チェック
+       </small>
+</div>
+<div class="connection-arrow arrow-2">
+</div>
+<div class="diagram-item dms-service">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🚚
+       </div>
+<h3 id="引っ越し実行">
+        引っ越し実行
+       </h3>
+<p>
+<strong>
+         AWS DMS
+        </strong>
+</p>
+<small>
+        データ移行
+        <br/>
+        継続同期
+       </small>
+</div>
+<div class="connection-arrow arrow-3">
+</div>
+<div class="diagram-item new-library">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🏛️
+       </div>
+<h3 id="新しい図書館">
+        新しい図書館
+       </h3>
+<p>
+<strong>
+         移行先データベース
+        </strong>
+</p>
+<small>
+        PostgreSQL、Aurora
+        <br/>
+        Redshift など
+       </small>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="データの流れ">
+       📊 データの流れ
+      </h3>
+<p>
+       古いDB → スキーマ分析・変換 → データ移行・同期 → 新しいDB
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="詳細な移行手順図書館引っ越し版">
+     📋 詳細な移行手順（図書館引っ越し版）
+    </h2>
+<div class="step-by-step">
+<div class="step-item">
+<div class="step-number">
+       1
+      </div>
+<div class="step-content">
+<h3 id="現状調査Assessment">
+        📊 現状調査（Assessment）
+       </h3>
+<p>
+<strong>
+         古い図書館の調査
+        </strong>
+<br/>
+        → 何冊の本があるか？どんな分類システムか？
+        <br/>
+        → AWS SCTで既存DBの構造・サイズ・複雑さを分析
+        <br/>
+        → 移行可能性と工数を見積もり
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       2
+      </div>
+<div class="step-content">
+<h3 id="設計図作成Schema-Conversion">
+        📐 設計図作成（Schema Conversion）
+       </h3>
+<p>
+<strong>
+         新図書館の設計図作成
+        </strong>
+<br/>
+        → 古い分類システムを新しいシステムに変換
+        <br/>
+        → AWS SCTでテーブル構造・データ型・制約を自動変換
+        <br/>
+        → 手動修正が必要な箇所をレポートで確認
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       3
+      </div>
+<div class="step-content">
+<h3 id="️-新図書館建設Target-DB-Setup">
+        🏗️ 新図書館建設（Target DB Setup）
+       </h3>
+<p>
+<strong>
+         移行先環境の準備
+        </strong>
+<br/>
+        → 新しい図書館（データベース）を建設
+        <br/>
+        → 変換されたスキーマを新DBに適用
+        <br/>
+        → ネットワーク・セキュリティ設定を完了
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       4
+      </div>
+<div class="step-content">
+<h3 id="初期引っ越しFull-Load">
+        📦 初期引っ越し（Full Load）
+       </h3>
+<p>
+<strong>
+         全ての本を一度に移動
+        </strong>
+<br/>
+        → DMS で全データの初期コピーを実行
+        <br/>
+        → この間も古い図書館は営業継続
+        <br/>
+        → 大容量の場合は AWS Snowball も活用可能
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       5
+      </div>
+<div class="step-content">
+<h3 id="継続同期CDC---Change-Data-Capture">
+        🔄 継続同期（CDC - Change Data Capture）
+       </h3>
+<p>
+<strong>
+         新しい本の追加を自動同期
+        </strong>
+<br/>
+        → 営業中に追加・変更された本も新図書館に反映
+        <br/>
+        → DMSがリアルタイムでデータ変更を検知・同期
+        <br/>
+        → 両方の図書館が同じ状態を維持
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       6
+      </div>
+<div class="step-content">
+<h3 id="✅-検証とテストValidation">
+        ✅ 検証とテスト（Validation）
+       </h3>
+<p>
+<strong>
+         本が正確に移動されたかチェック
+        </strong>
+<br/>
+        → データ整合性の確認（件数・内容の一致）
+        <br/>
+        → アプリケーションの動作テスト
+        <br/>
+        → パフォーマンステストの実施
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       7
+      </div>
+<div class="step-content">
+<h3 id="切り替えCutover">
+        🔄 切り替え（Cutover）
+       </h3>
+<p>
+<strong>
+         利用者を新図書館に案内
+        </strong>
+<br/>
+        → 古い図書館を一時閉館（数分〜数時間）
+        <br/>
+        → アプリケーションの接続先を新DBに変更
+        <br/>
+        → 新図書館でサービス再開！
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       8
+      </div>
+<div class="step-content">
+<h3 id="完了-監視Post-Migration">
+        🏁 完了・監視（Post-Migration）
+       </h3>
+<p>
+<strong>
+         引っ越し完了後の確認
+        </strong>
+<br/>
+        → 新図書館の稼働状況監視
+        <br/>
+        → パフォーマンス・エラーの確認
+        <br/>
+        → 古い図書館のクリーンアップ
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="⏰-ダウンタイム最小化の仕組み">
+     ⏰ ダウンタイム最小化の仕組み
+    </h2>
+<div class="timeline">
+<h3 id="移行タイムライン" style="text-align: center; margin-bottom: 30px; color: #0369A1;">
+      📅 移行タイムライン
+     </h3>
+<div class="timeline-item phase-1">
+<h4>
+       📊 Phase 1: 準備期間（1-2週間）
+      </h4>
+<p>
+<strong>
+        図書館は通常営業
+       </strong>
+       - SCTでスキーマ分析・変換、移行先DB準備
+      </p>
+<div class="moving-book" style="display: inline-block; margin-left: 10px;">
+       📚
+      </div>
+</div>
+<div class="timeline-item phase-2">
+<h4>
+       📦 Phase 2: 初期移行（1-3日）
+      </h4>
+<p>
+<strong>
+        図書館は通常営業
+       </strong>
+       - DMSで全データの初期コピー実行
+      </p>
+<div class="moving-book" style="display: inline-block; margin-left: 10px;">
+       📚📚📚
+      </div>
+</div>
+<div class="timeline-item phase-3">
+<h4>
+       🔄 Phase 3: 継続同期（数日〜数週間）
+      </h4>
+<p>
+<strong>
+        図書館は通常営業
+       </strong>
+       - 新しい本の追加をリアルタイム同期
+      </p>
+<div class="moving-book" style="display: inline-block; margin-left: 10px;">
+       📚➡️📚
+      </div>
+</div>
+<div class="timeline-item phase-4">
+<h4>
+       🔄 Phase 4: 切り替え（数分〜数時間）
+      </h4>
+<p>
+<strong>
+        図書館一時閉館
+       </strong>
+       - アプリケーション接続先変更、サービス再開
+      </p>
+<div style="display: inline-block; margin-left: 10px;">
+       ⚡ダウンタイム⚡
+      </div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="ダウンタイム最小化のポイント">
+      🎯 ダウンタイム最小化のポイント
+     </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+        📈 従来の移行:
+       </strong>
+       数日〜数週間のサービス停止
+      </p>
+<p>
+<strong>
+        ⚡ SCT + DMS:
+       </strong>
+       数分〜数時間のサービス停止
+      </p>
+<br/>
+<p>
+<strong>
+        🔑 実現方法:
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        事前の徹底した準備（Phase 1-2）
+       </li>
+<li>
+        バックグラウンドでの初期データコピー
+       </li>
+<li>
+        リアルタイム変更同期（CDC）
+       </li>
+<li>
+        迅速な切り替えプロセス
+       </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="対応データベース種類">
+     📊 対応データベース種類
+    </h2>
+<div class="database-comparison">
+<div class="db-card old-db">
+<h3 id="移行元古い図書館">
+       📤 移行元（古い図書館）
+      </h3>
+<div style="margin: 20px 0;">
+<div style="font-size: 2em; margin-bottom: 10px;">
+        🏛️
+       </div>
+<ul style="text-align: left; margin-left: 20px;">
+<li>
+<strong>
+          Oracle Database
+         </strong>
+</li>
+<li>
+<strong>
+          Microsoft SQL Server
+         </strong>
+</li>
+<li>
+<strong>
+          IBM Db2
+         </strong>
+</li>
+<li>
+<strong>
+          MySQL
+         </strong>
+</li>
+<li>
+<strong>
+          PostgreSQL
+         </strong>
+</li>
+<li>
+<strong>
+          MongoDB
+         </strong>
+</li>
+<li>
+<strong>
+          SAP ASE
+         </strong>
+</li>
+</ul>
+</div>
+</div>
+<div class="db-card new-db">
+<h3 id="移行先新しい図書館">
+       📥 移行先（新しい図書館）
+      </h3>
+<div style="margin: 20px 0;">
+<div style="font-size: 2em; margin-bottom: 10px;">
+        ☁️
+       </div>
+<ul style="text-align: left; margin-left: 20px;">
+<li>
+<strong>
+          Amazon Aurora
+         </strong>
+</li>
+<li>
+<strong>
+          Amazon RDS
+         </strong>
+</li>
+<li>
+<strong>
+          Amazon Redshift
+         </strong>
+</li>
+<li>
+<strong>
+          Amazon DynamoDB
+         </strong>
+</li>
+<li>
+<strong>
+          Amazon Neptune
+         </strong>
+</li>
+<li>
+<strong>
+          Amazon DocumentDB
+         </strong>
+</li>
+<li>
+<strong>
+          Amazon Kinesis
+         </strong>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="人気の移行パターン">
+      💡 人気の移行パターン
+     </h3>
+<div style="text-align: left; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+<div>
+<h4>
+        🔄 同種DB移行
+       </h4>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         Oracle → Aurora PostgreSQL
+        </li>
+<li>
+         SQL Server → Aurora MySQL
+        </li>
+<li>
+         MySQL → RDS MySQL
+        </li>
+</ul>
+</div>
+<div>
+<h4>
+        🔄 異種DB移行
+       </h4>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         Oracle → PostgreSQL
+        </li>
+<li>
+         SQL Server → MySQL
+        </li>
+<li>
+         MySQL → DynamoDB
+        </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🤔 なぜ2つのサービス（SCT + DMS）が必要なの？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         役割分担
+        </strong>
+        があります！
+       </p>
+<br/>
+<p>
+<strong>
+         🔨 SCT（設計図作成）:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         データベース構造の分析・変換
+        </li>
+<li>
+         異なるDB間の互換性問題を解決
+        </li>
+<li>
+         移行前の課題を事前に特定
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         🚚 DMS（実際の引っ越し）:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         実際のデータ移行作業
+        </li>
+<li>
+         リアルタイム同期
+        </li>
+<li>
+         ダウンタイム最小化
+        </li>
+</ul>
+<br/>
+<p>
+        建築士（SCT）が設計図を作り、引っ越し業者（DMS）が実際に運ぶようなイメージです。
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       💰 料金はどのくらいかかるの？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+        主な費用は以下の通りです：
+       </p>
+<br/>
+<p>
+<strong>
+         💡 AWS SCT:
+        </strong>
+        無料！
+       </p>
+<br/>
+<p>
+<strong>
+         💰 AWS DMS:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          レプリケーションインスタンス
+         </strong>
+         : $0.60〜/時間
+        </li>
+<li>
+<strong>
+          データ転送料金
+         </strong>
+         : 送信時のみ課金
+        </li>
+<li>
+<strong>
+          ストレージ料金
+         </strong>
+         : ログ保存分のみ
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         💡 節約のコツ:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         移行完了後はDMSインスタンスを削除
+        </li>
+<li>
+         適切なインスタンスサイズを選択
+        </li>
+<li>
+         テスト期間を短く設定
+        </li>
+</ul>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       ⚡ どの程度の規模まで対応できるの？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         ペタバイト級
+        </strong>
+        まで対応可能です！
+       </p>
+<br/>
+<p>
+<strong>
+         📊 規模別の目安:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          小規模（〜100GB）:
+         </strong>
+         数時間で完了
+        </li>
+<li>
+<strong>
+          中規模（100GB〜1TB）:
+         </strong>
+         1〜3日で完了
+        </li>
+<li>
+<strong>
+          大規模（1TB〜）:
+         </strong>
+         AWS Snowball併用で高速化
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         🔧 大規模対応の工夫:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         AWS Snowball Family でオフライン移行
+        </li>
+<li>
+         複数のDMSタスクで並列処理
+        </li>
+<li>
+         テーブル分割による高速化
+        </li>
+</ul>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🔧 失敗した場合はどうなるの？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         安心してください！
+        </strong>
+        元のシステムは無傷です。
+       </p>
+<br/>
+<p>
+<strong>
+         🛡️ 安全な設計:
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         移行元DBは
+         <strong>
+          読み取り専用
+         </strong>
+         でアクセス
+        </li>
+<li>
+         元のデータに変更は一切加えません
+        </li>
+<li>
+         いつでも元の環境に戻せます
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         🔄 復旧手順:
+        </strong>
+</p>
+<ol style="margin-left: 20px; margin-top: 10px;">
+<li>
+         アプリケーションを元のDBに戻す
+        </li>
+<li>
+         DMSタスクを停止
+        </li>
+<li>
+         問題を解決して再実行
+        </li>
+</ol>
+<br/>
+<p>
+        図書館の引っ越しに失敗しても、古い図書館の本は何も変わっていないので安心です！
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="✨-SCT-+-DMS-の最大のメリット">
+     ✨ SCT + DMS の最大のメリット
+    </h2>
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       ⚡
+      </div>
+<h3 id="最小ダウンタイム">
+       最小ダウンタイム
+      </h3>
+<p>
+       サービス停止時間を数分〜数時間に短縮。ビジネス影響を最小限に
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🎯
+      </div>
+<h3 id="高い成功率">
+       高い成功率
+      </h3>
+<p>
+       事前のスキーマ変換と検証により、移行の成功率を大幅に向上
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔧
+      </div>
+<h3 id="自動化">
+       自動化
+      </h3>
+<p>
+       多くの作業が自動化され、手動エラーのリスクを削減
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       💰
+      </div>
+<h3 id="コスト削減">
+       コスト削減
+      </h3>
+<p>
+       クラウドDBに移行することで、運用コストを大幅削減
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔍
+      </div>
+<h3 id="詳細な分析">
+       詳細な分析
+      </h3>
+<p>
+       移行前に詳細な分析レポートで課題を事前に把握
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🛡️
+      </div>
+<h3 id="安全性">
+       安全性
+      </h3>
+<p>
+       元のデータに影響なし。いつでも元の環境に戻せる安心設計
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="highlight-box">
+<h2 id="まとめ">
+      🎯 まとめ
+     </h2>
+<div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+<p>
+       📐
+       <strong>
+        AWS SCT
+       </strong>
+       = 設計図作成（スキーマ変換・課題分析）
+      </p>
+<p>
+       🚚
+       <strong>
+        AWS DMS
+       </strong>
+       = 引っ越し業者（データ移行・継続同期）
+      </p>
+<p>
+       ⚡
+       <strong>
+        最小ダウンタイム
+       </strong>
+       = 図書館をほぼ閉めずに引っ越し完了
+      </p>
+<p>
+       🔄
+       <strong>
+        異なるDB間移行
+       </strong>
+       = 古い分類システムから新しいシステムへ
+      </p>
+<br/>
+<p>
+       この2つのサービスを組み合わせることで、
+       <strong>
+        大規模なデータベースも安全・迅速に移行
+       </strong>
+       できます！
+      </p>
+<br/>
+<p>
+<strong>
+        🎯 成功のポイント：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        事前の入念な計画とテスト
+       </li>
+<li>
+        SCTでの詳細な分析と課題解決
+       </li>
+<li>
+        段階的な移行アプローチ
+       </li>
+<li>
+        十分な検証期間の確保
+       </li>
+</ul>
+<br/>
+<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 20px;">
+<strong>
+        💡 はじめの一歩:
+       </strong>
+       AWS SCTは無料なので、まずは既存DBの分析から始めてみましょう！
+      </div>
+</div>
+</div>
+</div>
+</div>
+<script>
+   function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#0369A1' : '#2196f3';
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.analogy-card, .diagram-item');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1) rotate(1deg)';
+                    setTimeout(() => {
+                        this.style.transform = 'translateY(-10px)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // ステップアニメーション
+            const steps = document.querySelectorAll('.step-item');
+            function animateSteps() {
+                steps.forEach((step, index) => {
+                    setTimeout(() => {
+                        step.style.transform = 'translateX(15px) scale(1.02)';
+                        step.style.borderLeftColor = '#00f2fe';
+                        
+                        setTimeout(() => {
+                            step.style.transform = 'translateX(0) scale(1)';
+                            step.style.borderLeftColor = '#0369A1';
+                        }, 800);
+                    }, index * 300);
+                });
+            }
+            
+            // 15秒ごとにステップアニメーションを実行
+            setInterval(animateSteps, 15000);
+
+            // 本の移動アニメーション
+            setInterval(() => {
+                const books = document.querySelectorAll('.moving-book');
+                books.forEach(book => {
+                    book.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        book.style.transform = 'translateX(0)';
+                    }, 1000);
+                });
+            }, 3000);
+        });
+  </script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">1</span> <span class="separator" aria-hidden="true">/</span> <span class="total">1</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

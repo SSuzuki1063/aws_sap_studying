@@ -1,0 +1,2435 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Amazon Kinesis Data Streamsをベルトコンベアで理解しよう
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/kinesis-infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#工場のベルトコンベア-→-商品の流れ-→-リアルタイム処理">🏭 工場のベルトコンベア → 📦 商品の流れ → 📊 リアルタイム処理</a> </li><li class="toc-h2"> <a href="#まず、Kinesis-Data-Streamsって何？">🤔 まず、Kinesis Data Streamsって何？</a> </li><li class="toc-h3"> <a href="#簡単に言うと...">📝 簡単に言うと...</a> </li><li class="toc-h3"> <a href="#工場のベルトコンベア">🏭 工場のベルトコンベア</a> </li><li class="toc-h3"> <a href="#☁️-Kinesis-Data-Streams">☁️ Kinesis Data Streams</a> </li><li class="toc-h2"> <a href="#重要な5つの要素をベルトコンベアで理解">🏭 重要な5つの要素をベルトコンベアで理解</a> </li><li class="toc-h3"> <a href="#Data-Stream=-工場全体のコンベアシステム">Data Stream = 工場全体のコンベアシステム</a> </li><li class="toc-h3"> <a href="#Shard=-個々のベルトコンベアライン">Shard = 個々のベルトコンベアライン</a> </li><li class="toc-h3"> <a href="#Producer=-商品を載せる作業員">Producer = 商品を載せる作業員</a> </li><li class="toc-h3"> <a href="#Consumer=-商品を受け取る作業員">Consumer = 商品を受け取る作業員</a> </li><li class="toc-h3"> <a href="#Partition-Key=-商品の仕分けタグ">Partition Key = 商品の仕分けタグ</a> </li><li class="toc-h2"> <a href="#データレコード-=-荷札付きの商品">📦 データレコード = 荷札付きの商品</a> </li><li class="toc-h2"> <a href="#️-3つの情報が付いた商品">🏷️ 3つの情報が付いた商品</a> </li><li class="toc-h3"> <a href="#Data=-商品の中身">Data = 商品の中身</a> </li><li class="toc-h3"> <a href="#Partition-Key=-配送先ラベル">Partition Key = 配送先ラベル</a> </li><li class="toc-h3"> <a href="#Sequence-Number=-商品の通し番号">Sequence Number = 商品の通し番号</a> </li><li class="toc-h3"> <a href="#データレコードの構造">📋 データレコードの構造</a> </li><li class="toc-h2"> <a href="#シーケンス番号の仕組み">🔢 シーケンス番号の仕組み</a> </li><li class="toc-h2"> <a href="#ベルトコンベアでの通し番号システム">📊 ベルトコンベアでの通し番号システム</a> </li><li class="toc-h3"> <a href="#各ラインでの通し番号管理">🏭 各ラインでの通し番号管理</a> </li><li class="toc-h3"> <a href="#⚡-シーケンス番号の重要な特徴">⚡ シーケンス番号の重要な特徴</a> </li><li class="toc-h3"> <a href="#実際のデータ送受信の流れ">📈 実際のデータ送受信の流れ</a> </li><li class="toc-h3"> <a href="#Producer側-データ送信">Producer側：データ送信</a> </li><li class="toc-h3"> <a href="#Consumer側-データ受信">Consumer側：データ受信</a> </li><li class="toc-h2"> <a href="#シーケンス番号の活用方法">🎯 シーケンス番号の活用方法</a> </li><li class="toc-h3"> <a href="#重複処理の防止">重複処理の防止</a> </li><li class="toc-h3"> <a href="#処理再開ポイント">処理再開ポイント</a> </li><li class="toc-h3"> <a href="#データ順序の確認">データ順序の確認</a> </li><li class="toc-h3"> <a href="#一意識別子として">一意識別子として</a> </li><li class="toc-h3"> <a href="#実践的なコード例">💡 実践的なコード例</a> </li><li class="toc-h2"> <a href="#⚠️-よくある誤解と注意点">⚠️ よくある誤解と注意点</a> </li><li class="toc-h3"> <a href="#❌-よくある間違い">❌ よくある間違い</a> </li><li class="toc-h3"> <a href="#✅-正しい理解">✅ 正しい理解</a> </li><li class="toc-h3"> <a href="#実装時のベストプラクティス">🎯 実装時のベストプラクティス</a> </li><li class="toc-h2"> <a href="#実際のベルトコンベアの動きを見てみよう">🔄 実際のベルトコンベアの動きを見てみよう</a> </li><li class="toc-h3"> <a href="#Kinesis-Data-Stream-の動作イメージ">📊 Kinesis Data Stream の動作イメージ</a> </li><li class="toc-h3"> <a href="#Producerデータ送信者">Producer （データ送信者）</a> </li><li class="toc-h3"> <a href="#Consumerデータ受信者">Consumer （データ受信者）</a> </li><li class="toc-h3"> <a href="#データの流れの特徴">📈 データの流れの特徴</a> </li><li class="toc-h2"> <a href="#️-Partition-Key仕分けタグの仕組み">🏷️ Partition Key（仕分けタグ）の仕組み</a> </li><li class="toc-h2"> <a href="#商品の仕分けシステム">📦 商品の仕分けシステム</a> </li><li class="toc-h3"> <a href="#️-仕分け作業の流れ">🏷️ 仕分け作業の流れ</a> </li><li class="toc-h3"> <a href="#商品データにタグを付ける">商品（データ）にタグを付ける</a> </li><li class="toc-h3"> <a href="#タグを見てラインShardを決定">タグを見てライン（Shard）を決定</a> </li><li class="toc-h3"> <a href="#同じタグは必ず同じラインへ">同じタグは必ず同じラインへ</a> </li><li class="toc-h3"> <a href="#負荷分散">負荷分散</a> </li><li class="toc-h3"> <a href="#順序保証">順序保証</a> </li><li class="toc-h3"> <a href="#効率的処理">効率的処理</a> </li><li class="toc-h3"> <a href="#設計の重要性">設計の重要性</a> </li><li class="toc-h3"> <a href="#良いPartition-Keyの選び方">💡 良いPartition Keyの選び方</a> </li><li class="toc-h2"> <a href="#実際の設定手順超簡単版">📋 実際の設定手順（超簡単版）</a> </li><li class="toc-h3"> <a href="#工場Data-Streamを建設">工場（Data Stream）を建設</a> </li><li class="toc-h3"> <a href="#作業員Producerを配置">作業員（Producer）を配置</a> </li><li class="toc-h3"> <a href="#受取人Consumerを配置">受取人（Consumer）を配置</a> </li><li class="toc-h3"> <a href="#監視システムを設置">監視システムを設置</a> </li><li class="toc-h3"> <a href="#運用開始！">運用開始！</a> </li><li class="toc-h2"> <a href="#シャードのデータ量制限">🚚 シャードのデータ量制限</a> </li><li class="toc-h2"> <a href="#⚖️-ベルトコンベアの処理能力">⚖️ ベルトコンベアの処理能力</a> </li><li class="toc-h3"> <a href="#工場のベルトコンベア-1">🏭 工場のベルトコンベア</a> </li><li class="toc-h3"> <a href="#☁️-Kinesis-Shard">☁️ Kinesis Shard</a> </li><li class="toc-h3"> <a href="#書き込み制限Producer側">書き込み制限 （Producer側）</a> </li><li class="toc-h3"> <a href="#読み込み制限Consumer側">読み込み制限 （Consumer側）</a> </li><li class="toc-h3"> <a href="#レコードサイズ個別制限">レコードサイズ （個別制限）</a> </li><li class="toc-h3"> <a href="#バッチ処理PutRecords-API">バッチ処理 （PutRecords API）</a> </li><li class="toc-h3"> <a href="#API別の詳細制限">📊 API別の詳細制限</a> </li><li class="toc-h3"> <a href="#PutRecord-API1個ずつ送信">PutRecord API（1個ずつ送信）</a> </li><li class="toc-h3"> <a href="#PutRecords-APIまとめて送信">PutRecords API（まとめて送信）</a> </li><li class="toc-h3"> <a href="#GetRecords-APIデータ取得">GetRecords API（データ取得）</a> </li><li class="toc-h3"> <a href="#⚠️-制限超過時の動作スロットリング">⚠️ 制限超過時の動作（スロットリング）</a> </li><li class="toc-h2"> <a href="#制限対策とベストプラクティス">🎯 制限対策とベストプラクティス</a> </li><li class="toc-h3"> <a href="#指数バックオフリトライ">指数バックオフリトライ</a> </li><li class="toc-h3"> <a href="#効率的なバッチング">効率的なバッチング</a> </li><li class="toc-h3"> <a href="#適切なShard数の計算">適切なShard数の計算</a> </li><li class="toc-h3"> <a href="#レート制御の実装">レート制御の実装</a> </li><li class="toc-h3"> <a href="#実際の計算例">💡 実際の計算例</a> </li><li class="toc-h3"> <a href="#監視すべきメトリクス">🎯 監視すべきメトリクス</a> </li><li class="toc-h2"> <a href="#❓-よくある質問">❓ よくある質問</a> </li><li class="toc-h2"> <a href="#✨-Kinesis-Data-Streamsのメリット">✨ Kinesis Data Streamsのメリット</a> </li><li class="toc-h3"> <a href="#リアルタイム処理">リアルタイム処理</a> </li><li class="toc-h3"> <a href="#自動スケーリング">自動スケーリング</a> </li><li class="toc-h3"> <a href="#高い耐久性">高い耐久性</a> </li><li class="toc-h3"> <a href="#豊富な連携">豊富な連携</a> </li><li class="toc-h3"> <a href="#順序保証-1">順序保証</a> </li><li class="toc-h3"> <a href="#コスト効率">コスト効率</a> </li><li class="toc-h2"> <a href="#実際の使用例">🎯 実際の使用例</a> </li><li class="toc-h3"> <a href="#リアルタイム分析">リアルタイム分析</a> </li><li class="toc-h3"> <a href="#IoTデータ処理">IoTデータ処理</a> </li><li class="toc-h3"> <a href="#ログ集約-分析">ログ集約・分析</a> </li><li class="toc-h3"> <a href="#不正検知システム">不正検知システム</a> </li><li class="toc-h2"> <a href="#まとめ">🎯 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> 分析・運用・クイズ </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> 分析・運用 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Kinesis Infographic </span> </nav> <!-- ページコンテンツ (slot) -->  <header class="header">
+<h1>
+     🏭 Amazon Kinesis Data Streams
+    </h1>
+
+<p>
+     ベルトコンベアシステムで理解する超入門ガイド
+    </p>
+<div class="intro-analogy">
+<h2 id="工場のベルトコンベア-→-商品の流れ-→-リアルタイム処理">
+      🏭 工場のベルトコンベア → 📦 商品の流れ → 📊 リアルタイム処理
+     </h2>
+<p>
+      Kinesis Data Streamsを、身近な工場のベルトコンベアシステムで例えて分かりやすく説明します！
+     </p>
+</div>
+</header>
+<div class="section">
+<h2 id="まず、Kinesis-Data-Streamsって何？">
+     🤔 まず、Kinesis Data Streamsって何？
+    </h2>
+<div class="highlight-box">
+<h3 id="簡単に言うと...">
+      📝 簡単に言うと...
+     </h3>
+<p style="font-size: 1.2em; margin-top: 15px;">
+<strong>
+       大量のデータ
+      </strong>
+      を
+      <strong>
+       リアルタイム
+      </strong>
+      で、
+      <strong>
+       複数のベルトコンベア
+      </strong>
+      を使って
+      <strong>
+       効率的に処理
+      </strong>
+      するAWSのサービスです
+     </p>
+</div>
+<div class="comparison-table">
+<div class="comparison-side everyday-side">
+<h3 id="工場のベルトコンベア">
+       🏭 工場のベルトコンベア
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         作業員
+        </strong>
+        が
+        <strong>
+         商品
+        </strong>
+        を
+        <br/>
+        ベルトコンベアに載せる
+       </p>
+<br/>
+<p>
+        👆 複数のラインで
+        <br/>
+        🔄
+        <strong>
+         同時に大量処理
+        </strong>
+        ！
+       </p>
+<br/>
+<p>
+        📦 商品が順番に流れて
+        <br/>
+        🏭
+        <strong>
+         各工程で処理
+        </strong>
+        される
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="☁️-Kinesis-Data-Streams">
+       ☁️ Kinesis Data Streams
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         アプリケーション
+        </strong>
+        が
+        <strong>
+         データ
+        </strong>
+        を
+        <br/>
+        ストリームに送信
+       </p>
+<br/>
+<p>
+        👆 複数のシャードで
+        <br/>
+        🔄
+        <strong>
+         同時に大量処理
+        </strong>
+        ！
+       </p>
+<br/>
+<p>
+        📊 データが順番に流れて
+        <br/>
+        ⚙️
+        <strong>
+         各システムで処理
+        </strong>
+        される
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="重要な5つの要素をベルトコンベアで理解">
+     🏭 重要な5つの要素をベルトコンベアで理解
+    </h2>
+<div class="concept-grid">
+<div class="concept-card">
+<div class="analogy-icon">
+       📊
+      </div>
+<h3 id="Data-Stream=-工場全体のコンベアシステム">
+       Data Stream
+       <br/>
+       = 工場全体のコンベアシステム
+      </h3>
+<p>
+<strong>
+        データの流れ全体
+       </strong>
+       を管理します。
+       <br/>
+       工場の複数のベルトコンベアを統括する
+       <strong>
+        システム全体
+       </strong>
+       のようなものです。
+      </p>
+<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        具体例:
+       </strong>
+       ログ解析システム
+       <br/>
+<strong>
+        名前:
+       </strong>
+       my-log-stream
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       🔄
+      </div>
+<h3 id="Shard=-個々のベルトコンベアライン">
+       Shard
+       <br/>
+       = 個々のベルトコンベアライン
+      </h3>
+<p>
+<strong>
+        実際のデータ処理ライン
+       </strong>
+       です。
+       <br/>
+       工場の
+       <strong>
+        1本1本のベルトコンベア
+       </strong>
+       で、それぞれが独立してデータを処理します。
+      </p>
+<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        処理能力:
+       </strong>
+       1MB/秒 または 1,000レコード/秒
+       <br/>
+<strong>
+        特徴:
+       </strong>
+       自動で負荷分散
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       👷
+      </div>
+<h3 id="Producer=-商品を載せる作業員">
+       Producer
+       <br/>
+       = 商品を載せる作業員
+      </h3>
+<p>
+<strong>
+        データを送信する側
+       </strong>
+       です。
+       <br/>
+       作業員が商品をベルトコンベアに載せるように、
+       <strong>
+        アプリケーションがデータを送信
+       </strong>
+       します。
+      </p>
+<div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        例:
+       </strong>
+       Webサーバー、IoTデバイス
+       <br/>
+<strong>
+        役割:
+       </strong>
+       データの投入
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       📦
+      </div>
+<h3 id="Consumer=-商品を受け取る作業員">
+       Consumer
+       <br/>
+       = 商品を受け取る作業員
+      </h3>
+<p>
+<strong>
+        データを受信・処理する側
+       </strong>
+       です。
+       <br/>
+       ベルトコンベアから商品を受け取る作業員のように、
+       <strong>
+        データを受信して処理
+       </strong>
+       します。
+      </p>
+<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        例:
+       </strong>
+       分析システム、データベース
+       <br/>
+<strong>
+        役割:
+       </strong>
+       データの取得・処理
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       🏷️
+      </div>
+<h3 id="Partition-Key=-商品の仕分けタグ">
+       Partition Key
+       <br/>
+       = 商品の仕分けタグ
+      </h3>
+<p>
+<strong>
+        データの分散ルール
+       </strong>
+       です。
+       <br/>
+       商品に貼る
+       <strong>
+        「食品」「電子機器」
+       </strong>
+       などのタグで、どのラインに送るかを決めます。
+      </p>
+<div style="background: #e1f5fe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        例:
+       </strong>
+       ユーザーID、地域コード
+       <br/>
+<strong>
+        効果:
+       </strong>
+       同じキーのデータは同じシャードへ
+      </div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="データレコード-=-荷札付きの商品">
+     📦 データレコード = 荷札付きの商品
+    </h2>
+<div class="intro-analogy">
+<h2 id="️-3つの情報が付いた商品">
+      🏷️ 3つの情報が付いた商品
+     </h2>
+<p>
+      データレコードは、ベルトコンベアに流れる「荷札付きの商品」のようなものです
+     </p>
+</div>
+<div class="concept-grid">
+<div class="concept-card">
+<div class="analogy-icon">
+       🎁
+      </div>
+<h3 id="Data=-商品の中身">
+       Data
+       <br/>
+       = 商品の中身
+      </h3>
+<p>
+<strong>
+        実際に送りたいデータ
+       </strong>
+       です。
+       <br/>
+       商品の中身のように、JSON、CSV、画像など
+       <strong>
+        任意の形式
+       </strong>
+       で送れます。
+      </p>
+<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        最大サイズ:
+       </strong>
+       1MB
+       <br/>
+<strong>
+        形式:
+       </strong>
+       JSON、CSV、バイナリなど自由
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       🏷️
+      </div>
+<h3 id="Partition-Key=-配送先ラベル">
+       Partition Key
+       <br/>
+       = 配送先ラベル
+      </h3>
+<p>
+<strong>
+        どのライン（Shard）に送るか
+       </strong>
+       を決めます。
+       <br/>
+       商品に貼る配送先ラベルのように、
+       <strong>
+        仕分けの基準
+       </strong>
+       になります。
+      </p>
+<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        例:
+       </strong>
+       "user123", "device_001"
+       <br/>
+<strong>
+        役割:
+       </strong>
+       同じキーは同じShardへ
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       🔢
+      </div>
+<h3 id="Sequence-Number=-商品の通し番号">
+       Sequence Number
+       <br/>
+       = 商品の通し番号
+      </h3>
+<p>
+<strong>
+        Kinesisが自動で付ける
+       </strong>
+       一意の番号です。
+       <br/>
+       工場の通し番号のように、
+       <strong>
+        そのライン内での順序
+       </strong>
+       を保証します。
+      </p>
+<div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        自動生成:
+       </strong>
+       ユーザーは設定不要
+       <br/>
+<strong>
+        用途:
+       </strong>
+       順序保証、重複防止
+      </div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="データレコードの構造">
+      📋 データレコードの構造
+     </h3>
+<div class="config-example">
+      {
+  "Data": "{\"user_id\":\"123\",\"action\":\"click\"}",
+  "PartitionKey": "user123", 
+  "SequenceNumber": "49590338271490256608559692538361571095921575989136588610"
+}
+     </div>
+<p style="margin-top: 15px;">
+      この3つの要素がセットで、1つのデータレコードを構成します
+     </p>
+</div>
+</div>
+<div class="section">
+<h2 id="シーケンス番号の仕組み">
+     🔢 シーケンス番号の仕組み
+    </h2>
+<div class="intro-analogy">
+<h2 id="ベルトコンベアでの通し番号システム">
+      📊 ベルトコンベアでの通し番号システム
+     </h2>
+<p>
+      各ライン（Shard）ごとに、商品に通し番号を付けて順序を管理します
+     </p>
+</div>
+<div class="conveyor-diagram">
+<h3 id="各ラインでの通し番号管理" style="text-align: center; margin-bottom: 30px; color: #667eea;">
+      🏭 各ラインでの通し番号管理
+     </h3>
+<div class="shard-container">
+<div style="text-align: center; margin: 20px 0;">
+<h4 style="color: #667eea;">
+        🔄 Shard 1（ユーザーAliceのライン）
+       </h4>
+<div class="shard-belt" style="justify-content: space-around; background: linear-gradient(90deg, #0369A1 0%, #00f2fe 100%);">
+<div style="display: flex; align-items: center; gap: 10px;">
+<div class="data-item" style="background: #DC2626;">
+          📝
+         </div>
+<span style="font-size: 0.9em;">
+          Login
+          <br/>
+          Seq: 001
+         </span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div class="data-item" style="background: #4ecdc4;">
+          👀
+         </div>
+<span style="font-size: 0.9em;">
+          View Page
+          <br/>
+          Seq: 002
+         </span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div class="data-item" style="background: #45b7d1;">
+          🛒
+         </div>
+<span style="font-size: 0.9em;">
+          Add Cart
+          <br/>
+          Seq: 003
+         </span>
+</div>
+</div>
+</div>
+<div style="text-align: center; margin: 20px 0;">
+<h4 style="color: #667eea;">
+        🔄 Shard 2（ユーザーBobのライン）
+       </h4>
+<div class="shard-belt" style="justify-content: space-around; background: linear-gradient(90deg, #9333EA 0%, #f5576c 100%);">
+<div style="display: flex; align-items: center; gap: 10px;">
+<div class="data-item" style="background: #DC2626;">
+          📝
+         </div>
+<span style="font-size: 0.9em;">
+          Login
+          <br/>
+          Seq: 001
+         </span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div class="data-item" style="background: #4ecdc4;">
+          🔍
+         </div>
+<span style="font-size: 0.9em;">
+          Search
+          <br/>
+          Seq: 002
+         </span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div class="data-item" style="background: #96ceb4;">
+          💳
+         </div>
+<span style="font-size: 0.9em;">
+          Purchase
+          <br/>
+          Seq: 003
+         </span>
+</div>
+</div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="⚡-シーケンス番号の重要な特徴">
+       ⚡ シーケンス番号の重要な特徴
+      </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+         ✅ Shard内での順序保証:
+        </strong>
+        同じShard内では必ず番号順に処理
+       </p>
+<p>
+<strong>
+         ❌ Shard間では順序保証なし:
+        </strong>
+        異なるShardの番号に関連性はなし
+       </p>
+<p>
+<strong>
+         🔢 非常に大きな数値:
+        </strong>
+        文字列形式の長い番号
+       </p>
+<p>
+<strong>
+         🤖 自動生成:
+        </strong>
+        Kinesisが自動で採番、ユーザーは設定不要
+       </p>
+</div>
+</div>
+</div>
+<div class="step-by-step">
+<h3 id="実際のデータ送受信の流れ" style="text-align: center; margin-bottom: 20px; color: #667eea;">
+      📈 実際のデータ送受信の流れ
+     </h3>
+<div class="step-item" style="border-left-color: #0369A1;">
+<div class="step-number" style="background: #0369A1;">
+       1
+      </div>
+<div class="step-content">
+<h3 id="Producer側-データ送信">
+        Producer側：データ送信
+       </h3>
+<div class="config-example">
+        // ユーザーAliceのアクション
+await kinesis.putRecord({
+  StreamName: 'user-actions',
+  Data: JSON.stringify({user: 'alice', action: 'login'}),
+  PartitionKey: 'alice'
+});
+// → Shard 1, Sequence: 49590...001 (自動生成)
+
+await kinesis.putRecord({
+  StreamName: 'user-actions', 
+  Data: JSON.stringify({user: 'alice', action: 'view_page'}),
+  PartitionKey: 'alice'
+});
+// → Shard 1, Sequence: 49590...002 (自動生成)
+       </div>
+</div>
+</div>
+<div class="step-item" style="border-left-color: #9333EA;">
+<div class="step-number" style="background: #9333EA;">
+       2
+      </div>
+<div class="step-content">
+<h3 id="Consumer側-データ受信">
+        Consumer側：データ受信
+       </h3>
+<div class="config-example">
+        // Shard 1から順番に受信（必ず送信順）
+{
+  "SequenceNumber": "49590338271490256608559692538361571095921575989136588610",
+  "Data": "{\"user\":\"alice\",\"action\":\"login\"}",
+  "PartitionKey": "alice"
+}
+
+{
+  "SequenceNumber": "49590338271490256608559692538361571095921575989136588611", 
+  "Data": "{\"user\":\"alice\",\"action\":\"view_page\"}",
+  "PartitionKey": "alice"
+}
+// ↑ 必ず login → view_page の順序で受信される！
+       </div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="シーケンス番号の活用方法">
+     🎯 シーケンス番号の活用方法
+    </h2>
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🚫
+      </div>
+<h3 id="重複処理の防止">
+       重複処理の防止
+      </h3>
+<p>
+       処理済みシーケンス番号を記録して、同じデータの重複処理を防止
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📍
+      </div>
+<h3 id="処理再開ポイント">
+       処理再開ポイント
+      </h3>
+<p>
+       最後に処理した番号を保存して、障害復旧時に正確な位置から再開
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📊
+      </div>
+<h3 id="データ順序の確認">
+       データ順序の確認
+      </h3>
+<p>
+       番号の連続性をチェックして、データ欠損や順序異常を検出
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔗
+      </div>
+<h3 id="一意識別子として">
+       一意識別子として
+      </h3>
+<p>
+       Shard ID + シーケンス番号で、全データレコードを一意に識別
+      </p>
+</div>
+</div>
+<div class="faq-section">
+<h3 id="実践的なコード例" style="text-align: center; margin-bottom: 20px; color: #d63384;">
+      💡 実践的なコード例
+     </h3>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🚫 重複処理を防ぐコード
+      </div>
+<div class="faq-answer" style="display: none;">
+<div class="config-example">
+        const processedSequenceNumbers = new Set();
+
+consumer.on('data', (record) =&gt; {
+  // 既に処理済みかチェック
+  if (processedSequenceNumbers.has(record.SequenceNumber)) {
+    console.log('重複データをスキップ:', record.SequenceNumber);
+    return;
+  }
+  
+  // データ処理
+  try {
+    const data = JSON.parse(record.Data);
+    processUserAction(data);
+    
+    // 処理完了後にシーケンス番号を記録
+    processedSequenceNumbers.add(record.SequenceNumber);
+    console.log('処理完了:', record.SequenceNumber);
+  } catch (error) {
+    console.error('処理エラー:', error);
+  }
+});
+       </div>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       📍 処理再開ポイントの保存
+      </div>
+<div class="faq-answer" style="display: none;">
+<div class="config-example">
+        // DynamoDBに最後のシーケンス番号を保存
+const saveCheckpoint = async (shardId, sequenceNumber) =&gt; {
+  await dynamodb.putItem({
+    TableName: 'kinesis-checkpoints',
+    Item: {
+      shardId: { S: shardId },
+      lastSequenceNumber: { S: sequenceNumber },
+      timestamp: { S: new Date().toISOString() }
+    }
+  }).promise();
+};
+
+// 処理再開時にチェックポイントから開始
+const getLastCheckpoint = async (shardId) =&gt; {
+  const result = await dynamodb.getItem({
+    TableName: 'kinesis-checkpoints',
+    Key: { shardId: { S: shardId } }
+  }).promise();
+  
+  return result.Item ? result.Item.lastSequenceNumber.S : null;
+};
+
+// データ処理完了時にチェックポイント更新
+consumer.on('data', async (record) =&gt; {
+  // データ処理
+  await processData(record.Data);
+  
+  // チェックポイント保存
+  await saveCheckpoint(record.ShardId, record.SequenceNumber);
+});
+       </div>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       📊 データ順序の監視
+      </div>
+<div class="faq-answer" style="display: none;">
+<div class="config-example">
+        const shardStates = new Map();
+
+consumer.on('data', (record) =&gt; {
+  const shardId = record.ShardId;
+  
+  if (!shardStates.has(shardId)) {
+    shardStates.set(shardId, {
+      lastSequenceNumber: null,
+      processedCount: 0
+    });
+  }
+  
+  const state = shardStates.get(shardId);
+  
+  // 順序確認（文字列比較）
+  if (state.lastSequenceNumber &amp;&amp; 
+      record.SequenceNumber &lt;= state.lastSequenceNumber) {
+    console.warn('順序異常を検出:', {
+      shard: shardId,
+      expected: `&gt; ${state.lastSequenceNumber}`,
+      actual: record.SequenceNumber
+    });
+  }
+  
+  // 状態更新
+  state.lastSequenceNumber = record.SequenceNumber;
+  state.processedCount++;
+  
+  console.log(`Shard ${shardId}: 処理数 ${state.processedCount}`);
+});
+       </div>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="⚠️-よくある誤解と注意点">
+     ⚠️ よくある誤解と注意点
+    </h2>
+<div class="comparison-table">
+<div class="comparison-side everyday-side">
+<h3 id="❌-よくある間違い">
+       ❌ よくある間違い
+      </h3>
+<div style="text-align: left; margin-top: 15px;">
+<p>
+<strong>
+         🔢 整数だと思う
+        </strong>
+<br/>
+        → 実際は非常に長い文字列
+       </p>
+<br/>
+<p>
+<strong>
+         🌍 全Shard通じてユニーク
+        </strong>
+<br/>
+        → 実際はShard内でのみユニーク
+       </p>
+<br/>
+<p>
+<strong>
+         ✏️ 自分で設定できる
+        </strong>
+<br/>
+        → 実際はKinesisが自動生成
+       </p>
+<br/>
+<p>
+<strong>
+         📈 連続する数値
+        </strong>
+<br/>
+        → 実際は大きく跳ぶことがある
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="✅-正しい理解">
+       ✅ 正しい理解
+      </h3>
+<div style="text-align: left; margin-top: 15px;">
+<p>
+<strong>
+         📝 文字列として扱う
+        </strong>
+<br/>
+        → `record.SequenceNumber` (string)
+       </p>
+<br/>
+<p>
+<strong>
+         🔗 ShardID + 番号で一意
+        </strong>
+<br/>
+        → `${shardId}-${sequenceNumber}`
+       </p>
+<br/>
+<p>
+<strong>
+         🤖 完全に自動
+        </strong>
+<br/>
+        → ユーザーは一切設定不要
+       </p>
+<br/>
+<p>
+<strong>
+         📊 文字列比較で順序判定
+        </strong>
+<br/>
+        → `seqA.localeCompare(seqB)`
+       </p>
+</div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="実装時のベストプラクティス">
+      🎯 実装時のベストプラクティス
+     </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+        📝 常に文字列として扱う:
+       </strong>
+       数値変換は行わない
+      </p>
+<p>
+<strong>
+        💾 チェックポイントを定期保存:
+       </strong>
+       障害時の復旧を考慮
+      </p>
+<p>
+<strong>
+        🔍 順序監視を実装:
+       </strong>
+       データ欠損の早期発見
+      </p>
+<p>
+<strong>
+        ⚡ 重複処理を考慮:
+       </strong>
+       冪等性のある処理を心がける
+      </p>
+<p>
+<strong>
+        📊 メトリクス収集:
+       </strong>
+       処理遅延やエラー率を監視
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実際のベルトコンベアの動きを見てみよう">
+     🔄 実際のベルトコンベアの動きを見てみよう
+    </h2>
+<div class="conveyor-diagram">
+<h3 id="Kinesis-Data-Stream-の動作イメージ" style="text-align: center; margin-bottom: 30px; color: #667eea;">
+      📊 Kinesis Data Stream の動作イメージ
+     </h3>
+<div class="producer-consumer-diagram">
+<div class="producer-section">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        👷‍♂️
+       </div>
+<h3 id="Producerデータ送信者">
+        Producer
+        <br/>
+        （データ送信者）
+       </h3>
+<p>
+<strong>
+         例：
+        </strong>
+</p>
+<ul style="text-align: left; margin-top: 10px;">
+<li>
+         Webアプリケーション
+        </li>
+<li>
+         IoTセンサー
+        </li>
+<li>
+         ログ収集システム
+        </li>
+</ul>
+</div>
+<div class="stream-center">
+<h4 style="text-align: center; margin-bottom: 20px; color: #667eea;">
+        Data Stream: my-log-stream
+       </h4>
+<div class="shard-container">
+<div class="shard-belt">
+<span>
+          Shard 1
+         </span>
+<div class="data-item">
+          📊
+         </div>
+<span>
+          1MB/秒
+         </span>
+</div>
+<div class="shard-belt">
+<span>
+          Shard 2
+         </span>
+<div class="data-item">
+          📈
+         </div>
+<span>
+          1MB/秒
+         </span>
+</div>
+<div class="shard-belt">
+<span>
+          Shard 3
+         </span>
+<div class="data-item">
+          📉
+         </div>
+<span>
+          1MB/秒
+         </span>
+</div>
+</div>
+<p style="text-align: center; color: #667eea; font-weight: bold;">
+        合計: 3MB/秒の処理能力
+       </p>
+</div>
+<div class="consumer-section">
+<div style="font-size: 3em; margin-bottom: 15px;">
+        🤖
+       </div>
+<h3 id="Consumerデータ受信者">
+        Consumer
+        <br/>
+        （データ受信者）
+       </h3>
+<p>
+<strong>
+         例：
+        </strong>
+</p>
+<ul style="text-align: left; margin-top: 10px;">
+<li>
+         分析システム
+        </li>
+<li>
+         データウェアハウス
+        </li>
+<li>
+         機械学習パイプライン
+        </li>
+</ul>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="データの流れの特徴">
+       📈 データの流れの特徴
+      </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+         🔄 リアルタイム:
+        </strong>
+        データがベルトコンベアのように連続して流れます
+       </p>
+<p>
+<strong>
+         ⚖️ 負荷分散:
+        </strong>
+        Partition Keyに基づいて複数のShardに自動分散
+       </p>
+<p>
+<strong>
+         📊 順序保証:
+        </strong>
+        同じシャード内ではデータの順序が保証されます
+       </p>
+<p>
+<strong>
+         🔒 耐久性:
+        </strong>
+        24時間〜365日間データを保持（設定可能）
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="️-Partition-Key仕分けタグの仕組み">
+     🏷️ Partition Key（仕分けタグ）の仕組み
+    </h2>
+<div class="intro-analogy">
+<h2 id="商品の仕分けシステム">
+      📦 商品の仕分けシステム
+     </h2>
+<p>
+      Partition Keyは、商品（データ）をどのベルトコンベア（Shard）に送るかを決める重要な仕組みです
+     </p>
+</div>
+<div class="step-by-step">
+<h3 id="️-仕分け作業の流れ" style="text-align: center; margin-bottom: 20px; color: #667eea;">
+      🏷️ 仕分け作業の流れ
+     </h3>
+<div class="step-item" style="border-left-color: #9333EA;">
+<div class="step-number" style="background: #9333EA;">
+       1
+      </div>
+<div class="step-content">
+<h3 id="商品データにタグを付ける">
+        商品（データ）にタグを付ける
+       </h3>
+<p>
+<strong>
+         Producer側で設定：
+        </strong>
+<br/>
+        商品に「ユーザーID: user123」というタグを付けます
+        <br/>
+<strong>
+         工場の例：
+        </strong>
+        「食品」「電子機器」「衣料品」のラベルを貼る
+       </p>
+</div>
+</div>
+<div class="step-item" style="border-left-color: #0369A1;">
+<div class="step-number" style="background: #0369A1;">
+       2
+      </div>
+<div class="step-content">
+<h3 id="タグを見てラインShardを決定">
+        タグを見てライン（Shard）を決定
+       </h3>
+<p>
+<strong>
+         ハッシュ関数で計算：
+        </strong>
+<br/>
+        「user123」→ ハッシュ計算 → Shard 2に決定
+        <br/>
+<strong>
+         工場の例：
+        </strong>
+        「食品」タグ → ライン2、「電子機器」タグ → ライン1
+       </p>
+</div>
+</div>
+<div class="step-item" style="border-left-color: #20bf6b;">
+<div class="step-number" style="background: #20bf6b;">
+       3
+      </div>
+<div class="step-content">
+<h3 id="同じタグは必ず同じラインへ">
+        同じタグは必ず同じラインへ
+       </h3>
+<p>
+<strong>
+         順序保証の仕組み：
+        </strong>
+<br/>
+        「user123」のデータは必ずShard 2に送られます
+        <br/>
+<strong>
+         工場の例：
+        </strong>
+        「食品」は必ずライン2で、順番通りに処理される
+       </p>
+</div>
+</div>
+</div>
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       ⚖️
+      </div>
+<h3 id="負荷分散">
+       負荷分散
+      </h3>
+<p>
+       適切なPartition Keyで、データを複数のShardに均等に分散
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📊
+      </div>
+<h3 id="順序保証">
+       順序保証
+      </h3>
+<p>
+       同じKeyのデータは同じShardで順番通りに処理される
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🎯
+      </div>
+<h3 id="効率的処理">
+       効率的処理
+      </h3>
+<p>
+       関連データをまとめて処理することで効率アップ
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔧
+      </div>
+<h3 id="設計の重要性">
+       設計の重要性
+      </h3>
+<p>
+       適切なKey設計で、システム全体のパフォーマンスが決まる
+      </p>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="良いPartition-Keyの選び方">
+      💡 良いPartition Keyの選び方
+     </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+        ✅ 良い例：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+         ユーザーID:
+        </strong>
+        ユーザーごとのアクションを順序保証
+       </li>
+<li>
+<strong>
+         デバイスID:
+        </strong>
+        IoTデータの順序を保持
+       </li>
+<li>
+<strong>
+         注文ID:
+        </strong>
+        注文処理の流れを順番通りに
+       </li>
+</ul>
+<br/>
+<p>
+<strong>
+        ❌ 避けるべき例：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+         固定値:
+        </strong>
+        全データが1つのShardに集中
+       </li>
+<li>
+<strong>
+         タイムスタンプ:
+        </strong>
+        時間によって偏りが発生
+       </li>
+<li>
+<strong>
+         ランダム値:
+        </strong>
+        関連データがバラバラに
+       </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実際の設定手順超簡単版">
+     📋 実際の設定手順（超簡単版）
+    </h2>
+<div class="step-by-step">
+<div class="step-item">
+<div class="step-number">
+       1
+      </div>
+<div class="step-content">
+<h3 id="工場Data-Streamを建設">
+        工場（Data Stream）を建設
+       </h3>
+<p>
+<strong>
+         AWSコンソールでData Stream作成
+        </strong>
+<br/>
+        → ストリーム名を決める（例: my-log-stream）
+        <br/>
+        → 必要なShard数を決める（処理量に応じて）
+       </p>
+<div class="config-example">
+        aws kinesis create-stream \
+  --stream-name my-log-stream \
+  --shard-count 3
+       </div>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       2
+      </div>
+<div class="step-content">
+<h3 id="作業員Producerを配置">
+        作業員（Producer）を配置
+       </h3>
+<p>
+<strong>
+         データ送信アプリケーションを開発
+        </strong>
+<br/>
+        → AWS SDKを使ってデータ送信
+        <br/>
+        → Partition Keyを適切に設定
+       </p>
+<div class="config-example">
+        // JavaScript例
+const params = {
+  StreamName: 'my-log-stream',
+  Data: JSON.stringify(logData),
+  PartitionKey: 'user123'
+};
+kinesis.putRecord(params);
+       </div>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       3
+      </div>
+<div class="step-content">
+<h3 id="受取人Consumerを配置">
+        受取人（Consumer）を配置
+       </h3>
+<p>
+<strong>
+         データ処理アプリケーションを開発
+        </strong>
+<br/>
+        → Kinesis Client Libraryを使用
+        <br/>
+        → 受信したデータを適切に処理
+       </p>
+<div class="config-example">
+        // Consumer設定例
+const consumer = new KinesisConsumer({
+  streamName: 'my-log-stream',
+  region: 'ap-northeast-1'
+});
+
+consumer.on('data', (record) =&gt; {
+  // データ処理ロジック
+  console.log(record);
+});
+       </div>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       4
+      </div>
+<div class="step-content">
+<h3 id="監視システムを設置">
+        監視システムを設置
+       </h3>
+<p>
+<strong>
+         CloudWatchでモニタリング
+        </strong>
+<br/>
+        → Shard使用率、エラー率を監視
+        <br/>
+        → 必要に応じてShard数を調整
+       </p>
+</div>
+</div>
+<div class="step-item">
+<div class="step-number">
+       5
+      </div>
+<div class="step-content">
+<h3 id="運用開始！">
+        運用開始！
+       </h3>
+<p>
+<strong>
+         リアルタイムデータ処理スタート
+        </strong>
+<br/>
+        → ベルトコンベアが動き始める！
+        <br/>
+        → データが連続して流れて処理される
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="シャードのデータ量制限">
+     🚚 シャードのデータ量制限
+    </h2>
+<div class="intro-analogy">
+<h2 id="⚖️-ベルトコンベアの処理能力">
+      ⚖️ ベルトコンベアの処理能力
+     </h2>
+<p>
+      各シャード（ベルトコンベアライン）には明確な処理能力の上限があります
+     </p>
+</div>
+<div class="comparison-table">
+<div class="comparison-side everyday-side">
+<h3 id="工場のベルトコンベア-1">
+       🏭 工場のベルトコンベア
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         搬入能力
+        </strong>
+<br/>
+        1秒間に1トンの荷物
+        <br/>
+        または1,000個の商品
+       </p>
+<br/>
+<p>
+<strong>
+         搬出能力
+        </strong>
+<br/>
+        1秒間に2トンの荷物を
+        <br/>
+        作業員が取り出し可能
+       </p>
+<br/>
+<p>
+<strong>
+         1個の荷物
+        </strong>
+<br/>
+        最大1トンまで
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="☁️-Kinesis-Shard">
+       ☁️ Kinesis Shard
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         書き込み制限
+        </strong>
+<br/>
+        1秒間に1MBのデータ
+        <br/>
+        または1,000レコード
+       </p>
+<br/>
+<p>
+<strong>
+         読み込み制限
+        </strong>
+<br/>
+        1秒間に2MBのデータを
+        <br/>
+        Consumerが取得可能
+       </p>
+<br/>
+<p>
+<strong>
+         1レコード
+        </strong>
+<br/>
+        最大1MBまで
+       </p>
+</div>
+</div>
+</div>
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📦
+      </div>
+<h3 id="書き込み制限Producer側">
+       書き込み制限
+       <br/>
+       （Producer側）
+      </h3>
+<p>
+<strong>
+        1MB/秒
+       </strong>
+       または
+       <strong>
+        1,000レコード/秒
+       </strong>
+<br/>
+       のいずれか小さい方
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📥
+      </div>
+<h3 id="読み込み制限Consumer側">
+       読み込み制限
+       <br/>
+       （Consumer側）
+      </h3>
+<p>
+<strong>
+        2MB/秒
+       </strong>
+<br/>
+       Enhanced Fan-Outなら
+       <br/>
+       5Consumer × 2MB/秒
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📋
+      </div>
+<h3 id="レコードサイズ個別制限">
+       レコードサイズ
+       <br/>
+       （個別制限）
+      </h3>
+<p>
+<strong>
+        最大1MB
+       </strong>
+<br/>
+       1つのレコードの
+       <br/>
+       上限サイズ
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       ⚡
+      </div>
+<h3 id="バッチ処理PutRecords-API">
+       バッチ処理
+       <br/>
+       （PutRecords API）
+      </h3>
+<p>
+<strong>
+        500レコード
+       </strong>
+       または
+       <br/>
+<strong>
+        5MB
+       </strong>
+       /リクエスト
+       <br/>
+       のいずれか小さい方
+      </p>
+</div>
+</div>
+<div class="step-by-step">
+<h3 id="API別の詳細制限" style="text-align: center; margin-bottom: 20px; color: #667eea;">
+      📊 API別の詳細制限
+     </h3>
+<div class="step-item" style="border-left-color: #0369A1;">
+<div class="step-number" style="background: #0369A1;">
+       API
+      </div>
+<div class="step-content">
+<h3 id="PutRecord-API1個ずつ送信">
+        PutRecord API（1個ずつ送信）
+       </h3>
+<p>
+<strong>
+         制限:
+        </strong>
+        1,000回/秒, 1MB/秒
+        <br/>
+<strong>
+         用途:
+        </strong>
+        リアルタイム送信、少量データ
+       </p>
+<div class="config-example">
+        // 1つずつ送信
+await kinesis.putRecord({
+  StreamName: 'my-stream',
+  Data: JSON.stringify(userData),  // 最大1MB
+  PartitionKey: 'user123'
+});
+// 制限: このAPIを1秒間に1,000回まで呼び出し可能
+       </div>
+</div>
+</div>
+<div class="step-item" style="border-left-color: #9333EA;">
+<div class="step-number" style="background: #9333EA;">
+       API
+      </div>
+<div class="step-content">
+<h3 id="PutRecords-APIまとめて送信">
+        PutRecords API（まとめて送信）
+       </h3>
+<p>
+<strong>
+         制限:
+        </strong>
+        500レコード/リクエスト, 5MB/リクエスト
+        <br/>
+<strong>
+         用途:
+        </strong>
+        バッチ処理、高効率送信
+       </p>
+<div class="config-example">
+        // まとめて送信（推奨）
+await kinesis.putRecords({
+  StreamName: 'my-stream',
+  Records: [
+    { Data: data1, PartitionKey: key1 },
+    { Data: data2, PartitionKey: key2 },
+    // ... 最大500個、合計5MBまで
+  ]
+});
+// より効率的でスループットが高い
+       </div>
+</div>
+</div>
+<div class="step-item" style="border-left-color: #20bf6b;">
+<div class="step-number" style="background: #20bf6b;">
+       API
+      </div>
+<div class="step-content">
+<h3 id="GetRecords-APIデータ取得">
+        GetRecords API（データ取得）
+       </h3>
+<p>
+<strong>
+         制限:
+        </strong>
+        5回/秒, 2MB/秒, 10,000レコード/リクエスト
+        <br/>
+<strong>
+         用途:
+        </strong>
+        Consumer側でのデータ取得
+       </p>
+<div class="config-example">
+        // データ取得
+const response = await kinesis.getRecords({
+  ShardIterator: iterator,
+  Limit: 100  // 最大10,000レコード/リクエスト
+});
+// 制限: 1つのShardに対して5回/秒まで
+// 実際の取得量: 2MB/秒まで
+       </div>
+</div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="⚠️-制限超過時の動作スロットリング">
+      ⚠️ 制限超過時の動作（スロットリング）
+     </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+        🚫 ProvisionedThroughputExceededException が発生:
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        1MB/秒 または 1,000レコード/秒を超過
+       </li>
+<li>
+        API呼び出しが拒否される
+       </li>
+<li>
+        自動的にリトライが必要
+       </li>
+</ul>
+<br/>
+<p>
+<strong>
+        📈 工場の例:
+       </strong>
+       ベルトコンベアの処理能力を超えて荷物を載せようとすると、「処理能力オーバー」で拒否される
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="制限対策とベストプラクティス">
+     🎯 制限対策とベストプラクティス
+    </h2>
+<div class="concept-grid">
+<div class="concept-card">
+<div class="analogy-icon">
+       🔄
+      </div>
+<h3 id="指数バックオフリトライ">
+       指数バックオフリトライ
+      </h3>
+<p>
+<strong>
+        スロットリング発生時の対応
+       </strong>
+<br/>
+       工場が混雑時、少し待ってから再度搬入するように、徐々に間隔を空けてリトライ
+      </p>
+<div class="config-example">
+       const retryWithBackoff = async (operation, maxRetries = 5) =&gt; {
+  for (let i = 0; i &lt; maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error.code === 'ProvisionedThroughputExceededException') {
+        const delay = Math.pow(2, i) * 100; // 100ms, 200ms, 400ms...
+        await new Promise(resolve =&gt; setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+};
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       📦
+      </div>
+<h3 id="効率的なバッチング">
+       効率的なバッチング
+      </h3>
+<p>
+<strong>
+        PutRecords APIの活用
+       </strong>
+<br/>
+       1つずつ運ぶより、まとめて運ぶ方が効率的。最大500レコードをバッチ処理
+      </p>
+<div class="config-example">
+       const batchPutRecords = async (records) =&gt; {
+  const BATCH_SIZE = 500;
+  const batches = [];
+  
+  for (let i = 0; i &lt; records.length; i += BATCH_SIZE) {
+    batches.push(records.slice(i, i + BATCH_SIZE));
+  }
+  
+  for (const batch of batches) {
+    await retryWithBackoff(() =&gt; 
+      kinesis.putRecords({
+        StreamName: 'my-stream',
+        Records: batch
+      })
+    );
+  }
+};
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       ⚖️
+      </div>
+<h3 id="適切なShard数の計算">
+       適切なShard数の計算
+      </h3>
+<p>
+<strong>
+        必要な処理能力から逆算
+       </strong>
+<br/>
+       工場の処理量に応じてライン数を増やすように、データ量に応じてShard数を決定
+      </p>
+<div class="config-example">
+       // 必要なShard数の計算
+const calculateRequiredShards = (dataRate) =&gt; {
+  const SHARD_LIMIT_MB_PER_SEC = 1;
+  const SHARD_LIMIT_RECORDS_PER_SEC = 1000;
+  
+  const shardsByDataSize = Math.ceil(dataRate.mbPerSec / SHARD_LIMIT_MB_PER_SEC);
+  const shardsByRecordCount = Math.ceil(dataRate.recordsPerSec / SHARD_LIMIT_RECORDS_PER_SEC);
+  
+  // より制約の厳しい方を採用
+  return Math.max(shardsByDataSize, shardsByRecordCount);
+};
+
+// 例: 3MB/秒, 2,500レコード/秒の場合
+const required = calculateRequiredShards({
+  mbPerSec: 3,
+  recordsPerSec: 2500
+});
+console.log(`必要なShard数: ${required}`); // 3個
+      </div>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       📊
+      </div>
+<h3 id="レート制御の実装">
+       レート制御の実装
+      </h3>
+<p>
+<strong>
+        送信レートの調整
+       </strong>
+<br/>
+       工場の処理能力に合わせて搬入ペースを調整するように、データ送信レートを制御
+      </p>
+<div class="config-example">
+       class RateLimitedProducer {
+  constructor(ratePerSecond = 800) { // 1000の80%で安全マージン
+    this.ratePerSecond = ratePerSecond;
+    this.lastSent = 0;
+    this.tokens = ratePerSecond;
+  }
+  
+  async sendRecord(record) {
+    await this.waitForToken();
+    return kinesis.putRecord(record);
+  }
+  
+  async waitForToken() {
+    const now = Date.now();
+    const elapsed = (now - this.lastSent) / 1000;
+    
+    this.tokens = Math.min(this.ratePerSecond, this.tokens + elapsed * this.ratePerSecond);
+    
+    if (this.tokens &lt; 1) {
+      const waitTime = (1 - this.tokens) / this.ratePerSecond * 1000;
+      await new Promise(resolve =&gt; setTimeout(resolve, waitTime));
+      this.tokens = 1;
+    }
+    
+    this.tokens -= 1;
+    this.lastSent = now;
+  }
+}
+      </div>
+</div>
+</div>
+<div class="faq-section">
+<h3 id="実際の計算例" style="text-align: center; margin-bottom: 20px; color: #d63384;">
+      💡 実際の計算例
+     </h3>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       📊 ログデータの送信：1秒間に2,000件のログ（各1KB）
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         計算過程：
+        </strong>
+</p>
+<div class="config-example">
+        // データ量: 2,000件 × 1KB = 2MB/秒
+// レコード数: 2,000レコード/秒
+
+// データ量から: 2MB ÷ 1MB = 2 Shard
+// レコード数から: 2,000レコード ÷ 1,000 = 2 Shard
+
+// 結果: 2 Shard必要
+       </div>
+<p>
+<strong>
+         💡 推奨設定：
+        </strong>
+        余裕を持って3 Shardで運用開始
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       📱 IoTセンサーデータ：1秒間に500件のセンサーデータ（各2KB）
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         計算過程：
+        </strong>
+</p>
+<div class="config-example">
+        // データ量: 500件 × 2KB = 1MB/秒
+// レコード数: 500レコード/秒
+
+// データ量から: 1MB ÷ 1MB = 1 Shard
+// レコード数から: 500レコード ÷ 1,000 = 0.5 Shard → 1 Shard
+
+// 結果: 1 Shard必要
+       </div>
+<p>
+<strong>
+         💡 推奨設定：
+        </strong>
+        1 Shardで十分、成長に備えて2 Shardも可
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       📹 動画メタデータ：1秒間に100件の大きなデータ（各50KB）
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         計算過程：
+        </strong>
+</p>
+<div class="config-example">
+        // データ量: 100件 × 50KB = 5MB/秒
+// レコード数: 100レコード/秒
+
+// データ量から: 5MB ÷ 1MB = 5 Shard
+// レコード数から: 100レコード ÷ 1,000 = 0.1 Shard → 1 Shard
+
+// 結果: 5 Shard必要（データ量が制約要因）
+       </div>
+<p>
+<strong>
+         💡 推奨設定：
+        </strong>
+        データサイズが大きい場合は、データ量が制約要因になる
+       </p>
+</div>
+</div>
+</div>
+<div class="highlight-box">
+<h3 id="監視すべきメトリクス">
+      🎯 監視すべきメトリクス
+     </h3>
+<div style="text-align: left; margin-top: 20px;">
+<p>
+<strong>
+        📊 CloudWatchで監視：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+         IncomingRecords:
+        </strong>
+        1秒間の受信レコード数
+       </li>
+<li>
+<strong>
+         IncomingBytes:
+        </strong>
+        1秒間の受信データ量
+       </li>
+<li>
+<strong>
+         WriteProvisionedThroughputExceeded:
+        </strong>
+        スロットリング発生回数
+       </li>
+<li>
+<strong>
+         ReadProvisionedThroughputExceeded:
+        </strong>
+        読み込みスロットリング
+       </li>
+</ul>
+<br/>
+<p>
+<strong>
+        ⚠️ アラート設定の目安：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        使用率が80%を超えたら警告
+       </li>
+<li>
+        スロットリングが発生したら即座に通知
+       </li>
+<li>
+        処理遅延が閾値を超えたら調査
+       </li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🤔 Shardはいくつ必要？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         処理量から計算します：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          1Shard = 1MB/秒
+         </strong>
+         または
+         <strong>
+          1,000レコード/秒
+         </strong>
+</li>
+<li>
+         3MB/秒のデータがある → 3Shard必要
+        </li>
+<li>
+         余裕を持って+1〜2Shard追加することを推奨
+        </li>
+</ul>
+<br/>
+<p>
+        💡
+        <strong>
+         後から変更可能
+        </strong>
+        なので、少なめから始めてもOK！
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       💰 料金はどのくらい？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+        主な料金体系：
+       </p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          Shard時間:
+         </strong>
+         約$18/月（1Shardあたり）
+        </li>
+<li>
+<strong>
+          PUT料金:
+         </strong>
+         100万レコードで約$17
+        </li>
+<li>
+<strong>
+          拡張データ保持:
+         </strong>
+         GB時間あたり約$0.023
+        </li>
+</ul>
+<p style="margin-top: 15px;">
+        例: 3Shard + 100万レコード/月 = 約$71/月
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       ⚡ どのくらいのレイテンシ？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         非常に低いレイテンシ
+        </strong>
+        を実現：
+       </p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          通常:
+         </strong>
+         数百ミリ秒〜1秒以内
+        </li>
+<li>
+<strong>
+          Enhanced Fan-Out:
+         </strong>
+         65ミリ秒以内（専用接続）
+        </li>
+<li>
+<strong>
+          リアルタイム分析
+         </strong>
+         に最適
+        </li>
+</ul>
+<p style="margin-top: 15px;">
+        🚀 ほぼリアルタイムでデータ処理が可能です！
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🔧 他のAWSサービスとの連携は？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         豊富な連携オプション：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+<strong>
+          Lambda:
+         </strong>
+         サーバーレス処理
+        </li>
+<li>
+<strong>
+          Kinesis Analytics:
+         </strong>
+         リアルタイム分析
+        </li>
+<li>
+<strong>
+          S3:
+         </strong>
+         データの長期保存
+        </li>
+<li>
+<strong>
+          Redshift:
+         </strong>
+         データウェアハウス
+        </li>
+<li>
+<strong>
+          Elasticsearch:
+         </strong>
+         検索・分析
+        </li>
+</ul>
+<p style="margin-top: 15px;">
+        💡 エコシステムとして活用することで真価を発揮！
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="✨-Kinesis-Data-Streamsのメリット">
+     ✨ Kinesis Data Streamsのメリット
+    </h2>
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       ⚡
+      </div>
+<h3 id="リアルタイム処理">
+       リアルタイム処理
+      </h3>
+<p>
+       数百ミリ秒の超低レイテンシでデータを処理できます
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📈
+      </div>
+<h3 id="自動スケーリング">
+       自動スケーリング
+      </h3>
+<p>
+       データ量に応じてShard数を調整、自動で処理能力を拡張
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔒
+      </div>
+<h3 id="高い耐久性">
+       高い耐久性
+      </h3>
+<p>
+       複数のAZでデータを複製、データ損失のリスクを最小化
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔧
+      </div>
+<h3 id="豊富な連携">
+       豊富な連携
+      </h3>
+<p>
+       AWS内の様々なサービスとシームレスに連携可能
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📊
+      </div>
+<h3 id="順序保証-1">
+       順序保証
+      </h3>
+<p>
+       Partition Key単位でデータの順序を保証、整合性を維持
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       💰
+      </div>
+<h3 id="コスト効率">
+       コスト効率
+      </h3>
+<p>
+       使った分だけの従量課金、無駄なコストを削減
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="実際の使用例">
+     🎯 実際の使用例
+    </h2>
+<div class="concept-grid">
+<div class="concept-card">
+<div class="analogy-icon">
+       📱
+      </div>
+<h3 id="リアルタイム分析">
+       リアルタイム分析
+      </h3>
+<p>
+<strong>
+        ユースケース:
+       </strong>
+       アプリのユーザー行動分析
+       <br/>
+<strong>
+        流れ:
+       </strong>
+       アプリ → Kinesis → Lambda → DynamoDB
+       <br/>
+<strong>
+        効果:
+       </strong>
+       ユーザーの行動をリアルタイムで把握
+      </p>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       🌡️
+      </div>
+<h3 id="IoTデータ処理">
+       IoTデータ処理
+      </h3>
+<p>
+<strong>
+        ユースケース:
+       </strong>
+       センサーデータの監視
+       <br/>
+<strong>
+        流れ:
+       </strong>
+       IoTデバイス → Kinesis → Lambda → CloudWatch
+       <br/>
+<strong>
+        効果:
+       </strong>
+       異常値を即座に検知・アラート
+      </p>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       📊
+      </div>
+<h3 id="ログ集約-分析">
+       ログ集約・分析
+      </h3>
+<p>
+<strong>
+        ユースケース:
+       </strong>
+       Webサーバーのログ解析
+       <br/>
+<strong>
+        流れ:
+       </strong>
+       サーバー → Kinesis → Kinesis Analytics → S3
+       <br/>
+<strong>
+        効果:
+       </strong>
+       アクセスパターンの即座な把握
+      </p>
+</div>
+<div class="concept-card">
+<div class="analogy-icon">
+       💳
+      </div>
+<h3 id="不正検知システム">
+       不正検知システム
+      </h3>
+<p>
+<strong>
+        ユースケース:
+       </strong>
+       クレジットカード取引監視
+       <br/>
+<strong>
+        流れ:
+       </strong>
+       取引データ → Kinesis → 機械学習 → アラート
+       <br/>
+<strong>
+        効果:
+       </strong>
+       怪しい取引を瞬時に検出
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="highlight-box">
+<h2 id="まとめ">
+      🎯 まとめ
+     </h2>
+<div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+<p>
+       🏭
+       <strong>
+        Data Stream
+       </strong>
+       = 工場全体（複数のベルトコンベアを統括するシステム）
+      </p>
+<p>
+       🔄
+       <strong>
+        Shard
+       </strong>
+       = 個々のベルトコンベアライン（実際の処理ライン）
+      </p>
+<p>
+       👷
+       <strong>
+        Producer
+       </strong>
+       = 商品を載せる作業員（データ送信側）
+      </p>
+<p>
+       📦
+       <strong>
+        Consumer
+       </strong>
+       = 商品を受け取る作業員（データ受信・処理側）
+      </p>
+<p>
+       🏷️
+       <strong>
+        Partition Key
+       </strong>
+       = 商品の仕分けタグ（どのラインに送るかの決定）
+      </p>
+<br/>
+<p>
+       この仕組みで、
+       <strong>
+        大量のデータをリアルタイムで効率的に処理
+       </strong>
+       できます！
+      </p>
+<br/>
+<p>
+<strong>
+        🎯 初心者へのアドバイス：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        小さく始める → 1〜2Shardから開始
+       </li>
+<li>
+        Partition Key設計が重要 → ユーザーIDやデバイスIDを活用
+       </li>
+<li>
+        監視を忘れずに → CloudWatchでメトリクス確認
+       </li>
+<li>
+        他サービスとの連携 → Lambda、S3などと組み合わせて真価発揮
+       </li>
+</ul>
+</div>
+</div>
+</div>
+
+
+</div>
+<script>
+   function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#667eea' : '#5a6fd8';
+        }
+
+        // アニメーション効果
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.concept-card, .benefit-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.05) rotate(0.5deg)';
+                    setTimeout(() => {
+                        this.style.transform = 'translateY(-10px)';
+                    }, 200);
+                });
+            });
+
+            // スクロール時のアニメーション
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // ベルトコンベアアニメーション
+            const shardBelts = document.querySelectorAll('.shard-belt');
+            function animateShards() {
+                shardBelts.forEach((belt, index) => {
+                    setTimeout(() => {
+                        belt.style.transform = 'scale(1.02)';
+                        belt.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.3)';
+                        
+                        setTimeout(() => {
+                            belt.style.transform = 'scale(1)';
+                            belt.style.boxShadow = 'none';
+                        }, 500);
+                    }, index * 200);
+                });
+            }
+            
+            // 8秒ごとにShardアニメーションを実行
+            setInterval(animateShards, 8000);
+
+            // データアイテムのランダムアニメーション
+            const dataItems = document.querySelectorAll('.data-item');
+            function randomizeDataItems() {
+                const icons = ['📊', '📈', '📉', '💹', '📋', '📝', '💾', '🔢'];
+                dataItems.forEach(item => {
+                    item.textContent = icons[Math.floor(Math.random() * icons.length)];
+                });
+            }
+            
+            setInterval(randomizeDataItems, 3000);
+        });
+  </script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="aws_availability_infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">5</span> <span class="separator" aria-hidden="true">/</span> <span class="total">15</span> </div> <a href="kinesis_firehose_infographic.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

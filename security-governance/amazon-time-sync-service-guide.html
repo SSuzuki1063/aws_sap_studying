@@ -1,0 +1,1484 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Amazon Time Sync Service 完全図解ガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#最初に押さえるポイント">📌 最初に押さえるポイント</a> </li><li class="toc-h2"> <a href="#たとえ話で理解する世界標準時時計局">🎭 たとえ話で理解する「世界標準時時計局」</a> </li><li class="toc-h3"> <a href="#️-現実世界の標準時">🏛️ 現実世界の「標準時」</a> </li><li class="toc-h3"> <a href="#☁️-AWS-Time-Sync-Service">☁️ AWS Time Sync Service</a> </li><li class="toc-h3"> <a href="#Amazon-Time-Sync-Service-の仕組み">🏰 Amazon Time Sync Service の仕組み</a> </li><li class="toc-h2"> <a href="#3つのアクセス方法">🔗 3つのアクセス方法</a> </li><li class="toc-h2"> <a href="#⚔️-NTP-vs-PTP-プロトコル比較">⚔️ NTP vs PTP プロトコル比較</a> </li><li class="toc-h3"> <a href="#NTPNetwork-Time-Protocol">📡 NTP（Network Time Protocol）</a> </li><li class="toc-h3"> <a href="#⚡-PTPPrecision-Time-Protocol">⚡ PTP（Precision Time Protocol）</a> </li><li class="toc-h2"> <a href="#うるう秒スメアリングとは？">🦘 うるう秒スメアリングとは？</a> </li><li class="toc-h3"> <a href="#なぜスメアリングが重要？">なぜスメアリングが重要？</a> </li><li class="toc-h2"> <a href="#⚙️-設定ガイド">⚙️ 設定ガイド</a> </li><li class="toc-h3"> <a href="#Linux-Amazon-Linux-2-chrony-の設定">Linux (Amazon Linux 2 / chrony) の設定</a> </li><li class="toc-h3"> <a href="#Windows-の設定">Windows の設定</a> </li><li class="toc-h2"> <a href="#主なユースケース">💼 主なユースケース</a> </li><li class="toc-h2"> <a href="#接続方法の比較">📊 接続方法の比較</a> </li><li class="toc-h2"> <a href="#❓-よくある質問FAQ">❓ よくある質問（FAQ）</a> </li><li class="toc-h2"> <a href="#まとめ">📝 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <style>* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 25%, #0c4a6e 50%, #134e4a 75%, #14532d 100%);
+            padding: 20px;
+            line-height: 1.6;
+            padding-top: 70px;}
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e40af 50%, #dc7600 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '⏰';
+            position: absolute;
+            font-size: 20em;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.1); opacity: 0.15; }
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        /* 結論ファースト */
+        .conclusion-first {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+        }
+        
+        .conclusion-first h2 {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #dc7600;
+            text-align: center;
+        }
+        
+        .key-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .key-point {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .key-point:hover {
+            transform: translateY(-8px);
+            background: rgba(255,255,255,0.2);
+            border-color: #dc7600;
+        }
+        
+        .key-point-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .key-point-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #dc7600;
+            margin-bottom: 10px;
+        }
+        
+        .key-point-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        /* セクションタイトル */
+        .section-title {
+            font-size: 2em;
+            color: #0f172a;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #dc7600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section-title-icon {
+            font-size: 1.2em;
+        }
+        
+        /* たとえ話セクション */
+        .analogy-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #f59e0b;
+        }
+        
+        .analogy-title {
+            color: #92400e;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .analogy-grid {
+            display: grid;
+            grid-template-columns: 1fr 100px 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .analogy-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .analogy-box h3 {
+            color: #92400e;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            text-align: center;
+        }
+        
+        .analogy-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #fffbeb;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .analogy-item-icon {
+            font-size: 2.5em;
+        }
+        
+        .analogy-arrow {
+            font-size: 3em;
+            color: #f59e0b;
+            text-align: center;
+        }
+        
+        /* 時計塔ビジュアル */
+        .clock-tower-visual {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            text-align: center;
+            color: white;
+        }
+        
+        .clock-tower-title {
+            color: #dc7600;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+        }
+        
+        .clock-tower-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+        
+        .source-tower {
+            background: linear-gradient(to top, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+            width: 120px;
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            position: relative;
+        }
+        
+        .source-tower::before {
+            content: '📡';
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3em;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .source-tower-label {
+            color: white;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .central-clock {
+            background: linear-gradient(to top, #f59e0b 0%, #dc7600 50%, #fbbf24 100%);
+            width: 180px;
+            height: 200px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .central-clock::before {
+            content: '🏛️';
+            position: absolute;
+            top: -60px;
+            font-size: 4em;
+        }
+        
+        .clock-face {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            box-shadow: inset 0 5px 20px rgba(0,0,0,0.2);
+            animation: tick 1s steps(1) infinite;
+        }
+        
+        @keyframes tick {
+            0% { content: '🕐'; }
+            8.33% { content: '🕑'; }
+            16.66% { content: '🕒'; }
+            25% { content: '🕓'; }
+        }
+        
+        .signal-wave {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .wave {
+            width: 15px;
+            height: 15px;
+            background: #dc7600;
+            border-radius: 50%;
+            animation: wave-pulse 1.5s infinite;
+        }
+        
+        .wave:nth-child(2) { animation-delay: 0.3s; }
+        .wave:nth-child(3) { animation-delay: 0.6s; }
+        
+        @keyframes wave-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .receiver-tower {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .receiver-box {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            width: 80px;
+            height: 100px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+        }
+        
+        .receiver-label {
+            font-size: 0.85em;
+            color: #a3e635;
+        }
+        
+        /* 3つのアクセス方法 */
+        .access-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .access-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .access-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+        
+        .access-card-header {
+            padding: 25px;
+            color: white;
+            text-align: center;
+        }
+        
+        .access-card:nth-child(1) .access-card-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        
+        .access-card:nth-child(2) .access-card-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .access-card:nth-child(3) .access-card-header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        }
+        
+        .access-card-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .access-card-title {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .access-card-content {
+            padding: 25px;
+        }
+        
+        .access-detail {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        
+        .access-detail-icon {
+            font-size: 1.5em;
+        }
+        
+        .endpoint-box {
+            background: #0f172a;
+            color: #22d3ee;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+        
+        .accuracy-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #dc7600 0%, #f59e0b 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        /* NTP vs PTP 比較 */
+        .protocol-comparison {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #0284c7;
+        }
+        
+        .protocol-title {
+            color: #0c4a6e;
+            font-size: 2em;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .protocol-grid {
+            display: grid;
+            grid-template-columns: 1fr 80px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .protocol-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .protocol-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 3px solid;
+        }
+        
+        .protocol-card:first-child h3 {
+            color: #0284c7;
+            border-color: #0284c7;
+        }
+        
+        .protocol-card:last-child h3 {
+            color: #7c3aed;
+            border-color: #7c3aed;
+        }
+        
+        .protocol-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+        
+        .protocol-feature-icon {
+            font-size: 1.8em;
+        }
+        
+        .protocol-feature-label {
+            font-weight: bold;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+        
+        .protocol-feature-value {
+            color: #64748b;
+            font-size: 0.95em;
+        }
+        
+        .vs-badge {
+            background: linear-gradient(135deg, #dc7600 0%, #f59e0b 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin: auto;
+            box-shadow: 0 5px 20px rgba(255,153,0,0.4);
+        }
+        
+        /* うるう秒説明 */
+        .leap-second-section {
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            border: 3px solid #ec4899;
+        }
+        
+        .leap-title {
+            color: #9d174d;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .leap-timeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .leap-timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 10%;
+            height: 4px;
+            background: linear-gradient(90deg, #ec4899 0%, #dc7600 50%, #10b981 100%);
+            z-index: 0;
+        }
+        
+        .timeline-point {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1;
+            border: 3px solid;
+        }
+        
+        .timeline-point:nth-child(1) { border-color: #ec4899; }
+        .timeline-point:nth-child(2) { border-color: #dc7600; }
+        .timeline-point:nth-child(3) { border-color: #10b981; }
+        
+        .timeline-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-time {
+            font-weight: bold;
+            color: #0f172a;
+        }
+        
+        .timeline-desc {
+            font-size: 0.85em;
+            color: #64748b;
+        }
+        
+        .smear-explanation {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .smear-icon {
+            font-size: 4em;
+        }
+        
+        .smear-text h4 {
+            color: #9d174d;
+            margin-bottom: 10px;
+        }
+        
+        /* 設定ガイド */
+        .config-section {
+            background: #f8fafc;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+        }
+        
+        .config-title {
+            color: #0f172a;
+            font-size: 2em;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .config-tabs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        
+        .config-tab {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+            font-weight: bold;
+        }
+        
+        .config-tab.active {
+            background: linear-gradient(135deg, #dc7600 0%, #f59e0b 100%);
+            color: white;
+            border-color: #dc7600;
+        }
+        
+        .config-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .config-step {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            margin: 15px 0;
+            background: #f8fafc;
+            border-radius: 10px;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-content h4 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .code-block {
+            background: #0f172a;
+            color: #22d3ee;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .code-comment {
+            color: #64748b;
+        }
+        
+        /* ユースケース */
+        .usecase-section {
+            margin: 50px 0;
+        }
+        
+        .usecase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        
+        .usecase-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .usecase-card:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        }
+        
+        .usecase-card:nth-child(1) { border-color: #3b82f6; }
+        .usecase-card:nth-child(2) { border-color: #10b981; }
+        .usecase-card:nth-child(3) { border-color: #8b5cf6; }
+        .usecase-card:nth-child(4) { border-color: #f59e0b; }
+        .usecase-card:nth-child(5) { border-color: #ec4899; }
+        .usecase-card:nth-child(6) { border-color: #06b6d4; }
+        
+        .usecase-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .usecase-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        
+        .usecase-desc {
+            color: #64748b;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+        
+        /* 比較表 */
+        .comparison-table {
+            overflow-x: auto;
+            margin: 40px 0;
+        }
+        
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .comparison-table th:first-child {
+            background: linear-gradient(135deg, #dc7600 0%, #f59e0b 100%);
+        }
+        
+        .comparison-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+        
+        .comparison-table tr:hover td {
+            background: #f8fafc;
+        }
+        
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .check-icon {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .cross-icon {
+            color: #ef4444;
+        }
+        
+        /* FAQ */
+        .faq-section {
+            background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+            padding: 50px;
+            border-radius: 20px;
+            margin: 50px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .faq-title {
+            color: #0f172a;
+            font-size: 2em;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .faq-question {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 20px 25px;
+            font-weight: bold;
+            color: #0c4a6e;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-answer {
+            padding: 25px;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        /* まとめ */
+        .summary {
+            background: linear-gradient(135deg, #0f172a 0%, #1e40af 50%, #dc7600 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .summary-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .summary-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #dc7600;
+            margin-bottom: 10px;
+        }
+        
+        .summary-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+            
+            .analogy-grid,
+            .protocol-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .analogy-arrow,
+            .vs-badge {
+                transform: rotate(90deg);
+            }
+            
+            .clock-tower-diagram {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .leap-timeline {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .leap-timeline::before {
+                top: 10%;
+                bottom: 10%;
+                left: 50%;
+                width: 4px;
+                height: 80%;
+            }
+        }</style>
+<header class="header">
+<h1>⏰ Amazon Time Sync Service</h1>
+<p>AWSが提供する高精度時刻同期サービス - 完全図解ガイド</p>
+</header>
+<div class="content">
+<!-- 結論ファースト -->
+<section class="conclusion-first">
+<h2 id="最初に押さえるポイント">📌 最初に押さえるポイント</h2>
+<div class="key-points">
+<div class="key-point">
+<div class="key-point-icon">🛰️</div>
+<div class="key-point-title">GPS＋原子時計</div>
+<div class="key-point-desc">衛星接続と原子時計を組み合わせた冗長構成で、超高精度な時刻を提供</div>
+</div>
+<div class="key-point">
+<div class="key-point-icon">💰</div>
+<div class="key-point-title">完全無料</div>
+<div class="key-point-desc">追加料金なし！VPC内のEC2インスタンスから無料でアクセス可能</div>
+</div>
+<div class="key-point">
+<div class="key-point-icon">⚡</div>
+<div class="key-point-title">マイクロ秒精度</div>
+<div class="key-point-desc">NTPで約100μs、PTPでナノ秒レベルの精度を実現</div>
+</div>
+<div class="key-point">
+<div class="key-point-icon">🔒</div>
+<div class="key-point-title">設定不要</div>
+<div class="key-point-desc">インターネット接続やセキュリティグループの設定は不要</div>
+</div>
+</div>
+</section>
+<!-- たとえ話セクション -->
+<section class="analogy-section">
+<h2 class="analogy-title" id="たとえ話で理解する世界標準時時計局">🎭 たとえ話で理解する「世界標準時時計局」</h2>
+<div class="analogy-grid">
+<div class="analogy-box">
+<h3 id="️-現実世界の標準時">🏛️ 現実世界の「標準時」</h3>
+<div class="analogy-item">
+<span class="analogy-item-icon">🛰️</span>
+<div>
+<strong>GPS衛星</strong><br/>
+                                宇宙から正確な時刻信号を送る「宇宙の灯台」
+                            </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">⚛️</span>
+<div>
+<strong>原子時計</strong><br/>
+                                原子の振動を使った「究極の精密時計」
+                            </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">📻</span>
+<div>
+<strong>電波時計の電波塔</strong><br/>
+                                標準時刻を各地に配信する「時報放送局」
+                            </div>
+</div>
+</div>
+<div class="analogy-arrow">➡️</div>
+<div class="analogy-box">
+<h3 id="☁️-AWS-Time-Sync-Service">☁️ AWS Time Sync Service</h3>
+<div class="analogy-item">
+<span class="analogy-item-icon">🛰️</span>
+<div>
+<strong>衛星接続クロック</strong><br/>
+                                各リージョンのGPS受信機で正確な時刻を取得
+                            </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">⚛️</span>
+<div>
+<strong>原子参照クロック</strong><br/>
+                                冗長構成の原子時計でバックアップ
+                            </div>
+</div>
+<div class="analogy-item">
+<span class="analogy-item-icon">📡</span>
+<div>
+<strong>Time Sync エンドポイント</strong><br/>
+                                NTP/PTPプロトコルで各インスタンスに配信
+                            </div>
+</div>
+</div>
+</div>
+</section>
+<!-- 時計塔ビジュアル -->
+<section class="clock-tower-visual">
+<h3 class="clock-tower-title" id="Amazon-Time-Sync-Service-の仕組み">🏰 Amazon Time Sync Service の仕組み</h3>
+<div class="clock-tower-diagram">
+<div class="source-tower">
+<div class="source-tower-label">🛰️<br/>GPS衛星</div>
+</div>
+<div class="source-tower">
+<div class="source-tower-label">⚛️<br/>原子時計</div>
+</div>
+<div class="central-clock">
+<div class="clock-face">🕐</div>
+<p style="margin-top: 15px; font-weight: bold;">Time Sync<br/>Service</p>
+<div class="signal-wave">
+<div class="wave"></div>
+<div class="wave"></div>
+<div class="wave"></div>
+</div>
+</div>
+<div class="receiver-tower">
+<div class="receiver-box">🖥️</div>
+<div class="receiver-label">EC2</div>
+</div>
+<div class="receiver-tower">
+<div class="receiver-box">📱</div>
+<div class="receiver-label">IoT</div>
+</div>
+<div class="receiver-tower">
+<div class="receiver-box">🏢</div>
+<div class="receiver-label">オンプレミス</div>
+</div>
+</div>
+</section>
+<!-- 3つのアクセス方法 -->
+<h2 class="section-title" id="3つのアクセス方法">
+<span class="section-title-icon">🔗</span>
+                3つのアクセス方法
+            </h2>
+<div class="access-methods">
+<div class="access-card">
+<div class="access-card-header">
+<div class="access-card-icon">🏠</div>
+<div class="access-card-title">VPCローカル接続</div>
+</div>
+<div class="access-card-content">
+<div class="access-detail">
+<span class="access-detail-icon">🎯</span>
+<span>EC2インスタンス専用の内部接続</span>
+</div>
+<div class="endpoint-box">
+                            IPv4: 169.254.169.123<br/>
+                            IPv6: fd00:ec2::123
+                        </div>
+<div class="access-detail">
+<span class="access-detail-icon">✅</span>
+<span>インターネット接続不要</span>
+</div>
+<div class="access-detail">
+<span class="access-detail-icon">✅</span>
+<span>セキュリティグループ設定不要</span>
+</div>
+<span class="accuracy-badge">精度: ~100μs</span>
+</div>
+</div>
+<div class="access-card">
+<div class="access-card-header">
+<div class="access-card-icon">🌐</div>
+<div class="access-card-title">パブリックNTP</div>
+</div>
+<div class="access-card-content">
+<div class="access-detail">
+<span class="access-detail-icon">🎯</span>
+<span>インターネット経由でどこからでもアクセス</span>
+</div>
+<div class="endpoint-box">
+                            time.aws.com
+                        </div>
+<div class="access-detail">
+<span class="access-detail-icon">📱</span>
+<span>IoTデバイス対応</span>
+</div>
+<div class="access-detail">
+<span class="access-detail-icon">🏢</span>
+<span>オンプレミス環境対応</span>
+</div>
+<span class="accuracy-badge">精度: ミリ秒レベル</span>
+</div>
+</div>
+<div class="access-card">
+<div class="access-card-header">
+<div class="access-card-icon">⚡</div>
+<div class="access-card-title">PTPハードウェアクロック</div>
+</div>
+<div class="access-card-content">
+<div class="access-detail">
+<span class="access-detail-icon">🎯</span>
+<span>Nitro System搭載インスタンス専用</span>
+</div>
+<div class="endpoint-box">
+                            /dev/ptp0
+                        </div>
+<div class="access-detail">
+<span class="access-detail-icon">🖥️</span>
+<span>対応: C7i, M7i, R7i, M7g, R7g等</span>
+</div>
+<div class="access-detail">
+<span class="access-detail-icon">🐧</span>
+<span>Linux直接PTP接続対応</span>
+</div>
+<span class="accuracy-badge">精度: ナノ秒レベル</span>
+</div>
+</div>
+</div>
+<!-- NTP vs PTP 比較 -->
+<section class="protocol-comparison">
+<h2 class="protocol-title" id="⚔️-NTP-vs-PTP-プロトコル比較">⚔️ NTP vs PTP プロトコル比較</h2>
+<div class="protocol-grid">
+<div class="protocol-card">
+<h3 id="NTPNetwork-Time-Protocol">📡 NTP（Network Time Protocol）</h3>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">🎯</span>
+<div>
+<div class="protocol-feature-label">精度</div>
+<div class="protocol-feature-value">約100マイクロ秒（0.0001秒）</div>
+</div>
+</div>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">🖥️</span>
+<div>
+<div class="protocol-feature-label">対応OS</div>
+<div class="protocol-feature-value">Linux / Windows 両対応</div>
+</div>
+</div>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">⚙️</span>
+<div>
+<div class="protocol-feature-label">設定難易度</div>
+<div class="protocol-feature-value">簡単（デフォルト設定済み）</div>
+</div>
+</div>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">🕐</span>
+<div>
+<div class="protocol-feature-label">うるう秒</div>
+<div class="protocol-feature-value">24時間スメアリング対応 ✅</div>
+</div>
+</div>
+</div>
+<div class="vs-badge">VS</div>
+<div class="protocol-card">
+<h3 id="⚡-PTPPrecision-Time-Protocol">⚡ PTP（Precision Time Protocol）</h3>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">🎯</span>
+<div>
+<div class="protocol-feature-label">精度</div>
+<div class="protocol-feature-value">ナノ秒レベル（0.000000001秒）</div>
+</div>
+</div>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">🖥️</span>
+<div>
+<div class="protocol-feature-label">対応OS</div>
+<div class="protocol-feature-value">Linux のみ（直接PTP接続）</div>
+</div>
+</div>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">⚙️</span>
+<div>
+<div class="protocol-feature-label">設定難易度</div>
+<div class="protocol-feature-value">中程度（ドライバ設定必要）</div>
+</div>
+</div>
+<div class="protocol-feature">
+<span class="protocol-feature-icon">🕐</span>
+<div>
+<div class="protocol-feature-label">うるう秒</div>
+<div class="protocol-feature-value">UTC標準に従う（スメアなし）</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- うるう秒説明 -->
+<section class="leap-second-section">
+<h2 class="leap-title" id="うるう秒スメアリングとは？">🦘 うるう秒スメアリングとは？</h2>
+<p style="text-align: center; color: #9d174d; margin-bottom: 30px; font-size: 1.1em;">
+                    地球の自転速度の変動に合わせてUTCに追加される「うるう秒」を、<br/>
+                    24時間かけてゆっくり調整する技術です。
+                </p>
+<div class="leap-timeline">
+<div class="timeline-point">
+<div class="timeline-icon">🌅</div>
+<div class="timeline-time">正午 UTC（前日）</div>
+<div class="timeline-desc">スメアリング開始</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-icon">🕛</div>
+<div class="timeline-time">真夜中 UTC</div>
+<div class="timeline-desc">うるう秒の瞬間</div>
+</div>
+<div class="timeline-point">
+<div class="timeline-icon">🌄</div>
+<div class="timeline-time">正午 UTC（翌日）</div>
+<div class="timeline-desc">スメアリング完了</div>
+</div>
+</div>
+<div class="smear-explanation">
+<span class="smear-icon">💡</span>
+<div class="smear-text">
+<h3 id="なぜスメアリングが重要？">なぜスメアリングが重要？</h3>
+<p>うるう秒が突然挿入されると、アプリケーションエラーやシステム障害の原因になります。Amazon Time Sync Serviceは1秒を24時間（86,400秒）かけて徐々に追加するため、システムへの影響を最小限に抑えられます。</p>
+</div>
+</div>
+</section>
+<!-- 設定ガイド -->
+<section class="config-section">
+<h2 class="config-title" id="⚙️-設定ガイド">⚙️ 設定ガイド</h2>
+<div class="config-tabs">
+<div class="config-tab active">🐧 Linux (chrony)</div>
+<div class="config-tab">🪟 Windows</div>
+</div>
+<div class="config-content">
+<h3 id="Linux-Amazon-Linux-2-chrony-の設定" style="color: #1e40af; margin-bottom: 20px;">Linux (Amazon Linux 2 / chrony) の設定</h3>
+<div class="config-step">
+<div class="step-number">1</div>
+<div class="step-content">
+<h4>現在の設定を確認</h4>
+<p>Amazon Linux 2以降はデフォルトで設定済みです</p>
+<div class="code-block">
+chronyc sources -v
+<span class="code-comment"># ^* が表示されれば同期中</span>
+</div>
+</div>
+</div>
+<div class="config-step">
+<div class="step-number">2</div>
+<div class="step-content">
+<h4>手動設定が必要な場合</h4>
+<p>/etc/chrony.conf を編集</p>
+<div class="code-block">
+server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4
+                            </div>
+</div>
+</div>
+<div class="config-step">
+<div class="step-number">3</div>
+<div class="step-content">
+<h4>サービスを再起動</h4>
+<div class="code-block">
+sudo systemctl restart chronyd
+                            </div>
+</div>
+</div>
+<h3 id="Windows-の設定" style="color: #1e40af; margin: 30px 0 20px;">Windows の設定</h3>
+<div class="config-step">
+<div class="step-number">1</div>
+<div class="step-content">
+<h4>PowerShellで設定（管理者権限）</h4>
+<div class="code-block">
+net stop w32time
+w32tm /config /syncfromflags:manual /manualpeerlist:"169.254.169.123"
+w32tm /config /reliable:yes
+net start w32time
+                            </div>
+</div>
+</div>
+<div class="config-step">
+<div class="step-number">2</div>
+<div class="step-content">
+<h4>同期状態を確認</h4>
+<div class="code-block">
+w32tm /query /status
+                            </div>
+</div>
+</div>
+</div>
+</section>
+<!-- ユースケース -->
+<h2 class="section-title" id="主なユースケース">
+<span class="section-title-icon">💼</span>
+                主なユースケース
+            </h2>
+<div class="usecase-section">
+<div class="usecase-grid">
+<div class="usecase-card">
+<div class="usecase-icon">💹</div>
+<div class="usecase-title">金融取引システム</div>
+<div class="usecase-desc">高頻度取引（HFT）では、マイクロ秒単位の時刻精度が取引の成否を分けます。正確なタイムスタンプは規制遵守にも必須です。</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">🗄️</div>
+<div class="usecase-title">分散データベース</div>
+<div class="usecase-desc">トランザクションの順序付けや競合解決に正確な時刻が必要。クロック スキューを最小化してデータの一貫性を保証します。</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">📊</div>
+<div class="usecase-title">ログ分析・監査</div>
+<div class="usecase-desc">複数サーバーのログを時系列で正確に並べることで、インシデント調査やセキュリティ監査の精度が向上します。</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">🔐</div>
+<div class="usecase-title">認証システム</div>
+<div class="usecase-desc">Kerberos認証やTOTP（ワンタイムパスワード）は時刻に依存。時刻のズレは認証失敗やセキュリティリスクに繋がります。</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">🔬</div>
+<div class="usecase-title">科学計算・研究</div>
+<div class="usecase-desc">実験データの正確なタイムスタンプや、センサーデータの同期など、再現性が求められる研究に不可欠です。</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">📱</div>
+<div class="usecase-title">IoT・エッジコンピューティング</div>
+<div class="usecase-desc">time.aws.comを使用することで、AWS外部のIoTデバイスやオンプレミス環境でも高精度な時刻同期が可能です。</div>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<h2 class="section-title" id="接続方法の比較">
+<span class="section-title-icon">📊</span>
+                接続方法の比較
+            </h2>
+<div class="comparison-table">
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>VPCローカルNTP</th>
+<th>パブリックNTP</th>
+<th>PTP（直接接続）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>エンドポイント</strong></td>
+<td>169.254.169.123</td>
+<td>time.aws.com</td>
+<td>/dev/ptp0</td>
+</tr>
+<tr>
+<td><strong>精度</strong></td>
+<td>~100μs</td>
+<td>ミリ秒レベル</td>
+<td>ナノ秒レベル</td>
+</tr>
+<tr>
+<td><strong>対応OS</strong></td>
+<td>Linux / Windows</td>
+<td>全OS</td>
+<td>Linux のみ</td>
+</tr>
+<tr>
+<td><strong>インターネット</strong></td>
+<td><span class="check-icon">✅ 不要</span></td>
+<td><span class="cross-icon">❌ 必要</span></td>
+<td><span class="check-icon">✅ 不要</span></td>
+</tr>
+<tr>
+<td><strong>利用場所</strong></td>
+<td>EC2インスタンス内</td>
+<td>どこからでも</td>
+<td>Nitro対応EC2</td>
+</tr>
+<tr>
+<td><strong>うるう秒スメア</strong></td>
+<td><span class="check-icon">✅ あり</span></td>
+<td><span class="check-icon">✅ あり</span></td>
+<td><span class="cross-icon">❌ なし</span></td>
+</tr>
+<tr>
+<td><strong>料金</strong></td>
+<td>無料</td>
+<td>無料</td>
+<td>無料</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- FAQ -->
+<section class="faq-section">
+<h2 class="faq-title" id="❓-よくある質問FAQ">❓ よくある質問（FAQ）</h2>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+                        Amazon Time Sync Serviceの利用料金は？
+                    </div>
+<div class="faq-answer">
+<strong>完全無料です！</strong> VPCローカル接続、パブリックNTP、PTPハードウェアクロックのいずれも追加料金なしで利用できます。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+                        Amazon Linux以外のOSでも使える？
+                    </div>
+<div class="faq-answer">
+                        はい、使えます。Ubuntu、CentOS、Windows Serverなど、NTPクライアントをサポートする全てのOSで利用可能です。ただし、デフォルトで設定されていない場合は手動設定が必要です。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+                        オンプレミス環境からも使える？
+                    </div>
+<div class="faq-answer">
+                        はい！<strong>time.aws.com</strong>（パブリックNTP）を使用することで、インターネット接続があればオンプレミス環境やIoTデバイスからも利用できます。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+                        PTPを使うには特別なインスタンスが必要？
+                    </div>
+<div class="faq-answer">
+                        はい、<strong>Nitro System搭載</strong>の対応インスタンスタイプ（C7i, M7i, R7i, C7a, M7a, R7a, M7g, R7g等）が必要です。また、ENA driver 2.10.0以上のインストールも必要です。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+                        NTPとPTPを同時に使っても問題ない？
+                    </div>
+<div class="faq-answer">
+                        通常は問題ありませんが、<strong>うるう秒イベント時は注意が必要</strong>です。NTPはスメアリングされた時刻を、PTPはUTC標準時刻を提供するため、うるう秒の前後24時間は両者を混在させないことを推奨します。
+                    </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>🤔</span>
+                        Stratum（階層）レベルは？
+                    </div>
+<div class="faq-answer">
+                        VPCローカルNTPは<strong>Stratum 3</strong>、PTPハードウェアクロックは<strong>Stratum 0</strong>（PHCソース）として認識されます。Stratumが低いほど、より正確な時刻源を示します。
+                    </div>
+</div>
+</section>
+<!-- まとめ -->
+<section class="summary">
+<h2 id="まとめ">📝 まとめ</h2>
+<div class="summary-grid">
+<div class="summary-item">
+<div class="summary-icon">🛰️</div>
+<div class="summary-title">高信頼性</div>
+<div class="summary-desc">GPS衛星＋原子時計の冗長構成で、常に正確な時刻を提供</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">⚡</div>
+<div class="summary-title">高精度</div>
+<div class="summary-desc">NTPで100μs、PTPでナノ秒レベルの精度を実現</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">🔧</div>
+<div class="summary-title">簡単設定</div>
+<div class="summary-desc">Amazon Linux 2以降はデフォルト設定済み</div>
+</div>
+<div class="summary-item">
+<div class="summary-icon">🌐</div>
+<div class="summary-title">幅広い対応</div>
+<div class="summary-desc">EC2、オンプレミス、IoTまで対応</div>
+</div>
+</div>
+<p style="margin-top: 30px; font-size: 1.2em; opacity: 0.9;">
+                    正確な時刻同期は、分散システムの基盤となる重要な要素です。<br/>
+                    Amazon Time Sync Serviceを活用して、信頼性の高いシステムを構築しましょう！
+                </p>
+</section>
+</div>
+
+
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="scp-syntax-visual-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">56</span> <span class="separator" aria-hidden="true">/</span> <span class="total">71</span> </div> <a href="cloudtrail-operations-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>
