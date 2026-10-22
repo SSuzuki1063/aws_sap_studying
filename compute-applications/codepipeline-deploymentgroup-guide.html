@@ -1,0 +1,1189 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   CodePipeline Deploy Stage と DeploymentGroup の関係
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/codepipeline-deploymentgroup-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#宅配ピザ店の配達システムで例えると超わかりやすい！">🍕 宅配ピザ店の配達システムで例えると超わかりやすい！</a> </li><li class="toc-h2"> <a href="#宅配ピザ店で理解するCI-CDパイプライン">🍕 宅配ピザ店で理解するCI/CDパイプライン</a> </li><li class="toc-h2"> <a href="#全体構成と関係性の図解">🔗 全体構成と関係性の図解</a> </li><li class="toc-h3"> <a href="#ピザ店で例えると">🍕 ピザ店で例えると</a> </li><li class="toc-h2"> <a href="#デプロイ実行の流れStep-by-Step">📋 デプロイ実行の流れ（Step by Step）</a> </li><li class="toc-h2"> <a href="#⚙️-設定例CodePipeline-+-CodeDeploy">⚙️ 設定例（CodePipeline + CodeDeploy）</a> </li><li class="toc-h3"> <a href="#重要なポイント">🔑 重要なポイント</a> </li><li class="toc-h2"> <a href="#実践ユースケース">💼 実践ユースケース</a> </li><li class="toc-h3"> <a href="#環境別デプロイ">環境別デプロイ</a> </li><li class="toc-h2"> <a href="#Deploy-Stage-vs-DeploymentGroup-比較表">📊 Deploy Stage vs DeploymentGroup 比較表</a> </li><li class="toc-h2"> <a href="#❓-よくある質問FAQ">❓ よくある質問（FAQ）</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li><li class="toc-h3"> <a href="#宅配ピザ-=-CI-CDパイプライン">🍕 宅配ピザ = CI/CDパイプライン</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> コンピュート・アプリケーション </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <div class="header">
+<h1>
+     🚀 CodePipeline Deploy Stage
+     <br/>
+     &amp; DeploymentGroup
+    </h1>
+<p>
+     宅配ピザで理解する！2つの関係と役割の完全ガイド
+    </p>
+</div>
+<div class="content">
+<!-- イントロ -->
+<div class="intro">
+<h2 id="宅配ピザ店の配達システムで例えると超わかりやすい！">
+      🍕 宅配ピザ店の配達システムで例えると超わかりやすい！
+     </h2>
+<p class="intro-text">
+<strong>
+       CodePipelineの「Deploy Stage」と「DeploymentGroup」の関係は、
+       <br/>
+       宅配ピザ店の「配達指示」と「配達エリア」の関係と同じ！
+      </strong>
+<br/>
+<br/>
+      「配達して！」という指示（Deploy Stage）と、
+      <br/>
+      「どこに届けるか」というエリア定義（DeploymentGroup）
+      <br/>
+<br/>
+      この2つがあって初めて、ピザ（アプリ）がお客様（サーバー）に届きます🍕✨
+     </p>
+</div>
+<!-- 宅配ピザの例え -->
+<div class="analogy-hero">
+<h2 class="analogy-hero-title" id="宅配ピザ店で理解するCI-CDパイプライン">
+      🍕 宅配ピザ店で理解するCI/CDパイプライン
+     </h2>
+<div class="pizza-flow">
+<div class="pizza-step">
+<div class="pizza-step-icon">
+        📝
+       </div>
+<div class="pizza-step-title">
+        注文受付
+       </div>
+<p>
+        お客様からの注文を受ける
+       </p>
+<div class="pizza-step-aws">
+        Source Stage
+       </div>
+</div>
+<div class="pizza-arrow">
+       →
+      </div>
+<div class="pizza-step">
+<div class="pizza-step-icon">
+        👨‍🍳
+       </div>
+<div class="pizza-step-title">
+        ピザ作り
+       </div>
+<p>
+        生地をこねて焼き上げる
+       </p>
+<div class="pizza-step-aws">
+        Build Stage
+       </div>
+</div>
+<div class="pizza-arrow">
+       →
+      </div>
+<div class="pizza-step" style="background: linear-gradient(to bottom, #fef2f2, white); border: 3px solid #ef4444;">
+<div class="pizza-step-icon">
+        🛵
+       </div>
+<div class="pizza-step-title">
+        配達指示
+       </div>
+<p>
+        「このピザを配達して！」
+       </p>
+<div class="pizza-step-aws" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+        Deploy Stage
+       </div>
+</div>
+<div class="pizza-arrow">
+       →
+      </div>
+<div class="pizza-step" style="background: linear-gradient(to bottom, #f0fdf4, white); border: 3px solid #10b981;">
+<div class="pizza-step-icon">
+        🏘️
+       </div>
+<div class="pizza-step-title">
+        配達エリア
+       </div>
+<p>
+        「〇〇地区の5軒に届ける」
+       </p>
+<div class="pizza-step-aws" style="background: linear-gradient(135deg, #10b981, #059669);">
+        DeploymentGroup
+       </div>
+</div>
+</div>
+<div style="background: white; padding: 25px; border-radius: 15px; margin-top: 30px; text-align: center;">
+<p style="font-size: 1.3em; color: #92400e; line-height: 1.8;">
+<strong>
+        🎯 ポイント：
+       </strong>
+<br/>
+<span style="color: #ef4444; font-weight: bold;">
+        Deploy Stage
+       </span>
+       = 「配達して！」という
+       <strong>
+        指示・命令
+       </strong>
+<br/>
+<span style="color: #10b981; font-weight: bold;">
+        DeploymentGroup
+       </span>
+       = 「どこに届けるか」という
+       <strong>
+        届け先の定義
+       </strong>
+<br/>
+<br/>
+       指示だけあっても届け先がないとピザは届かない！
+       <br/>
+       両方セットで初めて配達（デプロイ）が完了します✨
+      </p>
+</div>
+</div>
+<!-- 関係性の図解 -->
+<div class="relationship-section">
+<h2 class="relationship-title" id="全体構成と関係性の図解">
+      🔗 全体構成と関係性の図解
+     </h2>
+<div class="visual-diagram">
+<!-- CodePipeline全体 -->
+<div class="pipeline-container">
+<div class="pipeline-header">
+        🔄 CodePipeline（注文〜配達までの全工程）
+       </div>
+<div class="stages-flow">
+<div class="stage-box stage-source">
+<div class="stage-icon">
+          📦
+         </div>
+<div class="stage-name">
+          Source Stage
+         </div>
+<p style="font-size: 0.9em; color: #64748b; margin-top: 8px;">
+          コード取得
+         </p>
+</div>
+<div class="stage-arrow">
+         →
+        </div>
+<div class="stage-box stage-build">
+<div class="stage-icon">
+          🔨
+         </div>
+<div class="stage-name">
+          Build Stage
+         </div>
+<p style="font-size: 0.9em; color: #64748b; margin-top: 8px;">
+          ビルド・テスト
+         </p>
+</div>
+<div class="stage-arrow">
+         →
+        </div>
+<div class="stage-box stage-deploy">
+<div class="stage-icon">
+          🚀
+         </div>
+<div class="stage-name">
+          Deploy Stage
+         </div>
+<p style="font-size: 0.9em; color: #64748b; margin-top: 8px;">
+          デプロイ指示
+         </p>
+</div>
+</div>
+</div>
+<!-- Deploy Stageの詳細 -->
+<div class="deploy-detail">
+<div class="deploy-detail-header">
+<div class="deploy-detail-title">
+         🎯 Deploy Stage の中身
+        </div>
+<div class="deploy-detail-subtitle">
+         Deploy Stageは「どのサービスでデプロイするか」を指定
+        </div>
+</div>
+<div class="codedeploy-box">
+<div class="codedeploy-header">
+<div class="codedeploy-icon">
+          ⚙️
+         </div>
+<div class="codedeploy-title">
+          CodeDeploy（デプロイ実行サービス）
+         </div>
+</div>
+<p style="color: #475569; margin-bottom: 20px; text-align: center;">
+         CodeDeployが「DeploymentGroup」を見て、
+         <br/>
+<strong>
+          どのサーバーに配置するかを決定
+         </strong>
+         します
+        </p>
+<div style="text-align: center; font-size: 2em; margin: 20px 0;">
+         ⬇️
+        </div>
+<div class="deployment-groups-container">
+<div class="deployment-group">
+<div class="dg-icon">
+           🏢
+          </div>
+<div class="dg-name">
+           本番環境グループ
+          </div>
+<div class="dg-targets">
+           EC2: prod-web-1, prod-web-2
+           <br/>
+           タグ: Environment=Production
+          </div>
+</div>
+<div class="deployment-group">
+<div class="dg-icon">
+           🧪
+          </div>
+<div class="dg-name">
+           ステージング環境
+          </div>
+<div class="dg-targets">
+           EC2: stg-web-1
+           <br/>
+           タグ: Environment=Staging
+          </div>
+</div>
+<div class="deployment-group">
+<div class="dg-icon">
+           💻
+          </div>
+<div class="dg-name">
+           開発環境グループ
+          </div>
+<div class="dg-targets">
+           EC2: dev-web-1
+           <br/>
+           タグ: Environment=Development
+          </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 詳細説明カード -->
+<div class="detail-cards">
+<div class="detail-card pipeline">
+<div class="detail-card-icon">
+       🔄
+      </div>
+<div class="detail-card-title">
+       CodePipeline
+      </div>
+<div class="detail-content">
+<h3 id="ピザ店で例えると">
+        🍕 ピザ店で例えると
+       </h3>
+<p>
+        注文受付から配達完了までの
+        <strong>
+         全工程を管理するシステム
+        </strong>
+        。店長のように全体を見渡す。
+       </p>
+</div>
+<div class="detail-content">
+<h4>
+        💻 AWS での役割
+       </h4>
+<p>
+        CI/CDの
+        <strong>
+         オーケストレーター
+        </strong>
+        。ソースコード取得→ビルド→デプロイの流れを自動化・管理する。
+       </p>
+</div>
+<div class="detail-content">
+<h4>
+        📋 主な設定項目
+       </h4>
+<p>
+        • パイプライン名
+        <br/>
+        • 各ステージの定義
+        <br/>
+        • ステージ間の接続
+        <br/>
+        • 実行トリガー（プッシュ時など）
+       </p>
+</div>
+</div>
+<div class="detail-card stage">
+<div class="detail-card-icon">
+       🚀
+      </div>
+<div class="detail-card-title">
+       Deploy Stage
+      </div>
+<div class="detail-content">
+<h4>
+        🍕 ピザ店で例えると
+       </h4>
+<p>
+        「このピザを配達して！」という
+        <strong>
+         配達指示
+        </strong>
+        。何を使って配達するか（バイク？車？）を決める。
+       </p>
+</div>
+<div class="detail-content">
+<h4>
+        💻 AWS での役割
+       </h4>
+<p>
+        パイプラインの中の1ステージ。
+        <strong>
+         どのデプロイサービスを使うか
+        </strong>
+        （CodeDeploy, ECS, S3など）を指定する。
+       </p>
+</div>
+<div class="detail-content">
+<h4>
+        📋 主な設定項目
+       </h4>
+<p>
+        • デプロイプロバイダー選択
+        <br/>
+        • アプリケーション名
+        <br/>
+        •
+        <strong>
+         DeploymentGroup名
+        </strong>
+<br/>
+        • 入力アーティファクト
+       </p>
+</div>
+</div>
+<div class="detail-card group">
+<div class="detail-card-icon">
+       🏘️
+      </div>
+<div class="detail-card-title">
+       DeploymentGroup
+      </div>
+<div class="detail-content">
+<h4>
+        🍕 ピザ店で例えると
+       </h4>
+<p>
+        「〇〇地区の5軒」という
+        <strong>
+         配達エリア・届け先リスト
+        </strong>
+        。どこに届けるかの定義。
+       </p>
+</div>
+<div class="detail-content">
+<h4>
+        💻 AWS での役割
+       </h4>
+<p>
+<strong>
+         CodeDeployの設定
+        </strong>
+        の一部。デプロイ先のEC2インスタンスやLambda関数を定義する。
+       </p>
+</div>
+<div class="detail-content">
+<h4>
+        📋 主な設定項目
+       </h4>
+<p>
+        • ターゲットEC2のタグ条件
+        <br/>
+        • Auto Scaling グループ
+        <br/>
+        • デプロイ設定（方式）
+        <br/>
+        • ロードバランサー設定
+       </p>
+</div>
+</div>
+</div>
+<!-- 連携の流れ -->
+<div class="flow-section">
+<h2 class="flow-section-title" id="デプロイ実行の流れStep-by-Step">
+      📋 デプロイ実行の流れ（Step by Step）
+     </h2>
+<div class="flow-steps">
+<div class="flow-step">
+<div class="flow-step-number">
+        1
+       </div>
+<div class="flow-step-content">
+<div class="flow-step-title">
+         パイプラインがDeploy Stageに到達
+        </div>
+<div class="flow-step-desc">
+         Source Stage、Build Stageを経て、いよいよデプロイの番。
+         <br/>
+         ビルドされたアーティファクト（ピザ）が準備完了。
+        </div>
+<div class="flow-step-highlight">
+         🍕 ピザが焼き上がって、配達の準備OK！
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        2
+       </div>
+<div class="flow-step-content">
+<div class="flow-step-title">
+         Deploy StageがCodeDeployを呼び出す
+        </div>
+<div class="flow-step-desc">
+         Deploy Stageに設定された「CodeDeploy」プロバイダーが起動。
+         <br/>
+         設定されたアプリケーション名とDeploymentGroup名を参照。
+        </div>
+<div class="flow-step-highlight">
+         🛵 「〇〇配達員さん、この注文お願い！」と配達を依頼
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        3
+       </div>
+<div class="flow-step-content">
+<div class="flow-step-title">
+         CodeDeployがDeploymentGroupを参照
+        </div>
+<div class="flow-step-desc">
+         CodeDeployは指定されたDeploymentGroupの設定を確認。
+         <br/>
+         「どのEC2インスタンスにデプロイするか」を特定。
+        </div>
+<div class="flow-step-highlight">
+         📋 配達員が配達先リストを確認！「今日は〇〇地区の3軒だな」
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        4
+       </div>
+<div class="flow-step-content">
+<div class="flow-step-title">
+         ターゲットインスタンスを特定
+        </div>
+<div class="flow-step-desc">
+         DeploymentGroupのタグ条件やAuto Scalingグループに基づいて、
+         <br/>
+         実際のデプロイ先インスタンスを特定。
+        </div>
+<div class="flow-step-highlight">
+         🏠 「Environment=Production のタグがついたサーバーは...この3台！」
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        5
+       </div>
+<div class="flow-step-content">
+<div class="flow-step-title">
+         CodeDeploy Agentがデプロイ実行
+        </div>
+<div class="flow-step-desc">
+         各EC2上のCodeDeploy Agentがアーティファクトをダウンロードし、
+         <br/>
+         appspec.ymlに従ってデプロイを実行。
+        </div>
+<div class="flow-step-highlight">
+         🍕 ピザを各家庭に配達！「お届け物でーす！」
+        </div>
+</div>
+</div>
+<div class="flow-step">
+<div class="flow-step-number">
+        6
+       </div>
+<div class="flow-step-content">
+<div class="flow-step-title">
+         デプロイ完了・結果をPipelineに報告
+        </div>
+<div class="flow-step-desc">
+         全インスタンスへのデプロイが完了したら、
+         <br/>
+         結果をCodePipelineに報告。成功/失敗がパイプライン上に表示。
+        </div>
+<div class="flow-step-highlight">
+         ✅ 「配達完了しました！」と本部に報告
+        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- 設定例 -->
+<div class="config-section">
+<h2 class="config-title" id="⚙️-設定例CodePipeline-+-CodeDeploy">
+      ⚙️ 設定例（CodePipeline + CodeDeploy）
+     </h2>
+<div class="code-example">
+<div class="code-title">
+       📄 CodePipeline の Deploy Stage 設定（YAML）
+      </div>
+<pre><span class="code-comment"># CodePipeline の定義</span>
+<span class="code-keyword">Resources:</span>
+  MyPipeline:
+    <span class="code-keyword">Type:</span> AWS::CodePipeline::Pipeline
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">Name:</span> <span class="code-string">my-application-pipeline</span>
+      <span class="code-keyword">Stages:</span>
+        <span class="code-comment"># ... Source Stage, Build Stage の設定 ...</span>
+        
+        <span class="code-comment"># Deploy Stage の設定</span>
+        - <span class="code-keyword">Name:</span> <span class="code-string">Deploy</span>
+          <span class="code-keyword">Actions:</span>
+            - <span class="code-keyword">Name:</span> <span class="code-string">DeployToProduction</span>
+              <span class="code-keyword">ActionTypeId:</span>
+                <span class="code-keyword">Category:</span> <span class="code-string">Deploy</span>
+                <span class="code-keyword">Provider:</span> <span class="code-highlight">CodeDeploy</span>  <span class="code-comment"># ← デプロイサービスの指定</span>
+              <span class="code-keyword">Configuration:</span>
+                <span class="code-keyword">ApplicationName:</span> <span class="code-highlight">MyApplication</span>  <span class="code-comment"># ← CodeDeployアプリ名</span>
+                <span class="code-keyword">DeploymentGroupName:</span> <span class="code-highlight">ProductionGroup</span>  <span class="code-comment"># ← ★DeploymentGroup名！</span>
+              <span class="code-keyword">InputArtifacts:</span>
+                - <span class="code-keyword">Name:</span> <span class="code-string">BuildOutput</span></pre>
+</div>
+<div class="code-example">
+<div class="code-title">
+       📄 DeploymentGroup の設定（CloudFormation）
+      </div>
+<pre><span class="code-comment"># DeploymentGroup の定義（CodeDeployの設定）</span>
+<span class="code-keyword">Resources:</span>
+  ProductionDeploymentGroup:
+    <span class="code-keyword">Type:</span> AWS::CodeDeploy::DeploymentGroup
+    <span class="code-keyword">Properties:</span>
+      <span class="code-keyword">DeploymentGroupName:</span> <span class="code-highlight">ProductionGroup</span>  <span class="code-comment"># ← Pipeline側と名前を一致！</span>
+      <span class="code-keyword">ApplicationName:</span> <span class="code-highlight">MyApplication</span>
+      <span class="code-keyword">ServiceRoleArn:</span> !GetAtt CodeDeployServiceRole.Arn
+      
+      <span class="code-comment"># ★ デプロイ先の定義（タグでフィルタリング）</span>
+      <span class="code-keyword">Ec2TagFilters:</span>
+        - <span class="code-keyword">Key:</span> <span class="code-string">Environment</span>
+          <span class="code-keyword">Value:</span> <span class="code-string">Production</span>
+          <span class="code-keyword">Type:</span> <span class="code-string">KEY_AND_VALUE</span>
+        - <span class="code-keyword">Key:</span> <span class="code-string">Application</span>
+          <span class="code-keyword">Value:</span> <span class="code-string">MyApp</span>
+          <span class="code-keyword">Type:</span> <span class="code-string">KEY_AND_VALUE</span>
+      
+      <span class="code-comment"># デプロイ設定（Blue/Green or In-Place）</span>
+      <span class="code-keyword">DeploymentConfigName:</span> <span class="code-string">CodeDeployDefault.OneAtATime</span>
+      
+      <span class="code-comment"># ロードバランサー設定（オプション）</span>
+      <span class="code-keyword">LoadBalancerInfo:</span>
+        <span class="code-keyword">TargetGroupInfoList:</span>
+          - <span class="code-keyword">Name:</span> <span class="code-string">my-target-group</span></pre>
+</div>
+<div style="background: #fef3c7; padding: 25px; border-radius: 12px; margin-top: 25px; border-left: 5px solid #f59e0b;">
+<h3 id="重要なポイント" style="color: #92400e; margin-bottom: 15px; font-size: 1.2em;">
+       🔑 重要なポイント
+      </h3>
+<p style="color: #78350f; line-height: 1.8;">
+<strong>
+        1. 名前の一致が必須：
+       </strong>
+<br/>
+       Deploy Stageの
+       <code style="background: white; padding: 2px 8px; border-radius: 4px;">
+        DeploymentGroupName
+       </code>
+       と
+       <br/>
+       DeploymentGroupの
+       <code style="background: white; padding: 2px 8px; border-radius: 4px;">
+        DeploymentGroupName
+       </code>
+       が一致していないとエラー！
+       <br/>
+<br/>
+<strong>
+        2. タグ条件でターゲットを絞る：
+       </strong>
+<br/>
+<code style="background: white; padding: 2px 8px; border-radius: 4px;">
+        Ec2TagFilters
+       </code>
+       で「どのEC2に配置するか」を定義
+       <br/>
+<br/>
+<strong>
+        3. 複数のDeploymentGroupで環境を分ける：
+       </strong>
+<br/>
+       本番用、ステージング用など、用途別にグループを作成可能
+      </p>
+</div>
+</div>
+<!-- ユースケース -->
+<div class="usecase-section">
+<h2 class="usecase-title" id="実践ユースケース">
+      💼 実践ユースケース
+     </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<div class="usecase-icon">
+        🌍
+       </div>
+<h3 id="環境別デプロイ">
+        環境別デプロイ
+       </h3>
+<div class="usecase-desc">
+        開発→ステージング→本番と段階的にデプロイ。
+        <br/>
+        各環境ごとにDeploymentGroupを作成して管理。
+       </div>
+<div class="usecase-config">
+<strong>
+         設定例：
+        </strong>
+<code>
+         DevelopmentGroup
+        </code>
+<br/>
+<code>
+         StagingGroup
+        </code>
+<br/>
+<code>
+         ProductionGroup
+        </code>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        🔄
+       </div>
+<h4>
+        Blue/Greenデプロイ
+       </h4>
+<div class="usecase-desc">
+        新旧環境を並行稼働させ、問題なければ切り替え。
+        <br/>
+        DeploymentGroupでBlue/Green設定を定義。
+       </div>
+<div class="usecase-config">
+<strong>
+         設定：
+        </strong>
+<code>
+         DeploymentStyle: BLUE_GREEN
+        </code>
+<br/>
+        ロードバランサー連携必須
+       </div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        📊
+       </div>
+<h4>
+        カナリアデプロイ
+       </h4>
+<div class="usecase-desc">
+        一部のサーバーに先行デプロイして様子を見る。
+        <br/>
+        問題なければ残りにも展開。
+       </div>
+<div class="usecase-config">
+<strong>
+         設定：
+        </strong>
+<code>
+         CodeDeployDefault.LambdaCanary10Percent5Minutes
+        </code>
+</div>
+</div>
+<div class="usecase-card">
+<div class="usecase-icon">
+        🏢
+       </div>
+<h4>
+        マルチリージョン展開
+       </h4>
+<div class="usecase-desc">
+        東京・大阪など複数リージョンに同時展開。
+        <br/>
+        リージョンごとにDeploymentGroupを作成。
+       </div>
+<div class="usecase-config">
+<strong>
+         設定例：
+        </strong>
+<code>
+         TokyoProductionGroup
+        </code>
+<br/>
+<code>
+         OsakaProductionGroup
+        </code>
+</div>
+</div>
+</div>
+</div>
+<!-- 比較表 -->
+<div class="comparison-table">
+<h2 class="table-title" id="Deploy-Stage-vs-DeploymentGroup-比較表">
+      📊 Deploy Stage vs DeploymentGroup 比較表
+     </h2>
+<table>
+<thead>
+<tr>
+<th>
+         項目
+        </th>
+<th>
+         🚀 Deploy Stage
+        </th>
+<th>
+         🏘️ DeploymentGroup
+        </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<strong>
+          所属サービス
+         </strong>
+</td>
+<td>
+         CodePipeline
+        </td>
+<td>
+         CodeDeploy
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          役割
+         </strong>
+</td>
+<td>
+         「デプロイを実行せよ」という
+         <strong>
+          指示
+         </strong>
+</td>
+<td>
+         「どこにデプロイするか」という
+         <strong>
+          定義
+         </strong>
+</td>
+</tr>
+<tr>
+<td>
+<strong>
+          🍕 ピザで例えると
+         </strong>
+</td>
+<td>
+         「このピザを配達して！」という命令
+        </td>
+<td>
+         「〇〇地区の5軒」という届け先リスト
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          設定する内容
+         </strong>
+</td>
+<td>
+         • デプロイプロバイダー（CodeDeploy等）
+         <br/>
+         • アプリケーション名
+         <br/>
+         • DeploymentGroup名の指定
+        </td>
+<td>
+         • ターゲットEC2のタグ条件
+         <br/>
+         • デプロイ方式（Blue/Green等）
+         <br/>
+         • ロードバランサー設定
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          複数作成
+         </strong>
+</td>
+<td>
+         パイプラインに複数のDeploy Stageを定義可能
+        </td>
+<td>
+         1アプリに複数のDeploymentGroup作成可能
+        </td>
+</tr>
+<tr>
+<td>
+<strong>
+          作成タイミング
+         </strong>
+</td>
+<td>
+         パイプライン作成時
+        </td>
+<td>
+         CodeDeployアプリケーション作成後
+        </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Tips -->
+<div class="tip-box">
+<div class="tip-title">
+<span>
+       💡
+      </span>
+<span>
+       設計のベストプラクティス
+      </span>
+</div>
+<div class="tip-content">
+<strong>
+       1. 環境ごとにDeploymentGroupを分ける：
+      </strong>
+<br/>
+      開発・ステージング・本番で別々のDeploymentGroupを作成。タグで明確に区別しよう。
+      <br/>
+<br/>
+<strong>
+       2. 命名規則を統一する：
+      </strong>
+<br/>
+<code>
+       {アプリ名}-{環境名}-deployment-group
+      </code>
+      のような命名規則で管理を楽に。
+      <br/>
+      例：
+      <code>
+       myapp-production-deployment-group
+      </code>
+<br/>
+<br/>
+<strong>
+       3. パイプラインは1本で複数環境に展開：
+      </strong>
+<br/>
+      1つのパイプラインに複数のDeploy Stageを設置し、
+      <br/>
+      ステージング→承認→本番のように段階的デプロイが実現できる。
+      <br/>
+<br/>
+<strong>
+       4. タグ設計は慎重に：
+      </strong>
+<br/>
+      DeploymentGroupのタグフィルターが間違っていると、
+      <br/>
+      意図しないサーバーにデプロイされる危険あり！本番前に必ず確認。
+      <br/>
+<br/>
+<strong>
+       5. ロールバック設定を忘れずに：
+      </strong>
+<br/>
+      DeploymentGroupの設定で自動ロールバックを有効化しておくと安心。
+      <br/>
+      デプロイ失敗時に自動で前のバージョンに戻せる。
+     </div>
+</div>
+<!-- FAQ -->
+<div class="faq-section">
+<h2 class="faq-title" id="❓-よくある質問FAQ">
+      ❓ よくある質問（FAQ）
+     </h2>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       Deploy StageでCodeDeploy以外も使える？
+      </div>
+<div class="faq-answer">
+<strong>
+        はい！
+       </strong>
+       Deploy Stageのプロバイダーには以下が選べます：
+       <br/>
+       •
+       <strong>
+        CodeDeploy
+       </strong>
+       ：EC2/オンプレミス/Lambda向け
+       <br/>
+       •
+       <strong>
+        ECS
+       </strong>
+       ：コンテナ向け（Fargate含む）
+       <br/>
+       •
+       <strong>
+        S3
+       </strong>
+       ：静的ファイルのデプロイ
+       <br/>
+       •
+       <strong>
+        Elastic Beanstalk
+       </strong>
+       ：マネージド環境向け
+       <br/>
+       •
+       <strong>
+        CloudFormation
+       </strong>
+       ：インフラのデプロイ
+       <br/>
+       用途に応じて選択しましょう！
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       DeploymentGroupは複数作れる？
+      </div>
+<div class="faq-answer">
+<strong>
+        作れます！
+       </strong>
+       1つのCodeDeployアプリケーションに対して、
+       <br/>
+       複数のDeploymentGroupを作成可能です。
+       <br/>
+<br/>
+       典型的な使い方：
+       <br/>
+       • 環境別：Development / Staging / Production
+       <br/>
+       • リージョン別：Tokyo / Osaka / Singapore
+       <br/>
+       • 用途別：WebServers / BatchServers / APIServers
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       DeploymentGroupの名前を間違えたらどうなる？
+      </div>
+<div class="faq-answer">
+<strong>
+        パイプラインがエラーになります！
+       </strong>
+<br/>
+       Deploy Stageで指定したDeploymentGroup名が存在しない場合、
+       <br/>
+       「DeploymentGroup not found」エラーで失敗します。
+       <br/>
+<br/>
+<strong>
+        対策：
+       </strong>
+<br/>
+       • CloudFormationで両方を一緒に管理する
+       <br/>
+       • 命名規則を統一して間違いを防ぐ
+       <br/>
+       • デプロイ前にAWSコンソールで存在確認
+      </div>
+</div>
+<div class="faq-item">
+<div class="faq-question">
+<span>
+        Q.
+       </span>
+       タグ条件に一致するEC2が0台の場合は？
+      </div>
+<div class="faq-answer">
+<strong>
+        デプロイは成功扱いになることも！
+       </strong>
+<br/>
+       対象が0台でも「デプロイ完了」となる場合があるので注意。
+       <br/>
+<br/>
+<strong>
+        対策：
+       </strong>
+<br/>
+       • デプロイ前にターゲット台数を確認するステップを追加
+       <br/>
+       • CloudWatchでデプロイ対象台数を監視
+       <br/>
+       • Auto Scalingグループを使用している場合は最小台数を設定
+      </div>
+</div>
+</div>
+<!-- まとめ -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; padding: 50px; border-radius: 20px; text-align: center;">
+<h2 id="まとめ" style="font-size: 2.5em; margin-bottom: 30px;">
+      🎓 まとめ
+     </h2>
+<div style="max-width: 1100px; margin: 0 auto;">
+<div style="background: rgba(255,255,255,0.15); padding: 35px; border-radius: 15px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+<h3 id="宅配ピザ-=-CI-CDパイプライン" style="font-size: 1.8em; margin-bottom: 15px;">
+        🍕 宅配ピザ = CI/CDパイプライン
+       </h3>
+<p style="font-size: 1.15em; line-height: 2;">
+        Deploy StageとDeploymentGroupは
+        <br/>
+<strong>
+         「配達指示」と「届け先リスト」
+        </strong>
+        の関係！
+        <br/>
+        両方揃って初めてデプロイが完了します
+       </p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0;">
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🔄
+        </div>
+<strong style="font-size: 1.2em;">
+         CodePipeline
+        </strong>
+<br/>
+<br/>
+        全体の流れを
+        <br/>
+        管理する
+        <br/>
+        オーケストレーター
+       </div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🚀
+        </div>
+<strong style="font-size: 1.2em;">
+         Deploy Stage
+        </strong>
+<br/>
+<br/>
+        「デプロイして！」
+        <br/>
+        という
+        <br/>
+<strong>
+         指示・命令
+        </strong>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+<div style="font-size: 2.5em; margin-bottom: 15px;">
+         🏘️
+        </div>
+<strong style="font-size: 1.2em;">
+         DeploymentGroup
+        </strong>
+<br/>
+<br/>
+        「どこに届けるか」
+        <br/>
+        という
+        <br/>
+<strong>
+         届け先の定義
+        </strong>
+</div>
+</div>
+<p style="font-size: 1.3em; padding: 25px; background: rgba(255,255,255,0.2); border-radius: 12px; backdrop-filter: blur(10px); line-height: 1.8;">
+       🎯
+       <strong>
+        覚えておくべきこと：
+       </strong>
+<br/>
+<br/>
+       ① Deploy StageはCodePipelineの一部
+       <br/>
+       ② DeploymentGroupはCodeDeployの一部
+       <br/>
+       ③ Deploy StageがDeploymentGroupを
+       <strong>
+        参照
+       </strong>
+       して連携
+       <br/>
+       ④ 名前の一致が超重要！🔑
+      </p>
+</div>
+</div>
+</div>
+
+
+</div>
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+   // トップに戻るボタンの表示/非表示
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const readingProgress = document.getElementById('readingProgress');
+        const readingProgressBar = document.getElementById('readingProgressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+  </script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="alb_sticky_session_infographic.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">21</span> <span class="separator" aria-hidden="true">/</span> <span class="total">41</span> </div> <a href="alb-target-group-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

@@ -1,0 +1,1001 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   AWS CodeDeploy を劇場システムで理解しよう
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/codedeploy_infographic.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#ブルー舞台-↔️-グリーン舞台">🎭 ブルー舞台 ↔️ 🎬 グリーン舞台</a> </li><li class="toc-h2"> <a href="#まず、CodeDeployって何？">🤔 まず、CodeDeployって何？</a> </li><li class="toc-h3"> <a href="#簡単に言うと...">📝 簡単に言うと...</a> </li><li class="toc-h3"> <a href="#劇場の例">🎭 劇場の例</a> </li><li class="toc-h3"> <a href="#☁️-AWSの世界">☁️ AWSの世界</a> </li><li class="toc-h2"> <a href="#ブルー-グリーンデプロイメントとは？">🎭 ブルー/グリーンデプロイメントとは？</a> </li><li class="toc-h2"> <a href="#2つの舞台システム">🎪 2つの舞台システム</a> </li><li class="toc-h3"> <a href="#劇場の舞台配置">🎭 劇場の舞台配置</a> </li><li class="toc-h3"> <a href="#舞台転換の流れ">💡 舞台転換の流れ</a> </li><li class="toc-h2"> <a href="#デプロイメントの流れ">🔄 デプロイメントの流れ</a> </li><li class="toc-h3"> <a href="#新演目の準備開始">新演目の準備開始</a> </li><li class="toc-h3"> <a href="#リハーサルとテスト">リハーサルとテスト</a> </li><li class="toc-h3"> <a href="#瞬間的な舞台転換">瞬間的な舞台転換</a> </li><li class="toc-h3"> <a href="#旧舞台は控えに">旧舞台は控えに</a> </li><li class="toc-h2"> <a href="#ロールバック機能">🚨 ロールバック機能</a> </li><li class="toc-h3"> <a href="#緊急事態の対応！">緊急事態の対応！</a> </li><li class="toc-h2"> <a href="#️-CodeDeployの制御機能">🎛️ CodeDeployの制御機能</a> </li><li class="toc-h3"> <a href="#劇場の制御室">劇場の制御室</a> </li><li class="toc-h2"> <a href="#⚖️-デプロイメント戦略の比較">⚖️ デプロイメント戦略の比較</a> </li><li class="toc-h3"> <a href="#ブルー-グリーンデプロイメント">🎭 ブルー/グリーンデプロイメント</a> </li><li class="toc-h3"> <a href="#インプレースデプロイメント">🔄 インプレースデプロイメント</a> </li><li class="toc-h2"> <a href="#❓-よくある質問">❓ よくある質問</a> </li><li class="toc-h2"> <a href="#✨-CodeDeployの主要メリット">✨ CodeDeployの主要メリット</a> </li><li class="toc-h3"> <a href="#高速デプロイ">高速デプロイ</a> </li><li class="toc-h3"> <a href="#安全性">安全性</a> </li><li class="toc-h3"> <a href="#自動化">自動化</a> </li><li class="toc-h3"> <a href="#可視化">可視化</a> </li><li class="toc-h3"> <a href="#柔軟性">柔軟性</a> </li><li class="toc-h3"> <a href="#コスト効率">コスト効率</a> </li><li class="toc-h2"> <a href="#まとめ">🎯 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> CI/CD &amp; デプロイメント </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Codedeploy Infographic </span> </nav> <!-- ページコンテンツ (slot) -->  <header class="header">
+<h1>
+     🎭 AWS CodeDeploy
+    </h1>
+
+<p>
+     劇場システムで理解する超入門ガイド
+    </p>
+<div class="intro-analogy">
+<h2 id="ブルー舞台-↔️-グリーン舞台">
+      🎭 ブルー舞台 ↔️ 🎬 グリーン舞台
+     </h2>
+<p>
+      AWS CodeDeployのブルー/グリーンデプロイメントとロールバック機能を、劇場の舞台転換で分かりやすく説明します！
+     </p>
+</div>
+</header>
+<div class="section">
+<h2 id="まず、CodeDeployって何？">
+     🤔 まず、CodeDeployって何？
+    </h2>
+<div class="highlight-box">
+<h3 id="簡単に言うと...">
+      📝 簡単に言うと...
+     </h3>
+<p style="font-size: 1.2em; margin-top: 15px;">
+<strong>
+       新しいアプリケーション
+      </strong>
+      を
+      <strong>
+       安全に
+      </strong>
+      サーバーに配布して、
+                    問題があったら
+      <strong>
+       瞬時に元に戻せる
+      </strong>
+      サービスです
+     </p>
+</div>
+<div class="comparison-table">
+<div class="comparison-side theater-side">
+<h3 id="劇場の例">
+       🎭 劇場の例
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         新しい演目
+        </strong>
+        を上演したい
+        <br/>
+        でも
+        <strong>
+         失敗したら困る
+        </strong>
+</p>
+<br/>
+<p>
+        👆 準備用の舞台で練習して
+        <br/>
+        🎬
+        <strong>
+         瞬時に舞台転換
+        </strong>
+        しよう！
+        <br/>
+        ダメなら
+        <strong>
+         すぐ元に戻そう
+        </strong>
+        ！
+       </p>
+</div>
+</div>
+<div class="comparison-side aws-side">
+<h3 id="☁️-AWSの世界">
+       ☁️ AWSの世界
+      </h3>
+<div style="font-size: 1.1em; margin-top: 15px;">
+<p>
+<strong>
+         新しいアプリ
+        </strong>
+        をリリースしたい
+        <br/>
+        でも
+        <strong>
+         バグがあったら困る
+        </strong>
+</p>
+<br/>
+<p>
+        👆 別サーバーで準備して
+        <br/>
+        🚀
+        <strong>
+         瞬時に切り替え
+        </strong>
+        しよう！
+        <br/>
+        ダメなら
+        <strong>
+         すぐロールバック
+        </strong>
+        ！
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ブルー-グリーンデプロイメントとは？">
+     🎭 ブルー/グリーンデプロイメントとは？
+    </h2>
+<div class="intro-analogy">
+<h2 id="2つの舞台システム">
+      🎪 2つの舞台システム
+     </h2>
+<p>
+      観客に迷惑をかけずに、新しい演目に切り替える劇場の秘密技術です！
+     </p>
+</div>
+<div class="stage-diagram">
+<h3 id="劇場の舞台配置" style="text-align: center; margin-bottom: 30px; color: #667eea;">
+      🎭 劇場の舞台配置
+     </h3>
+<div class="stage-container">
+<div class="stage-area blue-stage" onclick="highlightStage(this)">
+<div class="stage-title">
+        🔵 ブルー舞台
+       </div>
+<div style="font-size: 2.5em; margin: 20px 0;">
+        🎭
+       </div>
+<p>
+<strong>
+         現在上演中
+        </strong>
+</p>
+<p>
+        お客様が観ている舞台
+       </p>
+<small>
+        （Version 1.0の演目）
+       </small>
+</div>
+<div class="stage-area green-stage" onclick="highlightStage(this)">
+<div class="stage-title">
+        🟢 グリーン舞台
+       </div>
+<div style="font-size: 2.5em; margin: 20px 0;">
+        🎬
+       </div>
+<p>
+<strong>
+         新演目準備中
+        </strong>
+</p>
+<p>
+        裏で準備している舞台
+       </p>
+<small>
+        （Version 2.0の演目）
+       </small>
+</div>
+</div>
+<div class="audience-section">
+<h4>
+       👥 観客席（ユーザー）
+      </h4>
+<p>
+       観客は常にどちらか一つの舞台を観ています
+      </p>
+<div class="audience-arrow">
+       👀
+      </div>
+</div>
+<div class="highlight-box">
+<h3 id="舞台転換の流れ">
+       💡 舞台転換の流れ
+      </h3>
+<p>
+       グリーン舞台で新演目の準備 → リハーサル → 観客の視線を切り替え → ブルー舞台が控えに
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="デプロイメントの流れ">
+     🔄 デプロイメントの流れ
+    </h2>
+<div class="deployment-flow">
+<div class="flow-step">
+<div class="step-number">
+       1
+      </div>
+<div class="step-content">
+<h3 id="新演目の準備開始">
+        新演目の準備開始
+       </h3>
+<p>
+<strong>
+         グリーン舞台でリハーサル
+        </strong>
+<br/>
+        → 新しいアプリケーションをグリーン環境にデプロイ
+        <br/>
+        → 観客（ユーザー）にはまだ見えない状態で準備
+       </p>
+</div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       2
+      </div>
+<div class="step-content">
+<h3 id="リハーサルとテスト">
+        リハーサルとテスト
+       </h3>
+<p>
+<strong>
+         舞台スタッフが最終確認
+        </strong>
+<br/>
+        → グリーン環境で動作テスト
+        <br/>
+        → 演出、照明、音響すべてチェック（機能テスト）
+       </p>
+</div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       3
+      </div>
+<div class="step-content">
+<h3 id="瞬間的な舞台転換">
+        瞬間的な舞台転換
+       </h3>
+<p>
+<strong>
+         観客の視線を新舞台へ
+        </strong>
+<br/>
+        → ロードバランサーでトラフィックを切り替え
+        <br/>
+        → 観客は一瞬で新しい演目を観ることに
+       </p>
+</div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       4
+      </div>
+<div class="step-content">
+<h3 id="旧舞台は控えに">
+        旧舞台は控えに
+       </h3>
+<p>
+<strong>
+         ブルー舞台が待機状態に
+        </strong>
+<br/>
+        → 問題があればすぐに戻せる状態で保持
+        <br/>
+        → 新演目が安定したら旧舞台を片付け
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="ロールバック機能">
+     🚨 ロールバック機能
+    </h2>
+<div class="rollback-section">
+<h3 id="緊急事態の対応！" style="text-align: center; margin-bottom: 20px;">
+      緊急事態の対応！
+     </h3>
+<p style="text-align: center; font-size: 1.2em;">
+      新演目で問題発生 → 瞬時に前の演目に戻す
+     </p>
+<div class="rollback-demo">
+<div class="rollback-stage">
+<div style="position: relative;">
+<div class="problem-indicator">
+         ⚠️ 問題発生
+        </div>
+<div style="font-size: 2em; margin: 20px 0;">
+         🟢
+        </div>
+<h4>
+         グリーン舞台
+        </h4>
+<p>
+         新演目で音響トラブル！
+         <br/>
+         （新アプリでバグ発生）
+        </p>
+</div>
+</div>
+<div class="rollback-arrow">
+       ⬅️
+      </div>
+<div class="rollback-stage">
+<div style="font-size: 2em; margin: 20px 0;">
+        🔵
+       </div>
+<h4>
+        ブルー舞台
+       </h4>
+<p>
+        安全な前の演目に復帰
+        <br/>
+        （前バージョンに自動復旧）
+       </p>
+</div>
+</div>
+<div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin-top: 20px;">
+<h4>
+       🎯 ロールバックの種類
+      </h4>
+<div style="margin-top: 15px;">
+<p>
+<strong>
+         🤖 自動ロールバック
+        </strong>
+        : 演出家（CloudWatch）が異常を検知して自動で前の演目に戻す
+       </p>
+<p>
+<strong>
+         👨‍💼 手動ロールバック
+        </strong>
+        : 劇場支配人（管理者）が判断して手動で戻す
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="️-CodeDeployの制御機能">
+     🎛️ CodeDeployの制御機能
+    </h2>
+<div class="control-panel">
+<h3 id="劇場の制御室" style="text-align: center; margin-bottom: 20px;">
+      劇場の制御室
+     </h3>
+<p style="text-align: center;">
+      舞台監督が使う様々なコントロール機能
+     </p>
+<div class="control-buttons">
+<div class="control-button" onclick="showDeployInfo('canary')">
+<div style="font-size: 2em; margin-bottom: 10px;">
+        🐤
+       </div>
+<h4>
+        カナリアデプロイ
+       </h4>
+<p>
+        少数の観客だけに新演目を先行公開
+       </p>
+</div>
+<div class="control-button" onclick="showDeployInfo('linear')">
+<div style="font-size: 2em; margin-bottom: 10px;">
+        📈
+       </div>
+<h4>
+        リニアデプロイ
+       </h4>
+<p>
+        段階的に観客を新演目に移動
+       </p>
+</div>
+<div class="control-button" onclick="showDeployInfo('all-at-once')">
+<div style="font-size: 2em; margin-bottom: 10px;">
+        ⚡
+       </div>
+<h4>
+        一括デプロイ
+       </h4>
+<p>
+        全観客を一気に新演目に移動
+       </p>
+</div>
+<div class="control-button" onclick="showDeployInfo('stop')">
+<div style="font-size: 2em; margin-bottom: 10px;">
+        ⏹️
+       </div>
+<h4>
+        デプロイ停止
+       </h4>
+<p>
+        舞台転換を緊急停止
+       </p>
+</div>
+</div>
+<div id="deploy-info" style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; display: none;">
+<h4 id="deploy-title">
+</h4>
+<p id="deploy-description">
+</p>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="⚖️-デプロイメント戦略の比較">
+     ⚖️ デプロイメント戦略の比較
+    </h2>
+<div class="strategy-comparison">
+<div class="strategy-card blue-green-card">
+<h3 id="ブルー-グリーンデプロイメント">
+       🎭 ブルー/グリーンデプロイメント
+      </h3>
+<div style="font-size: 2em; margin: 20px 0; text-align: center;">
+       🔵🟢
+      </div>
+<h4 style="color: #4169E1;">
+       👍 メリット
+      </h4>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        瞬時の切り替えが可能
+       </li>
+<li>
+        ダウンタイムがほぼゼロ
+       </li>
+<li>
+        即座にロールバック可能
+       </li>
+<li>
+        本番環境と同じ環境でテスト
+       </li>
+</ul>
+<h4 style="color: #4169E1; margin-top: 20px;">
+       👎 デメリット
+      </h4>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        2倍のリソースが必要
+       </li>
+<li>
+        データベースの同期が複雑
+       </li>
+<li>
+        コストが高い
+       </li>
+</ul>
+<div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        適用場面:
+       </strong>
+       重要なWebサービス、ECサイト、金融システム
+      </div>
+</div>
+<div class="strategy-card in-place-card">
+<h3 id="インプレースデプロイメント">
+       🔄 インプレースデプロイメント
+      </h3>
+<div style="font-size: 2em; margin: 20px 0; text-align: center;">
+       🎭➡️🎬
+      </div>
+<h4 style="color: #FFA500;">
+       👍 メリット
+      </h4>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        リソースが1つで済む
+       </li>
+<li>
+        シンプルな構成
+       </li>
+<li>
+        コストが安い
+       </li>
+<li>
+        設定が簡単
+       </li>
+</ul>
+<h4 style="color: #FFA500; margin-top: 20px;">
+       👎 デメリット
+      </h4>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        短時間のダウンタイムあり
+       </li>
+<li>
+        ロールバックに時間がかかる
+       </li>
+<li>
+        デプロイ中はサービス停止
+       </li>
+</ul>
+<div style="background: #fff8dc; padding: 15px; border-radius: 8px; margin-top: 15px;">
+<strong>
+        適用場面:
+       </strong>
+       内部システム、開発環境、小規模アプリ
+      </div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-section">
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🤔 なぜブルー/グリーンが安全なの？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         リスクが最小限
+        </strong>
+        だからです！
+       </p>
+<br/>
+<p>
+<strong>
+         劇場の例：
+        </strong>
+        新演目で失敗しても、観客は一瞬で元の演目を観ることができます。舞台転換は瞬間的で、観客に迷惑をかけません。
+       </p>
+<br/>
+<p>
+<strong>
+         AWSの場合：
+        </strong>
+        新アプリでバグがあっても、ロードバランサーが瞬時に前のバージョンに切り替えるので、ユーザーは停止を感じません。
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       💰 コストはどのくらいかかるの？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         ブルー/グリーンデプロイメント：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         デプロイ中は2倍のEC2インスタンス料金
+        </li>
+<li>
+         CodeDeploy自体は無料
+        </li>
+<li>
+         ロードバランサー料金（月額約20ドル〜）
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         インプレースデプロイメント：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         追加のインスタンス料金なし
+        </li>
+<li>
+         CodeDeploy自体は無料
+        </li>
+</ul>
+<br/>
+<p>
+        💡
+        <strong>
+         コスト削減のコツ：
+        </strong>
+        デプロイ完了後にブルー環境を停止すれば、通常時のコストは変わりません。
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       ⏱️ ロールバックはどのくらい早い？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         ブルー/グリーンデプロイメント：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         ⚡
+         <strong>
+          数秒〜数分
+         </strong>
+         で完了
+        </li>
+<li>
+         ロードバランサーの設定変更だけ
+        </li>
+<li>
+         前のバージョンが起動中なので即座に切り替え可能
+        </li>
+</ul>
+<br/>
+<p>
+<strong>
+         インプレースデプロイメント：
+        </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+         ⏳
+         <strong>
+          数分〜数十分
+         </strong>
+         かかる
+        </li>
+<li>
+         前のバージョンを再デプロイする必要
+        </li>
+<li>
+         アプリケーションサイズに依存
+        </li>
+</ul>
+<br/>
+<p>
+        🎭
+        <strong>
+         劇場で例えると：
+        </strong>
+        ブルー/グリーンは「照明を切り替えるだけ」、インプレースは「舞台セットを組み直す」ような違いです。
+       </p>
+</div>
+</div>
+<div class="faq-item">
+<div class="faq-question" onclick="toggleFaq(this)">
+       🔧 設定は難しい？
+      </div>
+<div class="faq-answer" style="display: none;">
+<p>
+<strong>
+         基本設定は簡単
+        </strong>
+        です！
+       </p>
+<br/>
+<p>
+<strong>
+         必要な設定：
+        </strong>
+</p>
+<ol style="margin-left: 20px; margin-top: 10px;">
+<li>
+         CodeDeployアプリケーションを作成
+        </li>
+<li>
+         デプロイメントグループを設定
+        </li>
+<li>
+         IAMロールの設定
+        </li>
+<li>
+         EC2インスタンスにCodeDeployエージェントをインストール
+        </li>
+</ol>
+<br/>
+<p>
+        💡
+        <strong>
+         コツ：
+        </strong>
+        AWSのチュートリアルに従えば、1〜2時間で基本的な環境は構築できます。最初は簡単なアプリで練習することをお勧めします。
+       </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h2 id="✨-CodeDeployの主要メリット">
+     ✨ CodeDeployの主要メリット
+    </h2>
+<div class="benefit-grid">
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       ⚡
+      </div>
+<h3 id="高速デプロイ">
+       高速デプロイ
+      </h3>
+<p>
+       数分で新しいバージョンをリリース、問題があれば瞬時にロールバック
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🔒
+      </div>
+<h3 id="安全性">
+       安全性
+      </h3>
+<p>
+       段階的デプロイとヘルスチェックで、リスクを最小限に抑制
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🤖
+      </div>
+<h3 id="自動化">
+       自動化
+      </h3>
+<p>
+       手動作業を減らし、ヒューマンエラーを防止、一貫したデプロイを実現
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       📊
+      </div>
+<h3 id="可視化">
+       可視化
+      </h3>
+<p>
+       デプロイの進行状況をリアルタイムで監視、詳細なログとメトリクスを提供
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       🎯
+      </div>
+<h3 id="柔軟性">
+       柔軟性
+      </h3>
+<p>
+       カナリア、リニア、一括など、要件に応じたデプロイ戦略を選択可能
+      </p>
+</div>
+<div class="benefit-card">
+<div style="font-size: 3em; margin-bottom: 15px;">
+       💰
+      </div>
+<h3 id="コスト効率">
+       コスト効率
+      </h3>
+<p>
+       CodeDeploy自体は無料、EC2の利用料金のみで高度なデプロイシステムを構築
+      </p>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="highlight-box">
+<h2 id="まとめ">
+      🎯 まとめ
+     </h2>
+<div style="text-align: left; margin-top: 20px; font-size: 1.1em;">
+<p>
+       🔵
+       <strong>
+        ブルー環境
+       </strong>
+       = 現在稼働中の舞台（本番環境）
+      </p>
+<p>
+       🟢
+       <strong>
+        グリーン環境
+       </strong>
+       = 新演目準備中の舞台（新バージョン環境）
+      </p>
+<p>
+       🔄
+       <strong>
+        ブルー/グリーンデプロイ
+       </strong>
+       = 瞬間的な舞台転換（ゼロダウンタイム切り替え）
+      </p>
+<p>
+       ⏪
+       <strong>
+        ロールバック
+       </strong>
+       = 問題時の緊急復旧（前バージョンへの即座復帰）
+      </p>
+<p>
+       🎛️
+       <strong>
+        制御機能
+       </strong>
+       = 段階的デプロイと自動化（カナリア、リニア等）
+      </p>
+<br/>
+<p>
+       これらの機能により、
+       <strong>
+        安全で迅速なアプリケーション配布
+       </strong>
+       が実現できます！
+      </p>
+<br/>
+<p>
+<strong>
+        🎯 選択指針：
+       </strong>
+</p>
+<ul style="margin-left: 20px; margin-top: 10px;">
+<li>
+        重要なサービス → ブルー/グリーンデプロイ
+       </li>
+<li>
+        開発・検証環境 → インプレースデプロイ
+       </li>
+<li>
+        初回は小さなアプリで練習
+       </li>
+<li>
+        段階的にカナリアデプロイを活用
+       </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<script>
+   function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const isVisible = answer.style.display !== 'none';
+            
+            answer.style.display = isVisible ? 'none' : 'block';
+            element.style.background = isVisible ? '#667eea' : '#5a6fd8';
+        }
+
+        function highlightStage(element) {
+            // Remove previous highlights
+            document.querySelectorAll('.stage-area').forEach(stage => {
+                stage.style.transform = 'translateY(0)';
+                stage.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+            });
+            
+            // Highlight clicked stage
+            element.style.transform = 'translateY(-10px) scale(1.05)';
+            element.style.boxShadow = '0 20px 40px rgba(0,0,0,0.3)';
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+                element.style.transform = 'translateY(0) scale(1)';
+                element.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+            }, 2000);
+        }
+
+        function showDeployInfo(type) {
+            const infoDiv = document.getElementById('deploy-info');
+            const titleElement = document.getElementById('deploy-title');
+            const descriptionElement = document.getElementById('deploy-description');
+            
+            const deployInfo = {
+                'canary': {
+                    title: '🐤 カナリアデプロイメント',
+                    description: '少数の観客（例：10%）に新演目を先行公開し、問題がなければ段階的に全観客に展開。炭鉱のカナリアのように、早期に問題を検知する手法です。'
+                },
+                'linear': {
+                    title: '📈 リニアデプロイメント',
+                    description: '一定の間隔で段階的に観客を移動（例：10分ごとに10%ずつ）。Linear10PercentEvery10Minutesのように設定し、安全に段階展開します。'
+                },
+                'all-at-once': {
+                    title: '⚡ 一括デプロイメント',
+                    description: '全観客を一気に新演目に移動。最も高速ですが、問題があった場合の影響も最大。緊急性が高い場合や確実に動作することが分かっている場合に使用。'
+                },
+                'stop': {
+                    title: '⏹️ デプロイメント停止',
+                    description: '舞台転換を緊急停止し、現在の状態を維持。問題を発見した際に被害拡大を防ぐための重要な機能です。'
+                }
+            };
+            
+            titleElement.textContent = deployInfo[type].title;
+            descriptionElement.textContent = deployInfo[type].description;
+            infoDiv.style.display = 'block';
+            
+            // Highlight effect
+            infoDiv.style.opacity = '0';
+            setTimeout(() => {
+                infoDiv.style.opacity = '1';
+                infoDiv.style.transition = 'opacity 0.5s ease';
+            }, 100);
+        }
+
+        // Animation effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Stage clicking animation
+            const stages = document.querySelectorAll('.stage-area');
+            
+            stages.forEach(stage => {
+                stage.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                });
+                
+                stage.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Control button hover effects
+            const controlButtons = document.querySelectorAll('.control-button');
+            controlButtons.forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.background = 'rgba(255,255,255,0.3)';
+                    this.style.transform = 'translateY(-3px) scale(1.02)';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.background = 'rgba(255,255,255,0.2)';
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Scroll-triggered animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+
+            // Rollback animation
+            function animateRollback() {
+                const rollbackArrow = document.querySelector('.rollback-arrow');
+                if (rollbackArrow) {
+                    rollbackArrow.style.color = '#ff4444';
+                    rollbackArrow.style.transform = 'translateX(-20px) scale(1.2)';
+                    
+                    setTimeout(() => {
+                        rollbackArrow.style.color = 'white';
+                        rollbackArrow.style.transform = 'translateX(0) scale(1)';
+                    }, 1000);
+                }
+            }
+            
+            // Animate rollback every 8 seconds
+            setInterval(animateRollback, 8000);
+
+            // Stage switching demonstration
+            function demonstrateStageSwitch() {
+                const blueStage = document.querySelector('.blue-stage');
+                const greenStage = document.querySelector('.green-stage');
+                
+                if (blueStage && greenStage) {
+                    // Highlight green stage first
+                    greenStage.style.transform = 'translateY(-10px) scale(1.05)';
+                    greenStage.style.boxShadow = '0 20px 40px rgba(50,205,50,0.4)';
+                    
+                    setTimeout(() => {
+                        // Switch to blue stage
+                        greenStage.style.transform = 'translateY(0) scale(1)';
+                        greenStage.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                        
+                        blueStage.style.transform = 'translateY(-10px) scale(1.05)';
+                        blueStage.style.boxShadow = '0 20px 40px rgba(65,105,225,0.4)';
+                        
+                        setTimeout(() => {
+                            blueStage.style.transform = 'translateY(0) scale(1)';
+                            blueStage.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                        }, 2000);
+                    }, 3000);
+                }
+            }
+            
+            // Demonstrate stage switching every 15 seconds
+            setInterval(demonstrateStageSwitch, 15000);
+        });
+  </script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">1</span> <span class="separator" aria-hidden="true">/</span> <span class="total">1</span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

@@ -1,0 +1,721 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   IAM ロール：権限ポリシー vs 信頼ポリシー完全ガイド
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/iam-role-policies-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#結論ファースト-30秒で理解！">🎯 結論ファースト：30秒で理解！</a> </li><li class="toc-h3"> <a href="#信頼ポリシーTrust-Policy">🚪 信頼ポリシー（Trust Policy）</a> </li><li class="toc-h3"> <a href="#️-権限ポリシーPermission-Policy">🗝️ 権限ポリシー（Permission Policy）</a> </li><li class="toc-h2"> <a href="#ホテルのセキュリティで理解しよう！">🏨 ホテルのセキュリティで理解しよう！</a> </li><li class="toc-h3"> <a href="#信頼ポリシー">信頼ポリシー</a> </li><li class="toc-h3"> <a href="#権限ポリシー">権限ポリシー</a> </li><li class="toc-h2"> <a href="#ロール引き受けの流れ">🔄 ロール引き受けの流れ</a> </li><li class="toc-h3"> <a href="#IAMユーザーがロール引き受けをリクエスト">👤 IAMユーザーがロール引き受けをリクエスト</a> </li><li class="toc-h2"> <a href="#詳細比較表">📊 詳細比較表</a> </li><li class="toc-h3"> <a href="#️-信頼ポリシーTrust-Policy">🛎️ 信頼ポリシー（Trust Policy）</a> </li><li class="toc-h3"> <a href="#️-権限ポリシーPermission-Policy-1">🗝️ 権限ポリシー（Permission Policy）</a> </li><li class="toc-h2"> <a href="#実際のポリシー例">💻 実際のポリシー例</a> </li><li class="toc-h2"> <a href="#MFAは信頼ポリシーで制御する！">🔐 MFAは信頼ポリシーで制御する！</a> </li><li class="toc-h3"> <a href="#なぜ信頼ポリシーでMFA？">なぜ信頼ポリシーでMFA？</a> </li><li class="toc-h2"> <a href="#よくあるユースケース">🎯 よくあるユースケース</a> </li><li class="toc-h3"> <a href="#クロスアカウントアクセス">🔄 クロスアカウントアクセス</a> </li><li class="toc-h3"> <a href="#EC2からS3アクセス">🤖 EC2からS3アクセス</a> </li><li class="toc-h3"> <a href="#本番環境への管理者アクセス">🔒 本番環境への管理者アクセス</a> </li><li class="toc-h3"> <a href="#⚙️-Lambda関数の実行">⚙️ Lambda関数の実行</a> </li><li class="toc-h2"> <a href="#❓-よくある質問">❓ よくある質問</a> </li><li class="toc-h3"> <a href="#Q-信頼ポリシーと権限ポリシー、どちらが先にチェックされる？">💭 Q: 信頼ポリシーと権限ポリシー、どちらが先にチェックされる？</a> </li><li class="toc-h2"> <a href="#まとめ">📝 まとめ</a> </li><li class="toc-h3"> <a href="#️-信頼ポリシー">🛎️ 信頼ポリシー</a> </li><li class="toc-h3"> <a href="#️-権限ポリシー">🗝️ 権限ポリシー</a> </li><li class="toc-h3"> <a href="#覚え方">🎯 覚え方</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> IAM &amp; 認証・認可 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> Iam Role Policies Guide </span> </nav> <!-- ページコンテンツ (slot) -->  <!-- ヘッダー -->
+<header class="header">
+<h1>
+     🔐 IAM ロール：権限ポリシー vs 信頼ポリシー
+    </h1>
+<p class="header-subtitle">
+     ホテルのセキュリティで理解する2つのポリシーの違い
+    </p>
+</header>
+<!-- 結論ファースト -->
+<section class="conclusion-first">
+<h2 id="結論ファースト-30秒で理解！">
+     🎯 結論ファースト：30秒で理解！
+    </h2>
+<div class="conclusion-grid">
+<div class="conclusion-item">
+<h3 id="信頼ポリシーTrust-Policy">
+       🚪 信頼ポリシー（Trust Policy）
+      </h3>
+<p>
+<strong>
+        「誰が」「どんな条件で」
+       </strong>
+       ロールを引き受けられるか？
+       <br/>
+       → ホテルの
+       <strong>
+        チェックイン受付
+       </strong>
+       と同じ！
+       <br/>
+       「身分証明 + MFA認証」をクリアして初めて鍵がもらえる
+      </p>
+</div>
+<div class="conclusion-item">
+<h3 id="️-権限ポリシーPermission-Policy">
+       🗝️ 権限ポリシー（Permission Policy）
+      </h3>
+<p>
+       ロールを引き受けた
+       <strong>
+        「後」に何ができるか？
+       </strong>
+<br/>
+       → ホテルの
+       <strong>
+        部屋の鍵
+       </strong>
+       と同じ！
+       <br/>
+       どの施設（部屋・プール・ジム）にアクセスできるかを決める
+      </p>
+</div>
+</div>
+</section>
+<!-- たとえ話セクション -->
+<section class="analogy-section">
+<h2 id="ホテルのセキュリティで理解しよう！">
+     🏨 ホテルのセキュリティで理解しよう！
+    </h2>
+<div class="hotel-diagram">
+<div class="hotel-visual">
+<div class="policy-box trust">
+<div class="policy-icon">
+        🛎️
+       </div>
+<h3 id="信頼ポリシー">
+        信頼ポリシー
+       </h3>
+<p>
+        チェックイン受付
+       </p>
+<div class="hotel-term">
+<strong>
+         確認すること：
+        </strong>
+<br/>
+        ・予約はあるか？（Principal）
+        <br/>
+        ・身分証明書は？（認証）
+        <br/>
+        ・本人確認コード（MFA）
+       </div>
+</div>
+<div class="arrow-center">
+       ➡️
+       <span>
+        通過後
+       </span>
+</div>
+<div class="policy-box permission">
+<div class="policy-icon">
+        🗝️
+       </div>
+<h3 id="権限ポリシー">
+        権限ポリシー
+       </h3>
+<p>
+        ルームキー
+       </p>
+<div class="hotel-term">
+<strong>
+         アクセスできる場所：
+        </strong>
+<br/>
+        ・客室（S3バケット）
+        <br/>
+        ・プール（EC2）
+        <br/>
+        ・レストラン（DynamoDB）
+       </div>
+</div>
+</div>
+<p style="text-align: center; font-size: 1.1em; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;">
+      💡
+      <strong>
+       ポイント：
+      </strong>
+      チェックインを通過しないと、どんな高級なルームキーも意味がない！
+      <br/>
+      逆に、チェックインしても、鍵がなければどこにも入れない！
+     </p>
+</div>
+</section>
+<!-- フロー図 -->
+<section class="flow-section">
+<h2 id="ロール引き受けの流れ">
+     🔄 ロール引き受けの流れ
+    </h2>
+<div class="flow-container">
+<div class="flow-step">
+<div class="step-number">
+       1
+      </div>
+<div class="step-content">
+<h3 id="IAMユーザーがロール引き受けをリクエスト">
+        👤 IAMユーザーがロール引き受けをリクエスト
+       </h3>
+<p>
+        「このロールを使いたいです！」とSTSに申請
+       </p>
+</div>
+<div class="step-policy trust-badge">
+       リクエスト開始
+      </div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       2
+      </div>
+<div class="step-content">
+<h4>
+        📋 信頼ポリシーをチェック
+       </h4>
+<p>
+        「このユーザーは許可されている？条件は満たしている？」
+       </p>
+</div>
+<div class="step-policy trust-badge">
+       🔶 信頼ポリシーで制御
+      </div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       3
+      </div>
+<div class="step-content">
+<h4>
+        🔐 MFA認証（設定されている場合）
+       </h4>
+<p>
+        「MFAコードを入力してください」→ 本人確認完了
+       </p>
+</div>
+<div class="step-policy trust-badge">
+       🔶 信頼ポリシーで制御
+      </div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       4
+      </div>
+<div class="step-content">
+<h4>
+        ✅ ロール引き受け成功！一時認証情報を取得
+       </h4>
+<p>
+        STSから一時的なアクセスキー・シークレットキー・トークンを受け取る
+       </p>
+</div>
+<div class="step-policy trust-badge">
+       チェックイン完了 🎉
+      </div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       5
+      </div>
+<div class="step-content">
+<h4>
+        🗝️ AWSリソースへアクセス
+       </h4>
+<p>
+        「S3を読みたい」「EC2を起動したい」などの操作を実行
+       </p>
+</div>
+<div class="step-policy permission-badge">
+       🔷 権限ポリシーで制御
+      </div>
+</div>
+<div class="flow-step">
+<div class="step-number">
+       6
+      </div>
+<div class="step-content">
+<h4>
+        📊 権限ポリシーで許可/拒否を判定
+       </h4>
+<p>
+        「この操作は許可されている？」→ 許可なら実行、拒否ならエラー
+       </p>
+</div>
+<div class="step-policy permission-badge">
+       🔷 権限ポリシーで制御
+      </div>
+</div>
+</div>
+</section>
+<!-- 詳細比較 -->
+<section class="comparison-section">
+<h2 id="詳細比較表">
+     📊 詳細比較表
+    </h2>
+<div class="comparison-table">
+<div class="comparison-card trust-card">
+<h3 id="️-信頼ポリシーTrust-Policy">
+       🛎️ 信頼ポリシー（Trust Policy）
+      </h3>
+<ul class="comparison-list">
+<li>
+<span class="list-label">
+         役割
+        </span>
+<span>
+         誰がこのロールを引き受けられるかを定義
+        </span>
+</li>
+<li>
+<span class="list-label">
+         タイミング
+        </span>
+<span>
+         ロール引き受け
+         <strong>
+          前
+         </strong>
+         にチェック
+        </span>
+</li>
+<li>
+<span class="list-label">
+         主な要素
+        </span>
+<span>
+         Principal（誰が）、Condition（どんな条件で）
+        </span>
+</li>
+<li>
+<span class="list-label">
+         MFA
+        </span>
+<span>
+         ✅ ここで制御する
+        </span>
+</li>
+<li>
+<span class="list-label">
+         設定場所
+        </span>
+<span>
+         ロール自体に直接アタッチ（1つだけ）
+        </span>
+</li>
+<li>
+<span class="list-label">
+         たとえ
+        </span>
+<span>
+         ホテルのチェックイン受付 🏨
+        </span>
+</li>
+</ul>
+</div>
+<div class="comparison-card permission-card">
+<h3 id="️-権限ポリシーPermission-Policy-1">
+       🗝️ 権限ポリシー（Permission Policy）
+      </h3>
+<ul class="comparison-list">
+<li>
+<span class="list-label">
+         役割
+        </span>
+<span>
+         ロールを使って何ができるかを定義
+        </span>
+</li>
+<li>
+<span class="list-label">
+         タイミング
+        </span>
+<span>
+         ロール引き受け
+         <strong>
+          後
+         </strong>
+         にチェック
+        </span>
+</li>
+<li>
+<span class="list-label">
+         主な要素
+        </span>
+<span>
+         Action（何を）、Resource（どこに）
+        </span>
+</li>
+<li>
+<span class="list-label">
+         MFA
+        </span>
+<span>
+         ❌ ここでは制御しない
+        </span>
+</li>
+<li>
+<span class="list-label">
+         設定場所
+        </span>
+<span>
+         ロールにアタッチ（複数可能）
+        </span>
+</li>
+<li>
+<span class="list-label">
+         たとえ
+        </span>
+<span>
+         ホテルのルームキー 🗝️
+        </span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- コード例 -->
+<section class="code-section">
+<h2 id="実際のポリシー例">
+     💻 実際のポリシー例
+    </h2>
+<div class="code-grid">
+<div class="code-block">
+<div class="code-header trust-header">
+       🛎️ 信頼ポリシー（AssumeRolePolicyDocument）
+      </div>
+<div class="code-content">
+<pre><span class="json-bracket">{</span>
+  <span class="json-key">"Version"</span>: <span class="json-string">"2012-10-17"</span>,
+  <span class="json-key">"Statement"</span>: [<span class="json-bracket">{</span>
+    <span class="json-key">"Effect"</span>: <span class="json-string">"Allow"</span>,
+    <span class="json-key">"Principal"</span>: <span class="json-bracket">{</span>
+      <span class="comment">// 誰が引き受けられるか</span>
+      <span class="json-key">"AWS"</span>: <span class="json-string">"arn:aws:iam::123456789012:user/DevUser"</span>
+    <span class="json-bracket">}</span>,
+    <span class="json-key">"Action"</span>: <span class="json-string">"sts:AssumeRole"</span>,
+    <span class="json-key">"Condition"</span>: <span class="json-bracket">{</span>
+      <span class="comment">// MFA必須の条件</span>
+      <span class="json-key">"Bool"</span>: <span class="json-bracket">{</span>
+        <span class="json-key">"aws:MultiFactorAuthPresent"</span>: <span class="json-value">"true"</span>
+      <span class="json-bracket">}</span>
+    <span class="json-bracket">}</span>
+  <span class="json-bracket">}</span>]
+<span class="json-bracket">}</span></pre>
+</div>
+</div>
+<div class="code-block">
+<div class="code-header permission-header">
+       🗝️ 権限ポリシー（IAM Policy）
+      </div>
+<div class="code-content">
+<pre><span class="json-bracket">{</span>
+  <span class="json-key">"Version"</span>: <span class="json-string">"2012-10-17"</span>,
+  <span class="json-key">"Statement"</span>: [<span class="json-bracket">{</span>
+    <span class="json-key">"Effect"</span>: <span class="json-string">"Allow"</span>,
+    <span class="json-key">"Action"</span>: [
+      <span class="comment">// 何ができるか</span>
+      <span class="json-string">"s3:GetObject"</span>,
+      <span class="json-string">"s3:PutObject"</span>
+    ],
+    <span class="json-key">"Resource"</span>: [
+      <span class="comment">// どのリソースに対して</span>
+      <span class="json-string">"arn:aws:s3:::my-bucket/*"</span>
+    ]
+  <span class="json-bracket">}</span>]
+<span class="json-bracket">}</span></pre>
+</div>
+</div>
+</div>
+</section>
+<!-- MFAセクション -->
+<section class="mfa-section">
+<h2 id="MFAは信頼ポリシーで制御する！">
+     🔐 MFAは信頼ポリシーで制御する！
+    </h2>
+<div class="mfa-content">
+<div class="mfa-explanation">
+<h3 id="なぜ信頼ポリシーでMFA？">
+       なぜ信頼ポリシーでMFA？
+      </h3>
+<p>
+       MFAは「本人確認」の一部です。ホテルで言えば、チェックイン時に
+       <strong>
+        「予約確認書 + 身分証明書 + ワンタイムコード」
+       </strong>
+       を求めるようなもの。
+      </p>
+<p>
+       ロールを引き受ける
+       <strong>
+        前
+       </strong>
+       に認証を強化するため、
+       <strong>
+        信頼ポリシー
+       </strong>
+       の
+       <code>
+        Condition
+       </code>
+       ブロックで設定します。
+      </p>
+<div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+<code style="font-size: 0.9em;">
+        "aws:MultiFactorAuthPresent": "true"
+       </code>
+</div>
+</div>
+<div class="mfa-visual">
+<div class="mfa-step">
+<div class="mfa-step-icon">
+        👤
+       </div>
+<div>
+<strong>
+         Step 1:
+        </strong>
+        ユーザーがロール引き受けをリクエスト
+       </div>
+</div>
+<div class="mfa-step">
+<div class="mfa-step-icon">
+        📱
+       </div>
+<div>
+<strong>
+         Step 2:
+        </strong>
+        MFAコード入力を要求
+       </div>
+</div>
+<div class="mfa-step">
+<div class="mfa-step-icon">
+        ✅
+       </div>
+<div>
+<strong>
+         Step 3:
+        </strong>
+        認証成功 → ロール引き受けOK！
+       </div>
+</div>
+</div>
+</div>
+</section>
+<!-- ユースケース -->
+<section class="usecase-section">
+<h2 id="よくあるユースケース">
+     🎯 よくあるユースケース
+    </h2>
+<div class="usecase-grid">
+<div class="usecase-card">
+<h3 id="クロスアカウントアクセス">
+       🔄 クロスアカウントアクセス
+      </h3>
+<p>
+       別のAWSアカウントからリソースにアクセスする
+      </p>
+<div class="usecase-policies">
+<div class="usecase-policy trust">
+<strong>
+         信頼ポリシー：
+        </strong>
+        アカウントB の特定ユーザーを許可
+       </div>
+<div class="usecase-policy permission">
+<strong>
+         権限ポリシー：
+        </strong>
+        S3バケットの読み取りを許可
+       </div>
+</div>
+</div>
+<div class="usecase-card">
+<h3 id="EC2からS3アクセス">
+       🤖 EC2からS3アクセス
+      </h3>
+<p>
+       EC2インスタンスがS3にファイルをアップロード
+      </p>
+<div class="usecase-policies">
+<div class="usecase-policy trust">
+<strong>
+         信頼ポリシー：
+        </strong>
+        EC2サービスを許可
+       </div>
+<div class="usecase-policy permission">
+<strong>
+         権限ポリシー：
+        </strong>
+        特定バケットへのPutObjectを許可
+       </div>
+</div>
+</div>
+<div class="usecase-card">
+<h3 id="本番環境への管理者アクセス">
+       🔒 本番環境への管理者アクセス
+      </h3>
+<p>
+       MFA認証後のみ本番環境を操作可能
+      </p>
+<div class="usecase-policies">
+<div class="usecase-policy trust">
+<strong>
+         信頼ポリシー：
+        </strong>
+        Adminグループ + MFA必須
+       </div>
+<div class="usecase-policy permission">
+<strong>
+         権限ポリシー：
+        </strong>
+        EC2の起動・停止を許可
+       </div>
+</div>
+</div>
+<div class="usecase-card">
+<h3 id="⚙️-Lambda関数の実行">
+       ⚙️ Lambda関数の実行
+      </h3>
+<p>
+       Lambda関数がDynamoDBにデータを書き込む
+      </p>
+<div class="usecase-policies">
+<div class="usecase-policy trust">
+<strong>
+         信頼ポリシー：
+        </strong>
+        Lambdaサービスを許可
+       </div>
+<div class="usecase-policy permission">
+<strong>
+         権限ポリシー：
+        </strong>
+        DynamoDBテーブルへの書き込みを許可
+       </div>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ -->
+<section class="faq-section">
+<h2 id="❓-よくある質問">
+     ❓ よくある質問
+    </h2>
+<div class="faq-item">
+<h3 id="Q-信頼ポリシーと権限ポリシー、どちらが先にチェックされる？">
+      💭 Q: 信頼ポリシーと権限ポリシー、どちらが先にチェックされる？
+     </h3>
+<p>
+      A:
+      <strong>
+       信頼ポリシーが先
+      </strong>
+      です。まずロールを引き受けられるかチェックし、引き受けた後に権限ポリシーで各操作の可否が判定されます。ホテルで言えば、チェックインしてからルームキーが使えるのと同じです。
+     </p>
+</div>
+<div class="faq-item">
+<h4>
+      💭 Q: 権限ポリシーでMFAを設定することはできない？
+     </h4>
+<p>
+      A: 技術的には可能ですが、
+      <strong>
+       一般的ではありません
+      </strong>
+      。MFAは「誰がロールを使えるか」という認証の問題なので、信頼ポリシーで設定するのがベストプラクティスです。
+     </p>
+</div>
+<div class="faq-item">
+<h4>
+      💭 Q: 一つのロールに複数の権限ポリシーをつけられる？
+     </h4>
+<p>
+      A:
+      <strong>
+       はい！
+      </strong>
+      権限ポリシーは複数アタッチ可能です。一方、信頼ポリシーはロールに1つだけです（ただし、その中に複数のStatementを書けます）。
+     </p>
+</div>
+<div class="faq-item">
+<h4>
+      💭 Q: サービスロール（EC2やLambda用）にも両方のポリシーが必要？
+     </h4>
+<p>
+      A:
+      <strong>
+       はい！
+      </strong>
+      サービスロールでも信頼ポリシーで「どのサービスがこのロールを使えるか」を定義し、権限ポリシーで「そのサービスが何をできるか」を定義します。
+     </p>
+</div>
+</section>
+<!-- まとめ -->
+<section class="summary-section">
+<h2 id="まとめ">
+     📝 まとめ
+    </h2>
+<p style="font-size: 1.1em; margin-bottom: 20px;">
+     IAMロールの2つのポリシーは、
+     <strong>
+      「入口のセキュリティ」と「中の権限」
+     </strong>
+     という別々の役割を持っています。
+    </p>
+<div class="summary-boxes">
+<div class="summary-box">
+<h3 id="️-信頼ポリシー">
+       🛎️ 信頼ポリシー
+      </h3>
+<p>
+       ロール引き受けの
+       <strong>
+        「門番」
+       </strong>
+<br/>
+       誰が・どんな条件で入れるか
+       <br/>
+       （MFAもここで設定！）
+      </p>
+</div>
+<div class="summary-box">
+<h3 id="️-権限ポリシー">
+       🗝️ 権限ポリシー
+      </h3>
+<p>
+       ロール使用時の
+       <strong>
+        「アクセスカード」
+       </strong>
+<br/>
+       どのリソースに・何ができるか
+       <br/>
+       （実際の操作権限）
+      </p>
+</div>
+<div class="summary-box">
+<h3 id="覚え方">
+       🎯 覚え方
+      </h3>
+<p>
+       ホテルで覚えよう！
+       <br/>
+<strong>
+        信頼 = チェックイン
+       </strong>
+<br/>
+<strong>
+        権限 = ルームキー
+       </strong>
+</p>
+</div>
+</div>
+</section>
+
+
+</div>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="aws-login-users-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">7</span> <span class="separator" aria-hidden="true">/</span> <span class="total">71</span> </div> <a href="iam-access-analyzer-policy-generation-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

@@ -1,0 +1,1219 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   Gateway Load Balancer によるディープパケットインスペクション
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#✈️-空港の世界">✈️ 空港の世界</a> </li><li class="toc-h2"> <a href="#☁️-AWS-の世界">☁️ AWS の世界</a> </li><li class="toc-h2"> <a href="#Gateway-Load-BalancerGWLB">Gateway Load Balancer（GWLB）</a> </li><li class="toc-h2"> <a href="#GWLBエンドポイントGWLBE">GWLBエンドポイント（GWLBE）</a> </li><li class="toc-h2"> <a href="#サードパーティアプライアンス">サードパーティアプライアンス</a> </li><li class="toc-h2"> <a href="#GENEVEカプセル化透過プロキシ">🧊 GENEVEカプセル化（透過プロキシ）</a> </li><li class="toc-h2"> <a href="#フローの一貫性Stickiness">🎯 フローの一貫性（Stickiness）</a> </li><li class="toc-h2"> <a href="#ヘルスチェックと自動切り替え">🔁 ヘルスチェックと自動切り替え</a> </li><li class="toc-h2"> <a href="#水平スケールアウト">📈 水平スケールアウト</a> </li><li class="toc-h2"> <a href="#インバウンド検査外→内">📥 インバウンド検査（外→内）</a> </li><li class="toc-h2"> <a href="#アウトバウンド検査内→外">📤 アウトバウンド検査（内→外）</a> </li><li class="toc-h2"> <a href="#マルチVPC一括検査">🏢 マルチVPC一括検査</a> </li><li class="toc-h2"> <a href="#侵入検知-防止IDS-IPS">🔍 侵入検知・防止（IDS/IPS）</a> </li><li class="toc-h2"> <a href="#コンプライアンス-監査">📊 コンプライアンス・監査</a> </li><li class="toc-h2"> <a href="#ハイブリッド環境の保護">🌍 ハイブリッド環境の保護</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> ネットワーキング </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current">  </span> </nav> <!-- ページコンテンツ (slot) -->  <style>:root {
+    --aws-dark: #232F3E;
+    --aws-orange: #FF9900;
+    --aws-orange-a: #dc7600;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --bg-light: #F9FAFB;
+    --bg-white: #FFFFFF;
+    --border: #E2E8F0;
+    --success: #10B981;
+    --danger: #EF4444;
+    --info: #3B82F6;
+    --purple: #7C3AED;
+    --teal: #0694a2;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    font-size: 20px;
+    line-height: 1.6;
+            padding-top: 70px;}
+
+  /* ===== HERO ===== */
+  .hero {
+    background: linear-gradient(135deg, #232F3E 0%, #2d4a6e 60%, #1a3a5c 100%);
+    color: white;
+    padding: 56px 40px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 30%, rgba(255,153,0,0.15) 0%, transparent 60%);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,153,0,0.2);
+    border: 1.5px solid rgba(255,153,0,0.5);
+    border-radius: 50px;
+    padding: 6px 22px;
+    font-size: 18px;
+    color: #FFB84D;
+    font-weight: 600;
+    margin-bottom: 20px;
+    letter-spacing: 0.04em;
+  }
+  .hero h1 {
+    font-size: 2.4em;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .hero h1 span { color: var(--aws-orange); }
+  .hero-sub {
+    font-size: 1.1em;
+    color: rgba(255,255,255,0.75);
+    max-width: 700px;
+    margin: 0 auto 36px;
+    position: relative;
+  }
+  .hero-key-points {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 820px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-kp {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius-md);
+    padding: 18px 22px;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .hero-kp .icon { font-size: 1.8em; flex-shrink: 0; }
+  .hero-kp .label { font-size: 0.85em; color: rgba(255,255,255,0.6); margin-bottom: 4px; }
+  .hero-kp .val { font-size: 1em; font-weight: 600; color: white; }
+
+  /* ===== CONTAINER ===== */
+  .container { max-width: 1100px; margin: 0 auto; padding: 48px 32px; }
+  .section { margin-bottom: 56px; }
+  .section-title {
+    font-size: 1.5em;
+    font-weight: 800;
+    color: var(--aws-dark);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 3px;
+    background: linear-gradient(90deg, var(--aws-orange) 0%, transparent 100%);
+    border-radius: 2px;
+    margin-left: 12px;
+  }
+  .section-desc {
+    font-size: 1em;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+  }
+
+  /* ===== ANALOGY ===== */
+  .analogy-block {
+    background: linear-gradient(135deg, #fffbf0 0%, #fff8e7 100%);
+    border: 2px solid rgba(255,153,0,0.3);
+    border-radius: var(--radius-lg);
+    padding: 36px;
+    margin-bottom: 28px;
+  }
+  .analogy-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .analogy-tag {
+    background: var(--aws-orange);
+    color: white;
+    font-size: 0.75em;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 50px;
+    letter-spacing: 0.05em;
+  }
+  .analogy-title { font-size: 1.3em; font-weight: 700; color: #92400e; }
+
+  .analogy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .analogy-side {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+  }
+  .analogy-side h2 {
+    font-size: 1em;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+  }
+  .analogy-side.left h2 { color: #d97706; }
+  .analogy-side.right h2 { color: var(--info); }
+
+  .analogy-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--bg-light);
+    font-size: 0.9em;
+  }
+  .analogy-row .emoji { font-size: 1.4em; flex-shrink: 0; }
+  .analogy-row strong { display: block; font-weight: 700; color: var(--text-primary); }
+  .analogy-row span { color: var(--text-secondary); font-size: 0.9em; }
+
+  .analogy-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    color: var(--aws-orange);
+    align-self: center;
+  }
+
+  /* ===== ARCHITECTURE DIAGRAM ===== */
+  .arch-diagram {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 36px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+  }
+
+  .arch-zone {
+    border: 2px dashed;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .arch-zone-label {
+    position: absolute;
+    top: -14px;
+    left: 20px;
+    background: white;
+    padding: 2px 12px;
+    border-radius: 50px;
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .arch-zone.internet { border-color: #cbd5e0; background: #f7fafc; }
+  .arch-zone.internet .arch-zone-label { color: var(--text-secondary); }
+
+  .arch-zone.app-vpc { border-color: rgba(59,130,246,0.4); background: rgba(235,248,255,0.5); }
+  .arch-zone.app-vpc .arch-zone-label { color: var(--info); }
+
+  .arch-zone.security-vpc { border-color: rgba(124,58,237,0.4); background: rgba(245,240,255,0.5); }
+  .arch-zone.security-vpc .arch-zone-label { color: var(--purple); }
+
+  .arch-zone.logging { border-color: rgba(16,185,129,0.4); background: rgba(236,253,245,0.5); }
+  .arch-zone.logging .arch-zone-label { color: var(--success); }
+
+  .arch-row {
+    display: grid;
+    gap: 16px;
+    align-items: center;
+  }
+  .arch-row.cols-3 { grid-template-columns: 1fr auto 1fr; }
+  .arch-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .arch-row.cols-1 { grid-template-columns: 1fr; }
+
+  .arch-node {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+  }
+  .arch-node .node-icon { font-size: 2em; margin-bottom: 6px; }
+  .arch-node .node-name { font-size: 0.85em; font-weight: 700; color: var(--text-primary); }
+  .arch-node .node-sub { font-size: 0.75em; color: var(--text-secondary); margin-top: 2px; }
+
+  .arch-node.gwlb-node {
+    border-color: var(--aws-orange);
+    background: linear-gradient(135deg, #fffbf0, #fff3d0);
+  }
+  .arch-node.gwlbe-node {
+    border-color: rgba(255,153,0,0.5);
+    background: #fffdf5;
+  }
+  .arch-node.appliance-node {
+    border-color: var(--purple);
+    background: linear-gradient(135deg, #f5f0ff, #ede9fe);
+  }
+  .arch-node.log-node {
+    border-color: var(--success);
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  }
+
+  .flow-arrow {
+    text-align: center;
+    font-size: 2em;
+    color: var(--aws-orange);
+    padding: 4px 0;
+  }
+  .flow-arrow.vertical { transform: rotate(0deg); }
+  .flow-arrow-h { font-size: 1.8em; color: var(--aws-orange); }
+  .flow-label {
+    font-size: 0.78em;
+    color: var(--text-secondary);
+    text-align: center;
+    margin: 6px 0;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    padding: 0 8px;
+  }
+
+  /* ===== FLOW STEPS ===== */
+  .flow-steps {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .flow-step {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+  .flow-step::after {
+    content: '→';
+    position: absolute;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.4em;
+    color: var(--aws-orange);
+    z-index: 2;
+  }
+  .flow-step:last-child::after { display: none; }
+  .flow-step .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--aws-dark);
+    color: white;
+    font-size: 0.85em;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px;
+  }
+  .flow-step .step-icon { font-size: 1.6em; margin-bottom: 8px; }
+  .flow-step .step-name { font-size: 0.8em; font-weight: 700; color: var(--text-primary); }
+  .flow-step .step-detail { font-size: 0.72em; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
+
+  .flow-step.step-inspect {
+    border-color: var(--purple);
+    background: linear-gradient(135deg, #f5f0ff, white);
+  }
+  .flow-step.step-inspect .step-num { background: var(--purple); }
+
+  .flow-step.step-log {
+    border-color: var(--success);
+    background: linear-gradient(135deg, #ecfdf5, white);
+  }
+  .flow-step.step-log .step-num { background: var(--success); }
+
+  /* ===== GWLB MECHANICS ===== */
+  .mechanics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .mechanic-card {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border-left: 4px solid var(--aws-orange);
+  }
+  .mechanic-card h2 {
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--aws-dark);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mechanic-card p {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .mechanic-card.purple { border-left-color: var(--purple); }
+  .mechanic-card.teal { border-left-color: var(--teal); }
+  .mechanic-card.green { border-left-color: var(--success); }
+
+  /* ===== LOGGING DIAGRAM ===== */
+  .log-flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+  .log-node {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+    position: relative;
+  }
+  .log-node::after {
+    content: '→';
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.3em;
+    color: var(--success);
+    z-index: 2;
+  }
+  .log-node:last-child::after { display: none; }
+  .log-node .icon { font-size: 2em; margin-bottom: 8px; }
+  .log-node .name { font-size: 0.85em; font-weight: 700; color: var(--text-primary); }
+  .log-node .detail { font-size: 0.78em; color: var(--text-secondary); margin-top: 4px; }
+  .log-node.highlight { border-color: var(--success); background: linear-gradient(135deg, #ecfdf5, white); }
+
+  /* ===== COMPARE TABLE ===== */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    font-size: 0.9em;
+  }
+  .compare-table th {
+    background: var(--aws-dark);
+    color: white;
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 0.95em;
+  }
+  .compare-table th:first-child { border-radius: 0; }
+  .compare-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:nth-child(even) td { background: var(--bg-light); }
+  .badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 50px;
+    font-size: 0.8em;
+    font-weight: 600;
+  }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-blue { background: #dbeafe; color: #1e3a8a; }
+  .badge-orange { background: #fed7aa; color: #9a3412; }
+
+  /* ===== USE CASES ===== */
+  .use-case-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .use-case-card {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+  }
+  .use-case-card h2 {
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .use-case-card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .use-case-card ul li {
+    font-size: 0.88em;
+    color: var(--text-secondary);
+    padding: 6px 0;
+    padding-left: 22px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+  .use-case-card ul li:last-child { border-bottom: none; }
+  .use-case-card ul li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--success);
+    font-weight: 700;
+  }
+
+  /* ===== GENCHI DIAGRAM (GWLBE placement) ===== */
+  .placement-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .placement-card {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+  }
+  .placement-card h2 {
+    font-size: 1em;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-primary);
+  }
+  .placement-mini-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .mini-node {
+    background: var(--bg-light);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.78em;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .mini-node.gwlbe { border-color: var(--aws-orange); background: #fff8e7; color: #92400e; }
+  .mini-arrow { color: var(--text-secondary); font-size: 1em; }
+  .placement-note {
+    font-size: 0.82em;
+    color: var(--text-secondary);
+    background: var(--bg-light);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    border-left: 3px solid var(--info);
+  }
+
+  /* ===== KEY CONCEPTS ===== */
+  .concept-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  .concept-card {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border-top: 4px solid;
+    text-align: center;
+  }
+  .concept-card:nth-child(1) { border-top-color: var(--aws-orange); }
+  .concept-card:nth-child(2) { border-top-color: var(--purple); }
+  .concept-card:nth-child(3) { border-top-color: var(--success); }
+  .concept-card .c-icon { font-size: 2.4em; margin-bottom: 10px; }
+  .concept-card h2 { font-size: 0.95em; font-weight: 700; color: var(--aws-dark); margin-bottom: 8px; }
+  .concept-card p { font-size: 0.85em; color: var(--text-secondary); line-height: 1.6; }
+
+  /* ===== FAQ ===== */
+  .faq-list { display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: white;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .faq-q {
+    padding: 20px 24px;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: var(--aws-dark);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .faq-q .q-badge {
+    background: var(--aws-orange);
+    color: white;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85em;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .faq-a {
+    padding: 0 24px 20px 64px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    background: var(--aws-dark);
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+    padding: 28px;
+    font-size: 0.85em;
+  }
+
+  @media (max-width: 768px) {
+    body { font-size: 18px;
+            padding-top: 70px;}
+    .hero-key-points { grid-template-columns: 1fr; }
+    .analogy-grid { grid-template-columns: 1fr; }
+    .flow-steps { grid-template-columns: 1fr; }
+    .flow-step::after { display: none; }
+    .mechanics-grid { grid-template-columns: 1fr; }
+    .log-flow { grid-template-columns: 1fr 1fr; }
+    .use-case-grid { grid-template-columns: 1fr; }
+    .placement-grid { grid-template-columns: 1fr; }
+    .concept-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 1.8em; }
+    .container { padding: 32px 16px; }
+  }</style>
+<!-- ========== ANALOGY ========== -->
+  <section class="section">
+    <div class="section-title">🏢 たとえ話で理解する GWLB</div>
+    <p class="section-desc">「空港のセキュリティゲート」で考えてみましょう。乗客（パケット）は必ずセキュリティチェック（検査アプライアンス）を通ってから搭乗口（アプリ）へ向かいます。</p>
+
+    <div class="analogy-block">
+      <div class="analogy-header">
+        <span class="analogy-tag">✈️ アナロジー</span>
+        <span class="analogy-title">空港のセキュリティチェックシステム</span>
+      </div>
+      <div class="analogy-grid">
+        <div class="analogy-side left">
+          <h2 id="✈️-空港の世界">✈️ 空港の世界</h2>
+          <div class="analogy-row">
+            <span class="emoji">🧳</span>
+            <div><strong>搭乗する乗客・荷物</strong><span>空港に入ってくるすべての人とモノ</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">🚧</span>
+            <div><strong>セキュリティゲート（GWLB）</strong><span>すべての乗客を振り分けるチェックポイント</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">🔍</span>
+            <div><strong>X線スキャナー（アプライアンス）</strong><span>荷物の中身を詳細に検査する機械</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">🛬</span>
+            <div><strong>搭乗口（アプリサーバー）</strong><span>検査が終わった乗客だけが入れる場所</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">📒</span>
+            <div><strong>インシデント記録簿（S3/CloudWatch）</strong><span>不審物・対処の記録を一括管理</span></div>
+          </div>
+        </div>
+        <div class="analogy-side right">
+          <h2 id="☁️-AWS-の世界">☁️ AWS の世界</h2>
+          <div class="analogy-row">
+            <span class="emoji">📦</span>
+            <div><strong>ネットワークパケット</strong><span>インターネットから来るすべての通信データ</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">⚖️</span>
+            <div><strong>Gateway Load Balancer（GWLB）</strong><span>トラフィックをアプライアンスへ均等に振り分ける</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">🛡️</span>
+            <div><strong>ファイアウォール／IDS アプライアンス</strong><span>パケットの中身（ペイロード）を深く検査</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">🖥️</span>
+            <div><strong>アプリケーションサーバー（EC2 等）</strong><span>安全と判断されたトラフィックだけが到達</span></div>
+          </div>
+          <div class="analogy-row">
+            <span class="emoji">📊</span>
+            <div><strong>S3 / CloudWatch Logs / SIEM</strong><span>すべての検査結果・アクションを一元記録</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== GWLB EXPLANATION ========== -->
+  <section class="section">
+    <div class="section-title">📖 Gateway Load Balancer とは？</div>
+    <p class="section-desc">サードパーティのネットワーク仮想アプライアンスのデプロイと管理を簡素化するAWSのサービスです。</p>
+
+    <div style="background:white; border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); border:1px solid var(--border); overflow:hidden; margin-bottom:24px;">
+
+      <!-- 概要テキスト -->
+      <div style="padding:28px 32px 24px; border-bottom:1px solid var(--border); background:linear-gradient(135deg,#f9fafb,white);">
+        <p style="font-size:0.95em; color:var(--text-secondary); line-height:1.8;">
+          Gateway Load Balancer（GWLB）は、<strong style="color:var(--text-primary);">ファイアウォール・侵入検知/防止システム（IDS/IPS）・ディープパケットインスペクションシステム</strong>などのネットワーク仮想アプライアンスを、既存のネットワーク構成を変えずに透過的に挿入できるAWSのロードバランサーです。
+          <br><br>
+          OSI モデルの <strong style="color:var(--info);">レイヤー3（ネットワーク層）</strong> と <strong style="color:var(--info);">レイヤー4（トランスポート層）</strong> で動作し、パケットの<strong style="color:var(--text-primary);">宛先IPアドレスとポート</strong>に基づいてルーティングを行います。
+        </p>
+      </div>
+
+      <!-- 3機能カード（均等3列） -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0;">
+
+        <div style="padding:28px 24px; border-right:1px solid var(--border); background:white;">
+          <div style="font-size:2em; margin-bottom:12px;">⚖️</div>
+          <div style="font-size:1em; font-weight:700; color:var(--aws-dark); margin-bottom:10px;">アプライアンスの<br>ロードバランシング</div>
+          <p style="font-size:0.88em; color:var(--text-secondary); line-height:1.7;">複数の仮想アプライアンスにトラフィックを均等分散。<strong>高可用性とスケーラビリティ</strong>を自動で確保し、単一障害点を排除します。</p>
+        </div>
+
+        <div style="padding:28px 24px; border-right:1px solid var(--border); background:white;">
+          <div style="font-size:2em; margin-bottom:12px;">💓</div>
+          <div style="font-size:1em; font-weight:700; color:var(--aws-dark); margin-bottom:10px;">ヘルスチェック</div>
+          <p style="font-size:0.88em; color:var(--text-secondary); line-height:1.7;">アプライアンスの正常性を常時監視。<strong>異常を検出すると自動的に健全なアプライアンスへリダイレクト</strong>し、サービス継続性を維持します。</p>
+        </div>
+
+        <div style="padding:28px 24px; background:white;">
+          <div style="font-size:2em; margin-bottom:12px;">🔬</div>
+          <div style="font-size:1em; font-weight:700; color:var(--aws-dark); margin-bottom:10px;">透過的な<br>ネットワークゲートウェイ</div>
+          <p style="font-size:0.88em; color:var(--text-secondary); line-height:1.7;"><strong>GENEVEプロトコル</strong>でカプセル化することで、元のパケット情報を完全に保持したままアプライアンスへ転送。アプリ側の設定変更は不要です。</p>
+        </div>
+
+      </div>
+
+      <!-- OSIレイヤー説明バー -->
+      <div style="padding:20px 32px; background:linear-gradient(135deg,#232F3E,#2d4a6e); display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+        <div style="color:rgba(255,255,255,0.7); font-size:0.85em; font-weight:600; white-space:nowrap;">🗂️ 動作レイヤー</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div style="background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,153,0,0.5); border-radius:8px; padding:8px 18px; text-align:center;">
+            <div style="font-size:0.75em; color:rgba(255,255,255,0.6); margin-bottom:2px;">Layer 3</div>
+            <div style="font-size:0.9em; font-weight:700; color:#FFB84D;">ネットワーク層</div>
+            <div style="font-size:0.75em; color:rgba(255,255,255,0.5); margin-top:2px;">宛先IPアドレスで判断</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,153,0,0.5); border-radius:8px; padding:8px 18px; text-align:center;">
+            <div style="font-size:0.75em; color:rgba(255,255,255,0.6); margin-bottom:2px;">Layer 4</div>
+            <div style="font-size:0.9em; font-weight:700; color:#FFB84D;">トランスポート層</div>
+            <div style="font-size:0.75em; color:rgba(255,255,255,0.5); margin-top:2px;">ポート番号で判断</div>
+          </div>
+        </div>
+        <div style="flex:1; min-width:200px; color:rgba(255,255,255,0.6); font-size:0.82em; line-height:1.6;">
+          ※ L7（アプリケーション層）の詳細検査はアプライアンス側が担当。GWLBはL3/L4でルーティングのみを行い、実際のDPIはアプライアンスが実施します。
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== KEY CONCEPTS ========== -->
+  <section class="section">
+    <div class="section-title">🧩 3つのコアコンセプト</div>
+    <p class="section-desc">GWLBアーキテクチャは「GWLB本体」「GWLBエンドポイント」「検査アプライアンス」の3要素で成り立ちます。</p>
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="c-icon">⚖️</div>
+        <h2 id="Gateway-Load-BalancerGWLB">Gateway Load Balancer（GWLB）</h2>
+        <p>セキュリティVPCに配置。複数のアプライアンスへトラフィックを均等分散しながら、元のパケット情報をそのまま保持（GENEVEカプセル化）して透過検査を実現する。</p>
+      </div>
+      <div class="concept-card">
+        <div class="c-icon">🔌</div>
+        <h2 id="GWLBエンドポイントGWLBE">GWLBエンドポイント（GWLBE）</h2>
+        <p>アプリケーションVPCに配置するインターフェース。ルートテーブルの向き先をGWLBEに設定するだけで、アプリ側の設定を変えずにトラフィックを検査経路へリダイレクト。</p>
+      </div>
+      <div class="concept-card">
+        <div class="c-icon">🛡️</div>
+        <h2 id="サードパーティアプライアンス">サードパーティアプライアンス</h2>
+        <p>Palo Alto、Fortinet、Check Point などのファイアウォール・IDS。パケット内容（レイヤー7）を解析し、許可・ブロック・ログを判定。GWLBがスケールを自動管理する。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ARCHITECTURE DIAGRAM ========== -->
+  <section class="section">
+    <div class="section-title">🏗️ アーキテクチャ全体図</div>
+    <p class="section-desc">インターネットからアプリまでの経路にGWLBエンドポイントを挿入し、すべてのトラフィックをセキュリティVPCへ「迂回」させます。</p>
+    <div class="arch-diagram">
+
+      <!-- Internet zone -->
+      <div class="arch-zone internet">
+        <div class="arch-zone-label">🌐 インターネット</div>
+        <div class="arch-row cols-1">
+          <div class="arch-node">
+            <div class="node-icon">👤</div>
+            <div class="node-name">インターネットユーザー</div>
+            <div class="node-sub">HTTPSリクエスト送信</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">⬇️</div>
+      <div class="flow-label">① IGW がパケットを受信</div>
+
+      <!-- App VPC zone -->
+      <div class="arch-zone app-vpc">
+        <div class="arch-zone-label">🔵 アプリケーション VPC</div>
+        <div class="arch-row cols-3">
+          <div class="arch-node">
+            <div class="node-icon">🚪</div>
+            <div class="node-name">Internet Gateway</div>
+            <div class="node-sub">エントリポイント</div>
+          </div>
+          <div class="flow-arrow-h">→</div>
+          <div class="arch-node gwlbe-node">
+            <div class="node-icon">🔌</div>
+            <div class="node-name">GWLB エンドポイント</div>
+            <div class="node-sub">ルートテーブルで誘導</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">⬆️⬇️</div>
+      <div class="flow-label">② トラフィックをセキュリティ VPC へ迂回<br>（GENEVE カプセル化）</div>
+
+      <!-- Security VPC zone -->
+      <div class="arch-zone security-vpc">
+        <div class="arch-zone-label">🟣 セキュリティ VPC（集中検査ハブ）</div>
+        <div class="arch-row cols-3">
+          <div class="arch-node appliance-node">
+            <div class="node-icon">🛡️</div>
+            <div class="node-name">ファイアウォール<br>アプライアンス #1</div>
+            <div class="node-sub">DPI・IDS・IPS</div>
+          </div>
+          <div class="arch-node gwlb-node">
+            <div class="node-icon">⚖️</div>
+            <div class="node-name">Gateway<br>Load Balancer</div>
+            <div class="node-sub">均等振り分け</div>
+          </div>
+          <div class="arch-node appliance-node">
+            <div class="node-icon">🛡️</div>
+            <div class="node-name">ファイアウォール<br>アプライアンス #2</div>
+            <div class="node-sub">DPI・IDS・IPS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">⬇️</div>
+      <div class="flow-label">③ 検査 OK のトラフィックのみアプリへ転送<br>／ 検査結果はログへ</div>
+
+      <!-- App servers + Logging zone in parallel -->
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+        <div class="arch-zone app-vpc" style="margin-bottom:0">
+          <div class="arch-zone-label">🔵 アプリケーション VPC（続き）</div>
+          <div class="arch-row cols-2">
+            <div class="arch-node">
+              <div class="node-icon">🖥️</div>
+              <div class="node-name">EC2 / コンテナ</div>
+              <div class="node-sub">安全なトラフィックのみ受信</div>
+            </div>
+            <div class="arch-node">
+              <div class="node-icon">🚫</div>
+              <div class="node-name">ブロックされた<br>パケット</div>
+              <div class="node-sub">脅威検知→ドロップ</div>
+            </div>
+          </div>
+        </div>
+        <div class="arch-zone logging" style="margin-bottom:0">
+          <div class="arch-zone-label">🟢 中央ログ収集</div>
+          <div class="arch-row cols-1">
+            <div class="arch-node log-node">
+              <div class="node-icon">📋</div>
+              <div class="node-name">S3 / CloudWatch /<br>SIEM</div>
+              <div class="node-sub">全アクションを集中管理</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== TRAFFIC FLOW STEPS ========== -->
+  <section class="section">
+    <div class="section-title">🔄 トラフィックフロー（5ステップ）</div>
+    <p class="section-desc">パケットが「受信」から「アプリ到達」または「ブロック」に至るまでの流れを追います。</p>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-icon">🌐</div>
+        <div class="step-name">IGW受信</div>
+        <div class="step-detail">インターネットからパケット到着。ルートテーブルがGWLBEへ誘導</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-icon">🔌</div>
+        <div class="step-name">GWLBE転送</div>
+        <div class="step-detail">GWLBエンドポイントがパケットをセキュリティVPCへ送出（GENEVEカプセル化）</div>
+      </div>
+      <div class="flow-step step-inspect">
+        <div class="step-num">3</div>
+        <div class="step-icon">🔍</div>
+        <div class="step-name">DPI 検査</div>
+        <div class="step-detail">アプライアンスがL7まで解析。マルウェア・攻撃パターンを検知</div>
+      </div>
+      <div class="flow-step step-log">
+        <div class="step-num">4</div>
+        <div class="step-icon">📋</div>
+        <div class="step-name">ログ送信</div>
+        <div class="step-detail">検査結果・判定アクション・フローメタデータをS3/CWLに即時書き込み</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-icon">✅</div>
+        <div class="step-name">判定・転送</div>
+        <div class="step-detail">許可→アプリへ返送。ブロック→ドロップ。GWLBが元経路へ戻す</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== GWLB MECHANICS ========== -->
+  <section class="section">
+    <div class="section-title">⚙️ GWLBの内部メカニクス</div>
+    <p class="section-desc">GWLBがどのように「透過的」かつ「スケーラブル」に動くかを詳しく見ます。</p>
+    <div class="mechanics-grid">
+      <div class="mechanic-card">
+        <h2 id="GENEVEカプセル化透過プロキシ">🧊 GENEVEカプセル化（透過プロキシ）</h2>
+        <p>パケットをGENEVEプロトコルでラップし、元のIPヘッダー・ポート情報を保持したまま転送。アプライアンスはオリジナルのパケット内容を完全に見ることができ、送受信元の変更なし。</p>
+      </div>
+      <div class="mechanic-card purple">
+        <h2 id="フローの一貫性Stickiness">🎯 フローの一貫性（Stickiness）</h2>
+        <p>同一TCPセッションの往路・復路のパケットは必ず同じアプライアンスインスタンスに送られる（5-tuple ハッシュ）。ステートフルなセッション管理が正しく維持される。</p>
+      </div>
+      <div class="mechanic-card teal">
+        <h2 id="ヘルスチェックと自動切り替え">🔁 ヘルスチェックと自動切り替え</h2>
+        <p>GWLBはアプライアンスの死活監視を常時実行。障害インスタンスを自動的に除外し、正常なインスタンスだけにトラフィックを向ける。検査の空白時間を最小化。</p>
+      </div>
+      <div class="mechanic-card green">
+        <h2 id="水平スケールアウト">📈 水平スケールアウト</h2>
+        <p>アプライアンスをAuto Scalingグループで管理することでトラフィック増大に自動対応。GWLBが新しいアプライアンスを即座に検出し、負荷分散に加える。管理者の手作業不要。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== GWLBE PLACEMENT ========== -->
+  <section class="section">
+    <div class="section-title">🔌 GWLBEの配置パターン</div>
+    <p class="section-desc">GWLBエンドポイント（GWLBE）の置き場所は「インバウンド検査」と「アウトバウンド検査」で異なります。</p>
+    <div class="placement-grid">
+      <div class="placement-card">
+        <h2 id="インバウンド検査外→内">📥 インバウンド検査（外→内）</h2>
+        <div class="placement-mini-flow">
+          <div class="mini-node">🌐 IGW</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node gwlbe">🔌 GWLBE<br>（IGWルートテーブル）</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node">🛡️ GWLB検査</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node">🖥️ EC2</div>
+        </div>
+        <div class="placement-note">GWLBEをIGWと同じVPCに置き、IGWルートテーブルの向き先をGWLBEに設定。外部からのすべてのトラフィックが検査を通過。</div>
+      </div>
+      <div class="placement-card">
+        <h2 id="アウトバウンド検査内→外">📤 アウトバウンド検査（内→外）</h2>
+        <div class="placement-mini-flow">
+          <div class="mini-node">🖥️ EC2</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node gwlbe">🔌 GWLBE<br>（プライベートRT）</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node">🛡️ GWLB検査</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node">🌐 外部</div>
+        </div>
+        <div class="placement-note">プライベートサブネットのルートテーブルにGWLBEを追加。EC2からの外向き通信（データ漏洩・C2通信）も検査対象に含める。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CENTRAL LOGGING ========== -->
+  <section class="section">
+    <div class="section-title">📊 中央ログ収集のフロー</div>
+    <p class="section-desc">検査されたトラフィックのすべてのアクションが、一箇所に集まりクロスVPC分析が可能になります。</p>
+    <div class="log-flow">
+      <div class="log-node">
+        <div class="icon">🛡️</div>
+        <div class="name">アプライアンス</div>
+        <div class="detail">検査・判定後にログ生成（FlowLog、AlertLog）</div>
+      </div>
+      <div class="log-node">
+        <div class="icon">📡</div>
+        <div class="name">ログ転送</div>
+        <div class="detail">Syslog / CloudWatch Agent / Kinesis Data Firehose</div>
+      </div>
+      <div class="log-node highlight">
+        <div class="icon">🗄️</div>
+        <div class="name">中央ログストア</div>
+        <div class="detail">S3バケット（セキュリティアカウント）に集中</div>
+      </div>
+      <div class="log-node">
+        <div class="icon">🔎</div>
+        <div class="name">分析・可視化</div>
+        <div class="detail">Amazon Athena / OpenSearch / SIEM ツール</div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px; background:white; border-radius:var(--radius-md); padding:24px; box-shadow:var(--shadow-md); border:1px solid var(--border);">
+      <div style="font-size:1em; font-weight:700; color:var(--aws-dark); margin-bottom:16px;">📋 ログに含まれる主要フィールド</div>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>フィールド</th>
+            <th>内容</th>
+            <th>活用シーン</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>src-ip / dst-ip</strong></td>
+            <td>送受信元IPアドレス</td>
+            <td>攻撃元IPの特定・ブロックリスト作成</td>
+          </tr>
+          <tr>
+            <td><strong>action</strong></td>
+            <td>ALLOW / DENY / ALERT</td>
+            <td>ポリシー効果の検証・コンプライアンス証跡</td>
+          </tr>
+          <tr>
+            <td><strong>threat-name</strong></td>
+            <td>検知した脅威の種類</td>
+            <td>インシデント対応・SIEM相関分析</td>
+          </tr>
+          <tr>
+            <td><strong>bytes / packets</strong></td>
+            <td>フロー量データ</td>
+            <td>データ漏洩の異常検知・容量計画</td>
+          </tr>
+          <tr>
+            <td><strong>session-id</strong></td>
+            <td>セッション識別子</td>
+            <td>往路・復路の紐付けとフォレンジック</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== USE CASES ========== -->
+  <section class="section">
+    <div class="section-title">💼 主なユースケース</div>
+    <div class="use-case-grid">
+      <div class="use-case-card">
+        <h2 id="マルチVPC一括検査">🏢 マルチVPC一括検査</h2>
+        <ul>
+          <li>本番・開発・検証の各VPCを1つのセキュリティVPCで集中管理</li>
+          <li>Transit Gatewayとの組み合わせで大規模マルチアカウント対応</li>
+          <li>検査ポリシーの一元管理でコンプライアンスを簡素化</li>
+          <li>アプリチームへのセキュリティ責任の分離</li>
+        </ul>
+      </div>
+      <div class="use-case-card">
+        <h2 id="侵入検知-防止IDS-IPS">🔍 侵入検知・防止（IDS/IPS）</h2>
+        <ul>
+          <li>L7ペイロードの解析によるゼロデイ攻撃の検知</li>
+          <li>SQLインジェクション・XSSなどWebアプリ攻撃のリアルタイム防御</li>
+          <li>マルウェアシグネチャとの照合でC2通信を遮断</li>
+          <li>SSL/TLS復号検査による暗号化脅威の可視化</li>
+        </ul>
+      </div>
+      <div class="use-case-card">
+        <h2 id="コンプライアンス-監査">📊 コンプライアンス・監査</h2>
+        <ul>
+          <li>PCI DSS・SOC2・ISO27001対応の通信ログ完全保存</li>
+          <li>誰が何時どのデータにアクセスしたかの追跡</li>
+          <li>異常な大量データ転送（データ漏洩）の検知と通知</li>
+          <li>定期レポートの自動生成（Athena + QuickSight）</li>
+        </ul>
+      </div>
+      <div class="use-case-card">
+        <h2 id="ハイブリッド環境の保護">🌍 ハイブリッド環境の保護</h2>
+        <ul>
+          <li>Direct Connect経由のオンプレミス↔AWS通信の検査</li>
+          <li>VPN接続トラフィックへの透過的なポリシー適用</li>
+          <li>クラウド移行期の既存セキュリティポリシー継続適用</li>
+          <li>東西トラフィック（VPC間）の内部脅威監視</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== COMPARE ========== -->
+  <section class="section">
+    <div class="section-title">📐 他のセキュリティサービスとの違い</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>サービス</th>
+          <th>検査レイヤー</th>
+          <th>アプライアンス統合</th>
+          <th>主な用途</th>
+          <th>GWLBとの関係</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Gateway Load Balancer</strong></td>
+          <td><span class="badge badge-green">L3〜L7（DPI）</span></td>
+          <td>✅ サードパーティ統合</td>
+          <td>透過的全トラフィック検査</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>AWS WAF</strong></td>
+          <td><span class="badge badge-blue">L7（HTTP/S）</span></td>
+          <td>❌ AWSマネージドのみ</td>
+          <td>Webアプリ攻撃防御</td>
+          <td>GWLBと併用可。WAFはCloudFront/ALBに付加</td>
+        </tr>
+        <tr>
+          <td><strong>Security Group / NACL</strong></td>
+          <td><span class="badge badge-orange">L3〜L4のみ</span></td>
+          <td>❌</td>
+          <td>IPポートベースのフィルタ</td>
+          <td>GWLBの前後に組み合わせる基本防御層</td>
+        </tr>
+        <tr>
+          <td><strong>AWS Network Firewall</strong></td>
+          <td><span class="badge badge-green">L3〜L7</span></td>
+          <td>❌ AWSマネージドのみ</td>
+          <td>AWSネイティブのステートフルFW</td>
+          <td>サードパーティ不要な場合のGWLB代替</td>
+        </tr>
+        <tr>
+          <td><strong>Amazon GuardDuty</strong></td>
+          <td><span class="badge badge-blue">ログ分析</span></td>
+          <td>❌</td>
+          <td>脅威インテリジェンス・異常検知</td>
+          <td>GWLBログの分析先として補完</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ========== FAQ ========== -->
+  <section class="section">
+    <div class="section-title">❓ よくある質問</div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q"><span class="q-badge">Q</span>GWLBはトラフィックの内容を変えてしまいますか？</div>
+        <div class="faq-a">変えません。GWLBはGENEVEプロトコルでパケットを「外側からラップ」して転送するため、元のIPアドレス・ポート・ペイロードは一切変更されません。アプライアンスが検査するのも変更前のオリジナルパケットです。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span class="q-badge">Q</span>検査アプライアンスが1台しかない場合はどうなりますか？</div>
+        <div class="faq-a">GWLBはヘルスチェックが失敗したアプライアンスを自動除外します。アプライアンスを複数台（別AZに配置）にすることが強く推奨されます。Auto Scalingと組み合わせると、障害時・高負荷時も自動で台数を調整できます。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span class="q-badge">Q</span>ログの収集に追加コストはかかりますか？</div>
+        <div class="faq-a">GWLB自体にはログ出力機能はなく、ログはアプライアンス側が生成します。アプライアンスからCloudWatch Logs・S3・Kinesis Data Firehoseへの転送コストが発生します。ただし収集したログはAthenaで低コスト分析が可能です。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span class="q-badge">Q</span>SSL/TLS暗号化された通信も検査できますか？</div>
+        <div class="faq-a">GWLBは復号を行いませんが、アプライアンス（Palo Alto、FortinetなどのSSL復号機能）がTLSを終端し平文で検査することで対応可能です。その場合、復号証明書の管理とプライバシーポリシーへの考慮が必要です。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span class="q-badge">Q</span>Transit Gatewayと組み合わせるとどうなりますか？</div>
+        <div class="faq-a">最も一般的な大規模構成です。Transit Gatewayがアタッチされた多数のVPCからのトラフィックをセキュリティVPC（GWLBを配置）へ集約します。これにより数十のVPCを1セットのアプライアンスで一括検査できます。</div>
+      </div>
+    </div>
+  </section>
+
+
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Gateway Load Balancer ディープパケットインスペクション アーキテクチャガイド</p>
+  <p style="margin-top:6px; font-size:0.9em; opacity:0.6;">AWS初心者向け学習リソース ／ 本ドキュメントは教育目的で作成されています</p>
+</div>
+
+
+<!-- 固定ヘッダー機能のJavaScript -->
+<script>
+    // トップに戻るボタンの表示/非表示
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    const readingProgress = document.getElementById('readingProgress');
+    const readingProgressBar = document.getElementById('readingProgressBar');
+
+    if (scrollToTopBtn && readingProgress && readingProgressBar) {
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+
+            // トップに戻るボタンの表示制御
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+
+            // 読書進捗バーの表示制御と更新
+            if (scrollTop > 100) {
+                readingProgress.classList.add('show');
+                readingProgressBar.style.width = scrollPercentage + '%';
+                readingProgress.setAttribute('aria-valuenow', Math.round(scrollPercentage));
+            } else {
+                readingProgress.classList.remove('show');
+            }
+        });
+
+        // トップに戻る機能
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+</script>  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="vpc-flow-log-fields-guide.html" class="page-bottom-nav-link prev" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current">43</span> <span class="separator" aria-hidden="true">/</span> <span class="total">51</span> </div> <a href="vpc-dual-stack-networking-guide.html" class="page-bottom-nav-link next" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>

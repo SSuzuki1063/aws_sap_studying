@@ -1,0 +1,782 @@
+<!DOCTYPE html><html lang="ja"> <head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><title>
+   エンドツーエンド暗号化 完全ガイド - CloudFront → ALB → EC2
+  </title><!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><!-- FOUC prevention: apply dark mode before paint --><script>
+(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})();
+</script><!-- 共通CSSファイル（データ駆動アーキテクチャ） --><link href="/aws_sap_studying/css/page-base.css" rel="stylesheet"><link href="/aws_sap_studying/css/variables.css" rel="stylesheet"><link href="/aws_sap_studying/css/design-system.css" rel="stylesheet"><link href="/aws_sap_studying/css/layout.css" rel="stylesheet"><link href="/aws_sap_studying/css/responsive.css" rel="stylesheet"><!-- ページ固有CSSファイル --><link href="/aws_sap_studying/css/common.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/sidebar-toc.css" rel="stylesheet"><link href="/aws_sap_studying/css/pages/e2e-encryption-guide.css" rel="stylesheet"><link href="/aws_sap_studying/css/components/page-bottom-nav.css" rel="stylesheet"></head> <body> <!-- 左サイドバー目次 --><div id="sidebar-toc" class="sidebar-toc"> <div class="sidebar-toc-header"> <h2> <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label="目次アイコン"> <rect x="1" y="2" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> <rect x="1" y="5.5" width="10" height="1.5" rx="0.75" fill="currentColor"></rect> <rect x="1" y="9" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.7"></rect> <rect x="1" y="12.5" width="11" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"></rect> </svg>
+目次
+</h2> </div> <nav class="sidebar-toc-content" aria-label="ページ目次"> <ul> <li class="toc-h2"> <a href="#3重の鍵付きリレー配送で理解する">🔐 3重の鍵付きリレー配送で理解する</a> </li><li class="toc-h2"> <a href="#アーキテクチャ全体図">🏗️ アーキテクチャ全体図</a> </li><li class="toc-h2"> <a href="#各区間の詳細">🔍 各区間の詳細</a> </li><li class="toc-h2"> <a href="#証明書の比較表">📊 証明書の比較表</a> </li><li class="toc-h2"> <a href="#実装コード例">💻 実装コード例</a> </li><li class="toc-h2"> <a href="#ベストプラクティス">✅ ベストプラクティス</a> </li><li class="toc-h2"> <a href="#よくある質問FAQ">❓ よくある質問（FAQ）</a> </li><li class="toc-h2"> <a href="#まとめ">🎓 まとめ</a> </li> </ul> </nav> </div> <!-- サイドバー折りたたみボタン --> <button id="sidebar-toc-toggle" class="sidebar-toc-toggle" onclick="toggleSidebarTOC()" aria-label="目次を開閉"> <span id="sidebar-toc-toggle-icon">◀</span> </button> <header class="fixed-nav-header"> <div class="fixed-nav-container"> <a class="fixed-nav-logo" href="/aws_sap_studying/index.html"> <span class="nav-logo-icon" aria-hidden="true">&#9651;</span> <span class="nav-logo-text">AWS SAP</span> </a> <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="mainNav"><span class="hamburger-icon">&#9776;</span></button> <nav aria-label="メインナビゲーション" class="fixed-nav-links" role="navigation" id="mainNav"> <a href="/aws_sap_studying/concept-map.html"><span class="nav-label-ja">概念マップ</span><span class="nav-label-en">Concept Map</span></a> <a href="/aws_sap_studying/learning-resources.html"><span class="nav-label-ja">学習ガイド</span><span class="nav-label-en">Study Guide</span></a> <a href="/aws_sap_studying/knowledge-base.html"><span class="nav-label-ja">サービス</span><span class="nav-label-en">Services</span></a> <a href="/aws_sap_studying/roadmap.html"><span class="nav-label-ja">ロードマップ</span><span class="nav-label-en">Roadmap</span></a> <a href="/aws_sap_studying/quiz.html"><span class="nav-label-ja">クイズ</span><span class="nav-label-en">Quiz</span></a> <a href="/aws_sap_studying/bookmark.html"><span class="nav-label-ja">ブックマーク</span><span class="nav-label-en">Bookmark</span></a> <a href="https://github.com/SSuzuki1063/aws_sap_studying" target="_blank" rel="noopener noreferrer" class="nav-github" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a> <button class="theme-toggle" aria-label="テーマ切替" title="ダーク/ライトモード切替"> <span class="icon-sun" aria-hidden="true">&#9788;</span> <span class="icon-moon" aria-hidden="true">&#9790;</span> </button> </nav> </div> </header> <!-- 読書進捗インジケーター --> <div aria-label="ページ読書進捗" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="reading-progress" id="readingProgress" role="progressbar"> <div class="reading-progress-bar" id="readingProgressBar"></div> </div> <!-- トップに戻るボタン --> <button aria-label="ページトップに戻る" class="scroll-to-top" id="scrollToTop" title="トップに戻る">
+↑
+</button> <div class="container"> <!-- ブレッドクラムナビゲーション --> <nav class="breadcrumb-nav"> <a class="breadcrumb-home" href="../index.html">
+🏠 ホーム
+</a> <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> セキュリティ・ガバナンス </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-item"> 暗号化 &amp; 証明書管理 </span>  <span class="breadcrumb-separator">
+›
+</span> <span class="breadcrumb-current"> E2E Encryption Guide </span> </nav> <!-- ページコンテンツ (slot) -->  
+
+<!-- ========================================
+     Hero / Conclusion-First
+     ======================================== -->
+<header class="hero">
+    <div class="hero-content">
+        <span class="hero-badge" aria-hidden="true">Security / Networking</span>
+        <h1>エンドツーエンド暗号化<br>完全ガイド</h1>
+        <p class="hero-subtitle">ユーザー → CloudFront → ALB → EC2<br>すべての経路を暗号化するアーキテクチャ</p>
+
+        <div class="hero-takeaways">
+            <div class="takeaway-card">
+                <span class="takeaway-num" aria-hidden="true">1</span>
+                <div class="takeaway-title">3つの区間すべてにHTTPS</div>
+                <div class="takeaway-text">ユーザー↔CloudFront、CloudFront↔ALB、ALB↔EC2の各区間でそれぞれ証明書が必要</div>
+            </div>
+            <div class="takeaway-card">
+                <span class="takeaway-num" aria-hidden="true">2</span>
+                <div class="takeaway-title">ACMはEC2には使えない</div>
+                <div class="takeaway-text">ACM証明書はCloudFrontとALBで使えるが、EC2インスタンスには直接デプロイできない</div>
+            </div>
+            <div class="takeaway-card">
+                <span class="takeaway-num" aria-hidden="true">3</span>
+                <div class="takeaway-title">HTTPリスナーは削除する</div>
+                <div class="takeaway-text">暗号化されていない通信経路を完全に塞ぐことで、真のエンドツーエンド暗号化を実現</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main>
+
+<!-- ========================================
+     Analogy Section
+     ======================================== -->
+<section class="section section-white">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">🔐</span> 3重の鍵付きリレー配送で理解する</h2>
+        <p class="section-desc">エンドツーエンド暗号化は、大切な荷物を3つの異なる鍵付き車両でリレー配送するようなものです</p>
+
+        <div class="analogy-intro">
+            <div class="analogy-intro-title"><span aria-hidden="true">📦</span> たとえ話：機密書類のリレー配送</div>
+            <div class="analogy-intro-text">
+                あなたが「機密書類」を遠くの金庫室に届けたいとします。<br>
+                途中で3つの配送区間があり、<strong>各区間で別々の鍵付き配送車</strong>に乗り換えます。<br>
+                どの区間でも鍵がかかっているから、途中で誰かが覗き見することはできません。<br>
+                これが<strong>エンドツーエンド暗号化</strong>の考え方です！
+            </div>
+        </div>
+
+        <div class="analogy-table-wrap">
+            <table class="analogy-table">
+                <thead>
+                    <tr>
+                        <th><span class="analogy-emoji" aria-hidden="true">📦</span>リレー配送のたとえ</th>
+                        <th><span class="analogy-emoji" aria-hidden="true">☁️</span>AWSでの対応</th>
+                        <th>ポイント</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>機密書類（荷物）</td>
+                        <td>ユーザーのリクエスト・レスポンスデータ</td>
+                        <td>守りたい対象</td>
+                    </tr>
+                    <tr>
+                        <td>第1配送車（公道を走る）</td>
+                        <td>ユーザー → CloudFront 間の通信</td>
+                        <td>インターネット上で最も危険な区間</td>
+                    </tr>
+                    <tr>
+                        <td>第2配送車（専用道路を走る）</td>
+                        <td>CloudFront → ALB 間の通信</td>
+                        <td>AWS内部だが油断禁物</td>
+                    </tr>
+                    <tr>
+                        <td>第3配送車（施設内を走る）</td>
+                        <td>ALB → EC2 間の通信</td>
+                        <td>VPC内部でも暗号化が必要</td>
+                    </tr>
+                    <tr>
+                        <td>各車の鍵</td>
+                        <td>各区間のSSL/TLS証明書</td>
+                        <td>区間ごとに異なる鍵（証明書）が必要</td>
+                    </tr>
+                    <tr>
+                        <td>配送会社の身分証明</td>
+                        <td>ACM（AWS Certificate Manager）</td>
+                        <td>CloudFrontとALBの鍵は<br>ACMで無料発行できる</td>
+                    </tr>
+                    <tr>
+                        <td>自前で作る特殊な鍵</td>
+                        <td>サードパーティ証明書（EC2用）</td>
+                        <td>EC2にはACMが使えないため<br>自分で証明書を用意する</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     Architecture Overview Diagram
+     ======================================== -->
+<section class="section section-light">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">🏗️</span> アーキテクチャ全体図</h2>
+        <p class="section-desc">3つの区間すべてがHTTPSで暗号化された通信経路</p>
+
+        <div class="arch-diagram-wrap">
+            <svg viewBox="0 0 1300 540" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="エンドツーエンド暗号化アーキテクチャ図。ユーザーからCloudFront、ALB、EC2への3区間すべてがHTTPSで暗号化されている">
+                <defs>
+                    <marker id="arr-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+                    </marker>
+                    <marker id="arr-purple" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#8B5CF6"/>
+                    </marker>
+                    <marker id="arr-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 Z" fill="#059669"/>
+                    </marker>
+                    <filter id="node-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/>
+                    </filter>
+                </defs>
+
+                <!-- Background -->
+                <rect x="0" y="0" width="1300" height="540" rx="20" fill="#F8FAFC"/>
+
+                <!-- ============================================
+                     Zone backgrounds (behind everything)
+                     Zone 1: x=20..455  contains User + CloudFront
+                     Zone 2: x=465..740 contains ALB
+                     Zone 3: x=750..1280 contains EC2s + TG
+                     ============================================ -->
+                <rect x="20" y="150" width="435" height="285" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="238" y="180" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#1D4ED8">区間① インターネット</text>
+
+                <rect x="465" y="150" width="275" height="285" rx="14" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="603" y="180" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#6D28D9">区間② AWSバックボーン</text>
+
+                <rect x="750" y="150" width="530" height="285" rx="14" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <text x="1015" y="180" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#047857">区間③ VPC内部</text>
+
+                <!-- ============================================
+                     Nodes
+                     User     cx=105
+                     CF       cx=340
+                     ALB      cx=603
+                     EC2①    cx=880
+                     EC2②    cx=880
+                     TG       cx=1130
+                     ============================================ -->
+
+                <!-- Node: User -->
+                <g filter="url(#node-shadow)">
+                    <rect x="40" y="260" width="130" height="95" rx="14" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+                    <text x="105" y="300" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="28">👤</text>
+                    <text x="105" y="335" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#1E293B">ユーザー</text>
+                </g>
+
+                <!-- Node: CloudFront -->
+                <g filter="url(#node-shadow)">
+                    <rect x="250" y="250" width="180" height="115" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="340" y="293" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="28">🌐</text>
+                    <text x="340" y="323" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#1E293B">CloudFront</text>
+                    <text x="340" y="347" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="13" fill="#6B7280">service.example.com</text>
+                </g>
+
+                <!-- Node: ALB -->
+                <g filter="url(#node-shadow)">
+                    <rect x="513" y="250" width="180" height="115" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+                    <text x="603" y="293" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="28">⚖️</text>
+                    <text x="603" y="323" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#1E293B">ALB</text>
+                    <text x="603" y="347" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="13" fill="#6B7280">service-alb.example.com</text>
+                </g>
+
+                <!-- Node: Auto Scaling Group wrapper -->
+                <rect x="790" y="215" width="185" height="210" rx="16" fill="none" stroke="#059669" stroke-width="2" stroke-dasharray="8 4"/>
+                <text x="883" y="440" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="14" font-weight="600" fill="#059669">Auto Scaling Group</text>
+
+                <!-- Node: EC2 ① -->
+                <g filter="url(#node-shadow)">
+                    <rect x="805" y="230" width="155" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="883" y="268" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="22">🖥️</text>
+                    <text x="883" y="296" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="15" font-weight="700" fill="#1E293B">EC2 ①</text>
+                </g>
+
+                <!-- Node: EC2 ② -->
+                <g filter="url(#node-shadow)">
+                    <rect x="805" y="330" width="155" height="80" rx="14" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
+                    <text x="883" y="368" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="22">🖥️</text>
+                    <text x="883" y="396" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="15" font-weight="700" fill="#1E293B">EC2 ②</text>
+                </g>
+
+                <!-- Node: Target Group -->
+                <g filter="url(#node-shadow)">
+                    <rect x="1060" y="275" width="140" height="70" rx="14" fill="#FEFCE8" stroke="#FACC15" stroke-width="2"/>
+                    <text x="1130" y="306" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#1E293B">Target Group</text>
+                    <text x="1130" y="328" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="13" fill="#6B7280">HTTPS:443</text>
+                </g>
+
+                <!-- ============================================
+                     Arrows between nodes
+                     ============================================ -->
+
+                <!-- Arrow: User → CloudFront -->
+                <line x1="170" y1="307" x2="245" y2="307" stroke="#3B82F6" stroke-width="3" marker-end="url(#arr-blue)"/>
+
+                <!-- Arrow: CloudFront → ALB -->
+                <line x1="430" y1="307" x2="508" y2="307" stroke="#8B5CF6" stroke-width="3" marker-end="url(#arr-purple)"/>
+
+                <!-- Arrow: ALB → EC2① (upper branch) -->
+                <path d="M693 290 L800 270" stroke="#059669" stroke-width="3" marker-end="url(#arr-green)" fill="none"/>
+                <!-- Arrow: ALB → EC2② (lower branch) -->
+                <path d="M693 325 L800 370" stroke="#059669" stroke-width="3" marker-end="url(#arr-green)" fill="none"/>
+
+                <!-- Arrow: EC2 → TG (dashed, illustrative) -->
+                <line x1="960" y1="310" x2="1056" y2="310" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                <!-- ============================================
+                     HTTPS labels on arrows
+                     ============================================ -->
+                <rect x="185" y="280" width="60" height="24" rx="4" fill="#3B82F6"/>
+                <text x="215" y="297" text-anchor="middle" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="white">HTTPS</text>
+
+                <rect x="450" y="280" width="60" height="24" rx="4" fill="#8B5CF6"/>
+                <text x="480" y="297" text-anchor="middle" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="white">HTTPS</text>
+
+                <rect x="720" y="260" width="60" height="24" rx="4" fill="#059669"/>
+                <text x="750" y="277" text-anchor="middle" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="white">HTTPS</text>
+
+                <!-- ============================================
+                     Certificate boxes (top row, centered over nodes)
+                     ============================================ -->
+
+                <!-- Cert 1: centered over CloudFront (cx=340) -->
+                <rect x="190" y="40" width="300" height="65" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5"/>
+                <text x="340" y="68" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#1D4ED8">🔑 ACM パブリック証明書</text>
+                <text x="340" y="90" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="13" fill="#3B82F6">service.example.com</text>
+                <line x1="340" y1="105" x2="340" y2="250" stroke="#93C5FD" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                <!-- Cert 2: centered over ALB (cx=603) -->
+                <rect x="453" y="40" width="300" height="65" rx="10" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.5"/>
+                <text x="603" y="68" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#6D28D9">🔑 ACM 証明書（ALB用）</text>
+                <text x="603" y="90" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="13" fill="#8B5CF6">service-alb.example.com</text>
+                <line x1="603" y1="105" x2="603" y2="250" stroke="#C4B5FD" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                <!-- Cert 3: centered over EC2 (cx=883) -->
+                <rect x="733" y="40" width="300" height="65" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.5"/>
+                <text x="883" y="68" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#047857">🔑 サードパーティ証明書</text>
+                <text x="883" y="90" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="13" fill="#059669">EC2にインストール（ACM不可）</text>
+                <line x1="883" y1="105" x2="883" y2="215" stroke="#6EE7B7" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                <!-- ============================================
+                     Bottom note
+                     ============================================ -->
+                <rect x="280" y="475" width="740" height="44" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.5"/>
+                <text x="650" y="503" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="16" font-weight="600" fill="#9A3412">💡 すべての区間でHTTPSを使用 = エンドツーエンド暗号化の完成</text>
+            </svg>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     Segment 1: User ↔ CloudFront
+     ======================================== -->
+<section class="section section-white">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">🔍</span> 各区間の詳細</h2>
+
+        <div class="segment-card seg1">
+            <div class="segment-header">
+                <div class="segment-num" aria-hidden="true">1</div>
+                <div class="segment-title-group">
+                    <div class="segment-card-title">ユーザー ↔ CloudFront</div>
+                    <div class="segment-card-sub">インターネット上の公開区間 ― 最も攻撃リスクが高い</div>
+                </div>
+            </div>
+            <div class="segment-body-grid">
+                <div class="detail-box">
+                    <div class="detail-box-title"><span aria-hidden="true">🔑</span> 必要な証明書</div>
+                    <p>カスタムドメイン（例：<code>service.example.com</code>）用の<strong>パブリック証明書</strong>が必要です。</p>
+                    <ul>
+                        <li><strong>ACMで発行</strong>（推奨）― 無料で自動更新</li>
+                        <li><strong>外部CAから取得</strong>してACMにインポートも可能</li>
+                    </ul>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-box-title"><span aria-hidden="true">⚙️</span> 設定のポイント</div>
+                    <ul>
+                        <li>CloudFrontディストリビューションに証明書を関連付け</li>
+                        <li>ビューワープロトコルポリシーを<strong>「Redirect HTTP to HTTPS」</strong>に設定</li>
+                        <li>TLS 1.2以上を推奨（セキュリティポリシーで指定）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tip-box">
+                <span class="tip-icon" aria-hidden="true">💡</span>
+                <div class="tip-text">
+                    <strong>たとえ話でいうと：</strong>公道を走る第1配送車の鍵です。公道は誰でも通れるため、最も厳重な鍵（パブリック証明書）が必要です。ACMを使えば鍵の自動更新もしてくれます。
+                </div>
+            </div>
+        </div>
+
+        <!-- Segment 2: CloudFront ↔ ALB -->
+        <div class="segment-card seg2">
+            <div class="segment-header">
+                <div class="segment-num" aria-hidden="true">2</div>
+                <div class="segment-title-group">
+                    <div class="segment-card-title">CloudFront ↔ ALB</div>
+                    <div class="segment-card-sub">AWSバックボーンネットワーク ― AWS内部でも暗号化が必須</div>
+                </div>
+            </div>
+            <div class="segment-body-grid">
+                <div class="detail-box">
+                    <div class="detail-box-title"><span aria-hidden="true">🔑</span> 必要な証明書</div>
+                    <p>ALBのドメイン（例：<code>service-alb.example.com</code>）用の証明書が必要です。</p>
+                    <ul>
+                        <li><strong>ACMで発行</strong>（推奨）</li>
+                        <li>ALBのHTTPSリスナー（443）にアタッチ</li>
+                    </ul>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-box-title"><span aria-hidden="true">⚙️</span> 設定のポイント</div>
+                    <ul>
+                        <li>CloudFrontのオリジンプロトコルを<strong>「HTTPS Only」</strong>に設定</li>
+                        <li>ALBの<strong>HTTPリスナー（80番ポート）を削除</strong></li>
+                        <li>オリジンのSSLプロトコルにTLS 1.2を指定</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="warn-box">
+                <span class="tip-icon" aria-hidden="true">⚠️</span>
+                <div class="warn-text">
+                    <strong>よくあるミス：</strong>ALBにHTTPリスナー（80番ポート）を残したまま運用すると、CloudFront経由以外のHTTP通信が可能になり、暗号化が不完全になります。必ず削除しましょう。
+                </div>
+            </div>
+        </div>
+
+        <!-- Segment 3: ALB ↔ EC2 -->
+        <div class="segment-card seg3">
+            <div class="segment-header">
+                <div class="segment-num" aria-hidden="true">3</div>
+                <div class="segment-title-group">
+                    <div class="segment-card-title">ALB ↔ EC2</div>
+                    <div class="segment-card-sub">VPC内部 ― 見落とされがちだが暗号化が必要</div>
+                </div>
+            </div>
+            <div class="segment-body-grid">
+                <div class="detail-box">
+                    <div class="detail-box-title"><span aria-hidden="true">🔑</span> 必要な証明書</div>
+                    <p>EC2インスタンスに<strong>サードパーティの証明書</strong>をインストールする必要があります。</p>
+                    <ul>
+                        <li><strong>ACM証明書はEC2に直接使用不可</strong></li>
+                        <li>Let's Encryptや有料CAから取得</li>
+                        <li>Nginx/Apache等のWebサーバーに設定</li>
+                    </ul>
+                </div>
+                <div class="detail-box">
+                    <div class="detail-box-title"><span aria-hidden="true">⚙️</span> 設定のポイント</div>
+                    <ul>
+                        <li>ターゲットグループのプロトコルを<strong>HTTPS</strong>に設定</li>
+                        <li>ターゲットグループのポートを<strong>443</strong>に設定</li>
+                        <li>Auto Scaling Groupをこのターゲットグループにアタッチ</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tip-box">
+                <span class="tip-icon" aria-hidden="true">💡</span>
+                <div class="tip-text">
+                    <strong>たとえ話でいうと：</strong>施設内を走る第3配送車の鍵です。施設内（VPC）は関係者しかいませんが、万が一に備えて専用の鍵（サードパーティ証明書）を用意します。配送会社の共通鍵（ACM）は使えないため、自前で用意する必要があります。
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     Certificate Comparison Table
+     ======================================== -->
+<section class="section section-light">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">📊</span> 証明書の比較表</h2>
+        <p class="section-desc">3つの区間で使用する証明書の違いを一覧で確認</p>
+
+        <div class="comparison-table-wrap">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th class="seg1-head">区間① User↔CF</th>
+                        <th class="seg2-head">区間② CF↔ALB</th>
+                        <th class="seg3-head">区間③ ALB↔EC2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>対象ドメイン</td>
+                        <td>service.example.com</td>
+                        <td>service-alb.example.com</td>
+                        <td>EC2内部ドメイン</td>
+                    </tr>
+                    <tr>
+                        <td>ACM利用</td>
+                        <td><span class="badge-ok">利用可能</span></td>
+                        <td><span class="badge-ok">利用可能</span></td>
+                        <td><span class="badge-ng">利用不可</span></td>
+                    </tr>
+                    <tr>
+                        <td>証明書の種類</td>
+                        <td>ACMパブリック証明書<br>or 外部CA証明書</td>
+                        <td>ACM証明書</td>
+                        <td>サードパーティ証明書<br>（Let's Encrypt等）</td>
+                    </tr>
+                    <tr>
+                        <td>設定場所</td>
+                        <td>CloudFront<br>ディストリビューション</td>
+                        <td>ALB<br>HTTPSリスナー</td>
+                        <td>EC2インスタンス<br>（Nginx/Apache等）</td>
+                    </tr>
+                    <tr>
+                        <td>自動更新</td>
+                        <td><span class="badge-ok">ACMで自動</span></td>
+                        <td><span class="badge-ok">ACMで自動</span></td>
+                        <td><span class="badge-ng">手動管理</span></td>
+                    </tr>
+                    <tr>
+                        <td>リスクレベル</td>
+                        <td>高（インターネット）</td>
+                        <td>中（AWSバックボーン）</td>
+                        <td>低（VPC内部）</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     Code Examples
+     ======================================== -->
+<section class="section section-white">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">💻</span> 実装コード例</h2>
+        <p class="section-desc">CloudFormation / AWS CLI / Terraform での設定例</p>
+
+        <div class="code-section">
+            <div class="code-tabs">
+                <button class="code-tab active" data-tab="cfn" type="button">CloudFormation</button>
+                <button class="code-tab" data-tab="cli" type="button">AWS CLI</button>
+                <button class="code-tab" data-tab="tf" type="button">Terraform</button>
+            </div>
+
+            <div class="code-panel active" id="panel-cfn">
+<pre><span class="code-comment"># エンドツーエンド暗号化のCloudFormation設定</span>
+
+<span class="code-keyword">Resources:</span>
+  <span class="code-comment"># ① ACM証明書（CloudFront用 - us-east-1必須）</span>
+  <span class="code-param">CloudFrontCertificate:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::CertificateManager::Certificate</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-param">DomainName:</span> <span class="code-string">service.example.com</span>
+      <span class="code-param">ValidationMethod:</span> <span class="code-string">DNS</span>
+
+  <span class="code-comment"># ② ACM証明書（ALB用）</span>
+  <span class="code-param">ALBCertificate:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::CertificateManager::Certificate</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-param">DomainName:</span> <span class="code-string">service-alb.example.com</span>
+      <span class="code-param">ValidationMethod:</span> <span class="code-string">DNS</span>
+
+  <span class="code-comment"># ALB - HTTPSリスナーのみ（HTTPリスナーなし）</span>
+  <span class="code-param">ALBHTTPSListener:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::ElasticLoadBalancingV2::Listener</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-param">LoadBalancerArn:</span> <span class="code-value">!Ref ALB</span>
+      <span class="code-param">Port:</span> <span class="code-value">443</span>
+      <span class="code-param">Protocol:</span> <span class="code-string">HTTPS</span>
+      <span class="code-param">SslPolicy:</span> <span class="code-string">ELBSecurityPolicy-TLS13-1-2-2021-06</span>
+      <span class="code-param">Certificates:</span>
+        - <span class="code-param">CertificateArn:</span> <span class="code-value">!Ref ALBCertificate</span>
+      <span class="code-param">DefaultActions:</span>
+        - <span class="code-keyword">Type:</span> <span class="code-string">forward</span>
+          <span class="code-param">TargetGroupArn:</span> <span class="code-value">!Ref HTTPSTargetGroup</span>
+
+  <span class="code-comment"># ③ ターゲットグループ（HTTPS - EC2への暗号化通信）</span>
+  <span class="code-param">HTTPSTargetGroup:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::ElasticLoadBalancingV2::TargetGroup</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-param">Protocol:</span> <span class="code-string">HTTPS</span>
+      <span class="code-param">Port:</span> <span class="code-value">443</span>
+      <span class="code-param">VpcId:</span> <span class="code-value">!Ref VPC</span>
+      <span class="code-param">HealthCheckProtocol:</span> <span class="code-string">HTTPS</span>
+      <span class="code-param">HealthCheckPath:</span> <span class="code-string">/health</span>
+
+  <span class="code-comment"># CloudFrontディストリビューション</span>
+  <span class="code-param">Distribution:</span>
+    <span class="code-keyword">Type:</span> <span class="code-string">AWS::CloudFront::Distribution</span>
+    <span class="code-keyword">Properties:</span>
+      <span class="code-param">DistributionConfig:</span>
+        <span class="code-param">ViewerCertificate:</span>
+          <span class="code-param">AcmCertificateArn:</span> <span class="code-value">!Ref CloudFrontCertificate</span>
+          <span class="code-param">SslSupportMethod:</span> <span class="code-string">sni-only</span>
+          <span class="code-param">MinimumProtocolVersion:</span> <span class="code-string">TLSv1.2_2021</span>
+        <span class="code-param">Origins:</span>
+          - <span class="code-param">DomainName:</span> <span class="code-string">service-alb.example.com</span>
+            <span class="code-param">CustomOriginConfig:</span>
+              <span class="code-param">OriginProtocolPolicy:</span> <span class="code-string">https-only</span>
+              <span class="code-param">OriginSSLProtocols:</span>
+                - <span class="code-string">TLSv1.2</span>
+        <span class="code-param">DefaultCacheBehavior:</span>
+          <span class="code-param">ViewerProtocolPolicy:</span> <span class="code-string">redirect-to-https</span></pre>
+            </div>
+
+            <div class="code-panel" id="panel-cli">
+<pre><span class="code-comment"># ① ACM証明書の発行（CloudFront用 - us-east-1）</span>
+<span class="code-keyword">aws</span> acm request-certificate \
+    <span class="code-param">--domain-name</span> <span class="code-string">"service.example.com"</span> \
+    <span class="code-param">--validation-method</span> <span class="code-string">DNS</span> \
+    <span class="code-param">--region</span> <span class="code-string">us-east-1</span>
+
+<span class="code-comment"># ② ACM証明書の発行（ALB用 - ALBのリージョン）</span>
+<span class="code-keyword">aws</span> acm request-certificate \
+    <span class="code-param">--domain-name</span> <span class="code-string">"service-alb.example.com"</span> \
+    <span class="code-param">--validation-method</span> <span class="code-string">DNS</span> \
+    <span class="code-param">--region</span> <span class="code-string">ap-northeast-1</span>
+
+<span class="code-comment"># ALBのHTTPSリスナーを作成</span>
+<span class="code-keyword">aws</span> elbv2 create-listener \
+    <span class="code-param">--load-balancer-arn</span> <span class="code-string">"arn:aws:elasticloadbalancing:..."</span> \
+    <span class="code-param">--protocol</span> <span class="code-string">HTTPS</span> \
+    <span class="code-param">--port</span> <span class="code-value">443</span> \
+    <span class="code-param">--ssl-policy</span> <span class="code-string">"ELBSecurityPolicy-TLS13-1-2-2021-06"</span> \
+    <span class="code-param">--certificates</span> <span class="code-string">"CertificateArn=arn:aws:acm:..."</span> \
+    <span class="code-param">--default-actions</span> <span class="code-string">"Type=forward,TargetGroupArn=arn:..."</span>
+
+<span class="code-comment"># ⚠️ HTTPリスナー（80）があれば削除</span>
+<span class="code-keyword">aws</span> elbv2 delete-listener \
+    <span class="code-param">--listener-arn</span> <span class="code-string">"arn:aws:elasticloadbalancing:...:listener/..."</span>
+
+<span class="code-comment"># ③ ターゲットグループをHTTPSに設定</span>
+<span class="code-keyword">aws</span> elbv2 create-target-group \
+    <span class="code-param">--name</span> <span class="code-string">"e2e-https-tg"</span> \
+    <span class="code-param">--protocol</span> <span class="code-string">HTTPS</span> \
+    <span class="code-param">--port</span> <span class="code-value">443</span> \
+    <span class="code-param">--vpc-id</span> <span class="code-string">"vpc-xxxxxxxx"</span> \
+    <span class="code-param">--health-check-protocol</span> <span class="code-string">HTTPS</span></pre>
+            </div>
+
+            <div class="code-panel" id="panel-tf">
+<pre><span class="code-comment"># ① ACM証明書（CloudFront用 - us-east-1）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_acm_certificate"</span> <span class="code-param">"cloudfront"</span> {
+  <span class="code-param">provider</span>          = <span class="code-value">aws.us_east_1</span>
+  <span class="code-param">domain_name</span>       = <span class="code-string">"service.example.com"</span>
+  <span class="code-param">validation_method</span> = <span class="code-string">"DNS"</span>
+}
+
+<span class="code-comment"># ② ACM証明書（ALB用）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_acm_certificate"</span> <span class="code-param">"alb"</span> {
+  <span class="code-param">domain_name</span>       = <span class="code-string">"service-alb.example.com"</span>
+  <span class="code-param">validation_method</span> = <span class="code-string">"DNS"</span>
+}
+
+<span class="code-comment"># ALB HTTPSリスナー（HTTPリスナーは作成しない）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_lb_listener"</span> <span class="code-param">"https"</span> {
+  <span class="code-param">load_balancer_arn</span> = <span class="code-value">aws_lb.main.arn</span>
+  <span class="code-param">port</span>              = <span class="code-value">443</span>
+  <span class="code-param">protocol</span>          = <span class="code-string">"HTTPS"</span>
+  <span class="code-param">ssl_policy</span>        = <span class="code-string">"ELBSecurityPolicy-TLS13-1-2-2021-06"</span>
+  <span class="code-param">certificate_arn</span>   = <span class="code-value">aws_acm_certificate.alb.arn</span>
+
+  <span class="code-keyword">default_action</span> {
+    <span class="code-param">type</span>             = <span class="code-string">"forward"</span>
+    <span class="code-param">target_group_arn</span> = <span class="code-value">aws_lb_target_group.https.arn</span>
+  }
+}
+
+<span class="code-comment"># ③ ターゲットグループ（HTTPS - EC2への暗号化）</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_lb_target_group"</span> <span class="code-param">"https"</span> {
+  <span class="code-param">name</span>     = <span class="code-string">"e2e-https-tg"</span>
+  <span class="code-param">port</span>     = <span class="code-value">443</span>
+  <span class="code-param">protocol</span> = <span class="code-string">"HTTPS"</span>
+  <span class="code-param">vpc_id</span>   = <span class="code-value">aws_vpc.main.id</span>
+
+  <span class="code-keyword">health_check</span> {
+    <span class="code-param">protocol</span> = <span class="code-string">"HTTPS"</span>
+    <span class="code-param">path</span>     = <span class="code-string">"/health"</span>
+  }
+}
+
+<span class="code-comment"># CloudFrontディストリビューション</span>
+<span class="code-keyword">resource</span> <span class="code-string">"aws_cloudfront_distribution"</span> <span class="code-param">"main"</span> {
+  <span class="code-keyword">origin</span> {
+    <span class="code-param">domain_name</span> = <span class="code-string">"service-alb.example.com"</span>
+    <span class="code-keyword">custom_origin_config</span> {
+      <span class="code-param">origin_protocol_policy</span> = <span class="code-string">"https-only"</span>
+      <span class="code-param">origin_ssl_protocols</span>   = [<span class="code-string">"TLSv1.2"</span>]
+    }
+  }
+
+  <span class="code-keyword">viewer_certificate</span> {
+    <span class="code-param">acm_certificate_arn</span>      = <span class="code-value">aws_acm_certificate.cloudfront.arn</span>
+    <span class="code-param">ssl_support_method</span>       = <span class="code-string">"sni-only"</span>
+    <span class="code-param">minimum_protocol_version</span> = <span class="code-string">"TLSv1.2_2021"</span>
+  }
+
+  <span class="code-keyword">default_cache_behavior</span> {
+    <span class="code-param">viewer_protocol_policy</span> = <span class="code-string">"redirect-to-https"</span>
+  }
+}</pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     Best Practices
+     ======================================== -->
+<section class="section section-light">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">✅</span> ベストプラクティス</h2>
+
+        <div class="best-practices-grid">
+            <div class="bp-card">
+                <div class="bp-card-icon" aria-hidden="true">🛡️</div>
+                <div class="bp-card-title">TLS 1.2以上を強制</div>
+                <div class="bp-card-text">CloudFront・ALBともにTLS 1.2以上のセキュリティポリシーを設定し、古いプロトコルを無効化しましょう。</div>
+            </div>
+            <div class="bp-card">
+                <div class="bp-card-icon" aria-hidden="true">🚫</div>
+                <div class="bp-card-title">HTTPリスナーの完全排除</div>
+                <div class="bp-card-text">ALBのHTTPリスナー（80番ポート）を削除して、暗号化されていない通信経路を完全に塞ぎましょう。</div>
+            </div>
+            <div class="bp-card">
+                <div class="bp-card-icon" aria-hidden="true">🔄</div>
+                <div class="bp-card-title">証明書の自動更新</div>
+                <div class="bp-card-text">ACM証明書は自動更新されますが、EC2のサードパーティ証明書は手動管理です。certbot等で自動化を検討しましょう。</div>
+            </div>
+            <div class="bp-card">
+                <div class="bp-card-icon" aria-hidden="true">📍</div>
+                <div class="bp-card-title">CloudFront用ACMはus-east-1</div>
+                <div class="bp-card-text">CloudFrontに関連付けるACM証明書は、必ず<strong>us-east-1（バージニア北部）</strong>で発行する必要があります。</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     FAQ
+     ======================================== -->
+<section class="section section-white">
+    <div class="container">
+        <h2 class="section-title"><span aria-hidden="true">❓</span> よくある質問（FAQ）</h2>
+
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-question" type="button" aria-expanded="false">
+                    なぜACM証明書はEC2に直接使えないのですか？
+                    <span class="faq-toggle" aria-hidden="true">▼</span>
+                </button>
+                <div class="faq-answer">
+                    ACMはAWSのマネージドサービス（CloudFront、ALB、API Gateway等）に証明書を提供するための仕組みです。ACMの秘密鍵はAWSが管理しており、外部にエクスポートできません。EC2インスタンスは自分でWebサーバー（Nginx、Apache等）を管理するため、秘密鍵にアクセスできるサードパーティの証明書が必要になります。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" aria-expanded="false">
+                    CloudFrontとALB間はAWS内部なのに暗号化が必要ですか？
+                    <span class="faq-toggle" aria-hidden="true">▼</span>
+                </button>
+                <div class="faq-answer">
+                    はい、必要です。AWSバックボーンネットワークは安全性が高いですが、コンプライアンス要件（PCI DSS、HIPAA等）やゼロトラストセキュリティの観点から、すべての通信を暗号化することが推奨されています。「信頼できる内部ネットワーク」という考え方自体がセキュリティリスクになりえます。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" aria-expanded="false">
+                    ALBのHTTPリスナーを残してリダイレクトに使うのはダメですか？
+                    <span class="faq-toggle" aria-hidden="true">▼</span>
+                </button>
+                <div class="faq-answer">
+                    エンドツーエンド暗号化の観点からは推奨されません。CloudFrontのオリジンとしてALBを使う場合、CloudFront側でHTTPS Onlyを設定すれば、ALB側のHTTPリスナーは不要です。HTTPリスナーを残すと、CloudFrontを迂回した直接アクセスが暗号化されないリスクがあります。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" aria-expanded="false">
+                    EC2の証明書管理を楽にする方法はありますか？
+                    <span class="faq-toggle" aria-hidden="true">▼</span>
+                </button>
+                <div class="faq-answer">
+                    いくつかのアプローチがあります。Let's Encryptとcertbotを使えば無料で自動更新が可能です。また、AWS Systems Manager（SSM）を使って証明書の配布・更新を自動化する方法もあります。さらに、EC2の代わりにECS/Fargateを使えば、ALBとの間はAWS内部通信となり、証明書管理が簡素化されます。
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" type="button" aria-expanded="false">
+                    NLBを使う場合も同じ考え方ですか？
+                    <span class="faq-toggle" aria-hidden="true">▼</span>
+                </button>
+                <div class="faq-answer">
+                    NLBにはTLSリスナーを設定できますが、NLBはL4（トランスポート層）で動作するため、TLSターミネーションを行わずにパススルーすることも可能です。パススルーの場合、EC2で直接TLS終端を行うため、EC2にサードパーティ証明書が必要です。ALBと同じくACM証明書をNLBのTLSリスナーにアタッチすることもできます。
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========================================
+     Summary
+     ======================================== -->
+<section class="summary-section">
+    <h2 class="summary-title"><span aria-hidden="true">🎓</span> まとめ</h2>
+
+    <div class="summary-grid">
+        <div class="summary-item">
+            <div class="summary-item-icon" aria-hidden="true">🔵</div>
+            <div class="summary-item-title">区間①<br>User ↔ CloudFront</div>
+            <div class="summary-item-text">ACMパブリック証明書で<br>インターネット通信を暗号化</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-item-icon" aria-hidden="true">🟣</div>
+            <div class="summary-item-title">区間②<br>CloudFront ↔ ALB</div>
+            <div class="summary-item-text">ACM証明書＋HTTPS Only設定<br>HTTPリスナーは削除</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-item-icon" aria-hidden="true">🟢</div>
+            <div class="summary-item-title">区間③<br>ALB ↔ EC2</div>
+            <div class="summary-item-text">サードパーティ証明書を<br>EC2にインストール</div>
+        </div>
+    </div>
+
+    <div class="summary-message">
+        <strong>「3つの鍵付きリレー配送」</strong>を完成させることで、<br>
+        ユーザーからEC2まで<strong>すべての経路が暗号化</strong>されます。<br>
+        1つでも区間が欠けると「鍵のかかっていない配送車」が混ざり、<br>
+        セキュリティが不完全になります。
+    </div>
+
+    <div class="exam-tip">
+        <div class="exam-tip-title"><span aria-hidden="true">📝</span> 試験対策ポイント（ANS-C01 / SAP）</div>
+        <div class="exam-tip-text">
+            試験では「エンドツーエンド暗号化を実現する構成」を問う問題が頻出します。特に以下の点を押さえましょう：
+            ACM証明書がEC2に直接使えないこと、CloudFront用のACM証明書はus-east-1で発行が必要なこと、ALBのHTTPリスナーを削除してHTTPS Onlyにする必要があること、ターゲットグループのプロトコルをHTTPSに設定する必要があること。これらが選択肢の引っかけポイントになります。
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer style="background: #111827; color: rgba(255,255,255,0.5); text-align: center; padding: 30px 20px; font-size: 20px;">
+    AWS エンドツーエンド暗号化 完全ガイド
+</footer>
+
+<!-- ========================================
+     JavaScript
+     ======================================== -->
+
+
+  <!-- ページ下部ナビゲーション --> <nav class="page-bottom-nav" aria-label="前後ページナビゲーション"> <a href="#" class="page-bottom-nav-link prev disabled" aria-disabled="true" tabindex="-1" aria-label="前のページへ"> <span class="nav-arrow" aria-hidden="true">←</span> <span class="nav-label">前のページ</span> </a> <div class="page-bottom-nav-counter" role="status"> <span class="visually-hidden">ページ </span> <span class="current"></span> <span class="separator" aria-hidden="true">/</span> <span class="total"></span> </div> <a href="#" class="page-bottom-nav-link next disabled" aria-disabled="true" tabindex="-1" aria-label="次のページへ"> <span class="nav-label">次のページ</span> <span class="nav-arrow" aria-hidden="true">→</span> </a> </nav> </div> <button onclick="window.location.href='../learning-resources.html'" onmouseout="this.style.backgroundColor='#dc7600'; this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255, 153, 0, 0.3)';" onmouseover="this.style.backgroundColor='#E68900'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 16px rgba(255, 153, 0, 0.4)';" style="position: fixed; bottom: 30px; right: 30px; background-color: #dc7600; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); transition: all 0.3s ease; z-index: 1000;">
+🏠 リソース集に戻る
+</button> <div style="text-align: center; padding: 20px; margin-top: 40px; border-top: 2px solid #909296; background-color: #F9FAFB;"> <p style="color: #6B7280; font-size: 0.9em; margin: 0;">
+Created by
+<a href="https://github.com/SSuzuki1063" style="color: #dc7600; text-decoration: none; font-weight: 600;" target="_blank">
+SSuzuki1063
+</a> </p> <p style="color: #6f7682; font-size: 0.8em; margin: 5px 0 0 0;">
+AWS SAP Learning Resources
+</p> </div> <!-- 外部JS --> <script src="/aws_sap_studying/js/sidebar-toc.js"></script> <script src="/aws_sap_studying/js/scroll-progress.js"></script> <script src="/aws_sap_studying/js/mobile-nav.js"></script> <script src="/aws_sap_studying/js/theme-toggle.js"></script> </body> </html>
