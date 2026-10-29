@@ -180,8 +180,8 @@ git commit --no-verify -m "メッセージ"
 
 ## 関連ドキュメント
 
-- [@docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) - Data-driven architecture の詳細
-- [@docs/CODING_STANDARDS.md](../../docs/CODING_STANDARDS.md) - Data-driven development principles
+- [.claude/docs/architecture.md](../../.claude/docs/architecture.md) - データ生成とページ構成の詳細
+- [.claude/rules/data-navigation.md](../../.claude/rules/data-navigation.md) - registry とデータ生成の規約
 - [@CLAUDE.md](../../CLAUDE.md) - プロジェクト全体のガイド
 
 ## 更新履歴

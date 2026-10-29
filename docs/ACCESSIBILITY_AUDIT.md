@@ -1,5 +1,7 @@
 # WCAG 2.1 アクセシビリティ監査レポート
 
+> **この文書は 2025-12-28 時点の監査記録です。** 2026-03 に Astro へ移行する前の構成(ルート直下の `index.html` / `data.js` など)を前提に書かれています。今のファイル構成は `.claude/docs/architecture.md`、色の規約は `.claude/rules/css-standards.md` を見てください。
+
 **監査日**: 2025年12月28日
 **監査対象**: AWS SAP学習リソースサイト
 **基準**: WCAG 2.1 レベルA・AAに準拠
