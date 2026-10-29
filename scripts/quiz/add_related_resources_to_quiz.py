@@ -3,6 +3,7 @@
 quiz-data-extended.js に relatedResources フィールドを追加するスクリプト
 """
 
+import json
 import re
 from pathlib import Path
 
@@ -808,8 +809,20 @@ KEYWORD_RESOURCE_MAP = {
 }
 
 
+def load_existing_pages() -> set[str]:
+    """サイトに存在するページ(resource-registry.json のキー)を返す"""
+    registry_file = PROJECT_ROOT / "src" / "data" / "resource-registry.json"
+    return set(json.loads(registry_file.read_text(encoding="utf-8")))
+
+
+EXISTING_PAGES = load_existing_pages()
+
+
 def find_matching_resources(text: str) -> list[dict]:
-    """テキストからキーワードをマッチングしてリソースを返す"""
+    """テキストからキーワードをマッチングしてリソースを返す
+
+    サイトに存在しないページ(削除済み・未作成)へのリンクは付けない。
+    """
     matched = []
     seen_paths = set()
 
@@ -818,6 +831,8 @@ def find_matching_resources(text: str) -> list[dict]:
             for resource in resources:
                 # 重複を避ける
                 path_or_url = resource.get("path", resource.get("url", ""))
+                if "path" in resource and resource["path"] not in EXISTING_PAGES:
+                    continue
                 if path_or_url not in seen_paths:
                     matched.append(resource.copy())
                     seen_paths.add(path_or_url)
@@ -902,8 +917,11 @@ def process_quiz_file(content: str) -> str:
 
 def main():
     """メイン処理"""
-    quiz_file = PROJECT_ROOT / "quiz-data-extended.js"
-    backup_file = PROJECT_ROOT / "quiz-data-extended.js.backup"
+    quiz_file = PROJECT_ROOT / "public" / "quiz-data-extended.js"
+    # public/ の中に置くとサイトで配信されてしまうので、gitignore 済みの backups/ に置く
+    backup_dir = PROJECT_ROOT / "backups"
+    backup_dir.mkdir(exist_ok=True)
+    backup_file = backup_dir / "quiz-data-extended.js.backup"
 
     print("quiz-data-extended.js に relatedResources を追加しています...")
 
