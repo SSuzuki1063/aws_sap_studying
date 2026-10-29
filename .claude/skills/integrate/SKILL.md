@@ -64,7 +64,7 @@ git add quiz-data-extended.js && git commit -m "feat: クイズ追加" && git pu
 ```bash
 python3 scripts/html_management/update_counts.py        # カウント同期
 python3 scripts/ci/post_integration_check.py [--verbose] # 統合後確認
-python3 scripts/ci/validate_html_w3c.py --pr-mode        # HTML W3C検証（変更ファイルのみ）
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist        # HTML W3C検証（変更ファイルのみ）
 npm run qa:css-validate:pr                               # CSS W3C検証（変更ファイルのみ）
 ```
 

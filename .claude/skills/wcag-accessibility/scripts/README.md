@@ -27,7 +27,7 @@
 
 | スクリプト | 目的 | 使用方法 |
 |-----------|------|---------|
-| `validate_html_w3c.py` | W3C HTML Validator検証 | `python3 scripts/ci/validate_html_w3c.py [--pr-mode]` |
+| `validate_html_w3c.py` | W3C HTML Validator検証 | `python3 scripts/ci/validate_html_w3c.py --base-dir dist [--pr-mode]` |
 
 ---
 
@@ -46,7 +46,7 @@ python3 scripts/accessibility/check_heading_hierarchy.py
 bash scripts/accessibility/find_svg_without_aria.sh
 
 # 4. W3C HTML検証
-python3 scripts/ci/validate_html_w3c.py --pr-mode
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
 ```
 
 ### 2. 単一ファイル検証

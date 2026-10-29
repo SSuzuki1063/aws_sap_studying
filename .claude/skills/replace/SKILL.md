@@ -63,7 +63,7 @@ git commit -m "fix(category): リソース名 — 更新内容の概要" && git 
 
 ```bash
 # エラー内容を確認
-python3 scripts/ci/validate_html_w3c.py --files category/filename.html
+python3 scripts/ci/validate_html_w3c.py --base-dir dist --files category/filename.html
 
 # HTMLを修正後、再実行
 python3 scripts/html_management/integrate_resource_complete.py --source replace_html/

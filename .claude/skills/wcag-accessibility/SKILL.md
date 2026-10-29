@@ -198,7 +198,7 @@ h2 { color: white; }
 python3 scripts/accessibility/check_contrast_ratio.py
 python3 scripts/accessibility/check_heading_hierarchy.py
 bash scripts/accessibility/find_svg_without_aria.sh
-python3 scripts/ci/validate_html_w3c.py --pr-mode
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
 ```
 
 ### 2. 単一ファイル検証

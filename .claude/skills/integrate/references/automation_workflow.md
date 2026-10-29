@@ -77,8 +77,8 @@ python3 scripts/ci/post_integration_check.py
 python3 scripts/ci/post_integration_check.py --verbose
 
 # HTML W3C検証
-python3 scripts/ci/validate_html_w3c.py --files networking/foo.html
-python3 scripts/ci/validate_html_w3c.py --pr-mode  # 変更HTMLファイルのみ
+python3 scripts/ci/validate_html_w3c.py --base-dir dist --files networking/foo.html
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist  # 変更HTMLファイルのみ
 
 # CSS W3C検証（CSSファイルを変更した場合は必須）
 npm run qa:css-validate:pr    # 変更CSSファイルのみ（PRモード）
@@ -109,7 +109,7 @@ python3 scripts/quiz_management/analyze_quiz.py
 
 対処:
 1. エラー箇所を修正
-2. 単独で再検証: `python3 scripts/ci/validate_html_w3c.py --files networking/foo.html`
+2. 単独で再検証: `python3 scripts/ci/validate_html_w3c.py --base-dir dist --files networking/foo.html`
 3. 修正できたら `--skip-validation` で残りのパイプラインを通す
 
 ### TOCスキップ（Step 3の警告）
