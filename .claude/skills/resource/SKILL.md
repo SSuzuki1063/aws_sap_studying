@@ -1,154 +1,68 @@
 ---
 name: resource
 description: |
-  学習HTMLリソースの統合管理スキル（integrate / replace / delete のオーケストレーター）。
+  学習リソース(HTML ページと BlackBelt PDF)の追加・更新・削除の入口になるスキル。
+  依頼内容とステージングディレクトリを見て、正しい手順に振り分ける。
   以下の場面で使用:
-  (1) 新規HTMLリソースを追加したい（→ integrate）
-  (2) 既存リソースのコンテンツを更新したい（→ replace）
-  (3) リソースをサイトから削除したい（→ delete）
-  (4) 何をすべきか不明な時（→ 自動診断）
-  (5) 複数ファイルを一括処理したい（→ バッチ操作）
-  ※ BlackBelt PDFの登録は blackbelt スキルを使用すること。
-  ※ このスキルはHTMLリソース専用。PDFの登録・クイズ追加・概念マップ管理には対応しない。
+  (1) 新しい HTML リソースを追加したい(new_html/ にファイルがある)
+  (2) 既存リソースの内容を更新したい(replace_html/ にファイルがある)
+  (3) リソースをサイトから削除したい
+  (4) BlackBelt PDF を登録したい
+  (5) 何をすればよいか分からない、または複数の操作をまとめて行いたい
+  ※ 追加・更新からデプロイまで一気に進めるときは /ship を使う。
 ---
 
-# resource — HTMLリソース統合管理オーケストレーター
+# resource — 学習リソース管理の入口
 
-## サブスキルの使い分け早見表
+このサイトは Astro 5 の静的サイト。ページは `src/pages/<category>/<name>.astro`、ページ固有の CSS は `css/pages/<name>.css`、一覧・検索・統計のデータは `src/data/resource-registry.json` から `node scripts/generate-data.mjs` で生成する。`public/data.js` / `public/index.js` / `src/data/resources.ts` は生成物なので手で編集しない(次の生成で上書きされるため)。
 
-| やりたいこと | 使うスキル |
-|------------|-----------|
-| 新しいHTMLリソースを追加 | `integrate` |
-| 既存HTMLリソースの内容を更新 | `replace` |
-| HTMLリソースをサイトから削除 | `delete` |
-| 複数ファイルを一括処理 | 下記「バッチ操作」セクション参照 |
-| BlackBelt PDF を登録 | `blackbelt`（このスキルの対象外） |
+## 振り分け
 
----
+| やりたいこと | 手順 |
+|---|---|
+| 新しい HTML を追加(`new_html/` に置いた) | `ship` スキルの Step 1b(HTML → Astro 変換と registry 登録)→ 下の「仕上げ」 |
+| 既存 HTML の内容を更新(`replace_html/` に置いた) | `replace` スキル |
+| リソースを削除 | `delete` スキル(実行前に必ずユーザーに確認) |
+| BlackBelt PDF を登録 | `blackbelt` スキル |
+| 追加・更新からデプロイまで一気に進める | `/ship`(検証の自動修正ループ・commit・デプロイまで行う) |
 
-## Step 1: 自動診断（意図が不明な場合）
-
-ユーザーが「何をすべきか」を明示していない場合、以下を実行して状況を把握する。
+依頼から判断できないときは、次を確認してから振り分ける。
 
 ```bash
-# ステージングディレクトリを確認
-ls new_html/        # ← ファイルがある → integrate
-ls replace_html/    # ← ファイルがある → replace
-
-# data.js との整合性ベースラインを確認
-python3 scripts/ci/check_data_integrity.py
+ls new_html/ replace_html/        # ステージングにファイルがあるか
+git status --short src/ css/pages/ # 作業途中の変更がないか
 ```
 
-### 診断フロー
+どれにも当てはまらなければ、「追加・更新・削除のどれですか」とユーザーに聞く。
 
-```
-new_html/ にファイルあり？
-  → YES: integrate スキルのワークフローに従う
-replace_html/ にファイルあり？
-  → YES: replace スキルのワークフローに従う
-削除したいリソースが特定されている？
-  → YES: delete スキルのワークフローに従う
-上記いずれにも当てはまらない？
-  → ユーザーに意図を確認して適切なサブスキルへ誘導する
-```
+## 新規追加の手順
 
----
+`.claude/skills/ship/SKILL.md` の **Step 1b** に従って変換する。要点は次のとおり(詳細とカテゴリ表は ship 側が正)。
 
-## Step 2: サブスキルへの委譲
+1. `<style>` を `css/pages/<name>.css` に切り出す
+2. `<body>` の中身(`<script>` を除く)を `rawContent` にし、`<Fragment set:html={rawContent} />` で埋め込む。Astro が `{}` を式として解釈しないようにするため
+3. `<h2>` / `<h3>` から `tocItems` を作る(目次は見出しから作られる)
+4. カテゴリとセクションを ship のカテゴリ表で決め、`src/pages/<category>/<name>.astro` を作る
+5. `src/data/resource-registry.json` にエントリを追加し、`src/data/update-history.json` の先頭に履歴を足す
 
-各操作の詳細手順はサブスキルに委譲する。このスキルはフローを複製しない。
+そのあと「仕上げ」へ進む。
 
-### 新規追加 → integrate
+## 仕上げ(追加・更新・削除・PDF 登録で共通)
 
-`.claude/skills/integrate/SKILL.md` の「Workflow 1: HTML リソース追加」に従う。
+1. `node scripts/generate-data.mjs` — 一覧・検索・統計のデータを作り直す。`orphaned?` の警告が出たら、registry と `.astro` の対応がずれている
+2. `npm run build` — ビルドが通れば、データとページの整合性も確認できる
+3. `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` — ページを変えたときだけ。CI と同じく、ビルド後の `dist/` を検証する。エラーはすべて直す
+4. 作業ブランチを切って commit する(例: `feat: 新規リソース追加 — <タイトル>`)。生成物の `public/data.js` / `public/index.js` / `src/data/resources.ts` も一緒に commit する
+5. デプロイはユーザーに頼まれたときだけ行う(`/deploy`、または PR を作って master にマージ)。master へのマージでサイトが公開されるため
 
-要点:
-1. `new_html/` にファイルを配置
-2. `python3 scripts/html_management/integrate_resource_complete.py` を実行
-3. `data.js` の `resources[]` + `updateHistory` を更新
-4. `index.js` の `searchData[]` を更新
-5. `update_counts.py` → `check_data_integrity.py` を実行
-6. コミット＆プッシュ
+`gh-pages` ブランチは CI がビルド結果を置く場所なので、手で commit や push をしない。
 
-### コンテンツ更新 → replace
+## 複数の操作をまとめて行うとき
 
-`.claude/skills/replace/SKILL.md` のワークフローに従う。
+次の順で処理し、「仕上げ」は最後に 1 回だけ行う。
 
-要点:
-1. `replace_html/` に更新ファイルを配置（**元ファイルと同じファイル名**）
-2. `python3 scripts/html_management/integrate_resource_complete.py --source replace_html/` を実行
-3. `data.js` / `index.js` の更新は**不要**
-4. コミット＆プッシュ
+1. 削除(参照を先に外しておくと、追加・更新で前後ナビを付け直しやすい)
+2. 更新(`replace_html/`)
+3. 追加(`new_html/`)と PDF 登録
 
-### 削除 → delete
-
-`.claude/skills/delete/SKILL.md` のワークフローに従う。
-
-⚠️ **削除は不可逆操作。実行前に必ずユーザーへ最終確認を行うこと。**
-
-要点:
-1. `data.js` の `resources[]` からエントリ削除、count を -1
-2. `index.js` の `searchData[]` からエントリ削除
-3. `git rm category/filename.html`
-4. 概念マップ参照・ページ下部ナビを必要に応じて更新
-5. `update_counts.py` → `check_data_integrity.py` を実行
-6. コミット＆プッシュ
-
----
-
-## バッチ操作（複数ファイルの一括処理）
-
-integrate / replace / delete が混在するケースの処理順序:
-
-```
-1. 全ファイルのオペレーション種別を確定
-   - new_html/     → integrate
-   - replace_html/ → replace
-   - 削除対象リスト → delete
-
-2. 処理の実行順序
-   a. integrate/replace: integrate_resource_complete.py を実行（W3C検証・git stage 自動化）
-   b. delete: data.js / index.js 編集 → git rm → ページ下部ナビ再生成（必要時）
-
-3. 一括で整合性チェック
-   python3 scripts/html_management/update_counts.py
-   python3 scripts/ci/check_data_integrity.py
-
-4. まとめてコミット
-   git commit -m "feat/fix/remove: 複数リソース処理 — 概要"
-   git push origin gh-pages
-```
-
-→ 詳細なシーケンス図・トラブルシューティング: **[resource_workflow.md](references/resource_workflow.md)**
-
----
-
-## 事後チェックリスト（全操作共通）
-
-- [ ] `python3 scripts/ci/check_data_integrity.py` が exit 0 で完了
-- [ ] `data.js` の section/category count が正しい（`update_counts.py` で自動補正可）
-- [ ] サイトのナビ・検索で期待通りに表示される
-- [ ] `git push origin gh-pages` が完了している（push しないとデプロイされない）
-
----
-
-## よくある迷いケース
-
-| 状況 | 判断 |
-|------|------|
-| 同じファイルを「削除して新規追加」したい | `replace` を使う（ファイルパスが変わらないなら） |
-| ファイルパスを変更したい | `delete` + `integrate` の2ステップ |
-| BlackBelt PDF を追加したい | `/skill blackbelt`（このスキルの対象外） |
-| W3Cエラーを直した更新版がある | `replace`（内容更新と同じ扱い） |
-| 複数カテゴリにまたがる一括追加 | バッチ操作を使う |
-
----
-
-## 参照ファイル
-
-| ファイル | 内容 |
-|---------|------|
-| [resource_workflow.md](references/resource_workflow.md) | 意図検出の詳細決定木・バッチ操作シーケンス・トラブルシューティング |
-| [integrate/SKILL.md](../integrate/SKILL.md) | 新規追加の詳細手順 |
-| [replace/SKILL.md](../replace/SKILL.md) | 置換の詳細手順 |
-| [delete/SKILL.md](../delete/SKILL.md) | 削除の詳細手順 |
+→ 判断に迷うケースとトラブルシューティング: [resource_workflow.md](references/resource_workflow.md)

@@ -54,7 +54,7 @@ All HTML **MUST** pass W3C validation before committing.
 
 - **Manual check** (after `npm run build`): `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist`
 - **Targeted check** (after `npm run build`): `python3 scripts/ci/validate_html_w3c.py --base-dir dist --files networking/foo.html`
-- **Integration**: `/skill resource` and `/ship` run validation automatically
+- **Integration**: `/ship` runs validation automatically (Gate B); `/skill resource` runs it in its shared finishing steps
 
 ## Semantic Heading Tags (Critical Rule 6)
 

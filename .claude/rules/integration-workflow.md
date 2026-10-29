@@ -12,13 +12,13 @@ paths:
 ## Always Use Skills (Critical Rule 1)
 
 ```bash
-/skill resource   # unified entry point; auto-routes to integrate / replace / delete
+/skill resource   # unified entry point; routes to ship's Step 1b (add) / replace / delete / blackbelt
 /ship             # full pipeline: integrate -> validate -> build -> commit -> deploy (self-correcting, max 5 retries)
 ```
 
 | Intent | Skill |
 |--------|-------|
-| Add new HTML resource | `/skill integrate` or `/ship` |
+| Add new HTML resource | `/skill resource` or `/ship` |
 | Update existing resource | `/skill replace` |
 | Remove a resource | `/skill delete` |
 
