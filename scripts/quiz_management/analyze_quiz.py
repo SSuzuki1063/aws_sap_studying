@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
-"""クイズデータを詳細分析するスクリプト（改良版）"""
+"""クイズデータを詳細分析するスクリプト（改良版）
 
+リポジトリのどこから実行してもよい。関連リンク(relatedResources)のうち、
+サイトに存在しないページを指しているものも一覧で表示する。
+"""
+
+import json
 import re
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+QUIZ_FILE = PROJECT_ROOT / "public" / "quiz-data-extended.js"
+REGISTRY_FILE = PROJECT_ROOT / "src" / "data" / "resource-registry.json"
 
 
 def analyze_quiz_data(file_path):
@@ -33,8 +43,12 @@ def analyze_quiz_data(file_path):
             current_category = {"key": category_key, "title": "", "line": i + 1}
             question_count = 0
 
-        # titleを検出
-        elif current_category and re.search(r'title:\s*["\']([^"\']+)["\']', line):
+        # カテゴリの title を検出(最初の 1 つだけ。後に出る title は関連リンクのもの)
+        elif (
+            current_category
+            and not current_category["title"]
+            and re.search(r'title:\s*["\']([^"\']+)["\']', line)
+        ):
             title_match = re.search(r'title:\s*["\']([^"\']+)["\']', line)
             current_category["title"] = title_match.group(1)
 
@@ -56,7 +70,7 @@ def analyze_quiz_data(file_path):
 
 
 def main():
-    categories = analyze_quiz_data("quiz-data-extended.js")
+    categories = analyze_quiz_data(QUIZ_FILE)
 
     print("=" * 70)
     print("AWS SAP クイズデータベース 現状分析")
@@ -95,6 +109,28 @@ def main():
             print("⚠ 10問未満のカテゴリ:")
             for cat in low_count:
                 print(f"  - {cat['title']}: {cat['count']}問")
+
+    broken = find_broken_internal_links(QUIZ_FILE, REGISTRY_FILE)
+    print()
+    if broken:
+        print(f"⚠ 存在しないページを指す関連リンク: {len(broken)}件")
+        for line_no, path in broken:
+            print(f"  - {QUIZ_FILE.name}:{line_no}  {path}")
+    else:
+        print("✓ 関連リンクはすべて存在するページを指しています")
+
+
+def find_broken_internal_links(quiz_file, registry_file):
+    """relatedResources の internal リンクのうち、registry に無いページを返す"""
+    registry = set(json.loads(Path(registry_file).read_text(encoding="utf-8")))
+    broken = []
+    for i, line in enumerate(
+        Path(quiz_file).read_text(encoding="utf-8").splitlines(), 1
+    ):
+        for path in re.findall(r'path:\s*"([^"]+\.html)"', line):
+            if path not in registry:
+                broken.append((i, path))
+    return broken
 
 
 if __name__ == "__main__":

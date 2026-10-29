@@ -50,8 +50,17 @@ npm run dev                                  # http://localhost:4321/aws_sap_stu
 ```
 
 - 選択肢がちょうど 4 つ、`correct` が 0〜3、`id` がカテゴリ内で重複していない
-- `relatedResources` の `internal` のページが実在する(`ls src/pages/<category>/<name>.astro`)
+- `relatedResources` の `internal` のページが実在する(`analyze_quiz.py` の最後に、存在しないページを指すリンクが一覧で出る)
 
-## 古いスクリプトについて
+## スクリプト
 
-`scripts/quiz/add_related_resources_to_quiz.py` と `scripts/quiz_management/analyze_quiz.py` は、移行前の場所(ルート直下の `quiz-data-extended.js`)を読みにいくため、今のままでは動かない。`relatedResources` は手で書く。
+```bash
+# カテゴリ別の問題数と、存在しないページを指す関連リンクの一覧
+python3 scripts/quiz_management/analyze_quiz.py
+
+# relatedResources が無い問題に、キーワードから関連リンクを付ける
+# (サイトに存在するページだけを付ける。元のファイルは backups/ に保存される)
+python3 scripts/quiz/add_related_resources_to_quiz.py
+```
+
+`add_related_resources_to_quiz.py` は、すでに `relatedResources` がある問題は変えない。キーワードと関連ページの対応は、スクリプト内の `KEYWORD_RESOURCE_MAP` にある。
