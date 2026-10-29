@@ -25,7 +25,7 @@ npm run preview   # production preview (requires prior build)
 | `npx playwright test --project=chromium tests/e2e/navigation/navbar.spec.ts` | Run a single test file |
 | `npx playwright test --project=chromium -g "test name"` | Run a single test by name |
 | `npx astro check` | Astro/TypeScript diagnostics |
-| `python3 scripts/ci/validate_html_w3c.py --pr-mode` | W3C HTML validation (changed files) |
+| `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` | W3C HTML validation (changed pages; run `npm run build` first) |
 | `npm run qa:all` | Full QA pipeline |
 
 ## Rules Reference

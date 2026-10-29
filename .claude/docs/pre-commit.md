@@ -4,7 +4,7 @@
 
 ```bash
 python3 scripts/ci/check_data_integrity.py               # public/data.js ⟷ public/index.js sync
-python3 scripts/ci/validate_html_w3c.py --pr-mode        # W3C HTML validation
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist        # W3C HTML validation (after npm run build)
 python3 scripts/ci/check_css_quality.py --pr-mode        # CSS quality: !important / ID selectors / nesting / global tags
 python3 scripts/accessibility/check_contrast_ratio.py    # WCAG color contrast
 python3 scripts/accessibility/check_heading_hierarchy.py # h1→h2→h3 order (exit 1 if violations)

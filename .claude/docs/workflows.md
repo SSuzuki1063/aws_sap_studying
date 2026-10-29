@@ -17,7 +17,7 @@ Manual steps (if not using skills):
 4. Update `src/data/resource-registry.json` + `src/data/update-history.json`
 5. Run `node scripts/generate-data.mjs`
 6. Run `npm run build` (validates data integrity)
-7. Run `python3 scripts/ci/validate_html_w3c.py --pr-mode` (W3C validation)
+7. Run `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` (W3C validation)
 8. Deploy with `/deploy`
 
 ### Replace/Update an Existing Resource
