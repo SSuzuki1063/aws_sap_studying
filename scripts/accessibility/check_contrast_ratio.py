@@ -258,7 +258,7 @@ def main():
     print("""
 1. 不合格の色の組み合わせを修正してください
 2. WebAIM Contrast Checker (https://webaim.org/resources/contrastchecker/) で再確認
-3. CODING_STANDARDS.md に検証済みカラーパレットを追加
+3. 検証済みの色を css/variables.css と .claude/rules/css-standards.md のカラーパレットに追加
 4. 新しい色を追加する際は必ずコントラスト比を検証
 
 WCAG 2.1 レベルAA要件:

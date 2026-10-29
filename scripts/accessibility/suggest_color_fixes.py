@@ -174,7 +174,7 @@ def main():
 
     # CSS変数形式で出力
     print("\n" + "=" * 80)
-    print("CSS変数形式（CODING_STANDARDS.mdに追加推奨）")
+    print("CSS変数形式（css/variables.css に追加推奨）")
     print("=" * 80)
     print("""
 ```css
@@ -216,8 +216,8 @@ def main():
     print("=" * 80)
     print("""
 1. 上記の推奨色をレビューし、デザインとの整合性を確認
-2. CODING_STANDARDS.md に検証済みカラーパレットセクションを追加
-3. index.html, quiz.html のCSSを更新
+2. css/variables.css の CSS 変数と .claude/rules/css-standards.md のカラーパレットを更新
+3. 色を直接書いているページ別 CSS(css/pages/)があれば、CSS 変数に置き換える
 4. ビジュアルテストでデザインが崩れていないか確認
 5. 再度コントラスト比検証を実行
 
