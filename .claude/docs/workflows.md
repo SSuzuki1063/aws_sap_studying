@@ -6,7 +6,7 @@
 
 **Use the skill** (recommended — handles HTML→Astro conversion, registry, data generation, validation):
 ```bash
-/skill integrate    # or /skill resource (auto-routes)
+/skill resource     # entry point; new pages are converted with ship's Step 1b
 /ship               # full autonomous pipeline with self-correcting gates
 ```
 

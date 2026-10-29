@@ -1,124 +1,60 @@
 ---
 name: replace
 description: |
-  既存のAWS学習HTMLリソースをreplace_html/ディレクトリの新バージョンで置換するスキル。
+  既存の学習 HTML リソースを、replace_html/ に置いた新しい版で置き換えるスキル。
   以下の場面で使用:
-  (1) 既存HTMLリソースのコンテンツ（説明文・図・表）を更新したい
-  (2) 既存ファイルのHTML構造・スタイルを修正したい
-  (3) 既存ファイルのW3Cエラーを解消したい
-  (4) 複数の既存ファイルを一括置換したい
-  ※ 新規ファイルを追加する場合は integrate スキルを使用すること。
+  (1) 既存リソースの説明文・図・表を更新したい
+  (2) 既存ページの HTML 構造やスタイルを直したい
+  (3) 既存ページの W3C エラーを解消した版がある
+  (4) 複数の既存ページをまとめて置き換えたい
+  ※ 新しいページの追加は resource スキル(→ ship の Step 1b)、削除は delete スキルを使う。
 ---
 
-# AWS SAP リソース置換スキル
+# replace — 既存リソースの置き換え
 
-## integrate との使い分け
+置き換えではページの URL は変わらないので、`src/data/resource-registry.json` のエントリはそのまま使う。変えるのは `.astro` の本文・目次と、ページ固有の CSS だけ。
 
-| 操作 | 使うスキル |
-|------|-----------|
-| 新しいHTMLリソースを追加 | `/skill integrate` |
-| 既存HTMLリソースの内容を更新 | `/skill replace` ← このスキル |
+## 手順
 
-**最大の違い：** 置換は `data.js` / `index.js` / `updateHistory` の更新が**不要**。
-ファイルパスが変わらないため、ナビ・検索・履歴タイムラインに影響しない。
+### Step 1: 置き換え先のページを特定する
 
----
-
-## ワークフロー（3ステップ）
+`replace_html/<name>.html` は、既存ページと同じファイル名で置く。対応する `.astro` を探す。
 
 ```bash
-# Step 1: replace_html/ に更新ファイルを配置（元ファイルと同じファイル名）
-# 例: networking/aws-vpc-guide.html を更新する場合
-#     → replace_html/aws-vpc-guide.html に配置
-
-# Step 2: 統合スクリプト実行（ブレッドクラム・TOC再生成・W3C検証・git stageまで自動）
-python3 scripts/html_management/integrate_resource_complete.py --source replace_html/
-
-# Step 3: コミット＆デプロイ
-git commit -m "fix(category): リソース名 — 更新内容の概要" && git push origin gh-pages
+ls src/pages/*/<name>.astro
 ```
 
-> **ドライランで事前確認:**
-> ```bash
-> python3 scripts/html_management/integrate_resource_complete.py --source replace_html/ --dry-run
-> ```
+見つからなければ新規ページなので、`resource` スキルの新規追加の手順に切り替える。
 
----
+### Step 2: `.astro` を作り直す
 
-## スクリプトが自動処理する内容
+ship スキルの Step 1b(i〜iii, v)と同じ方法で変換し、既存の `.astro` を上書きする。
 
-| ステップ | 処理内容 |
-|----------|---------|
-| 1 | ファイルをカテゴリディレクトリへ移動（既存ファイルを上書き） |
-| 2 | ブレッドクラムナビゲーションを更新 |
-| 3 | サイドバーTOCを再生成（`<h2>` / `<h3>` タグから自動生成） |
-| 4 | 「リソース集に戻る」ボタンを更新 |
-| 5 | ページ下部ナビゲーションを更新 |
-| 6 | **W3C HTML検証**（失敗するとgit stageせず中断） |
-| 7 | `git add` で自動ステージング |
+- **作り直すもの**: `rawContent`(`<body>` の中身、`<script>` は除く)、`tocItems`(`<h2>` / `<h3>` から)
+- **既存の値をそのまま残すもの**: `title`(内容に合わせて変える場合を除く)、`category`、`pageCss`、`prevPage` / `nextPage`、`pageNum` / `pageTotal`。前後ナビやページ番号は、ほかのページとの並びで決まっているため
+- `tocItems` は、既存ファイルと同じ書き方(`level: 'h2'` など)にそろえる
 
----
+### Step 3: CSS を置き換える
 
-## W3C検証エラー時
+新しい版の `<style>` を `css/pages/<name>.css` に上書きする。ダークモードのメディアクエリも含めて、そのまま移す。
 
-```bash
-# エラー内容を確認
-python3 scripts/ci/validate_html_w3c.py --base-dir dist --files category/filename.html
+### Step 4: 履歴を残す(任意)
 
-# HTMLを修正後、再実行
-python3 scripts/html_management/integrate_resource_complete.py --source replace_html/
+内容が大きく変わったときは、`src/data/update-history.json` の先頭に `"type": "content"` で更新内容を足す。誤字の修正などでは不要。
 
-# 緊急時のみ: 検証をスキップ（原則禁止）
-python3 scripts/html_management/integrate_resource_complete.py --source replace_html/ --skip-validation
-```
+### Step 5: 仕上げ
 
----
+`resource` スキルの「仕上げ」を行う(generate-data → build → `--base-dir dist` 付きの W3C 検証 → 作業ブランチに commit → デプロイはユーザーに頼まれたときだけ)。
 
-## ファイル配置ルール
-
-```
-replace_html/
-└── aws-your-resource.html   ← ファイル名は置換先と完全一致させる
-
-# スクリプト実行後は replace_html/ が空になる（処理済みファイルはカテゴリディレクトリへ移動）
-```
-
-**⚠️ ファイル名が一致しない場合、スクリプトは新規ファイルとして別パスに配置してしまう。**
-配置前に必ず元ファイルのファイル名を確認すること。
-
----
-
-## TOCが再生成されない場合
-
-`add_sidebar_toc.py` は `<h2>` / `<h3>` タグが2個以上あるファイルのみTOCを生成する。
-
-```html
-<!-- ✅ TOC生成される -->
-<h2 class="section-title">セクション名</h2>
-
-<!-- ❌ TOCスキップされる（エラーは出ない） -->
-<div class="section-title">セクション名</div>
-```
-
-ステップ3で `⚠️【要対応】` が表示された場合は `<div>` → `<h2>` に変換して再実行。
-
----
+処理し終えたら `replace_html/` の元ファイルは消してよい(git 管理外のステージング置き場のため)。
 
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
-|------|------|------|
-| スクリプトがファイルを見つけない | replace_html/ にファイルがない | ファイル名とディレクトリを確認 |
-| カテゴリ誤認識で別ディレクトリに移動した | ファイル内のキーワードが少ない | 手動で正しいカテゴリへ移動後、スクリプト再実行 |
-| W3C検証エラーで中断 | HTML構文エラー | エラーメッセージに従い修正後、再実行 |
-| TOCが消えた | `<h2>` が2個未満 | セクション見出しを `<h2>` に変換して再実行 |
-| git stageされていない | W3C検証失敗 | 検証を通過させてから再実行 |
-| デプロイ後も反映されない | push 忘れ | `git push origin gh-pages` を実行 |
+|---|---|---|
+| 目次が古いまま | `tocItems` を作り直していない | 新しい `<h2>` / `<h3>` の `id` と文言から作り直す |
+| 目次のリンクが効かない | 見出しに `id` が無い、または `tocItems` の `id` と一致しない | 見出しに `id` を付け、`tocItems` と合わせる |
+| 前後ナビが消えた | `prevPage` / `nextPage` を上書きした | 置き換え前の値に戻す(`git diff` で確認できる) |
+| ビルドが `{` `}` で落ちる | 本文を `rawContent` に入れていない、またはエスケープ漏れ | ship の Step 1b-v のエスケープ規則に従う |
 
----
-
-## 参照ファイル
-
-| ファイル | 内容 |
-|---------|------|
-| [replace_workflow.md](references/replace_workflow.md) | 詳細手順・複数ファイル一括置換・チェックリスト |
+→ 詳しい例: [replace_workflow.md](references/replace_workflow.md)
