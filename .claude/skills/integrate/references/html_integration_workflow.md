@@ -112,7 +112,7 @@ python3 scripts/html_management/update_counts.py
 スクリプトのステップ6で自動実行される。エラーが出た場合:
 ```bash
 # 特定ファイルを再検証
-python3 scripts/ci/validate_html_w3c.py --files category/filename.html
+python3 scripts/ci/validate_html_w3c.py --base-dir dist --files category/filename.html
 # エラーを修正してから再実行
 python3 scripts/html_management/integrate_resource_complete.py --skip-validation
 ```
@@ -172,7 +172,7 @@ python3 scripts/html_management/add_home_button.py
 python3 scripts/html_management/add_prev_next_nav.py --bottom-nav-only
 
 # 6. W3C検証
-python3 scripts/ci/validate_html_w3c.py --files category/filename.html
+python3 scripts/ci/validate_html_w3c.py --base-dir dist --files category/filename.html
 
 # 7. データ更新 (ステップ4以降はOption Aと同じ)
 ```

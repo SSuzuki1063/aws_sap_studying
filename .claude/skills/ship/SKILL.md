@@ -342,7 +342,7 @@ LOOP:
   IF gateB_iteration > 5: HALT — "Gate B: exceeded max iterations"
 
   Run HTML validation:
-    python3 scripts/ci/validate_html_w3c.py --pr-mode
+    python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
   Capture output and exit code → html_result
 
   Run CSS validation:

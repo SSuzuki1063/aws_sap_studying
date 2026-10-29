@@ -29,8 +29,8 @@ Tests in `tests/e2e/` organized by concern: `interaction/`, `navigation/`, `link
 
 | Command | Purpose |
 |---------|---------|
-| `python3 scripts/ci/validate_html_w3c.py --pr-mode` | W3C HTML validation (changed files only) |
-| `python3 scripts/ci/validate_html_w3c.py --files networking/foo.html` | W3C validation (specific file) |
+| `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` | W3C HTML validation (changed pages only; run `npm run build` first) |
+| `python3 scripts/ci/validate_html_w3c.py --base-dir dist --files networking/foo.html` | W3C validation (specific page; run `npm run build` first) |
 | `npm run qa:css-validate:pr` | CSS W3C validation (changed files only) |
 | `npm run qa:all` | Full QA pipeline (CSS validate + runtime + report) |
 

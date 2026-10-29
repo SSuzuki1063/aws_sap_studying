@@ -41,7 +41,7 @@ GitHub Actions runs on PRs to `master` (`.github/workflows/pr-quality-check.yml`
 | Check | Blocking | Command |
 |-------|----------|---------|
 | Data Integrity | ✅ Yes | `python3 scripts/ci/check_data_integrity.py` |
-| W3C HTML Validation | ✅ Yes | `python3 scripts/ci/validate_html_w3c.py --pr-mode` |
+| W3C HTML Validation | ✅ Yes | `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` |
 | Color Contrast | ✅ Yes | `python3 scripts/accessibility/check_contrast_ratio.py` |
 | JavaScript Syntax | ✅ Yes | `node -c js/quiz-data-extended.js public/data.js public/render.js public/index.js js/quiz-app.js` |
 | Heading Hierarchy | ⚠️ Warning | `python3 scripts/accessibility/check_heading_hierarchy.py` |

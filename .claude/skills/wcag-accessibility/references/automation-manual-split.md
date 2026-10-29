@@ -103,10 +103,10 @@ bash scripts/accessibility/find_svg_without_aria.sh
 **実行方法**:
 ```bash
 # 全ファイル検証
-python3 scripts/ci/validate_html_w3c.py
+python3 scripts/ci/validate_html_w3c.py --base-dir dist
 
 # PRモード（変更ファイルのみ）
-python3 scripts/ci/validate_html_w3c.py --pr-mode
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
 ```
 
 ---
@@ -188,7 +188,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-python3 scripts/ci/validate_html_w3c.py --pr-mode
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
 if [ $? -ne 0 ]; then
     echo "HTML validation failed"
     exit 1

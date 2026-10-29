@@ -52,8 +52,8 @@ Astro dev server (`npm run dev`) handles the base path via `astro.config.mjs`.
 
 All HTML **MUST** pass W3C validation before committing.
 
-- **Manual check**: `python3 scripts/ci/validate_html_w3c.py --pr-mode`
-- **Targeted check**: `python3 scripts/ci/validate_html_w3c.py --files networking/foo.html`
+- **Manual check** (after `npm run build`): `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist`
+- **Targeted check** (after `npm run build`): `python3 scripts/ci/validate_html_w3c.py --base-dir dist --files networking/foo.html`
 - **Integration**: `/skill resource` and `/ship` run validation automatically
 
 ## Semantic Heading Tags (Critical Rule 6)

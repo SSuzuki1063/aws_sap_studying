@@ -17,7 +17,7 @@ Config: `baseURL: http://localhost:4321`, webServer: `npm run preview:test`, ret
 ## CSS & HTML validation (before committing)
 
 ```bash
-python3 scripts/ci/validate_html_w3c.py --pr-mode   # HTML: changed files only
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist   # HTML: changed pages only (run npm run build first)
 npm run qa:css-validate:pr                           # CSS W3C: changed files only
 ```
 

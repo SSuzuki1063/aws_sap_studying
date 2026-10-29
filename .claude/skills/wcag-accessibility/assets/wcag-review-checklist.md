@@ -143,7 +143,7 @@ grep '<title>' path/to/file.html
 ### 自動検証コマンド
 
 ```bash
-python3 scripts/ci/validate_html_w3c.py --pr-mode
+python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
 ```
 
 ### オンライン検証

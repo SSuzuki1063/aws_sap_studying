@@ -42,7 +42,7 @@ After converting HTML -> `.astro` and placing in `src/pages/<category>/`, you **
 2. Update `src/data/update-history.json` (add changelog entry at top)
 3. Run `node scripts/generate-data.mjs`
 4. Run `npm run build` — build success validates data integrity
-5. Run `python3 scripts/ci/validate_html_w3c.py --pr-mode` — W3C validation
+5. Run `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` — W3C validation
 
 ## Directory -> displayCategory Mapping
 
