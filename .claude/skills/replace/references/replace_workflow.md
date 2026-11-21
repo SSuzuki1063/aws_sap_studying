@@ -2,6 +2,13 @@
 
 ## 例: `networking/aws-direct-connect-guide` を更新する
 
+前提: 作業用の worktree を作り、その中にいる(手順は `resource` スキルの「作業を始める前に」)。
+
+```bash
+git -C ~/aws_sap_studying worktree add --no-track -b content/update-direct-connect-guide ../aws_sap_studying-wt-update-direct-connect-guide origin/master
+cd ~/aws_sap_studying-wt-update-direct-connect-guide && npm ci
+```
+
 ```bash
 # 1. 新しい版を置く(既存と同じファイル名)
 cp ~/Downloads/aws-direct-connect-guide.html replace_html/
@@ -22,7 +29,6 @@ ls src/pages/*/aws-direct-connect-guide.astro
 node scripts/generate-data.mjs
 npm run build
 python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist
-git switch -c content/update-direct-connect-guide
 git add src/pages/networking/aws-direct-connect-guide.astro css/pages/aws-direct-connect-guide.css public/data.js public/index.js src/data/resources.ts
 git commit -m "fix(networking): Direct Connect ガイド — 料金表を更新"
 rm replace_html/aws-direct-connect-guide.html

@@ -25,8 +25,8 @@ Automate the full deploy pipeline: commit → merge to master → push → GitHu
 - If already on `master`, skip to Step 3.
 - If on another branch (e.g., `gh-pages`, `feat/*`):
   1. Note the current branch name and latest commit hash.
-  2. `git checkout master`
-  3. `git merge <source-branch> -m "Merge branch '<source-branch>' into master"`
+  2. Work branches live in a git worktree (`../aws_sap_studying-wt-<topic>`), where `git checkout master` fails because `master` is checked out in the main checkout. Merge from the main checkout instead: `git -C ~/aws_sap_studying merge <source-branch> -m "Merge branch '<source-branch>' into master"`. Run Step 3 and later with `git -C ~/aws_sap_studying` as well.
+  3. Only when the branch is checked out in the main checkout itself: `git checkout master`, then the same `git merge`.
   4. If merge conflicts occur, STOP and report to the user.
 
 ### Step 3: Push master

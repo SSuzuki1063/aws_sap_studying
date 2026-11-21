@@ -16,6 +16,22 @@ description: |
 
 このサイトは Astro 5 の静的サイト。ページは `src/pages/<category>/<name>.astro`、ページ固有の CSS は `css/pages/<name>.css`、一覧・検索・統計のデータは `src/data/resource-registry.json` から `node scripts/generate-data.mjs` で生成する。`public/data.js` / `public/index.js` / `src/data/resources.ts` は生成物なので手で編集しない(次の生成で上書きされるため)。
 
+## 作業を始める前に: worktree を作る
+
+ブランチは、本体のチェックアウト(`~/aws_sap_studying`、`master` のまま)で `git switch -c` せず、隣のディレクトリに git worktree として作る。追加・更新・削除・PDF 登録のどれも、ファイルに手を入れる前にここから始める。
+
+```bash
+git -C ~/aws_sap_studying fetch origin
+git -C ~/aws_sap_studying worktree add --no-track -b <type>/<topic> ../aws_sap_studying-wt-<topic> origin/master
+cd ~/aws_sap_studying-wt-<topic>
+npm ci    # node_modules は worktree ごとに要る
+```
+
+- `--no-track` と起点の `origin/master` は省かない。省くと、新しいブランチが `master` を追跡したり、本体のそのときの HEAD から分岐したりする
+- 本体の `new_html/` / `replace_html/` / `BlackBelt/` に置いた未コミットのファイルは worktree に入らない。`mv ~/aws_sap_studying/new_html/<name>.html new_html/` のように移してから作業する
+- 以降のコマンドは、すべて worktree の中で実行する
+- マージが済んだら片付ける: `git -C ~/aws_sap_studying worktree remove ../aws_sap_studying-wt-<topic>` → `git -C ~/aws_sap_studying branch -d <type>/<topic>`
+
 ## 振り分け
 
 | やりたいこと | 手順 |
@@ -52,8 +68,8 @@ git status --short src/ css/pages/ # 作業途中の変更がないか
 1. `node scripts/generate-data.mjs` — 一覧・検索・統計のデータを作り直す。`orphaned?` の警告が出たら、registry と `.astro` の対応がずれている
 2. `npm run build` — ビルドが通れば、データとページの整合性も確認できる
 3. `python3 scripts/ci/validate_html_w3c.py --pr-mode --base-dir dist` — ページを変えたときだけ。CI と同じく、ビルド後の `dist/` を検証する。エラーはすべて直す
-4. 作業ブランチを切って commit する(例: `feat: 新規リソース追加 — <タイトル>`)。生成物の `public/data.js` / `public/index.js` / `src/data/resources.ts` も一緒に commit する
-5. デプロイはユーザーに頼まれたときだけ行う(`/deploy`、または PR を作って master にマージ)。master へのマージでサイトが公開されるため
+4. worktree の作業ブランチに commit する(例: `feat: 新規リソース追加 — <タイトル>`)。生成物の `public/data.js` / `public/index.js` / `src/data/resources.ts` も一緒に commit する
+5. デプロイはユーザーに頼まれたときだけ行う(`/deploy`、または `git push -u origin <ブランチ>` して PR を作り master にマージ)。master へのマージでサイトが公開されるため
 
 `gh-pages` ブランチは CI がビルド結果を置く場所なので、手で commit や push をしない。
 
