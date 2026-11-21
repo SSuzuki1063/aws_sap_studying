@@ -63,7 +63,7 @@ Claude Code のスキルを使う前提で作っています。
 
 スキルを使わずに手で追加するときの手順は `.claude/rules/integration-workflow.md` にあります。
 
-変更は作業ブランチで行い、PR を作って `master` にマージします(マージするとサイトに公開されます)。
+変更は作業ブランチで行い、PR を作って `master` にマージします(マージするとサイトに公開されます)。作業ブランチは `git switch -c` ではなく git worktree として隣のディレクトリ(`../aws_sap_studying-wt-<topic>`)に作ります。手順は `.claude/skills/resource/SKILL.md` の「作業を始める前に」にあります。
 
 ## 開発者向けの資料
 

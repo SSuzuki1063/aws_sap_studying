@@ -573,10 +573,9 @@ If the pre-commit hook (`validate-categories.js`) fails, that means Step 2 was s
 
 ### 5a. Ensure on master
 
-If not on `master`:
+If not on `master`: work branches live in a git worktree (`../aws_sap_studying-wt-<topic>`), and `git checkout master` fails there because `master` is checked out in the main checkout. Merge from the main checkout, and run 5b from there too (`git -C ~/aws_sap_studying push origin master`):
 ```bash
-git checkout master
-git merge <source-branch> -m "Merge branch '<source-branch>' into master"
+git -C ~/aws_sap_studying merge <source-branch> -m "Merge branch '<source-branch>' into master"
 ```
 
 ### 5b. Push

@@ -4,6 +4,13 @@
 
 前提: ユーザーから削除の確認を取っている。
 
+前提: 作業用の worktree を作り、その中にいる(手順は `resource` スキルの「作業を始める前に」)。
+
+```bash
+git -C ~/aws_sap_studying worktree add --no-track -b remove/old-vpc-guide ../aws_sap_studying-wt-remove-old-vpc-guide origin/master
+cd ~/aws_sap_studying-wt-remove-old-vpc-guide && npm ci
+```
+
 ```bash
 # 1. 対象と参照を確認
 ls src/pages/*/old-vpc-guide.astro
@@ -25,7 +32,6 @@ nextPage: 'vpc-endpoints.html',
 4. 削除と仕上げ
 
 ```bash
-git switch -c remove/old-vpc-guide
 git rm src/pages/networking/old-vpc-guide.astro css/pages/old-vpc-guide.css
 node scripts/generate-data.mjs
 npm run build
